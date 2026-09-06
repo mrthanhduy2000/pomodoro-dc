@@ -49,7 +49,7 @@
  * SÁNG và kỷ 10 là đá phiến gần ĐEN, hai thứ không ai nhầm được.
  *
  * ⇒ **Bài học chung, quan trọng hơn cái bẫy cụ thể**: `--selftest` chỉ chứng minh bộ lọc CÓ tác
- * dụng, không chứng minh nó chọn ĐÚNG THỨ (đã ghi ở `CLAUDE.md`, Phase 4C).
+ * dụng, không chứng minh nó chọn ĐÚNG THỨ (đã ghi ở `docs/LESSONS_3D.md`, Phase 4C).
  *
  * ══════════════════════════════════════════════════════════════════════════════════════════════
  * ✅ ĐÃ VÁ GỐC (2026-08-16) — BỎ HẲN PROXY "MÁI", KHÔNG PHẢI VÁ BỘ LỌC

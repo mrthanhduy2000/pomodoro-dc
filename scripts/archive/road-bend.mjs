@@ -26,7 +26,7 @@
  *   · 1,05  = cong nhẹ, mắt vừa đọc ra
  *   · 1,3+  = ngoằn ngoèo rõ rệt
  *
- * ⚠️ CHỌN MỘT TỈ SỐ LÀ CÓ CHỦ ĐÍCH, đúng bài học Phase 7D đã ghi trong `CLAUDE.md`: *"một con số
+ * ⚠️ CHỌN MỘT TỈ SỐ LÀ CÓ CHỦ ĐÍCH, đúng bài học Phase 7D đã ghi trong `docs/LESSONS_3D.md`: *"một con số
  * tuyệt đối không diễn đạt được một luật nói về QUAN HỆ"*. "Tim đường lệch 0,19 ô" không nói lên
  * điều gì nếu không biết con đường dài bao nhiêu và ô rộng bao nhiêu; còn "dài hơn đường chim bay
  * 8%" thì đọc được ngay, và nó là đại lượng mà ngành địa mạo học dùng để phân loại dòng sông.
@@ -43,7 +43,7 @@
  * đường lượn biên độ nhỏ mà dài. Một con đường lệch ngang 0,19 ô trên chiều dài 11 ô thì mắt đọc
  * ra rất rõ *"đường này lượn"*, mà chiều dài của nó chỉ hơn đường chim bay hơn 1%.
  *
- * Đây đúng bài học fBm ở Phase 9A (`CLAUDE.md`): *"hỏi đại lượng này có chứa thứ mình KHÔNG muốn
+ * Đây đúng bài học fBm ở Phase 9A (`docs/LESSONS_3D.md`): *"hỏi đại lượng này có chứa thứ mình KHÔNG muốn
  * đo không"* — và ở đây là chiều ngược lại: đại lượng ấy **loãng mất** thứ mình muốn đo.
  *
  * ⇒ Cột CHÍNH của bảng là **`lệch ÷ bề rộng`**: độ lệch ngang lớn nhất của tim đường, chia cho

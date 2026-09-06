@@ -1,96 +1,256 @@
-# OPERATIONS — hạ tầng, deploy, sync, push, Electron tray, MCP
+# OPERATIONS — infrastructure, deploy, sync, push, Electron tray, MCP, testing
 
-> **Tách khỏi `CLAUDE.md` ngày 2026-09-06** (cùng lý do với `docs/GOVERNANCE.md`): giữ nguyên văn
-> mọi cái bẫy đã trả giá, nhưng không bắt MỌI phiên phải nạp chúng.
-> Các LUẬT rút ra vẫn nằm ở `CLAUDE.md` dạng một dòng — file này là phần "vì sao" + cách làm.
+> Split out of `CLAUDE.md` on 2026-09-06 and translated to English the same evening. Every trap below
+> was paid for by a real incident; **nothing was deleted in either pass**. The LAWS distilled from
+> these live in `CLAUDE.md` as one-liners — this file is the "why" and the "how".
 >
-> **Mở file này khi:** đụng Supabase/sync · deploy trục trặc · thêm route `api/` · sửa Web Push ·
-> sửa Electron tray/menu bar · setup lại máy hoặc dự án mới.
+> **Open this when:** touching Supabase/sync · a deploy misbehaves · adding an `api/` route ·
+> changing Web Push · changing the Electron tray/menu bar · setting up a new machine or project.
 
-## Hạ tầng
+## Infrastructure
 
-
-| Thứ | Chi tiết |
-|-----|----------|
+| Thing | Detail |
+|---|---|
 | App URL | `https://pomodoro-dc.vercel.app` |
 | Mac menu bar | Electron companion app |
 | GitHub | `https://github.com/mrthanhduy2000/pomodoro-dc` |
 | Supabase | `https://jcefdsdccmnmqvuwelmm.supabase.co` |
-| Bảng DB | `game_state` (id, data JSONB, updated_at) |
+| DB table | `game_state` (id, data JSONB, updated_at, version) |
 | Timer tray sync | `timer_live` (id `singleton`) |
 
-## Vercel Hobby: giới hạn 12 Serverless Functions/deploy
-- ⚠️ **2026-07-11 — SỰ CỐ + FIX TRIỆT ĐỂ (Đàm yêu cầu xử lý gốc, không vá tạm)**: thêm `api/keepalive.js` làm deploy FAIL — "No more than 12 Serverless Functions can be added to a Deployment on the Hobby plan". **Nguyên nhân gốc**: Vercel (preset "Other"/không framework) coi MỌI file `.js` nằm TRỰC TIẾP trong `api/` (đệ quy) là 1 Serverless Function riêng — kể cả file test — TRỪ file/thư mục có tên bắt đầu bằng `_` (quy ước Vercel đã tôn trọng sẵn cho `api/_lib/`). Lúc đó có 5 file `*.test.js` nằm lẫn trong `api/`/`api/push/` bị tính oan.
-  - **FIX CẤU TRÚC (vĩnh viễn, không phải blacklist phải nhớ cập nhật)**: chuyển TOÀN BỘ test của `api/` vào **`api/_tests/`** (mirror lại cấu trúc `api/push/` → `api/_tests/push/`) — dùng ĐÚNG quy ước underscore-prefix mà Vercel đã tự động bỏ qua, giống hệt `api/_lib/`. Vì vậy: test luôn nằm ngoài phạm vi quét Function của Vercel, KHÔNG cần biết trước tên file, KHÔNG cần nhớ xoá/di chuyển gì trước khi deploy — dù sau này có thêm hàng trăm file test (`.test.js`, `.spec.js`, tên gì cũng được) đặt đúng trong `api/_tests/` thì vẫn an toàn tuyệt đối.
-  - **⚠️ QUY TẮC BẮT BUỘC cho mọi test API mới**: LUÔN đặt trong `api/_tests/` (mirror đường dẫn của file đang test), KHÔNG đặt cạnh route handler nữa. Cập nhật path import tương ứng (`../coach.js`, `../../push/dispatch.js`...). `package.json` glob test đã trỏ sang `api/_tests/*.test.js api/_tests/push/*.test.js`.
-  - **Lớp phòng thủ thứ 2** (`.vercelignore`, phòng khi lỡ tay đặt nhầm file phụ trợ ngay dưới `api/` mà quên cho vào `_tests`/`_lib`): loại thêm `*.spec.*`/`*.mock.*`/`*.fixture(s).*`/`*.stories.*`/`*.bench.*`/`*.e2e.*` — không chỉ `*.test.js`.
-  - Hiện tại: đúng **10 function thật** (`coach`, `coach-digest`, `keepalive`, 7 route dưới `api/push/`) — còn dư 2 trước khi chạm trần 12. Thêm route API mới → đếm lại `find api -type f -name "*.js" ! -path "api/_*"`.
-  - ⚠️ **PHÁT HIỆN LẠI KHI SOÁT LOG**: commit `8ee264d` (25/6, thêm `api/coach-digest.js` — mảng 6/6 AI Coach) từng bị FAIL build **CÙNG NGUYÊN NHÂN NÀY** nhưng không ai để ý — Vercel giữ nguyên bản deploy trước đó, khiến tính năng "cảnh báo chuỗi sắp đứt qua push" **KHÔNG hề chạy thật trên production suốt 25/6–11/7** dù code/tài liệu đã ghi "hoàn tất" (xem `BAN_GIAO.md`). Bài học: sau mỗi lần push, PHẢI xác nhận tab Deployments trên Vercel hiện "Ready" — code xanh + commit thành công không có nghĩa là đã thực sự lên production.
+## Vercel Hobby: the 12 Serverless Functions ceiling
 
-## Sync (đã hoàn chỉnh)
-- `src/lib/supabase.js` — Supabase client
-- `src/lib/syncService.js` — pull khi mở app, push debounced 5s
-- `initSync()` gọi trong `App.jsx`, ở effect chạy sau khi store nạp xong (`storesHydrated`)
-- ⚠️ **Đồng bộ ngừng hoạt động = kiểm tra Supabase project trước tiên, không phải code.** Project Free tier có thể tự PAUSE vì 1 trong 2 lý do khác nhau: (a) vượt hạn mức "Database Size" 0.5 GB — xem sự cố 2026-07-11 ở `BAN_GIAO.md`: `cron.job_run_details` phình tới 795 MB do job push-dispatch chạy mỗi 5s không dọn log, KHÔNG phải do `game_state` — bảng đó luôn chỉ vài trăm KB (đã có job tự-dọn log mỗi đêm `supabase/cleanup_cron_logs.sql` để không tái diễn); (b) project "không hoạt động" ~7 ngày (app 1 người dùng dễ im lặng lâu) — chống bằng cron `api/keepalive.js` (Vercel, 3h sáng mỗi ngày, xem `vercel.json`) gọi 1 query nhẹ qua đúng client Supabase để giữ project luôn "active". Nếu Database Size phình lại, soi `cron.job_run_details` trước; nếu bị pause dù Database Size vẫn thấp, kiểm tra cron `keepalive` có đang chạy không (cần `CRON_SECRET`+`SUPABASE_SERVICE_ROLE_KEY` đã đặt ở Vercel env).
-- ⚠️ **"First action wins" (2026-07-11) — chống 2 máy giành nhau ghi đè.** Trước đây `game_state` chỉ có `updated_at` do CLIENT tự ghi (`new Date().toISOString()`) → máy nào ghi CUỐI CÙNG thắng bất kể ai thao tác trước, gây hiện tượng 2 máy nhảy qua nhảy lại + có thể MẤT dữ liệu (xem sự cố cùng ngày ở `BAN_GIAO.md`: mất 1 phiên focus thật vì laptop ghi đè lên phiên điện thoại vừa hoàn thành). ĐÃ SỬA: thêm cột `version` do TRIGGER PHÍA SERVER tự tăng (`supabase/game_state_version.sql`, không phụ thuộc đồng hồ máy khách) — `syncService.js` ghi kiểu compare-and-swap (`.eq('version', expectedVersion)`); ghi bị từ chối (0 dòng khớp) → máy đó THUA, phải tự nhận lại bản đã thắng (`pullFromCloud()`), TUYỆT ĐỐI không được ép ghi đè. Guard cũ dựa trên `localSession?.isRunning` đã bị GỠ (không cần nữa — version là nguồn xác định thứ tự chính xác, không phải suy đoán). Hàm thuần `shouldImportVersion` test ở `src/lib/syncService.test.js`.
-- ⚠️ **BẢN VÁ C1 (2026-07-17) — 4 lưới an toàn quanh CAS, ĐỪNG gỡ mà không đọc kỹ.** (a) **Flush khi rời app**: `visibilitychange→hidden` + `pagehide` gọi `pushNow()` **chỉ khi còn thay đổi đang chờ** — vì trên iOS tab bị đóng băng nên timer debounce 5s KHÔNG bao giờ nổ. Điều kiện "còn đang chờ" dựa vào biến `debounceTimer`, nên nó **PHẢI được gán `null`** khi timer nổ hoặc bị huỷ (nếu không, tín hiệu luôn bật và mọi lần ẩn app đều ghi mù). (b) **`hasMeaningfulState()`** (thuần, export): local trắng + cloud có dữ liệu → NHẬN cloud, KHÔNG đẩy; local có dữ liệu thật → vẫn đẩy như cũ (đây là đường hồi phục cho thay đổi offline chưa kịp đẩy — đừng biến nhánh else thành "luôn import"). (c) Nhánh `known < 0` (đường ghi DUY NHẤT không có CAS) phải **đọc cloud trước**; đọc lỗi → hoãn ghi, không ghi mù. (d) Lỗi Postgres **`42703`** lúc initSync → `console.error` chỉ đích danh `supabase/game_state_version.sql`. Test hành vi: `src/lib/syncService.behavior.test.js` (17 bài; file test có stub chặn debounce 5s thật để không flaky). **Giới hạn còn lại có chủ đích**: 2 máy sửa trường KHÁC NHAU khi offline vẫn mất phần của máy thua → `TECH_DEBT.md` #8. ⚠️ Deploy code mới PHẢI chạy `supabase/game_state_version.sql` TRƯỚC (hoặc gần như đồng thời) — thiếu cột `version` thì mọi lần ghi sẽ lỗi (`column "version" does not exist`) → sync ngừng hẳn cho tới khi chạy SQL.
+⚠️ **2026-07-11 — INCIDENT + PERMANENT FIX** (Đàm asked for a root fix, not a patch): adding
+`api/keepalive.js` made the deploy FAIL — *"No more than 12 Serverless Functions can be added to a
+Deployment on the Hobby plan"*.
 
-## Web Push iPhone (đã chạy; cần làm lại khi setup máy/dự án mới)
-- Biến môi trường trên Vercel: `WEB_PUSH_PUBLIC_KEY`, `WEB_PUSH_PRIVATE_KEY`, `WEB_PUSH_SUBJECT`, `SUPABASE_SERVICE_ROLE_KEY`, `CRON_SECRET`, **`GEMINI_API_KEY`** (AI Coach đám mây Gemini — ĐÃ cấu hình + **bật billing/paid tier (2026-06-24) → hết 429, chạy ổn định** trên `gemini-2.5-flash`; thiếu key → AI Coach KHÔNG chạy vì đã gỡ Qwen on-device; `GEMINI_MODEL`/`GEMINI_MODEL_FALLBACK`/`GEMINI_MODEL_FALLBACK2` tuỳ chọn). Xem `.env.example`. Khoá Supabase frontend đã hardcode, không cần đặt.
-- Tạo khoá Web Push: `npm run push:keys` → dán public/private vào biến môi trường Vercel.
-- Bảng + scheduler push nằm trong `supabase/*.sql` — chạy tay trong Supabase SQL editor (thiếu thì push hỏng).
-- Sửa push phía trình duyệt: `public/push-worker.js` (service worker) + `public/manifest.json` (PWA).
+**Root cause**: Vercel (preset "Other" / no framework) treats EVERY `.js` file directly under `api/`
+(recursively) as its own Serverless Function — including test files — EXCEPT files and folders whose
+name starts with `_` (a Vercel convention it already honoured for `api/_lib/`). At the time, 5
+`*.test.js` files sat among `api/` and `api/push/` and were being counted.
 
+**STRUCTURAL FIX (permanent, not a blacklist somebody must remember to maintain)**: move ALL `api/`
+tests into **`api/_tests/`**, mirroring the source layout (`api/push/` → `api/_tests/push/`) — using
+exactly the underscore-prefix convention Vercel already skips, just like `api/_lib/`. Tests are
+therefore permanently outside Vercel's function scan: no filename list to know in advance, nothing to
+delete or move before deploying, and it stays safe even with hundreds of future test files
+(`.test.js`, `.spec.js`, any name) as long as they live in `api/_tests/`.
 
-## App menu bar Mac (Electron tray) — cách bật, và 4 cái bẫy đã trả giá (2026-08-05, 2026-08-10)
-- **Chạy bằng gì**: `node_modules/electron/dist/Electron.app/Contents/MacOS/Electron <đường-dẫn-dự-án>` (binary chạy thẳng). KHÔNG có bản `.app` đóng gói nào cho app tray.
-- ⚠️ **BẪY 1 (đã dọn 2026-08-05, ghi lại để đừng tạo lại)**: từng có `DC Pomodoro.app` nằm ngay trong thư mục dự án, trông như app menu bar nhưng **KHÔNG PHẢI** — nó là applet AppleScript đời cũ, khởi động `serve-dist.mjs` ở `localhost:31105` rồi mở Chrome (đúng luồng localhost đã bị cấm ở mục "KHÔNG làm những thứ này"), lại còn trỏ vào thư mục cũ `Pomodoro Game - USING`. Mở nó KHÔNG làm hiện icon tray. **Đã xoá.** Đừng tạo lại kiểu launcher này; muốn bật app tray thì dùng LaunchAgent bên dưới.
-- ⚠️ **BẪY 2 — launchd KHÔNG chạy được đường dẫn có ký tự tiếng Việt.** Trỏ `ProgramArguments` thẳng vào đường dẫn chứa "Bản sao…" thì job luôn thoát **mã 78 (EX_CONFIG)**, KHÔNG có stderr, dù `plutil -lint` OK và `test -x` báo file tồn tại (bash chuẩn hoá NFC/NFD, launchd thì không). **Cùng họ với cái bẫy NFC/NFD làm test nạp hai bản React.** Cách vá: LaunchAgent chỉ trỏ tới script bọc ở đường dẫn **thuần ASCII** — `~/Library/Application Support/dc-pomodoro-tray.sh` — script đó mới `cd` vào thư mục có dấu (bash xử lý đúng). Log cũng phải để ở đường dẫn ASCII (`~/Library/Logs/dc-pomodoro-tray.*.log`).
-- **Tự khởi động**: LaunchAgent `~/Library/LaunchAgents/com.dcpomodoro.tray.plist` (`RunAtLoad` bật, **`KeepAlive` TẮT** để nút "Thoát" trong menu tray thoát được thật, không bị bật lại ngay).
-- ⚠️ **BẪY 3 — `main.js` KHÔNG có khoá chống chạy trùng** (`requestSingleInstanceLock`). Chạy 2 lần = **2 biểu tượng** trên thanh menu. Trước khi nạp LaunchAgent phải `pkill` bản đang chạy tay.
-- ⚠️ **BẪY 4 (2026-08-10) — "ảnh trong suốt" KHÔNG bằng "không có ảnh".** Khi có phiên chạy, tray bỏ icon đi và chỉ hiện chữ (`🍅 mm:ss` / `☕ mm:ss`). Trước đây chỗ "bỏ icon" nạp `public/tray-empty.png` (16x16, alpha = 0 toàn bộ). Trong suốt nên KHÔNG nhìn thấy, **nhưng macOS vẫn chừa đủ 16 điểm ảnh chỗ cho nó** → sinh khoảng trắng ngay trước quả cà chua / cốc cà phê. Vá đúng: `nativeImage.createEmpty()` (ảnh 0x0, không chiếm chỗ). File `tray-empty.png` đã xoá hẳn. **Đừng quay lại dùng PNG trong suốt cho mục đích "ẩn icon".**
-- **Không có phiên nào chạy thì tray chỉ hiện icon trơn** (`updateTrayTitle` đặt tiêu đề rỗng) — đó là bình thường, không phải hỏng. Có phiên mới hiện `🍅 mm:ss`.
-- **(Đã dọn sạch 2026-08-05)** Toàn bộ dấu vết dự án đời cũ đã bị xoá (chuyển Thùng rác): LaunchAgent `com.civjourney.localhost`; thư mục dự án cũ `Downloads/Claude Code/Pomodoro Game - USING` (đã rỗng, chỉ còn log); applet `DC Pomodoro.app`; 2 file backup dữ liệu game cũ + 2 file thiết kế đời CivJourney trong `Downloads`; 2 thư mục phiên Claude của đường dẫn dự án cũ. **Từ nay chỉ còn MỘT thư mục dự án duy nhất**: `Downloads/Claude Code/Bản sao Pomodoro Game - USING`. (Hai thứ tên có "pomodoro" còn lại trong `~/Library` — `com.macpomodoro` và `iCloud~com~limepresso~pomodorofree` — là app Pomodoro của hãng KHÁC, không liên quan dự án này, KHÔNG được xoá nhầm.)
+⚠️ **MANDATORY RULE for every new API test**: always place it in `api/_tests/` (mirroring the path of
+the file under test), never beside the route handler. Update the import paths accordingly
+(`../coach.js`, `../../push/dispatch.js`…). The `package.json` test glob covers `api/**/*.test.js`.
 
-## Quy trình deploy
+**Second line of defence** (`.vercelignore`, in case a helper file is dropped directly under `api/`
+and forgotten): it also excludes `*.spec.*` / `*.mock.*` / `*.fixture(s).*` / `*.stories.*` /
+`*.bench.*` / `*.e2e.*`, not just `*.test.js`.
+
+Currently **10 real functions** (`coach`, `coach-digest`, `keepalive`, 7 routes under `api/push/`) —
+2 to spare before the ceiling. After adding an API route, recount:
+`find api -type f -name "*.js" ! -path "api/_*"`.
+
+⚠️ **FOUND AGAIN WHILE READING LOGS**: commit `8ee264d` (25 June, adding `api/coach-digest.js` — the
+6th piece of the AI Coach) had already FAILED its build for **this same reason**, and nobody noticed
+— Vercel simply kept serving the previous deployment, so the "warn before a streak breaks via push"
+feature **never actually ran in production from 25/6 to 11/7** while the code and docs said
+"complete" (see `BAN_GIAO.md`). Lesson: after every push you MUST confirm the Vercel Deployments tab
+shows "Ready" — green code plus a successful commit does not mean it shipped.
+
+## Sync (complete)
+
+- `src/lib/supabase.js` — Supabase client.
+- `src/lib/syncService.js` — pull on app open, debounced push every 5s.
+- `initSync()` is called from `App.jsx`, in an effect that runs after the stores hydrate
+  (`storesHydrated`).
+
+⚠️ **Sync stopped working = check the Supabase project first, not the code.** A Free-tier project can
+auto-PAUSE for two different reasons: (a) exceeding the 0.5 GB "Database Size" quota — see the
+2026-07-11 incident in `BAN_GIAO.md`: `cron.job_run_details` had grown to 795 MB because the
+push-dispatch job ran every 5s without pruning its log, NOT because of `game_state`, which is always
+a few hundred KB (a nightly self-cleaning job, `supabase/cleanup_cron_logs.sql`, now prevents a
+recurrence); (b) ~7 days of "inactivity" (a one-user app easily goes quiet that long) — prevented by
+the `api/keepalive.js` cron (Vercel, 3 a.m. daily, see `vercel.json`) which runs one light query
+through the real Supabase client to keep the project active. If Database Size balloons again, look at
+`cron.job_run_details` first; if the project pauses while Database Size is low, check whether the
+`keepalive` cron is running (it needs `CRON_SECRET` + `SUPABASE_SERVICE_ROLE_KEY` in Vercel env).
+
+⚠️ **"First action wins" (2026-07-11) — stops two machines overwriting each other.** `game_state`
+used to have only `updated_at`, written by the CLIENT (`new Date().toISOString()`), so whichever
+machine wrote LAST won regardless of who acted first — causing two devices to flip-flop and
+potentially LOSE data (same-day incident in `BAN_GIAO.md`: a real focus session was lost because a
+laptop overwrote a session the phone had just completed). FIXED: a `version` column incremented by a
+SERVER-SIDE TRIGGER (`supabase/game_state_version.sql`, independent of any client clock).
+`syncService.js` writes compare-and-swap style (`.eq('version', expectedVersion)`); a rejected write
+(0 rows matched) means that machine LOST and must re-pull the winning state (`pullFromCloud()`) —
+**it must never force an overwrite**. The old guard based on `localSession?.isRunning` was REMOVED
+(unnecessary — `version` determines ordering exactly, rather than guessing). The pure function
+`shouldImportVersion` is tested in `src/lib/syncService.test.js`.
+
+⚠️ **PATCH C1 (2026-07-17) — four safety nets around CAS; do not remove any without reading this.**
+(a) **Flush on leaving the app**: `visibilitychange→hidden` + `pagehide` call `pushNow()` **only when
+a change is pending** — on iOS the tab is frozen, so the 5s debounce timer NEVER fires. The "pending"
+signal is the `debounceTimer` variable, so it **MUST be set to `null`** when the timer fires or is
+cancelled (otherwise the signal is permanently on and every app-hide writes blindly).
+(b) **`hasMeaningfulState()`** (pure, exported): local empty + cloud has data → ACCEPT cloud, do not
+push; local has real data → push as before (this is the recovery path for offline changes not yet
+pushed — do not turn the else branch into "always import").
+(c) The `known < 0` branch (the ONLY write path without CAS) must **read cloud first**; if that read
+fails, postpone the write rather than write blindly.
+(d) Postgres error **`42703`** during `initSync` → a `console.error` naming `supabase/game_state_version.sql`
+specifically.
+Behavioural tests: `src/lib/syncService.behavior.test.js` (17 cases; the file stubs out the real 5s
+debounce so it cannot be flaky). **Remaining limitation, deliberate**: two machines editing DIFFERENT
+fields while offline still lose the loser's part → `TECH_DEBT.md` #8.
+⚠️ Deploying new code REQUIRES running `supabase/game_state_version.sql` first (or near-simultaneously)
+— without the `version` column every write errors (`column "version" does not exist`) and sync stops
+entirely until the SQL is run.
+
+## Web Push on iPhone (working; redo this when setting up a new machine or project)
+
+- Vercel environment variables: `WEB_PUSH_PUBLIC_KEY`, `WEB_PUSH_PRIVATE_KEY`, `WEB_PUSH_SUBJECT`,
+  `SUPABASE_SERVICE_ROLE_KEY`, `CRON_SECRET`, **`GEMINI_API_KEY`** (the cloud AI Coach — already
+  configured, with **billing / paid tier enabled since 2026-06-24 ⇒ no more 429s**, running stably on
+  `gemini-2.5-flash`; without the key the AI Coach does NOT run at all because the on-device Qwen
+  engine was removed; `GEMINI_MODEL` / `GEMINI_MODEL_FALLBACK` / `GEMINI_MODEL_FALLBACK2` optional).
+  See `.env.example`. The Supabase frontend keys are hardcoded and need no env entry.
+- Generate Web Push keys: `npm run push:keys` → paste public/private into Vercel env.
+- The push tables and scheduler live in `supabase/*.sql` — run them by hand in the Supabase SQL
+  editor (missing them breaks push).
+- Browser-side push changes: `public/push-worker.js` (service worker) + `public/manifest.json` (PWA).
+
+## Mac menu bar app (Electron tray) — how to enable it, and the 4 traps already paid for
+
+- **How it runs**: `node_modules/electron/dist/Electron.app/Contents/MacOS/Electron <project-dir>`
+  (the binary directly). There is **no packaged `.app`** for the tray app.
+- ⚠️ **TRAP 1 (cleaned up 2026-08-05, recorded so nobody recreates it)**: a `DC Pomodoro.app` used to
+  sit inside the project folder looking like the menu bar app but **it was not** — it was an old
+  AppleScript applet that started `serve-dist.mjs` on `localhost:31105` and opened Chrome (exactly the
+  localhost flow that is banned), and it pointed at the old folder `Pomodoro Game - USING`. Opening it
+  did NOT show a tray icon. **Deleted.** Never recreate that kind of launcher; use the LaunchAgent below.
+- ⚠️ **TRAP 2 — launchd cannot run a path containing Vietnamese characters.** Pointing
+  `ProgramArguments` straight at a path containing "Bản sao…" makes the job exit with **code 78
+  (EX_CONFIG)**, with NO stderr, even though `plutil -lint` passes and `test -x` says the file exists
+  (bash normalises NFC/NFD, launchd does not). **Same family as the NFC/NFD trap that made the tests
+  load two copies of React.** The fix: the LaunchAgent points only at a wrapper script on a **pure
+  ASCII path** — `~/Library/Application Support/dc-pomodoro-tray.sh` — and that script `cd`s into the
+  accented folder (bash handles it correctly). Logs must also live on ASCII paths
+  (`~/Library/Logs/dc-pomodoro-tray.*.log`).
+- **Auto-start**: LaunchAgent `~/Library/LaunchAgents/com.dcpomodoro.tray.plist` (`RunAtLoad` on,
+  **`KeepAlive` OFF** so the tray menu's "Quit" really quits instead of being relaunched instantly).
+- ⚠️ **TRAP 3 — `main.js` has no single-instance lock** (`requestSingleInstanceLock`). Running it
+  twice = **two icons** in the menu bar. `pkill` the running copy before loading the LaunchAgent.
+- ⚠️ **TRAP 4 (2026-08-10) — "a transparent image" is not "no image".** While a session runs, the tray
+  drops the icon and shows text only (`🍅 mm:ss` / `☕ mm:ss`). The "drop the icon" path used to load
+  `public/tray-empty.png` (16×16, fully transparent). Being transparent it was invisible, **but macOS
+  still reserved its 16 pixels**, producing a blank gap before the tomato / coffee cup. Correct fix:
+  `nativeImage.createEmpty()` (a 0×0 image that occupies nothing). `tray-empty.png` has been deleted.
+  **Never go back to a transparent PNG for "hiding" an icon.**
+- **With no session running the tray shows only the plain icon** (`updateTrayTitle` sets an empty
+  title) — that is normal, not a fault. `🍅 mm:ss` appears only once a session starts.
+- ⚠️ **Realtime must never be the only update path** (ADR-072, 2026-09-06): `electron/main.js` polls
+  `fetchTimerLive` on an interval AND refetches on `powerMonitor` `resume`, because a Supabase
+  Realtime WebSocket can die silently (Mac sleep/wake, Wi-Fi change) without replaying missed events.
+- **(Fully cleaned 2026-08-05)** Every trace of the old project layout was removed (moved to Trash):
+  LaunchAgent `com.civjourney.localhost`; the old project folder `Downloads/Claude Code/Pomodoro Game
+  - USING`; the `DC Pomodoro.app` applet; 2 old game-data backups and 2 CivJourney-era design files in
+  `Downloads`; 2 Claude session folders for the old project path. **From now on there is exactly ONE
+  project folder**: `Downloads/Claude Code/Bản sao Pomodoro Game - USING`. (The two remaining
+  "pomodoro"-named things in `~/Library` — `com.macpomodoro` and `iCloud~com~limepresso~pomodorofree`
+  — belong to OTHER vendors' Pomodoro apps, are unrelated to this project, and must not be deleted.)
+
+## Deploy process
+
 ```
-Sửa code → git add . && git commit -m "mô tả" → git push origin main
-→ Vercel tự deploy trong ~2 phút
-→ Mọi thiết bị thấy bản mới
+edit code → git add . && git commit -m "message" → git push origin main
+→ Vercel deploys automatically in ~2 minutes
+→ every device sees the new version
 ```
-Hoặc bấm đúp file `/Users/damduy/Desktop/🚀 Deploy App.command`
+Or double-click `/Users/damduy/Desktop/🚀 Deploy App.command`.
 
-- ⚠️ **PHẢI LÀ NHÁNH `main`, không phải nhánh nào khác** (bài học 2026-08-12, mất công chờ vô ích): Vercel **chỉ cập nhật production khi có push vào `main`**. Push vào nhánh khác (vd nhánh tính năng `claude/...` mà phiên Claude Code trên web tự tạo) chỉ sinh một bản **Preview** ở URL riêng — `pomodoro-dc.vercel.app` KHÔNG đổi gì cả, và bản Preview của gói Hobby thường bắt đăng nhập Vercel mới xem được trên Safari iPhone. Chính trang Overview của Vercel có ghi *"To update your Production Deployment, push to the `main` branch"* nhưng rất dễ lướt qua.
-  - ⇒ **Quy tắc cho MỌI AI (Đàm chốt lại 2026-08-22: *"sau này tự deploy, tôi không có việc gì phải tự deploy cả"*)**: làm xong thứ Đàm cần THẤY trên máy thật mà đang ở nhánh phụ → **TỰ gộp vào `main` rồi push, KHÔNG hỏi**. "Deploy" nghĩa là tới được `pomodoro-dc.vercel.app`, KHÔNG phải "đã push lên GitHub" — nhánh phụ = code đã an toàn trên GitHub, KHÔNG có nghĩa là đã lên production, nên dừng ở nhánh rồi báo "đã deploy xong" là báo sai.
-    - **CHỈ DỪNG LẠI HỎI** khi việc gỡ xung đột đòi phải **vứt bỏ công của một phiên khác**. Xung đột gỡ được mà không mất gì thì cứ gỡ rồi đi tiếp.
-    - **VẪN PHẢI BÁO RÕ đã đưa lên production những gì NGOÀI phần việc của mình.** Nhánh phụ thường mang theo commit của các phiên khác chưa từng lên production (lần 2026-08-22: 11 commit Phase 13–14 của phiên khác đi kèm 2 commit của phiên đang làm). Đàm có quyền biết mình vừa nhận thêm những gì — im lặng chuyện đó là giấu phạm vi thay đổi.
-    - Push xong **vẫn phải xác nhận Vercel "Ready"** (gạch đầu dòng ngay dưới).
-  - Cách gộp an toàn: `git fetch origin main` → kiểm `git merge-base --is-ancestor origin/main <nhánh>` (trả về true là gộp thẳng được, không xung đột) → `git checkout -B main origin/main && git merge --ff-only <nhánh> && git push origin main`.
-- ⚠️ **Push xong PHẢI mở tab Deployments xác nhận "Ready"** — code xanh + commit thành công KHÔNG có nghĩa là đã thực sự lên production (xem sự cố `8ee264d` ở mục "Vercel Hobby: giới hạn 12 Serverless Functions").
+⚠️ **It MUST be the `main` branch** (lesson from 2026-08-12, a wasted wait): Vercel **only updates
+production on a push to `main`**. Pushing any other branch (e.g. a `claude/...` feature branch a web
+Claude Code session created) produces only a **Preview** at its own URL — `pomodoro-dc.vercel.app`
+does not change at all, and Hobby-plan previews usually demand a Vercel login before Safari on iPhone
+will show them. Vercel's own Overview page says *"To update your Production Deployment, push to the
+`main` branch"*, but it is very easy to skim past.
 
-## 🔌 MCP — giữ cái nào (đo 2026-09-06)
+⇒ **Rule for EVERY AI** (Đàm settled it on 2026-08-22: *"sau này tự deploy, tôi không có việc gì phải
+tự deploy cả"*): once you finish something Đàm needs to SEE on his real device while you are on a side
+branch → **merge into `main` and push yourself, do NOT ask**. "Deploy" means it reached
+`pomodoro-dc.vercel.app`, NOT "it was pushed to GitHub" — a side branch means the code is safe on
+GitHub, not that it is in production, so stopping at the branch and reporting "deployed" is a false
+report.
+- **ONLY stop to ask** when resolving the conflict would require throwing away another session's
+  work. A conflict that resolves without losing anything: resolve it and carry on.
+- **You must still REPORT clearly what reached production BEYOND your own work.** A side branch often
+  carries commits from other sessions that never shipped (on 2026-08-22: 11 Phase 13–14 commits from
+  another session travelled along with 2 commits of the session doing the work). Đàm has the right to
+  know what he just received — staying silent about that hides the real scope of the change.
+- After pushing, **still confirm Vercel shows "Ready"**.
 
-Cấu hình MCP nằm ở **tài khoản claude.ai, KHÔNG nằm trong repo** (không có `.mcp.json`) ⇒ AI không
-tắt hộ được. Đàm tự tắt bằng `/mcp` trong Claude Code, hoặc claude.ai → Settings → Connectors.
+Safe merge recipe: `git fetch origin main` → check
+`git merge-base --is-ancestor origin/main <branch>` (true means it merges cleanly) →
+`git checkout -B main origin/main && git merge --ff-only <branch> && git push origin main`.
 
-| Giữ ✅ | Vì sao |
+## MCP — which servers to keep (measured 2026-09-06)
+
+MCP configuration lives in the claude.ai account, **not in the repo** (there is no `.mcp.json`), so an
+AI cannot turn them off on Đàm's behalf. He does it via `/mcp` in Claude Code, or claude.ai →
+Settings → Connectors.
+
+| Keep ✅ | Why |
 |---|---|
-| **github** (55 tool) | **Bắt buộc** — phiên web KHÔNG có `gh` CLI, mọi thao tác PR/issue/CI đi qua đây |
-| **Claude Code Remote** (22) | Hệ thống phiên web: `add_repo`, `send_later` (tự hẹn giờ theo dõi PR) |
-| **ccd_session** (2) | Hệ thống |
+| **github** (55 tools) | **Required** — web sessions have no `gh` CLI; every PR/issue/CI action goes through it |
+| **Claude Code Remote** (22) | Web-session plumbing: `add_repo`, `send_later` (self-scheduled PR follow-ups) |
+| **ccd_session** (2) | Plumbing |
 
-| Tắt ❌ | tool |
+| Turn off ❌ | tools |
 |---|---|
-| TickTick · Notion · Canva · Gmail · Google Calendar | 162 tool, **0 liên quan tới code dự án này** |
+| TickTick · Notion · Canva · Gmail · Google Calendar | 162 tools, **none related to this project's code** |
 
-⚠️ **Nhưng đừng kỳ vọng tiết kiệm token ở đây: đo ra chỉ ≈1.780 token = 1% vấn đề.** Lý do:
-harness **hoãn nạp** (defer) các MCP không dùng — chỉ giữ cái TÊN (~11 token), bỏ toàn bộ mô tả.
-Thứ tốn thật là MCP nạp **schema đầy đủ** (Claude Code Remote ≈11.400 token). Lý do nên tắt là để
-**đỡ nhiễu khi chọn công cụ** và tránh thông báo rớt kết nối giữa phiên, KHÔNG phải để tiết kiệm.
+⚠️ **But do not expect token savings here: measured, it is only ≈1,780 tokens = 1% of the problem.**
+Reason: the harness **defers** unused MCP servers — it keeps only the NAME (~11 tokens) and drops all
+descriptions. What actually costs is an MCP loaded with its **full schema** (Claude Code Remote
+≈11,400 tokens). The reason to turn the others off is **less noise when choosing a tool** and fewer
+mid-session disconnect notices, NOT savings.
 
+## Miscellaneous technical notes
 
-## Lưu ý kỹ thuật
-- `npm install` cần flag `--legacy-peer-deps`
-- Electron còn liên quan tới menu bar Mac. Đừng xoá hoặc bỏ qua khi sửa timer/tray.
-- `serve-dist.mjs` và LaunchAgent là luồng local cũ, chỉ đụng khi thật sự cần.
-- ⚠️ **(Lịch sử, đã gỡ)** Từng có `coachVoice.js` (giọng cảm xúc) + thư mục `ai-coach-sim/` (bản demo trình duyệt) — cả hai đã bị xoá hẳn ngày 2026-06-21 (xem mục "ĐÃ GỠ HẲN" ở trên). KHÔNG còn `src/engine/coachVoice.js` hay `ai-coach-sim/` trong repo — đừng tạo lại trừ khi Đàm yêu cầu.
+- `npm install` needs the `--legacy-peer-deps` flag.
+- Electron is still tied to the Mac menu bar. Do not delete or ignore it when changing the timer/tray.
+- `serve-dist.mjs` and the LaunchAgent are the old local flow; touch them only when genuinely needed.
+- ⚠️ **(History, removed)** There used to be a `coachVoice.js` (emotional voice) and an `ai-coach-sim/`
+  folder (browser demo) — both were deleted on 2026-06-21. Neither `src/engine/coachVoice.js` nor
+  `ai-coach-sim/` exists any more; do not recreate them unless Đàm asks.
+
+---
+
+## Testing — full detail (moved out of `CLAUDE.md` 2026-09-06)
+
+Always run `npm test` before committing, plus `npm run build`.
+
+⚠️ **`npm test` runs TWO passes (since 2026-08-21)**: `test:fast` (all fast tests — **the real test
+count is the last line of THIS pass**, and it must show `# skipped 1`) then `test:cross` (the
+`scene-tri` ↔ `plinth-tri` cross-check, **~25 seconds** since ADR-048 — before that it was 70–90
+seconds depending on machine load, measured at 68.8 · 85.9 · 86.3 seconds across three runs, and
+**that number is exactly what revealed a performance regression no gate was watching**; it now
+**prints its own duration** rather than letting the docs promise a fixed figure — see
+`TECH_DEBT #70`). For a quick count: `npm run test:fast`.
+
+⚠️ **The slow half is skipped via the `DC_CROSS_SLOW` environment variable, NOT `--test-skip-pattern`**
+— that flag was tried and **does nothing** (Node lists it, reports no error, and the slow test still
+runs ⇒ the "fast" pass silently carried an extra 70 seconds). A silently ignored flag is exactly the
+kind of thing that has bitten this project repeatedly; the current approach makes `# skipped 1`
+visible, so if it ever stops skipping, the number says so itself.
+
+⚠️ **The test glob CHANGED on 2026-08-12** (`TECH_DEBT #10`): from a hand-written list of
+single-level folders to `'electron/**/*.test.js' 'src/**/*.test.js' 'api/**/*.test.js'
+'scripts/**/*.test.js'`, **inside single quotes** so `node --test` expands them itself (`sh` has no
+globstar; removing the quotes breaks it). Previously a test inside a subfolder
+(`src/components/city/…`) would **silently never run**; now a test next to its source at any depth
+runs, matching the convention in `PROJECT_STRUCTURE.md`. Adding a new folder no longer requires
+editing `package.json`.
+
+Inspection tool for the metrics table the model receives:
+`node --import ./scripts/register-esm-loader.mjs scripts/coach-sample.mjs` (builds ~24h of sample
+history and prints `buildAnalystContext`). Anti-hallucination scores are printed by
+`src/engine/coach/eval.test.js`.

@@ -40,7 +40,7 @@ const FAR_BAND = 0.26;
  * khắp bề ngang và chấm bản CŨ của kỷ 13 được **14 lần đổi chiều** — trong khi bản cũ ngoài kia
  * đúng là một tấm ván phẳng. Truy ra: dải trên của kỷ 13 CÓ chạm nóc mấy công trình cao, nên phép
  * đo đang đếm cả mái nhà và bóng đổ của THÀNH PHỐ rồi ghi công cho VÙNG XA. Con số vẫn "tăng" nên
- * rất dễ được nhận là bằng chứng — đúng loại sai mà `CLAUDE.md` gọi là "đo một trục thì vừa BÁO
+ * rất dễ được nhận là bằng chứng — đúng loại sai mà `docs/LESSONS_3D.md` gọi là "đo một trục thì vừa BÁO
  * NHẦM vừa BỎ SÓT". Thành phố luôn nằm giữa khung, nên chừa hai rìa là tách được nó ra.
  */
 const EDGE_SHARE = 0.28;

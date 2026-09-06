@@ -14,7 +14,7 @@
  * ⚠️ **CHẠY CẢ HAI CHẾ ĐỘ, VÀ ĐÓ MỚI LÀ ĐIỂM MẤU CHỐT.** Một con số "0 điểm ảnh lệch" tự nó KHÔNG
  * chứng minh gì — nó cũng đúng y hệt khi phép đo hỏng, khi cú bấm trượt, khi app chưa mọc ra. Chỉ
  * khi chế độ THƯỜNG ra một con số KHÁC 0 thì mới biết cái thước có răng. Đây đúng bài học đã ghi ở
- * `CLAUDE.md`: *"phép đo phải kèm một đối chứng, nếu không thì không biết nó còn răng hay không."*
+ * `docs/LESSONS_3D.md`: *"phép đo phải kèm một đối chứng, nếu không thì không biết nó còn răng hay không."*
  *
  * Số đo ngày 2026-08-27 (khung 1280×900, bấm sang tab "Thống kê"), HAI lượt liên tiếp:
  *   · chế độ THƯỜNG        : 40.385 rồi 39.370 điểm ảnh đổi (3,51% / 3,42%), lệch lớn nhất 255

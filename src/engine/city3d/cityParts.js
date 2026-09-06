@@ -41,7 +41,7 @@ import { buildPropSpec } from './propSpec.js';
  * `sceneGraph.js` loại vùng phụ cận ra khỏi vật cản, bản chép tay thì không, và bài test đỏ với
  * thông báo *"bán kính phố = 21,44"* — một con số nói về một thành phố không tồn tại.
  *
- * Đây đúng bài học đã ghi ở `CLAUDE.md`: *"một bài test dựng lại đầu vào bằng đường riêng thì nó
+ * Đây đúng bài học đã ghi ở `docs/LESSONS_3D.md`: *"một bài test dựng lại đầu vào bằng đường riêng thì nó
  * đang canh bản dựng lại ấy, không canh mã sản phẩm"* — và cách chữa không phải thêm một dòng
  * `continue` nữa (chỗ thứ bảy viết sau này sẽ lại quên), mà là **một luật một công thức**.
  */

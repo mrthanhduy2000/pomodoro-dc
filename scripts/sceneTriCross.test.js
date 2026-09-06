@@ -38,7 +38,7 @@
  * bài test cụ thể — trong đó có cả chi phí nạp module, chi phí của `plinth-tri.mjs`, và cả tải máy
  * lúc ấy. `TECH_DEBT #70` sinh ra vì dự án CHƯA CÓ cổng nào canh thời gian dựng cảnh; bài này chỉ
  * tình cờ **nhạy** với đại lượng đó, chứ nó không đo đại lượng đó. Dùng nó làm "cổng hiệu năng"
- * là đúng cái sai đã ghi ở `CLAUDE.md` — *một con số đúng vẫn có thể trả lời SAI câu hỏi mình đang
+ * là đúng cái sai đã ghi ở `docs/LESSONS_3D.md` — *một con số đúng vẫn có thể trả lời SAI câu hỏi mình đang
  * hỏi*.
  *   ⇒ **Không dựng một bộ đo riêng cho thời gian dựng cảnh vào lúc này** (chỉ thị Đàm: chi phí lớn
  *     hơn lợi ích khi chưa có phase nào đụng `terrain.js`/`horizon.js`/`noise.js`).

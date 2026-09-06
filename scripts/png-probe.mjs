@@ -21,7 +21,7 @@
  * biên, và ảnh hỏng thì không có gì đỏ lên.
  *
  * Tự giải mã PNG bằng `zlib` có sẵn của Node — KHÔNG thêm dependency nào (dự án đã một lần trả giá
- * vì gỡ dependency GPU nặng, xem `CLAUDE.md`; một công cụ dev không đáng để mở rộng chuỗi cung ứng).
+ * vì gỡ dependency GPU nặng, xem `docs/LESSONS_3D.md`; một công cụ dev không đáng để mở rộng chuỗi cung ứng).
  * Chỉ đọc được PNG 8-bit màu thật (loại 2 hoặc 6) — đúng thứ Chromium chụp ra.
  */
 

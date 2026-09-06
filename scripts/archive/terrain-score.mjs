@@ -344,7 +344,7 @@ export function chamBeVuong(era, gridSize = GRID, soTia = 720) {
     // ⚠️ TẤM ĐẤT LÀ HÌNH VUÔNG, NÊN TIA PHẢI CHẠY TỚI KHI RA KHỎI HÌNH VUÔNG — KHÔNG PHẢI TỚI
     // `reach`. Bản đầu dừng ở `d <= reach` (nửa CẠNH) và 12/15 kỷ trả về đúng 9,50 ở đường chéo:
     // tia hết đất trước khi chạm mốc, tức phép đo BÃO HOÀ và tỉ số chéo/trục bị kéo xuống giả tạo.
-    // Đúng cái bẫy đã ghi trong `CLAUDE.md`: *một bán kính chỉ là một bán kính khi vật thể TRÒN* —
+    // Đúng cái bẫy đã ghi trong `docs/LESSONS_3D.md`: *một bán kính chỉ là một bán kính khi vật thể TRÒN* —
     // theo đường chéo, hình vuông vươn xa hơn nửa cạnh đúng `√2` lần.
     let r = null;
     let chamMep = false;

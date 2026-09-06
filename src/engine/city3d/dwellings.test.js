@@ -106,7 +106,7 @@ test('MỖI 2 PHIÊN THÊM MỘT CĂN — và câu đếm ngược khớp với 
 });
 
 test('TRẦN MẬT ĐỘ: đo bằng TỈ LỆ lấp đầy, không bằng số ô đếm được', () => {
-  // ⚠️ BÀI NÀY ĐÃ ĐỔI CÁCH HỎI Ở PHASE 20, và lý do chính là bài học đã ghi trong `CLAUDE.md`:
+  // ⚠️ BÀI NÀY ĐÃ ĐỔI CÁCH HỎI Ở PHASE 20, và lý do chính là bài học đã ghi trong `docs/LESSONS_3D.md`:
   // *"một con số tuyệt đối không diễn đạt được MẬT ĐỘ trong một không gian hữu hạn"*. Trước đây
   // mọi kỷ có chung 30 ô đất nên số ô đếm được VÀ tỉ lệ lấp đầy là một; nay mẫu số đi từ 22 (kỷ 15,
   // nhiều đường + vành đai) tới 49 (kỷ 14), nên kỷ 15 dày ĐẶC (lấp 100% đất trống) mà vẫn ra ÍT ô

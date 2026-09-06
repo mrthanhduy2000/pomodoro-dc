@@ -5,7 +5,7 @@
  * trên MacBook, Đàm — người KHÔNG biết code — đã phải qua lại 5 vòng vì bộ đo hỏng ở những chỗ
  * chẳng liên quan gì tới hiệu năng: nhánh chưa `git fetch`, `package.json` bẩn chặn checkout,
  * `three` chưa cài (đổ ra 20 dòng ngăn xếp Vite), và một đường dẫn đầy dấu tiếng Việt mà bộ đo
- * chưa từng được thử. `CLAUDE.md` đã có sẵn bài học "BẪY 2" về NFC/NFD ở ĐÚNG đường dẫn đó — bài
+ * chưa từng được thử. `docs/OPERATIONS.md` đã có sẵn bài học "BẪY 2" về NFC/NFD ở ĐÚNG đường dẫn đó — bài
  * học nằm sẵn trong nhà mà công cụ mới vẫn không được thử ở điều kiện ấy. Đúng kết luận dự án đã
  * rút ra nhiều lần: **một bài học được ghi ra KHÔNG chặn được gì; chỉ một bài TEST mới chặn được.**
  *

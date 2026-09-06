@@ -59,7 +59,7 @@ test('nút lúc chưa có mục tiêu bấm được và gọi hàm dẫn đư�
   // ⚠️ NEO VÀO LỜI GỌI, KHÔNG NEO VÀO NHÃN. Bản đầu của bài này tìm chuỗi 'Điền mục tiêu →' và
   // ĐỎ OAN trên mã hoàn toàn đúng — vì chữ ấy xuất hiện LẦN ĐẦU trong khối chú thích giải thích
   // bản vá, nên phép cắt "lùi về thẻ <ActionButton gần nhất" nhảy ngược lên một nút khác hẳn
-  // ("Kết Thúc Giải Lao"). Cùng họ bài học đã ghi ở CLAUDE.md: hỏi `/tênHàm\(/` trên mã nguồn thì
+  // ("Kết Thúc Giải Lao"). Cùng họ bài học đã ghi ở docs/LESSONS_3D.md: hỏi `/tênHàm\(/` trên mã nguồn thì
   // chính dòng định nghĩa cũng là một match. Lời gọi `jumpToSessionGoal()` thì chỉ có đúng một
   // chỗ và nó nằm trong JSX, nên neo vào đó mới trỏ đúng nút.
   const call = ENGINE.indexOf('onClick={() => jumpToSessionGoal()}');

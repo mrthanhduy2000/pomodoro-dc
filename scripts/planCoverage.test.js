@@ -7,7 +7,7 @@
  * phiên" — sự thật là 55,8%).
  *
  * ⚠️ Cả bốn đối chứng dưới đây từng nằm trong cờ `--sai-so` của `plan-coverage.mjs`, tức chỉ chạy
- * khi có người nhớ gõ. Đúng bài học đã ghi ở `CLAUDE.md`: *một bài học được ghi ra KHÔNG chặn được
+ * khi có người nhớ gõ. Đúng bài học đã ghi ở `docs/LESSONS_3D.md`: *một bài học được ghi ra KHÔNG chặn được
  * gì; chỉ một bài TEST mới chặn được* — nên chúng phải nằm trong `npm test`.
  */
 

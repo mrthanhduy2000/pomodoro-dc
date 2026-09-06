@@ -1,210 +1,212 @@
 # Pomodoro DC — Project Brief
 
-## Người dùng
-- Tên: Đàm (non-coder, dùng Codex + Claude Code để code)
-- Giải thích đơn giản, tránh jargon kỹ thuật
+## ⚠️ LANGUAGE RULE (2026-09-06 — Đàm's decision, applies to every AI session)
+- **Docs, code, comments, commit messages: ENGLISH.** Vietnamese measures **1.72 chars/token** here;
+  English is roughly **4** — same meaning, ~2.3× cheaper. These files are re-read every session, so
+  the saving multiplies by session count.
+- **All replies to Đàm: VIETNAMESE.** He is a non-coder driving Codex + Claude Code on a
+  production app with real data on real devices; explain plainly, no jargon, and he likes
+  **visual comparisons with concrete numbers**. End-of-task reports are for him → Vietnamese.
+- **Scope, so this never contradicts itself:**
+  | Group | Language | Enforced by |
+  |---|---|---|
+  | `CLAUDE.md` · `START_HERE.md` · `PHASE_RULES.md` · `AGENTS.md` | English | `scripts/docBudget.test.js` (**red** on a Vietnamese paragraph) |
+  | `docs/GOVERNANCE.md` · `docs/OPERATIONS.md` | English | translated 2026-09-06 |
+  | Reference archives (`TECH_DEBT.md`, `ARCHITECTURE_DECISIONS.md`, `CHANGELOG.md`, `BAN_GIAO.md`, `docs/LESSONS_3D.md`, `PERFORMANCE.md`, …) | **legacy stays Vietnamese; NEW entries in English** | judgement |
+  Translating the 2.6M-char archive in one pass would cost ~700k output tokens and risks losing
+  knowledge that took whole phases to earn — so it converts gradually, as each part is touched.
+- Keep Vietnamese inside English docs only for: verbatim quotes of Đàm's instructions (historical
+  evidence) and UI strings the app actually shows.
 
-## ⚠️ HỎI TRƯỚC KHI LÀM (quy tắc tối cao — đặt trên cả NGUYÊN TẮC SỐ 1)
-Phân loại lệnh của Đàm thành 2 nhóm:
-- **Lệnh NGHIÊN CỨU / TÌM HIỂU / ĐỀ XUẤT / "cho ý kiến" / "theo bạn…"** → CHỈ trình bày phân tích + khuyến nghị rồi DỪNG. KHÔNG sửa code, KHÔNG commit, KHÔNG deploy. Hỏi "bạn có muốn tôi làm không?". Câu mơ hồ → coi là nghiên cứu + hỏi trước.
-- **Lệnh LÀM ("làm đi", "sửa", "thêm", "đổi", "nâng cấp", "deploy"…)** → theo đúng 4 bước: (1) **giải thích NGẮN GỌN, dễ hiểu, không hàn lâm** sắp làm gì + công dụng *trước khi sửa*; (2) làm (kèm `npm test`/lint + cập nhật tài liệu); (3) giải thích *sau khi sửa* đã đổi gì + ích lợi (vẫn dễ hiểu); (4) **TỰ ĐỘNG deploy lên Vercel** (commit + push) — KHÔNG hỏi lại, vì lệnh "làm" đã gồm cho phép deploy.
-- Lý do: app production của Đàm (push = Vercel deploy ra mọi thiết bị). Anh cần kiểm soát (nghiên cứu thì đừng động vào), nhưng đã ra lệnh làm thì khỏi hỏi tới lui — giải thích cho anh hiểu rồi deploy luôn. Chi tiết: memory `ask-before-acting.md`.
+## ⚠️ ASK BEFORE ACTING (supreme rule — outranks PRIORITY RULE #1)
+Classify every instruction into one of two buckets:
+- **RESEARCH / INVESTIGATE / PROPOSE / "cho ý kiến" / "theo bạn…"** → present analysis +
+  recommendation, then **STOP**. No code edits, no commit, no deploy. Ask "shall I do it?".
+  **Ambiguous phrasing counts as research** — ask first.
+- **DO ("làm đi", "sửa", "thêm", "đổi", "nâng cấp", "deploy"…)** → 4 steps: (1) explain **briefly and
+  plainly** what you are about to do *before* touching anything; (2) do it (with `npm test` + lint +
+  doc updates); (3) explain what changed and why it helps; (4) **deploy to Vercel automatically**
+  (commit + push) — do not ask again, "do it" already includes deploy permission.
+- Why: push = production deploy to all of Đàm's devices. He needs control over research, but once he
+  says do it, stop asking back and forth. Details: memory `ask-before-acting.md`.
 
-## ⚠️ NGÂN SÁCH TOKEN — luật đắt tiền nhất, đọc trước mọi thứ khác
-Cửa sổ ngữ cảnh là tài nguyên **cạn kiệt được**, và thứ tiêu nó không phải chat của Đàm mà là
-**tài liệu của chính dự án này**. Đo 2026-09-06: 20 file `.md` = **2.671.121 ký tự ≈ 1,55 triệu
-token = 769% cửa sổ 200k**. Một lệnh `cat TECH_DEBT.md` = **250.000 token = 125% cửa sổ 200k**
-— tức nổ cửa sổ chỉ bằng MỘT lệnh.
+## ⚠️ TOKEN BUDGET — the most expensive rule, read before anything else
+The context window is **exhaustible**, and what drains it is not chat — it is **this project's own
+docs**. Measured 2026-09-06: 20 `.md` files = **2,671,121 chars ≈ 1.55M tokens = 775% of a 200k
+window**. One `cat TECH_DEBT.md` = **252k tokens = 126% of a 200k window** — a single command blows
+the whole context.
 
-⚠️ **Đo bằng KÝ TỰ UNICODE (`.length`), KHÔNG bằng `wc -c`.** Tiếng Việt có dấu là 2–3 byte/ký tự
-nên `wc -c` thổi phồng ~21% (`CLAUDE.md`: 37.220 ký tự nhưng 45.011 byte). Đã suýt kết luận sai
-"vượt trần" vì đọc nhầm byte thành ký tự — đúng luật *"nghi công cụ đo trước, nghi mã sau"*.
-Hệ số quy đổi ĐO ĐƯỢC trên tài liệu tiếng Việt dự án này: **1,72 ký tự = 1 token**.
-⚠️ Và đo bằng **JS `String.length`** (đơn vị của cổng canh), không phải `len()` của Python:
-mỗi emoji ngoài BMP (🗺️ 🎨 🏙️) là **2** code unit trong JS nhưng **1** code point trong Python.
+⚠️ **Measure in UNICODE CHARS via JS `String.length`** — never `wc -c` (Vietnamese diacritics are
+2–3 bytes/char, inflating ~21%) and never Python `len()` (astral emoji differ). The measured ratio
+for Vietnamese docs here is **1.72 chars/token**; English is roughly **4**. Full reasoning:
+header comment of `scripts/doc-budget.mjs`.
 
-| File | ký tự | ≈token | %cửa sổ 200k | LUẬT |
+| File | chars | ≈tokens | % of 200k | RULE |
 |---|---:|---:|---:|---|
-| `TECH_DEBT.md` | 433.948 | 252k | 126% | ❌ **CẤM `cat`** — `grep -n` hoặc `sed -n 'A,Bp'` |
-| `ARCHITECTURE_DECISIONS.md` | 388.555 | 226k | 113% | ❌ CẤM `cat` — `grep -n 'ADR-0NN'` |
-| `CHANGELOG.md` | 266.007 | 154k | 77% | ❌ CẤM `cat` — chỉ `head -60` |
-| `docs/LESSONS_3D.md` | 261.236 | 152k | 76% | ❌ CẤM `cat` — chỉ `grep` |
-| `BAN_GIAO.md` | 234.342 | 136k | 68% | ❌ CẤM `cat` — **chỉ `head -60`** |
-| `PERFORMANCE.md` | 168.262 | 98k | 49% | ❌ CẤM `cat` |
-| `PROJECT_STRUCTURE.md` · `AI_HANDOFF_KNOWLEDGE.md` · `ARCHITECTURE.md` | ~104k mỗi file | ~60k | 30% | ⚠️ `grep` trước |
+| `TECH_DEBT.md` | 433,948 | 252k | 126% | ❌ **NEVER `cat`** — `grep -n` or `sed -n 'A,Bp'` |
+| `ARCHITECTURE_DECISIONS.md` | 388,555 | 226k | 113% | ❌ never `cat` — `grep -n 'ADR-0NN'` |
+| `CHANGELOG.md` | 266,007 | 154k | 77% | ❌ never `cat` — `head -60` only |
+| `docs/LESSONS_3D.md` | 261,236 | 152k | 76% | ❌ never `cat` — `grep` only |
+| `BAN_GIAO.md` | 234,342 | 136k | 68% | ❌ never `cat` — **`head -60` only** |
+| `PERFORMANCE.md` | 168,262 | 98k | 49% | ❌ never `cat` |
+| `PROJECT_STRUCTURE.md` · `AI_HANDOFF_KNOWLEDGE.md` · `ARCHITECTURE.md` | ~104k each | ~60k | 30% | ⚠️ `grep` first |
 
-**Ba việc bắt buộc, không phải khuyến nghị:**
-1. **Trước khi mở bất kỳ `.md` nào ngoài `CLAUDE.md`/`START_HERE.md`/`PHASE_RULES.md`: `grep -n`
-   trước, đọc theo dòng sau.** Cần bản đồ tiêu đề để biết đọc dòng nào →
-   `node scripts/doc-budget.mjs --map <file>` (in mục lục + số dòng, gần như không tốn token).
-2. **Đọc code cũng vậy** — `completeFocusSession` (~760 dòng) thì đừng `cat` cả `gameStore.js`.
-3. **Trần file tự-nạp có CỔNG CANH THẬT** (`scripts/docBudget.test.js`, chạy trong `npm test`):
+**Three obligations, not suggestions:**
+1. **Before opening any `.md` other than `CLAUDE.md` / `START_HERE.md` / `PHASE_RULES.md`:
+   `grep -n` first, then read by line range.** Need a table of contents to know which lines?
+   → `node scripts/doc-budget.mjs --map <file>` (prints headings + line ranges, costs almost nothing).
+2. **Same for code** — `completeFocusSession` is ~760 lines; do not `cat` all of `gameStore.js`.
+3. **Auto-loaded files have REAL GUARDS** (`scripts/docBudget.test.js`, inside `npm test`): a char
+   limit per file (listed in DOC MAP below) **and** a language gate. Over the limit, or a Vietnamese
+   paragraph in an English doc = **RED TEST**, not a note that scrolls past. Check anytime:
+   `node scripts/doc-budget.mjs` — it prints actual sizes and headroom fresh, which is why no
+   hand-copied "actual size" appears in this file (a stale one is worse than none).
+   When it goes red the fix is **SPLIT into a `docs/` topic file and leave one pointer line** —
+   never raise the limit, never delete knowledge.
+   *(Why guards: the old 40,000 limit was only a sentence — `START_HERE.md` had silently blown its
+   own 20,000 limit and no session noticed. **A threshold with no guard is a funnel.**)*
 
-   | File | Trần | Giá trị thật lúc đặt trần | Biên còn |
-   |---|---:|---:|---:|
-   | `CLAUDE.md` | 20.000 | 16.503 | 17% |
-   | `START_HERE.md` | 20.000 | 18.132 | 9% |
-   | `PHASE_RULES.md` | 10.000 | 6.611 | 34% |
-   | `AGENTS.md` | 4.000 | 3.228 | 19% |
-
-   Vượt = **test ĐỎ**, không phải một lời nhắc trôi qua. Kiểm bất cứ lúc nào: `node scripts/doc-budget.mjs`.
-   *(Vì sao cần cổng: trần 40.000 cũ chỉ là một câu trong tài liệu, không ai canh — `START_HERE.md`
-   đã âm thầm vượt trần 20.000 của nó (20.200) mà không phiên nào biết. Bài học dự án:
-   **một ngưỡng không có cổng canh là một cái phễu**; **một câu tự trấn an phải được kiểm như một con số**.)*
-
-## ⚠️ NGUYÊN TẮC ƯU TIÊN SỐ 1 (mọi phiên AI)
-1. **TRƯỚC khi làm:** đọc **`START_HERE.md`** — file DUY NHẤT bắt buộc đọc mỗi phiên. Rồi
-   **`PHASE_RULES.md`** nếu đang làm một phase. Mọi file khác là **KHO TRA CỨU**: chỉ mở phần
-   `grep` trúng (xem NGÂN SÁCH TOKEN ở trên).
-2. **SAU khi có cập nhật:** ghi `BAN_GIAO.md` + `CHANGELOG.md`. File khác **chỉ sửa khi thay đổi
-   làm nội dung nó SAI SỰ THẬT** — không sửa cho đủ bộ (`PHASE_RULES.md` §5). Đổi trạng thái
-   hoặc việc tiếp theo thì phải sửa `START_HERE.md`.
-3. Bàn giao thiết kế chi tiết nằm ở thư mục memory trên máy Đàm:
+## ⚠️ PRIORITY RULE #1 (every AI session)
+1. **Before working:** read **`START_HERE.md`** — the ONLY file required every session. Then
+   **`PHASE_RULES.md`** if you are inside a phase. Everything else is **REFERENCE**: open only the
+   part `grep` hits (see TOKEN BUDGET above).
+2. **After changes:** update `BAN_GIAO.md` + `CHANGELOG.md`. Other files change **only when your
+   change makes their content FALSE** — never "for completeness" (`PHASE_RULES.md` §5). Changing
+   status or next-steps means updating `START_HERE.md`.
+3. Design handoff notes live in Đàm's local memory folder:
    `/Users/damduy/.claude/projects/-Users-damduy-Downloads-Claude-Code-B-n-sao-Pomodoro-Game---USING/memory/`
-   (`upgrade-roadmap.md` cho AI Coach · `ui-review-2026-06.md` cho UI · `resonance-update.md` cho game loop ·
-   `ask-before-acting.md` cho quy tắc hỏi-trước). Phiên chạy trên web KHÔNG có thư mục này — đừng đi tìm.
-4. Luôn chạy `git status` tươi — đừng tin ảnh chụp git cũ.
-5. **File nằm ở đâu** → `PROJECT_STRUCTURE.md`. **Kiến trúc lớn / luồng dữ liệu** → `ARCHITECTURE.md`.
-   Cả hai phải cập nhật cùng lúc với mọi thay đổi cấu trúc.
-6. ⚠️ **File này là NGUỒN SỰ THẬT DUY NHẤT về quy tắc, cho MỌI AI** (Claude Code, Codex, ChatGPT…) —
-   chữ "CLAUDE" chỉ là lịch sử. `AGENTS.md` chỉ là con trỏ về đây. **TUYỆT ĐỐI không tạo bản sao
-   tài liệu quy tắc cho từng công cụ AI** — đã thử 2026-07-31 và thất bại (bản sao sinh câu vô
-   nghĩa + đường dẫn `.Codex/` không tồn tại, rồi trôi khỏi bản gốc sau 5 ngày). Đó chính là điều
-   **Composition over Duplication** cấm. Chi tiết: `AGENTS.md`.
+   (`upgrade-roadmap.md` AI Coach · `ui-review-2026-06.md` UI · `resonance-update.md` game loop ·
+   `ask-before-acting.md` the ask-first rule). **Web sessions have no such folder — don't hunt for it.**
+4. Always run a fresh `git status` — never trust a stale snapshot.
+5. **Where a file lives** → `PROJECT_STRUCTURE.md`. **Architecture / data flow** → `ARCHITECTURE.md`.
+   Both must be updated together with any structural change.
+6. ⚠️ **This file is the SINGLE SOURCE OF TRUTH for rules, for EVERY AI** (Claude Code, Codex,
+   ChatGPT…) — "CLAUDE" in the name is history only. `AGENTS.md` is just a pointer here.
+   **NEVER fork the rules per AI tool** — tried 2026-07-31 and it failed (the copy produced nonsense
+   sentences plus a `.Codex/` path that never existed, then drifted from the original within 5 days).
+   That is exactly what **Composition over Duplication** forbids. Details: `AGENTS.md`.
 
-## 📋 Quản trị + quy trình → **`docs/GOVERNANCE.md`** (mở khi làm task đáng kể)
-Nguyên văn "PROJECT GOVERNANCE PROTOCOL" + "AI ENGINEERING PLAYBOOK" ở đó. Bảy điều cô đọng:
-- **Definition of Done**: code đúng · build · test · lint · **tài liệu đồng bộ** · **project
-  knowledge đồng bộ**. Thiếu 1 mục = chưa xong.
-- **Bảng "loại thay đổi → tài liệu phải sửa"**: ở `docs/GOVERNANCE.md`. Đổi FLOW → `ARCHITECTURE.md` ·
-  đổi cấu trúc thư mục → `PROJECT_STRUCTURE.md` · quyết định có ≥2 phương án thật → ADR mới ·
-  phát hiện nợ → `TECH_DEBT.md` · mọi thay đổi → `BAN_GIAO.md`.
-- **Quy trình 7 giai đoạn**: Hiểu yêu cầu → Audit → Thiết kế → Thực hiện → Self Review → Validation
-  → Knowledge Update. **Bug thì sửa NGUYÊN NHÂN GỐC, không sửa triệu chứng.**
-- **Kiến trúc**: Single Responsibility · High Cohesion · Low Coupling · **Reuse over Rewrite** ·
-  **Composition over Duplication** · Explicit over Implicit. Không hy sinh kiến trúc lấy tốc độ.
-- **Không giả định**: không chắc → đọc source; source chưa đủ → đọc tài liệu; vẫn chưa đủ → **NÓI RÕ
-  điều còn thiếu**, không suy đoán rồi trình bày như sự thật.
-- **Commit**: mỗi commit một mục tiêu, rollback độc lập được, không trộn thay đổi không liên quan.
-- **Rủi ro thấp/trung bình phát hiện dọc đường → xử lý luôn**; rủi ro cao → hỏi trước.
+## 📋 Governance + process → **`docs/GOVERNANCE.md`** (open for any substantial task)
+Full PROJECT GOVERNANCE PROTOCOL + AI ENGINEERING PLAYBOOK live there, including the
+"change type → doc to update" table. Condensed:
+- **Definition of Done**: code · build · test · lint · **docs in sync** · **knowledge in sync**.
+  Missing one = not done.
+- **7 stages**: Understand → Audit → Design → Implement → Self-review → Validate → Knowledge update.
+  **Fix ROOT CAUSE, never symptoms.** **No guessing**: unsure → read source → read docs → **say what
+  is missing**; never present a guess as fact.
+- **Architecture**: Single Responsibility · High Cohesion · Low Coupling · **Reuse over Rewrite** ·
+  **Composition over Duplication** · Explicit over Implicit. Never trade architecture for speed.
+- **Commits**: one goal each, independently revertable. **Low/medium-risk issues found along the way
+  → fix now**; high risk → ask first.
 
-### Báo cáo cuối task — MỘT bản, không phải hai (thống nhất 2026-09-06)
-Trước đây có hai bản chồng nhau: "Báo cáo bàn giao 11 mục" + "TECHNICAL ADVISOR REPORT 11 mục",
-tốn ~2.500 token output MỖI task để nói phần lớn cùng một chuyện. Nay:
+### End-of-task report — ONE report, never two (unified 2026-09-06)
+There used to be two overlapping 11-point reports, burning ~2,500 output tokens per task to say
+mostly the same thing. Now:
 
-| Loại task | Báo cáo |
+| Task type | Report |
 |---|---|
-| Sửa lỗi nhỏ · mỹ thuật 3D · một việc gọn | **5 dòng** (`PHASE_RULES.md` §6): Đã làm · Ảnh/bằng chứng · Chưa xong · Rủi ro · Kế tiếp (đúng MỘT đề xuất) |
-| Kiến trúc · hạ tầng · Supabase/sync · database · AI Coach · deploy · bảo mật · refactor lớn · sự cố | **TECHNICAL ADVISOR REPORT 11 mục** (mẫu đầy đủ ở `docs/GOVERNANCE.md`), 100% tiếng Việt, ≤2 trang A4 |
+| Small fix · 3D art · one tidy job | **5 lines** (`PHASE_RULES.md` §6): Done · Evidence · Not done · Risk · Next (exactly ONE proposal) |
+| Architecture · infra · Supabase/sync · database · AI Coach · deploy · security · big refactor · incident | **TECHNICAL ADVISOR REPORT, 11 points** (template in `docs/GOVERNANCE.md`) |
 
-Không bao giờ viết cả hai cho cùng một task.
-## Nền tảng hiện tại
-App chính chạy trên **web** tại `https://pomodoro-dc.vercel.app`.
+Never write both for the same task. **Write reports in Vietnamese** — they are for Đàm and his
+external advisor, not for the codebase.
 
-- Web Vercel là bản đầy đủ, dùng trên iPhone và Mac.
-- Electron vẫn được dùng như app phụ trên Mac để có biểu tượng menu bar/tray.
-- Electron mở URL Vercel và đọc trạng thái timer từ Supabase, không phải bản app riêng tách logic.
-- Localhost chỉ dùng cho dev/test, không phải luồng sử dụng hằng ngày.
+## Platform & stack
+Main app is **web**: `https://pomodoro-dc.vercel.app` (full version, iPhone + Mac). Electron is a Mac
+companion only — it opens that URL and reads timer state from Supabase; it is **not** a separate app
+with its own logic. Localhost is dev/test only.
+React + Vite + PWA · Zustand + localStorage (key `dc-pomodoro-v1`, still reads legacy `civjourney-v1`)
+· Supabase sync · Vercel auto-deploy from GitHub.
 
-## Tech Stack
-- React + Vite + PWA
-- State: Zustand + localStorage (key: `dc-pomodoro-v1`, vẫn đọc được key cũ `civjourney-v1`)
-- Sync cloud: Supabase
-- Hosting: Vercel (auto-deploy từ GitHub)
-
-## Hạ tầng + vận hành → chi tiết ở **`docs/OPERATIONS.md`**
-| Thứ | Chi tiết |
-|-----|----------|
-| App URL | `https://pomodoro-dc.vercel.app` (nhánh `main` mới ra production) |
+## Infrastructure & operations → detail in **`docs/OPERATIONS.md`**
+| Thing | Detail |
+|---|---|
+| App URL | `https://pomodoro-dc.vercel.app` (only `main` reaches production) |
 | GitHub | `https://github.com/mrthanhduy2000/pomodoro-dc` |
-| Supabase | `https://jcefdsdccmnmqvuwelmm.supabase.co` — bảng `game_state`, `timer_live` |
-| Mac menu bar | Electron companion (`node_modules/electron/dist/…/Electron <thư-mục-dự-án>`) |
+| Supabase | `https://jcefdsdccmnmqvuwelmm.supabase.co` — tables `game_state`, `timer_live` |
+| Mac menu bar | Electron companion (`node_modules/electron/dist/…/Electron <project-dir>`) |
 
-Tám luật đã trả giá bằng sự cố thật — **chi tiết "vì sao" ở `docs/OPERATIONS.md`, đừng gỡ mà chưa đọc**:
-1. ⚠️ **Chỉ `main` lên production.** Nhánh phụ = chỉ có Preview. Làm xong thứ Đàm cần THẤY →
-   **TỰ gộp `main` rồi push, KHÔNG hỏi** (Đàm chốt 2026-08-22). Chỉ dừng hỏi khi gỡ xung đột đòi
-   vứt bỏ công của phiên khác. **Phải BÁO RÕ những gì NGOÀI phần việc của mình cũng vừa lên production.**
-2. ⚠️ **Push xong PHẢI xác nhận Vercel hiện "Ready"** — commit thành công ≠ đã lên production
-   (commit `8ee264d` fail build âm thầm, tính năng chết 25/6–11/7 mà tài liệu ghi "hoàn tất").
-3. ⚠️ **Vercel Hobby: tối đa 12 Serverless Function.** Mọi `.js` trực tiếp trong `api/` (đệ quy) đều
-   tính là 1 function, TRỪ tên bắt đầu bằng `_`. **Test API LUÔN đặt trong `api/_tests/`.**
-   Hiện có **10 function thật** — đếm lại: `find api -type f -name "*.js" ! -path "api/_*"`.
-4. ⚠️ **Sync ngừng chạy → kiểm Supabase project TRƯỚC, không phải code** (Free tier tự pause vì
-   vượt 0.5 GB hoặc im lặng ~7 ngày; đã có cron dọn log + `api/keepalive.js` chống cả hai).
-5. ⚠️ **Ghi cloud là compare-and-swap theo cột `version` do trigger SERVER tăng** ("first action
-   wins"). Ghi bị từ chối = máy đó THUA, phải `pullFromCloud()`, **tuyệt đối không ép ghi đè**.
-   Deploy code mới PHẢI chạy `supabase/game_state_version.sql` trước.
-6. ⚠️ **4 lưới an toàn quanh CAS (bản vá C1)** — flush khi rời app · `hasMeaningfulState()` ·
-   nhánh `known < 0` đọc cloud trước · bắt lỗi `42703`. **Đừng gỡ mà không đọc `docs/OPERATIONS.md`.**
-7. ⚠️ **Electron tray: 4 cái bẫy** (applet đời cũ · launchd không chạy đường dẫn tiếng Việt ·
-   không có khoá chống chạy trùng → 2 icon · "ảnh trong suốt" ≠ "không có ảnh").
-8. ⚠️ **Thiếu `GEMINI_API_KEY` ở Vercel env ⇒ AI Coach KHÔNG chạy** (đã gỡ hẳn engine on-device).
+Eight laws each paid for by a real incident — **the "why" is in `docs/OPERATIONS.md`; do not undo
+any of them before reading it**:
+1. ⚠️ **Only `main` reaches production.** Other branches produce Preview builds only. Finished
+   something Đàm needs to SEE while on a side branch → **merge into `main` and push yourself, do not
+   ask** (his instruction, 2026-08-22). Only stop to ask if resolving the conflict would throw away
+   another session's work. **Always state clearly what went to production BEYOND your own work.**
+2. ⚠️ **After pushing, confirm Vercel shows "Ready"** — a successful commit ≠ shipped (commit
+   `8ee264d` failed its build silently; the feature was dead 25/6–11/7 while docs said "complete").
+3. ⚠️ **Vercel Hobby: max 12 Serverless Functions.** Every `.js` directly under `api/` (recursive)
+   counts as one, **except** names starting with `_`. **API tests always go in `api/_tests/`.**
+   Currently **10 real functions** — recount: `find api -type f -name "*.js" ! -path "api/_*"`.
+4. ⚠️ **Sync stopped → check the Supabase project FIRST, not the code** (Free tier auto-pauses on
+   0.5 GB or ~7 days idle; a log-cleanup cron + `api/keepalive.js` guard both).
+5. ⚠️ **Cloud writes are compare-and-swap on a `version` column bumped by a SERVER trigger**
+   ("first action wins"). A rejected write means that machine LOST — it must `pullFromCloud()` and
+   **never force-overwrite**. Deploying new code requires running `supabase/game_state_version.sql`
+   first.
+6. ⚠️ **Four safety nets around CAS (patch C1)** — flush on app hide · `hasMeaningfulState()` ·
+   the `known < 0` branch reads cloud first · error `42703` handling. **Do not remove any without
+   reading `docs/OPERATIONS.md`.**
+7. ⚠️ **Electron tray has 4 traps** (legacy AppleScript applet · launchd cannot run paths with
+   Vietnamese characters · no single-instance lock → 2 icons · "transparent image" ≠ "no image").
+8. ⚠️ **No `GEMINI_API_KEY` in Vercel env ⇒ AI Coach does not run** (the on-device engine is gone).
 
-## 🗺️ BẢN ĐỒ TÀI LIỆU — file nào tự nạp, file nào phải tự mở
-Claude Code / Codex **TỰ NẠP 100% `CLAUDE.md`** mỗi phiên trước khi AI kịp quyết định gì ⇒ câu
-*"CLAUDE.md là kho tra cứu, chỉ grep phần cần"* là **bất khả thi**. Cách duy nhất làm nhẹ phiên là
-**TÁCH FILE**. Đã làm hai đợt: 190.700 → 21.600 token (2026-09-06 sáng, tách `LESSONS_3D`/`AI_COACH`)
-→ **9.000 token** (2026-09-06 chiều, tách `GOVERNANCE`/`OPERATIONS`). Không xoá một chữ nào.
+## 🗺️ DOC MAP — what auto-loads, what you must open
+Claude Code / Codex **auto-load 100% of `CLAUDE.md`** before the AI can decide anything, so
+*"CLAUDE.md is reference, just grep it"* is **impossible to obey**. The only fix is **splitting
+files**. Done in three passes on 2026-09-06: 190,700 → 21,600 tokens (split `LESSONS_3D`/`AI_COACH`)
+→ 9,600 (split `GOVERNANCE`/`OPERATIONS`) → **~2,800** (translated to English). Nothing was deleted.
 
-| File | Cơ chế | Khi nào mở |
+| File | Mechanism | When to open |
 |---|---|---|
-| `CLAUDE.md` (file này) | **TỰ NẠP mỗi phiên** — trần **20.000 ký tự**, có cổng canh | luôn có sẵn |
-| `START_HERE.md` | bắt buộc đọc mỗi phiên — trần **20.000** | mở phiên |
-| `PHASE_RULES.md` | đọc khi đang làm một phase — trần **10.000** | làm phase |
-| `AGENTS.md` | con trỏ cho Codex — trần **4.000** | Codex mở phiên |
-| **`docs/GOVERNANCE.md`** | mở khi cần | task đáng kể · cần mẫu báo cáo 11 mục |
-| **`docs/OPERATIONS.md`** | mở khi cần | sync · deploy · `api/` · push · tray |
-| `docs/LESSONS_3D.md` · `docs/AI_COACH.md` | **`grep`, ĐỪNG đọc trọn** | sửa 3D · sửa Coach |
-| `TECH_DEBT.md` · `ARCHITECTURE_DECISIONS.md` · `PERFORMANCE.md` · `BAN_GIAO.md` · `CHANGELOG.md` | **`grep`/`head`, CẤM đọc trọn** | tra cứu |
+| `CLAUDE.md` (this file) | **auto-loads every session** — limit **16,000 chars**, guarded | always present |
+| `START_HERE.md` | required reading every session — limit **16,000** | session start |
+| `PHASE_RULES.md` | read when inside a phase — limit **8,000** | during a phase |
+| `AGENTS.md` | pointer for Codex — limit **3,500** | Codex session start |
+| **`docs/GOVERNANCE.md`** | on demand | substantial task · need the 11-point template |
+| **`docs/OPERATIONS.md`** | on demand | sync · deploy · `api/` · push · tray |
+| `docs/LESSONS_3D.md` · `docs/AI_COACH.md` | **`grep`, NEVER whole** | 3D art · AI Coach |
+| `TECH_DEBT.md` · `ARCHITECTURE_DECISIONS.md` · `PERFORMANCE.md` · `BAN_GIAO.md` · `CHANGELOG.md` | **`grep`/`head`, never whole** | lookup |
 
-⚠️ **Thêm bài học mới thì viết vào file chuyên đề** (`docs/LESSONS_3D.md` cho 3D, `docs/OPERATIONS.md`
-cho hạ tầng, `docs/GOVERNANCE.md` cho quy trình), rồi — **chỉ khi nó đổi một QUY TẮC** — thêm MỘT DÒNG
-trỏ ở đây. Đừng để file này phình lại: nó là thứ duy nhất tính tiền ở **mọi** phiên.
-## 🎨 Bài học mỹ thuật thành phố 3D → **`docs/LESSONS_3D.md`**
+⚠️ **New lessons go into the topic file** (`docs/LESSONS_3D.md` for 3D, `docs/OPERATIONS.md` for
+infra, `docs/GOVERNANCE.md` for process) — then, **only if it changes a RULE**, add ONE pointer line
+here. Never let this file grow back: it is the only thing billed in **every** session.
 
-**89 bài học cấp 1 + 96 mục "KÈM THEO"** (146.727 token) đã chuyển sang đó, nguyên văn.
-Chúng là phần tri thức đắt nhất dự án — mỗi mục là một lần đã trả giá bằng một phase.
+## 🎨 3D city art lessons → **`docs/LESSONS_3D.md`**
+89 top-level lessons + 96 sub-entries (152k tokens), verbatim — the most expensive knowledge here;
+each cost a whole phase. ⚠️ **Touching the 3D city means `grep`-ing that file FIRST** (it opens with
+its own index). The 3D city is a **finished black box — Đàm forbids touching it.**
 
-⚠️ **Đang làm bất cứ gì đụng thành phố 3D thì PHẢI `grep` file đó TRƯỚC.** Từ khoá hay trúng:
+Five laws kept here because they apply to **every** task, not just 3D:
+1. **Suspect the MEASURING TOOL before the code** — it has lied 28 times.
+2. **An absolute number cannot express a law about a RELATION.**
+3. **A test that has never gone red is not a test** — ask *red when you remove WHAT?*
+4. **A reassuring sentence must be checked like a number.**
+5. **Before trusting a ratio, ask whether the denominator contains things outside the question.**
 
-```bash
-grep -n 'CÔNG CỤ ĐO NÓI DỐI' docs/LESSONS_3D.md   # 28 lần công cụ tự chế nói dối
-grep -n 'GÁNH HAI VIỆC'      docs/LESSONS_3D.md   # 7 lần một trường/bảng gánh hai việc
-grep -n 'PHÉP PHÁ\|THỬ NGƯỢC' docs/LESSONS_3D.md # vì sao một phép phá không nổ
-grep -n 'sweep-score\|ngưỡng mắt 12' docs/LESSONS_3D.md  # cổng không-trôi 15 kỷ
-grep -n 'mái\|mặt đường\|địa hình\|mặt nước\|cư dân\|khu phố' docs/LESSONS_3D.md
-```
+## AI Coach + game engine → detail in **`docs/AI_COACH.md`**
+Gemini specifics (model chain, `tier: 'deep'`, 28s timeout, 6-layer anti-hallucination guard,
+CoachChat/Offline/Nudge, `coach-digest` cron, `buildAnalystContext`) live there. Remember here:
+- ⚠️ **ONE ENGINE = GEMINI (cloud)**; Qwen/WebLLM removed 2026-06-24. No `GEMINI_API_KEY` ⇒ Coach is
+  dead, there is no on-device fallback.
+- ⚠️ Every Coach change goes through the guard; scores printed by `src/engine/coach/eval.test.js`
+  (**FPR = 0**, catch ≥ 90%). A dropping score means a loosened guard.
 
-Năm luật cô đọng nhất, giữ lại đây vì chúng áp cho **mọi** loại task chứ không riêng 3D:
-1. **Nghi CÔNG CỤ ĐO trước, nghi mã sau** — đã 28 lần công cụ tự chế nói dối.
-2. **Một con số tuyệt đối không diễn đạt được một luật nói về QUAN HỆ** (chữ "hơn" trong chú thích).
-3. **Một bài test chưa từng thấy đỏ thì chưa phải test** — và phải hỏi *nó đỏ khi gỡ CÁI GÌ*.
-4. **Một câu tự trấn an phải được kiểm như một con số.**
-5. **Trước khi tin một tỉ lệ, hỏi mẫu số có lẫn thứ không thuộc câu hỏi không.**
+**Pure game engine** is separate from state: formulas in `src/engine/gameMath.js` + `constants.js`,
+state in `src/store/gameStore.js`. Change formulas in the engine, never inline them into the store.
+External data (Supabase/import) **must** pass through `normalizePersistedGameState`.
+⚠️ Hot spot: `completeFocusSession` (~760 lines) — easy to introduce "used a stale value" bugs.
 
-## AI Coach + tầng engine → chi tiết ở **`docs/AI_COACH.md`**
+### Testing — detail in `docs/OPERATIONS.md`
+Always `npm test` + `npm run build` before committing. `npm test` runs **two passes**: `test:fast`
+(**the real count is the last line of THIS pass**, and it must show `# skipped 1`) then `test:cross`
+(~25–33s, prints its own duration). Quick count: `npm run test:fast`.
+⚠️ The slow half is skipped by the **`DC_CROSS_SLOW` env var, NOT `--test-skip-pattern`** (that flag
+silently does nothing). ⚠️ Test glob covers `electron/` · `src/` · `api/` · `scripts/` at any depth —
+adding a folder no longer needs a `package.json` edit.
 
-App có cả một hệ "huấn luyện viên" và engine game thuần. Toàn bộ chi tiết Gemini (chuỗi model,
-`tier: 'deep'`, timeout 28s, lưới chống-bịa 6 lớp, CoachChat/CoachOffline/CoachNudge,
-cron `coach-digest`, tầng số liệu `buildAnalystContext`) nằm ở `docs/AI_COACH.md`.
-
-Ba điều bắt buộc nhớ, giữ lại đây:
-- ⚠️ **CHỈ MỘT ENGINE = GEMINI (đám mây)** — đã gỡ hẳn Qwen/WebLLM 2026-06-24. Thiếu
-  `GEMINI_API_KEY` ở Vercel env ⇒ Coach KHÔNG chạy (không còn lưới on-device dự phòng).
-- ⚠️ Mọi thay đổi Coach phải qua lưới chống-bịa; điểm số in ra bởi `src/engine/coach/eval.test.js`
-  (**FPR = 0**, BẮT ≥ 90%). Tụt điểm = guard bị nới tay.
-- ⚠️ Test API mới LUÔN đặt trong `api/_tests/` (xem mục Vercel 12 Functions ở trên).
-
-- **Engine game thuần** tách khỏi state: công thức ở `src/engine/gameMath.js` + `constants.js`, state ở `src/store/gameStore.js`. Sửa công thức → sửa ở engine, đừng nhồi vào store. Dữ liệu ngoài (Supabase/import) PHẢI đi qua `normalizePersistedGameState`.
-- ⚠️ Điểm nóng: `completeFocusSession` trong `gameStore.js` rất dài (~760 dòng) — sửa cẩn thận, dễ sinh bug "dùng giá trị cũ".
-- Luôn `npm test` trước khi commit + `npm run build`. ⚠️ **`npm test` NAY CHẠY HAI LƯỢT (2026-08-21)**: `test:fast` (mọi bài nhanh — **số bài thật nằm ở dòng cuối của LƯỢT NÀY**, và nó phải hiện `# skipped 1`) rồi `test:cross` (phép đối chiếu chéo `scene-tri` ↔ `plinth-tri`, **~25 giây** sau ADR-048 — trước đó là 70–90 giây tuỳ tải máy, đo được 68,8 · 85,9 · 86,3 giây ở ba lượt, và **chính con số ấy là thứ đã chỉ ra một hồi quy hiệu năng mà không cổng nào canh**; nó **TỰ IN thời gian chạy** thay vì để tài liệu hứa một con số cố định — xem `TECH_DEBT #70`). Muốn xem nhanh số bài → `npm run test:fast`. ⚠️ **Vế chậm được bỏ qua bằng BIẾN MÔI TRƯỜNG `DC_CROSS_SLOW`, KHÔNG bằng `--test-skip-pattern`** — đã thử cờ ấy và nó **không ăn** (Node có liệt kê cờ, không báo lỗi gì, mà bài chậm vẫn chạy ⇒ lượt "nhanh" âm thầm gánh thêm 70 giây). Một cờ bị bỏ qua trong im lặng là đúng thứ dự án này đã bị cắn nhiều lần; cách hiện tại thì `# skipped 1` HIỆN RA, nên nếu ngày nào nó thôi bỏ qua thì con số ấy tự nói. ⚠️ **Glob test ĐÃ ĐỔI 2026-08-12** (`TECH_DEBT #10`): từ danh sách viết tay từng thư mục MỘT CẤP → nay là `'electron/**/*.test.js' 'src/**/*.test.js' 'api/**/*.test.js'`, **để trong dấu nháy đơn** cho chính `node --test` mở rộng (`sh` không có globstar, bỏ nháy là hỏng). Trước đây test đặt trong thư mục con (`src/components/city/…`) sẽ **im lặng không bao giờ chạy** — nay đặt cạnh file nguồn ở bất kỳ độ sâu nào cũng chạy, đúng quy ước ở `PROJECT_STRUCTURE.md`. Thêm thư mục mới KHÔNG cần sửa `package.json` nữa. Công cụ mắt-soi bảng số liệu model nhận: `node --import ./scripts/register-esm-loader.mjs scripts/coach-sample.mjs` (dựng lịch sử mẫu ~24 giờ + in `buildAnalystContext`). Điểm số chống-bịa in ra bởi `src/engine/coach/eval.test.js`.
-
-## Việc đang dở & sắp tới
-→ Xem **`BAN_GIAO.md`** (mục "Sẽ làm tiếp" + "Nhật ký cập nhật"). Web Push iPhone đã xong & deploy.
-
-## KHÔNG làm những thứ này
-- ❌ Không biến Electron thành app chính riêng biệt.
-- ❌ Không dùng localhost / serve-dist.mjs / LaunchAgent làm luồng chạy chính.
-- ❌ Không nhân đôi logic game giữa web và Electron. Logic chính nằm ở web app.
-- ❌ KHÔNG start phiên focus trên dev/localhost — dev dùng chung Supabase row với production, sẽ ghi đè dữ liệu thật của Đàm.
-
+## NEVER do these
+- ❌ Never turn Electron into a separate main app.
+- ❌ Never make localhost / `serve-dist.mjs` / LaunchAgent the primary run path.
+- ❌ Never duplicate game logic between web and Electron. The web app owns the logic.
+- ❌ **Never start a focus session on dev/localhost** — dev shares the production Supabase row and
+  will overwrite Đàm's real data.

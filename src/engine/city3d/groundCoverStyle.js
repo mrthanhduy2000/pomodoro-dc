@@ -14,7 +14,7 @@
  * rơm, giếng, quảng trường lát đá. Chúng RỘNG (gần trọn một ô) và THẤP — đúng ngược với cây.
  *
  * ⚠️ VÀ ĐÂY LÀ THỨ PHỤC VỤ KHUNG **TOÀN CẢNH**, KHÔNG PHẢI CẬN CẢNH — trả lời trước khi viết mã,
- * đúng luật Đàm ra sau Phase 11 (`CLAUDE.md`, HỆ QUẢ 2b). Lý do đo được: ở khung mặc định một Ô
+ * đúng luật Đàm ra sau Phase 11 (`docs/LESSONS_3D.md`, HỆ QUẢ 2b). Lý do đo được: ở khung mặc định một Ô
  * LƯỚI rộng khoảng 60–90 điểm ảnh, tức **gấp 5–7 lần ngưỡng mắt 12** — trong khi một cái ống khói
  * Phase 11 chỉ còn 3–5 điểm ảnh. Một mảng phủ cỡ gần trọn ô là thứ DUY NHẤT trong ba phase gần đây
  * chắc chắn sống sót ở thang toàn cảnh. (Chi tiết nhỏ bên trong mỗi mảng — cọc rào, thành giếng —

@@ -614,7 +614,7 @@ test('⚠️ VẬT CẢN CHỈ GỒM KHỐI TRONG LƯỚI THÀNH PHỐ — cây 
  * ⚠️ TRẦN CHO HỘP BAO KHỐI `city` — VÌ VIỆC 1 VỪA BIẾN MỘT SỰ THẬT CHẮC CHẮN THÀNH MỘT SỰ THẬT
  * MONG MANH, VÀ MỘT SỰ THẬT MONG MANH KHÔNG CÓ TEST THÌ MỤC NÁT TRONG IM LẶNG.
  *
- * Nền của nó là một sự thật kiến trúc đã ghi trong `CLAUDE.md` (Performance Gate vòng 2): *"cả
+ * Nền của nó là một sự thật kiến trúc đã ghi trong `docs/LESSONS_3D.md` (Performance Gate vòng 2): *"cả
  * thành phố chỉ có 7 khối, khối nào cũng hoặc bao trùm camera hoặc có tâm ngay tại gốc toạ độ mà
  * camera thì luôn ngắm vào gốc ⇒ phép cắt theo hộp bao không bỏ được gì"*. Câu ấy nói ra một điều
  * dễ chịu: **KHÔNG có gì bị cắt, nên `đã vẽ` luôn bằng `trong cảnh`** (bài ở trên khoá đúng quan hệ

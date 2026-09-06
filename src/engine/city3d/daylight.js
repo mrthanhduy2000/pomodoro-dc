@@ -156,7 +156,7 @@ export const DAYLIGHT_PROFILES = {
   //     trên cao, trong bầu trời) · đỉnh trời ngả tím chàm · nắng gắt xiên · đèn đã BẬT hết.
   // Nhờ vậy hai chặng tách nhau ở NĂM trục cùng lúc (sắc · độ tươi · sương · tỉ lệ nắng/đèn nền ·
   // đèn đường), chứ không chỉ ở một con số góc màu — một trục thì rất dễ bị các tầng sau (tone
-  // mapping, kẹp kênh) nuốt mất, đúng bài học "BẢNG MÀU ≠ MÀU TRÊN MÀN HÌNH" ở `CLAUDE.md`.
+  // mapping, kẹp kênh) nuốt mất, đúng bài học "BẢNG MÀU ≠ MÀU TRÊN MÀN HÌNH" ở `docs/LESSONS_3D.md`.
   //
   // ⚠️ ĐÃ THỬ "BÌNH MINH HỒNG" VÀ PHẢI BỎ — ĐỪNG THỬ LẠI MÀ KHÔNG ĐỌC ĐOẠN NÀY.
   // Chính đầu file này viết *"bình minh hồng"*, nên bản sửa đầu đẩy chân trời sang 312° (hồng sen).
@@ -230,7 +230,7 @@ export const DAYLIGHT_PROFILES = {
   //   phép toán sai** — phải sửa đúng chỗ toán, rồi mới chỉnh tham số.
   //
   // ⚠️ CÒN MỘT TẦNG NỮA MỚI RA MÀU TRÊN MÀN HÌNH — đúng bài học "BẢNG MÀU ≠ MÀU TRÊN MÀN HÌNH" ở
-  // `CLAUDE.md`, nhưng lần này lệch theo chiều NGƯỢC với mái nhà. Mái nhà render ra tươi GẤP ĐÔI
+  // `docs/LESSONS_3D.md`, nhưng lần này lệch theo chiều NGƯỢC với mái nhà. Mái nhà render ra tươi GẤP ĐÔI
   // bảng màu; bầu trời thì render ra nhạt đi **5 lần** — vì `NeutralToneMapping` ở phơi sáng 1,2 nén
   // mạnh vùng sáng, mà chân trời để độ sáng 0,80 thì nằm đúng giữa vùng bị nén. Nên `palette3d.js`
   // đã hạ độ sáng chân trời xuống 0,70/0,72 và nâng độ tươi lên 0,60/0,44 để thoát vùng nén.

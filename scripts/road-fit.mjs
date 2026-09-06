@@ -23,7 +23,7 @@
  * nói lên điều gì cả — 0,675 là to hay nhỏ thì còn tuỳ mọi thứ khác trong khung hình to cỡ nào.
  * Thứ nói lên "lòi lõm cỡ nào" là **so với chiều cao một căn nhà**: nhảy nửa căn nhà trong một ô
  * thì mắt đọc ra bậc thang; nhảy 1/20 căn nhà thì mắt đọc ra mặt đất hơi gợn. Đây đúng bài học
- * Phase 7D (`CLAUDE.md`): một lời hứa nói về QUAN HỆ thì phải đo bằng một con số QUAN HỆ.
+ * Phase 7D (`docs/LESSONS_3D.md`): một lời hứa nói về QUAN HỆ thì phải đo bằng một con số QUAN HỆ.
  *
  * ⚠️ CHIỀU CAO NHÀ HỎI THẲNG BỘ SINH KHỐI, KHÔNG VIẾT CỨNG. `collectCitySpecs` là nguồn duy nhất
  * trả lời "thành phố này gồm những khối nào"; hỏi nó thì con số không thể già đi khi `massScale`

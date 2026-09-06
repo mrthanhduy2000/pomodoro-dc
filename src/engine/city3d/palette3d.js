@@ -35,7 +35,7 @@ import { getHumanStyle } from './humanStyle';
  *
  * ⚠️ CON SỐ NÀY TỪNG ĐƯỢC PHÁT BIỂU Ở HAI CHỖ VỚI HAI GIÁ TRỊ (phát hiện 2026-08-14): mã kẹp
  * `Math.min(0.70, …)` còn `palette3d.test.js` canh `s <= 0.66`. Đúng cái bẫy **"một luật chỉ được có
- * một công thức"** đã ghi ở `CLAUDE.md` — hai công thức tương đương trên giấy thì gần như luôn lệch
+ * một công thức"** đã ghi ở `docs/LESSONS_3D.md` — hai công thức tương đương trên giấy thì gần như luôn lệch
  * nhau ở biên, và ở đây biên ấy có thật: ngói lưu ly kỷ 4 (`#cf9e17`, Tử Cấm Thành) là vật liệu tươi
  * nhất bảng, ra đúng 0,70 — tức nó lọt qua mã và bị test bắt, hai bên nói ngược nhau về cùng một
  * mái. Nay chỉ còn MỘT số: mã kẹp bằng hằng số này, bài test `import` chính nó.
@@ -768,7 +768,7 @@ export function buildScenePalette({ tokens, eraColor, era: eraNumber, daylight }
   // mà ảnh dựng ra `#9ca8a5`, tức **164° tươi 0,06**. Chính chú thích ở `applyPaintedLook` đã cảnh
   // báo "cao hơn nữa thì trời bắt đầu bạc"; đây là mặt còn lại của cùng hiện tượng.
   // Hạ độ đậm đưa bầu trời RA KHỎI vùng nén, rồi nâng độ tươi bù phần vẫn bị nén.
-  // ⚠️ Đây là bài học "BẢNG MÀU ≠ MÀU TRÊN MÀN HÌNH" đã ghi ở `CLAUDE.md`, lần này theo chiều
+  // ⚠️ Đây là bài học "BẢNG MÀU ≠ MÀU TRÊN MÀN HÌNH" đã ghi ở `docs/LESSONS_3D.md`, lần này theo chiều
   // NGƯỢC với vụ mái nhà (mái thì màn hình TƯƠI GẤP ĐÔI bảng; trời thì màn hình NHẠT ĐI 5 lần).
   // ⇒ Sửa xong PHẢI chụp lại và đo đầu RA, không được tin bảng.
   const horizon = isDark

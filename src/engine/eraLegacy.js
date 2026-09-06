@@ -37,7 +37,7 @@
  * Nó tự cạn: xây xong là hết, không sinh thêm được.~~
  * ⚠️ **CÂU TRÊN ĐÃ HẾT ĐÚNG TỪ 2026-08-13 (ADR-012 — "TRÙNG TU DI SẢN").** Đàm chọn mở cho xây bù
  * bản vẽ kỷ cũ, tức chính cái chặn mà câu đó dựa vào đã bị gỡ. Đây đúng cái bẫy đã ghi ở
- * `CLAUDE.md`: *một luật mới làm cho điều kiện cũ hết đúng*, và mệnh đề cũ thì không tự đỏ lên —
+ * `docs/LESSONS_3D.md`: *một luật mới làm cho điều kiện cũ hết đúng*, và mệnh đề cũ thì không tự đỏ lên —
  * nó chỉ nằm đó nói sai. Nay lời hứa "không thể lạm dụng" được giữ bằng **BA** thứ khác, mỗi thứ
  * chặn một đường:
  *   1. `LEGACY_QUEUE_SLOTS = 1` — mỗi lúc chỉ trùng tu được MỘT công trình (`constants.js`).

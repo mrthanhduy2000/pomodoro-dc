@@ -92,7 +92,7 @@ const MARKING_SET = new Set(MARKING_KINDS);
 /**
  * MƯỜI TRỤC BẢN SẮC. Đọc kỹ ý nghĩa trước khi chỉnh — vài trục trông giống nhau nhưng trả lời hai
  * câu hỏi khác hẳn, và trộn chúng lại chính là cái bẫy "một trường gánh hai việc" đã cắn dự án này
- * bốn lần (xem `CLAUDE.md`).
+ * bốn lần (xem `docs/LESSONS_3D.md`).
  *
  * `avenue`   — bề rộng ĐẠI LỘ, tính theo phần của một ô (1 = rộng trọn ô). Đây là trục mạnh nhất:
  *              mắt đọc bề rộng trước cả màu. Đường mòn 0,52 và đại lộ Dubai 1,0 là hai thế giới.
@@ -471,7 +471,7 @@ export function streetCrossSection(style, rank) {
  *
  * ⚠️ Cái sai gốc là một **giả định về HÌNH**, không phải một con số sai: *"lòng đường của một ô là
  * một hình chữ nhật"*. Chỉnh khéo con số nào cũng không thoát, vì một hình chữ nhật chỉ có hai bề
- * rộng còn một ngã tư cần tới bốn. Cùng họ với "một trường gánh hai việc" (`CLAUDE.md`), chỉ khác
+ * rộng còn một ngã tư cần tới bốn. Cùng họ với "một trường gánh hai việc" (`docs/LESSONS_3D.md`), chỉ khác
  * là ở đây thứ gánh hai việc là một HÌNH DẠNG.
  *
  * ── LUẬT MỚI, SUY THẲNG TỪ CÁCH ĐƯỜNG SÁ NGOÀI ĐỜI GẶP NHAU ───────────────────────────────────

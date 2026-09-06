@@ -13,7 +13,11 @@
 > mà không được refactor triệt để, phải CHỦ ĐỘNG đề xuất mở một "Maintenance Sprint" (nêu rõ mục
 > tiêu/phạm vi/lợi ích/rủi ro/tiêu chí hoàn thành) thay vì tiếp tục cộng thêm tính năng mới.
 >
-> **Trạng thái ngưỡng (2026-09-06 chiều, sau ADR-073 "ngân sách token cho tài liệu")**: thêm
+> **Trạng thái ngưỡng (2026-09-06 tối, sau ADR-074 "tài liệu tự-nạp sang tiếng Anh")**: đóng
+> **#101** (41 lời trỏ sai đích đã sửa theo nội dung từng dòng). **103 mục · 44 đã đóng · 59 còn
+> mở**. Vẫn **1 mục Priority High còn mở** (#53), **0 mục Critical** → xa ngưỡng Maintenance Sprint.
+>
+> *(mốc trước)* **(2026-09-06 chiều, sau ADR-073 "ngân sách token cho tài liệu")**: thêm
 > **#103** (Medium — kho tra cứu đã lớn tới mức một lệnh `cat` nổ cửa sổ ngữ cảnh; luật cấm `cat`
 > hiện là văn bản, chưa phải cổng). **103 mục · 43 đã đóng · 60 còn mở**. Vẫn **1 mục Priority High
 > còn mở** (#53), **0 mục Critical** → xa ngưỡng Maintenance Sprint.
@@ -5707,7 +5711,19 @@ trong chú thích thì đừng để `--selftest` của chính nó vẫn dùng �
   bỏ bộ lọc bậc; lưới vẫn là điểm chính (ADR-028: «không giấu, chỉ gấp» — phần "chưa chạm" đã gấp từ
   2026-09-02). Không làm "đếm theo nhóm": nó là một bảng số nữa chứ không phải một việc.
 
-## #101 — 47 lời trỏ "xem `CLAUDE.md`" trong 38 file mã nguồn nay trỏ tới file KHÔNG CÒN chứa bài học 3D
+## #101 — ✅ **ĐÃ XỬ LÝ (2026-09-06 tối, ADR-074)** — 47 lời trỏ "xem `CLAUDE.md`" trong 38 file mã nay trỏ tới file KHÔNG CÒN chứa bài học 3D
+> ✅ **XỬ LÝ 2026-09-06 (tối)**: quét lại ra **63 dòng / 39 file** (nhiều hơn con số 47 ghi lúc mở, vì
+> hai file `scripts/doc-budget*.js` mới thêm cũng nhắc `CLAUDE.md` một cách hợp lệ). Đã phân loại
+> theo NỘI DUNG từng dòng thay vì thay hàng loạt:
+> · **40 dòng → `docs/LESSONS_3D.md`** (bài học mỹ thuật/đo lường, đã tách sang đó sáng cùng ngày);
+> · **1 dòng → `docs/OPERATIONS.md`** (bẫy NFC/NFD của launchd — thuộc nhóm bẫy Electron tray);
+> · **22 dòng GIỮ NGUYÊN `CLAUDE.md`** vì chúng nói về luật vẫn nằm ở đó (cấm chạy phiên thật trên
+>   dev/localhost, "KHÔNG làm những thứ này", ngân sách token, luật ngôn ngữ).
+> ⚠️ **Một chỗ chưa xác minh được đích**: `src/engine/eraLegacy.js:40` trích *"một luật mới làm cho
+> điều kiện cũ hết đúng"* — `grep` không tìm thấy nguyên văn câu này ở `docs/LESSONS_3D.md` hay
+> `CLAUDE.md`; nó đã được trỏ sang `LESSONS_3D.md` vì đó là nơi khả dĩ nhất, nhưng phiên nào đụng
+> tới file ấy nên xác minh lại và ghi bài học vào đúng chỗ nếu nó thật sự chưa được ghi ở đâu.
+
 
 - **Tên**: Con trỏ chú thích trỏ một cấp thiếu sau khi tách `docs/LESSONS_3D.md`
 - **Module**: `src/engine/city3d/**` · `src/components/city/**` · `scripts/**` (38 file)

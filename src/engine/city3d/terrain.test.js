@@ -450,7 +450,7 @@ test('dữ liệu rác KHÔNG làm nổ, và ngoài lưới thì kẹp về mép
 });
 
 test('mỗi kỷ phải GIẢI THÍCH ĐƯỢC địa hình của mình bằng một nơi có thật', () => {
-  // ⚠️ Cùng luật với `country`/`landmark` ở `eraStyle.js` (`CLAUDE.md`): con số không có lời giải
+  // ⚠️ Cùng luật với `country`/`landmark` ở `eraStyle.js` (`docs/LESSONS_3D.md`): con số không có lời giải
   // thích là con số tuỳ hứng, và tuỳ hứng chính là thứ đã sinh ra "15 kỷ cao bằng nhau" ở Phase 5B.
   for (const era of ERAS) {
     const profile = ERA_TERRAIN[era];

@@ -12,7 +12,7 @@
  * công trình đó ở tab Thành Phố vẫn vẽ đúng một cọc mốc thấp. Hai màn hình nói hai chuyện khác nhau
  * về một sự thật.
  *
- * Đây đúng là hình dạng sai mà `CLAUDE.md` đã ghi thành luật: **"một luật chỉ được có một công
+ * Đây đúng là hình dạng sai mà `docs/LESSONS_3D.md` đã ghi thành luật: **"một luật chỉ được có một công
  * thức — thấy hai chỗ cùng phát biểu một luật thì gộp lại NGAY"**. Hai công thức "tương đương trên
  * giấy" gần như luôn lệch nhau ở BIÊN, và biên chính là chỗ dữ liệu hỏng đi qua.
  *

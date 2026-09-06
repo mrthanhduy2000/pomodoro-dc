@@ -314,7 +314,7 @@ export function applyPaintedLook(renderer) {
   //
   // ⚠️ VÀ NÓ ĐÃ CẮN THẬT, Ở CHỖ ĐẮT NHẤT: cỡ bản đồ bóng đổ được viết cứng ở ba nơi với **ba giá
   // trị khác nhau** — app 1024, trang xem thử một-kỷ 1024, còn **bản QUÉT 15 kỷ chỉ 512**. Mà bản
-  // quét chính là công cụ mà `CLAUDE.md` bắt buộc dùng để duyệt mỹ thuật (*"sửa mỹ thuật thành phố
+  // quét chính là công cụ mà `docs/LESSONS_3D.md` bắt buộc dùng để duyệt mỹ thuật (*"sửa mỹ thuật thành phố
   // 3D thì PHẢI QUÉT"*). Nghĩa là mọi nhận xét về bóng đổ rút ra từ bảng quét — suốt nhiều phase —
   // đều đang nói về một thế giới có bóng thô gấp đôi thứ Đàm nhìn thấy. Không có gì đỏ lên: ảnh
   // vẫn dựng ra, chỉ là nó trả lời một câu hỏi khác câu mình đang hỏi.

@@ -1,168 +1,174 @@
-# GOVERNANCE — quy tắc quản trị dự án + quy trình làm việc chuẩn
+# GOVERNANCE — project governance rules + the standard working process
 
-> **Tách khỏi `CLAUDE.md` ngày 2026-09-06** để `CLAUDE.md` (file TỰ NẠP 100% mỗi phiên, tính tiền
-> ở MỌI phiên kể cả phiên chẳng liên quan) về dưới trần. **Không xoá một chữ nào** — nguyên văn
-> hai mục "PROJECT GOVERNANCE PROTOCOL" và "AI ENGINEERING PLAYBOOK" nằm dưới đây.
+> Split out of `CLAUDE.md` on 2026-09-06 (that file auto-loads 100% in every session, so it is billed
+> even in sessions that have nothing to do with process). Translated to English 2026-09-06 evening —
+> Vietnamese costs ~2.3× the tokens for the same meaning. **Nothing was deleted in either pass.**
 >
-> **Mở file này khi:** làm một task đáng kể và cần biết phải cập nhật tài liệu nào · cần mẫu
-> Technical Advisor Report · phân vân về quy trình 7 giai đoạn · sắp tạo module/abstraction mới.
-> **Không cần mở khi:** sửa mỹ thuật 3D (dùng `PHASE_RULES.md`) hoặc một sửa lỗi nhỏ.
+> **Open this when:** doing a substantial task and needing to know which docs to update · needing the
+> Technical Advisor Report template · unsure about the 7-stage process · about to create a new
+> module/abstraction. **Skip it for:** 3D art work (use `PHASE_RULES.md`) or a small bug fix.
 
-## 📋 PROJECT GOVERNANCE PROTOCOL (2026-07-12 — áp dụng vĩnh viễn, mọi phiên AI tương lai)
+## PROJECT GOVERNANCE PROTOCOL (2026-07-12 — permanent, every future AI session)
 
-Project gồm **3 thành phần giá trị ngang nhau**: (1) Source Code, (2) Documentation, (3) Project
-Knowledge (quyết định/lịch sử/bối cảnh). Code chỉ nói "hệ thống chạy thế nào" — chỉ tài liệu mới
-giữ được "vì sao nó chạy như vậy". Nếu 3 thành phần này lệch nhau, coi như CHƯA XONG việc dù code
-đã đúng/build/test/lint đều xanh.
+The project has **three components of equal value**: (1) Source Code, (2) Documentation, (3) Project
+Knowledge (decisions / history / context). Code only says *how* the system runs — only documentation
+preserves *why* it runs that way. If the three drift apart, the task is **NOT DONE**, even when the
+code is correct and build/test/lint are all green.
 
-### Definition of Done (áp dụng mọi task, không ngoại lệ)
-✓ Source code đúng · ✓ Build thành công · ✓ Test thành công · ✓ Lint thành công ·
-✓ **Documentation đã đồng bộ** · ✓ **Project Knowledge đã đồng bộ**. Thiếu 1 mục = chưa xong.
+### Definition of Done (every task, no exceptions)
+✓ Source code correct · ✓ Build succeeds · ✓ Tests pass · ✓ Lint passes ·
+✓ **Documentation in sync** · ✓ **Project Knowledge in sync**. One missing = not done.
 
-### Bảng: loại thay đổi → tài liệu PHẢI cập nhật
-Sau mỗi thay đổi, tự hỏi: có ảnh hưởng kiến trúc/module/workflow/AI/notification/sync/timer/store/
-API/database/build/deploy/folder/naming/dependency/testing/performance không? Nếu CÓ, tự xác định
-(không đợi Đàm nhắc) tài liệu nào trong bảng sau cần sửa:
+### Table: change type → documentation that MUST be updated
+After every change, ask: does this affect architecture / modules / workflow / AI / notifications /
+sync / timer / store / API / database / build / deploy / folders / naming / dependencies / testing /
+performance? If YES, decide for yourself (do not wait to be told) which docs below need updating:
 
-| Tài liệu | Vai trò (KHÔNG lẫn với các file khác) | Khi nào phải sửa |
+| Document | Role (never blurred with the others) | When to update |
 |---|---|---|
-| `README.md` | CHỈ trang giới thiệu: project là gì/chạy thế nào/build thế nào/deploy thế nào/đọc tiếp gì. KHÔNG nhồi kiến trúc sâu vào đây. | Đổi cách chạy/build/deploy, hoặc thêm tài liệu mới cần trỏ tới |
-| `ARCHITECTURE.md` | Bức tranh lớn: layer/module/dependency/state flow/AI flow/sync flow/notification flow/storage flow/database flow | Bất kỳ FLOW nào đổi |
-| `PROJECT_STRUCTURE.md` | Cây thư mục + quy tắc tạo module/chia folder/import/shared module/đặt tên | Đổi cấu trúc thư mục, thêm quy ước mới |
-| `CHANGELOG.md` | Tóm tắt CHÍNH THỨC, ngắn gọn theo mốc (mục đích/phạm vi/ảnh hưởng/tương thích) — KHÔNG phải lịch sử commit | Mọi thay đổi quan trọng (không phải mọi commit nhỏ) |
-| `MIGRATION.md` | Chỉ ghi khi đổi API/module/đường dẫn/workflow/state/storage/database/folder | CHỈ khi có migration thật — không có thì không cần ghi |
-| `ARCHITECTURE_DECISIONS.md` | "Bộ nhớ kiến trúc" — mỗi quyết định: Ngày/Bối cảnh/Vấn đề/Phương án cân nhắc/Lý do loại bỏ/Giải pháp chọn/Trade-off/Ảnh hưởng/Điều kiện xem lại | Quyết định có ≥2 phương án thật sự cân nhắc + trade-off thật + ảnh hưởng lâu dài |
-| `TECH_DEBT.md` | Mọi nợ kỹ thuật đã biết (đủ 14 trường: Tên/Module/Priority/Severity/Impact/Root Cause/Current Risk/Future Risk/Recommended Solution/Estimated Complexity/Blocking Conditions/Review Trigger/Owner/Status) | Phát hiện nợ mới mà rủi ro thấp thì xử lý luôn; rủi ro trung bình/cao hoặc ngoài phạm vi task hiện tại → PHẢI ghi vào đây, không bỏ qua |
-| `AI_ONBOARDING.md` | Đọc nhanh 10-15 phút — nếu AI mới cần audit cả codebase mới hiểu project thì file này CHƯA đạt yêu cầu | Đổi module quan trọng nhất/rủi ro cao/bài học lớn mới |
-| `AI_HANDOFF_KNOWLEDGE.md` | Bàn giao tri thức ĐẦY ĐỦ nhất (domain/flow/ADR/tech debt chi tiết) — để bàn giao cho AI khác hoàn toàn không có quyền đọc code | Thay đổi lớn ảnh hưởng nhiều phần của tài liệu này |
-| `BAN_GIAO.md` | Trạng thái hiện tại + nhật ký CHI TIẾT từng việc — luôn cập nhật, đây là NGUYÊN TẮC ƯU TIÊN SỐ 1 có sẵn | MỌI thay đổi dù nhỏ |
+| `README.md` | ONLY the front page: what the project is, how to run/build/deploy, what to read next. No deep architecture here. | run/build/deploy changed, or a new doc needs a pointer |
+| `ARCHITECTURE.md` | The big picture: layers / modules / dependencies / state flow / AI flow / sync flow / notification flow / storage flow / database flow | any FLOW changes |
+| `PROJECT_STRUCTURE.md` | Folder tree + rules for creating modules / splitting folders / imports / shared modules / naming | folder structure changes, new conventions |
+| `CHANGELOG.md` | The OFFICIAL short summary per milestone (purpose / scope / impact / compatibility) — NOT a commit log | every significant change (not every small commit) |
+| `MIGRATION.md` | Only for changes to API / module / path / workflow / state / storage / database / folder | ONLY when a real migration exists |
+| `ARCHITECTURE_DECISIONS.md` | The "architectural memory" — each decision: Date / Context / Problem / Options weighed / Why each was rejected / Chosen solution / Trade-offs / Impact / Review conditions | a decision with ≥2 genuinely weighed options, real trade-offs, and lasting impact |
+| `TECH_DEBT.md` | Every known technical debt (all 14 fields: Name/Module/Priority/Severity/Impact/Root Cause/Current Risk/Future Risk/Recommended Solution/Estimated Complexity/Blocking Conditions/Review Trigger/Owner/Status) | new debt found: low risk → fix it now; medium/high risk or out of scope → it MUST be recorded here, never skipped |
+| `AI_ONBOARDING.md` | A 10–15 minute read — if a new AI must audit the whole codebase to understand the project, this file has failed | the most important / highest-risk module changes, or a major new lesson |
+| `AI_HANDOFF_KNOWLEDGE.md` | The FULLEST knowledge handoff (domain / flows / ADRs / detailed debt) — written for an AI with no access to the code at all | large changes touching many parts of this document |
+| `BAN_GIAO.md` | Current state + a DETAILED log of every item — always updated; this is PRIORITY RULE #1 | EVERY change, however small |
 
-### Ngưỡng "Maintenance Sprint"
-Khi `TECH_DEBT.md` có **≥8-10 mục Priority High/Critical**, HOẶC một module đã trải qua ≥3 lần vá
-lỗi/refactor nhỏ mà chưa từng refactor triệt để, hãy CHỦ ĐỘNG đề xuất mở một "Maintenance Sprint"
-(nêu rõ mục tiêu/phạm vi/lợi ích/rủi ro/tiêu chí hoàn thành) thay vì tiếp tục cộng thêm tính năng
-mới. Trạng thái ngưỡng hiện tại: xem đầu `TECH_DEBT.md`.
+### "Maintenance Sprint" threshold
+When `TECH_DEBT.md` holds **≥8–10 High/Critical items**, OR one module has been through ≥3 small
+patches/refactors without ever being refactored properly, **proactively propose a "Maintenance
+Sprint"** (state goal / scope / benefit / risk / completion criteria) instead of piling on more
+features. Current threshold status: see the top of `TECH_DEBT.md`.
 
-### Tính nhất quán kiến trúc (tự hỏi trước khi tạo mới)
-Trước khi tạo folder/module/service/hook/component/store/helper/abstraction/API/utility mới, tự
-hỏi: có tăng coupling không? có làm project khó hiểu hơn không? có tạo thêm 1 pattern mới trong khi
-pattern tương tự đã tồn tại không (tái sử dụng được không)? có tạo thêm nợ kỹ thuật mới không? Nếu
-có cách nhất quán hơn (khớp quy ước đã có ở `PROJECT_STRUCTURE.md`) → ưu tiên cách đó.
+### Architectural consistency (ask before creating anything new)
+Before creating a new folder / module / service / hook / component / store / helper / abstraction /
+API / utility, ask: does this increase coupling? does it make the project harder to understand? does
+it introduce a second pattern where one already exists (could it be reused)? does it create new
+technical debt? If a more consistent path exists (matching the conventions in
+`PROJECT_STRUCTURE.md`) — take that path.
 
-### Self-audit trước khi kết thúc task
-Kiểm tra: code/test/lint/build, dead code, duplicate logic, unused imports/dependencies,
-documentation, kiến trúc, tính nhất quán folder/naming/import, technical debt, knowledge update.
-Vấn đề rủi ro thấp/trung bình phát hiện được → xử lý luôn, không cần đợi Đàm yêu cầu (rủi ro cao →
-báo trước theo quy tắc "HỎI TRƯỚC KHI LÀM" ở trên).
+### Self-audit before finishing a task
+Check: code/test/lint/build, dead code, duplicate logic, unused imports/dependencies, documentation,
+architecture, folder/naming/import consistency, technical debt, knowledge updates. Low/medium-risk
+issues found → fix them now without being asked (high risk → report first, per ASK BEFORE ACTING).
 
-### Bảo tồn kinh nghiệm (Knowledge Preservation)
-Nếu trong lúc làm việc phát hiện: kinh nghiệm mới, bài học mới, bug đặc biệt, edge case, giới hạn
-của framework/Supabase/Electron/Vercel/AI/Browser — tự hỏi "thông tin này có giúp phiên sau tránh
-lặp lại sai lầm không?". Nếu có, PHẢI bổ sung vào tài liệu phù hợp (bảng ở trên) — không được để
-những bài học này chỉ tồn tại trong cuộc hội thoại rồi biến mất khi phiên kết thúc.
+### Knowledge preservation
+If, while working, you discover a new lesson, an unusual bug, an edge case, or a limitation of the
+framework / Supabase / Electron / Vercel / AI / browser — ask: *would this stop a future session
+repeating a mistake?* If yes, it MUST be added to the right document (table above). These lessons
+must never exist only in the conversation and vanish when the session ends.
 
-### Báo cáo bàn giao cuối phiên (khi hoàn thành một task đáng kể)
-1. Đã thay đổi gì · 2. Quyết định kiến trúc mới (nếu có) · 3. Tech debt đã xử lý · 4. Tech debt còn
-lại · 5. Migration nếu có · 6. Tài liệu đã cập nhật · 7. Giả định mới của hệ thống · 8. Bài học mới
-(Lesson Learned) · 9. Việc phiên sau cần biết · 10. Việc tuyệt đối chưa nên làm + lý do · 11. Đề
-xuất bước tiếp theo. Mục nào không đổi → ghi rõ "Không có thay đổi" (đừng bỏ qua im lặng). Áp dụng
-mục này ở MỨC ĐỘ PHÙ HỢP với quy mô task — một sửa lỗi nhỏ không cần đủ 11 mục, nhưng một task lớn
-(refactor, tính năng mới, sự cố) thì có.
+### End-of-session handoff report (for any substantial task)
+1. What changed · 2. New architectural decisions (if any) · 3. Debt paid · 4. Debt remaining ·
+5. Migration if any · 6. Docs updated · 7. New system assumptions · 8. Lessons learned ·
+9. What the next session must know · 10. What must NOT be done yet, and why · 11. Proposed next step.
+Anything unchanged → write "no change" explicitly, never skip it silently. **Scale this to the size
+of the task** — a small fix does not need 11 points; a refactor, a new feature, or an incident does.
 
-### TECHNICAL ADVISOR REPORT (bắt buộc từ 2026-07-17, sau MỖI task hoàn thành; bổ sung cùng ngày: mục 0 + mục 10 + viết 100% tiếng Việt)
-Ngoài báo cáo thường, PHẢI kèm một phần tiêu đề "TECHNICAL ADVISOR REPORT" — viết cho một **AI
-Technical Advisor độc lập (GPT)** đánh giá kiến trúc, KHÔNG phải cho Đàm. Ngắn gọn nhưng đủ ngữ
-cảnh; tối đa ~1-2 trang A4; không văn dài/không marketing/không tự khen/không lặp changelog.
-**NGÔN NGỮ: 100% tiếng Việt** (cả tiêu đề mục lẫn nội dung). CHỈ giữ tiếng Anh cho: tên file/
-class/hàm/biến, commit hash, API, framework, và thuật ngữ không có cách dịch tự nhiên (CAS,
-debounce, snapshot, whitelist...).
-Đúng 11 mục theo thứ tự:
-0. **Vì sao làm task này lúc này?** (≤10 dòng) — thuộc Priority nào của Roadmap A · gỡ blocker
-   nào · cải thiện điều kiện chuyển Phase nào · nếu KHÔNG làm thì rủi ro gì · vì sao ROI cao hơn
-   các task tồn đọng khác. Nếu KHÔNG phải task ROI cao nhất → giải thích vì sao vẫn làm.
-1. **Mục tiêu** — "tôi được yêu cầu làm gì?" (≤5 dòng).
-2. **Đã thay đổi gì** — chính xác file tạo mới / sửa / xoá; file lớn thì ghi module bị ảnh hưởng.
-3. **Quyết định kiến trúc** — QUAN TRỌNG NHẤT: vì sao chọn A thay vì B, vì sao chưa refactor,
-   vì sao test trước, vì sao giữ tương thích ngược, vì sao hoãn việc gì.
-4. **Giả định** — mọi giả định đã dùng (API không đổi, version luôn tăng, 1 phiên active...).
-   Không có → "Không có."
-5. **Rủi ro mới phát sinh** — rủi ro MỚI do thay đổi này. Không có → "Không có."
-6. **Blocker còn lại** — những gì còn chặn Giai đoạn hiện tại (≤10 dòng).
-7. **Tác động lên Roadmap** — chấm TỪNG mục: God File · Duplicate · Test · Sync · Nợ kỹ thuật ·
-   Độ ổn định AI Coach, theo thang: Không ảnh hưởng / Cải thiện nhẹ / Cải thiện / Hoàn thành.
-8. **Độ tự tin** — %; DƯỚI 90% phải giải thích lý do.
-9. **Câu hỏi cho Technical Advisor** — ≤5 câu hỏi kiến trúc/hướng đi chưa chắc. Không có → "Không có."
-10. **Đề xuất task tiếp theo** — đúng MỘT task (không phải danh sách): vì sao quan trọng nhất ·
-    điều kiện Phase A nào tiến thêm · hoàn thành xong mở khoá điều gì. Nhiều lựa chọn ngang nhau
-    → nêu trade-off rồi CHỌN MỘT.
+### TECHNICAL ADVISOR REPORT (mandatory since 2026-07-17, after EVERY completed task)
+On top of the normal report, include a section titled "TECHNICAL ADVISOR REPORT" — written for an
+**independent AI Technical Advisor (GPT)** reviewing the architecture, *not* for Đàm. Concise but
+with enough context; max ~1–2 A4 pages; no padding, no marketing, no self-praise, no repeating the
+changelog. **LANGUAGE: 100% Vietnamese** (headings and body) — this report is read by Đàm and his
+advisor, unlike the docs. Keep English only for: file / class / function / variable names, commit
+hashes, APIs, frameworks, and terms with no natural translation (CAS, debounce, snapshot, whitelist…).
 
-## 🛠️ AI ENGINEERING PLAYBOOK (Operating Manual — quy trình làm việc, 2026-07-12)
+Exactly 11 points, in order:
+0. **Why this task now?** (≤10 lines) — which Roadmap A priority · which blocker it clears · which
+   phase-transition condition it improves · what the risk of NOT doing it is · why its ROI beats the
+   other pending tasks. If it is NOT the highest-ROI task, explain why it was done anyway.
+1. **Goal** — "what was I asked to do?" (≤5 lines).
+2. **What changed** — exactly which files were created / modified / deleted; for large files, name
+   the affected modules.
+3. **Architectural decisions** — THE MOST IMPORTANT: why A instead of B, why not refactor yet, why
+   test first, why keep backward compatibility, what was postponed and why.
+4. **Assumptions** — every assumption relied on (API unchanged, version always increases, one active
+   session…). None → "Không có."
+5. **New risks** — risks NEWLY created by this change. None → "Không có."
+6. **Remaining blockers** — what still blocks the current stage (≤10 lines).
+7. **Roadmap impact** — score EACH: God File · Duplication · Tests · Sync · Technical debt · AI Coach
+   stability, on the scale: no effect / slight improvement / improvement / complete.
+8. **Confidence** — a percentage; BELOW 90% must be explained.
+9. **Questions for the Technical Advisor** — ≤5 open architectural questions. None → "Không có."
+10. **Proposed next task** — exactly ONE task (not a list): why it matters most · which Phase A
+    condition it advances · what completing it unlocks. Several equal candidates → state the
+    trade-offs, then PICK ONE.
 
-> Đây là quy trình làm việc TIÊU CHUẨN cho mọi AI tiếp quản project (Claude Code/Codex/ChatGPT...),
-> không riêng phiên nào. Mục Governance Protocol ở trên quản lý "tài liệu có đồng bộ với code
-> không"; mục này quản lý "AI thực hiện MỘT task như thế nào, từng bước". Hai mục KHÔNG lặp lại
-> nhau — chỗ nào trùng, mục này trỏ ngược lên Governance Protocol thay vì chép lại (đúng tinh thần
-> "Composition over Duplication" ngay bên dưới).
+⚠️ **Since 2026-09-06 this 11-point report is written ONLY for architecture / infrastructure /
+Supabase-sync / database / AI Coach / deploy / security / large-refactor / incident tasks.** Small
+fixes and 3D art phases use the 5-line report in `PHASE_RULES.md` §6. Never write both for one task.
 
-### Triết lý
-Không tối ưu cho việc hoàn thành nhanh — tối ưu cho khả năng bảo trì nhiều năm. Khi có nhiều cách
-giải quyết, ưu tiên phương án: đơn giản hơn, dễ bảo trì hơn, ít coupling hơn, ít nợ kỹ thuật hơn,
-khớp kiến trúc hiện tại hơn. Vai trò của AI khi làm việc ở đây không chỉ là "người viết code" —
-đồng thời là Senior Engineer, Software Architect, Reviewer, QA Engineer, Technical Writer, và
+---
+
+## AI ENGINEERING PLAYBOOK (operating manual, 2026-07-12)
+
+> This is the STANDARD working process for every AI taking over this project (Claude Code / Codex /
+> ChatGPT…). The Governance Protocol above governs *"are the docs in sync with the code"*; this
+> section governs *"how an AI executes ONE task, step by step"*. The two never repeat each other —
+> where they would overlap, this section points upward instead of copying ("Composition over
+> Duplication", below).
+
+### Philosophy
+Do not optimise for finishing fast — optimise for being maintainable for years. Given several
+solutions, prefer the one that is simpler, easier to maintain, less coupled, carries less debt, and
+fits the existing architecture better. The AI's role here is not just "the one who writes code" — it
+is simultaneously Senior Engineer, Software Architect, Reviewer, QA Engineer, Technical Writer and
 Maintainer.
 
-### Quy trình chuẩn — 7 giai đoạn (không bỏ qua nếu không có lý do đặc biệt)
-1. **Hiểu yêu cầu** — xác định loại task (Feature/Bug Fix/Refactor/Performance/Documentation/
-   Architecture/Infrastructure/AI/Database/Deployment) + phạm vi ảnh hưởng đầy đủ TRƯỚC khi viết
-   dòng code nào.
-2. **Audit** — module đang chạy ra sao? đã có abstraction/helper/util tương tự chưa? có pattern
-   project đang dùng không? có ADR/Tech Debt/bug cũ nào liên quan không (xem
-   `ARCHITECTURE_DECISIONS.md`/`TECH_DEBT.md`)? Ưu tiên tái dùng cái đã có hơn viết mới.
-3. **Thiết kế** — thay đổi nhỏ thì làm luôn; thay đổi vừa/lớn phải tự phân tích phạm vi/ảnh hưởng/
-   dependency/migration/rollback/test strategy TRƯỚC. Ảnh hưởng kiến trúc → tạo entry mới trong
-   `ARCHITECTURE_DECISIONS.md` (theo đúng format ADR đã có).
-4. **Thực hiện** — không copy logic, không tạo abstraction/helper trùng cái đã có, không tăng
-   coupling/độ phức tạp nếu không cần. Phát hiện duplicate/dead code/naming lệch/module sai trách
-   nhiệm trong lúc làm → xử lý LUÔN nếu rủi ro thấp/trung bình, không đợi task khác.
-5. **Self Review** — tự soát logic/naming/readability/maintainability/architecture/performance/
-   security/consistency TRƯỚC khi commit.
-6. **Validation** — build + lint + test luôn luôn. Task đụng API/Database/Sync/Notification/AI/
-   Deployment/Realtime → phải kiểm tra CẢ LUỒNG liên quan, không chỉ file vừa sửa.
-7. **Knowledge Update** — dùng bảng "loại thay đổi → tài liệu cần cập nhật" ở mục Governance
-   Protocol phía trên (không lặp lại bảng ở đây).
+### The standard 7 stages (never skipped without a specific reason)
+1. **Understand the request** — identify the task type (Feature / Bug Fix / Refactor / Performance /
+   Documentation / Architecture / Infrastructure / AI / Database / Deployment) and its full blast
+   radius BEFORE writing a line of code.
+2. **Audit** — how does the module work today? does a similar abstraction/helper/util already exist?
+   is there a pattern the project already uses? any related ADR / tech debt / old bug (see
+   `ARCHITECTURE_DECISIONS.md` / `TECH_DEBT.md`)? Prefer reusing what exists over writing new.
+3. **Design** — small changes: just do them. Medium/large: analyse scope / impact / dependencies /
+   migration / rollback / test strategy FIRST. Architectural impact → add an entry to
+   `ARCHITECTURE_DECISIONS.md` (following the existing ADR format).
+4. **Implement** — do not copy logic, do not create an abstraction that duplicates an existing one,
+   do not add coupling or complexity without need. Duplicates / dead code / inconsistent naming /
+   misplaced responsibility found along the way → fix them NOW if low/medium risk, do not defer.
+5. **Self review** — logic / naming / readability / maintainability / architecture / performance /
+   security / consistency, BEFORE committing.
+6. **Validation** — always build + lint + test. Tasks touching API / Database / Sync / Notification /
+   AI / Deployment / Realtime must exercise the WHOLE relevant flow, not just the edited file.
+7. **Knowledge update** — use the "change type → doc to update" table in the Governance Protocol
+   above (not repeated here).
 
-### Quy trình theo từng loại task
-- **Feature**: Audit → Thiết kế → Đánh giá ảnh hưởng → Code → Test → Documentation → Knowledge Update.
-- **Bug Fix**: Reproduce → Root Cause Analysis → Fix → Regression Test → Lesson Learned → Knowledge
-  Update. **Sửa nguyên nhân gốc, không sửa triệu chứng** — đúng tinh thần đã áp dụng cho mọi sự cố
-  production trong lịch sử dự án (xem `AI_HANDOFF_KNOWLEDGE.md` Phần 11).
-- **Refactor**: Audit → Risk Analysis → Refactor Plan → Refactor → Regression Test → Architecture
-  Review → Documentation.
-- **Architecture Change**: KHÔNG thực hiện ngay — đánh giá + phân tích trade-off + cân nhắc phương
-  án + viết `ARCHITECTURE_DECISIONS.md` TRƯỚC, rồi mới thay đổi.
+### Process by task type
+- **Feature**: Audit → Design → Impact assessment → Code → Test → Documentation → Knowledge update.
+- **Bug Fix**: Reproduce → Root cause analysis → Fix → Regression test → Lesson learned → Knowledge
+  update. **Fix the root cause, never the symptom** — as applied to every production incident in this
+  project's history (see `AI_HANDOFF_KNOWLEDGE.md` part 11).
+- **Refactor**: Audit → Risk analysis → Refactor plan → Refactor → Regression test → Architecture
+  review → Documentation.
+- **Architecture change**: DO NOT implement immediately — assess, analyse trade-offs, weigh options,
+  and write `ARCHITECTURE_DECISIONS.md` FIRST, then change.
 
-### Quy tắc kiến trúc (luôn ưu tiên)
+### Architectural rules (always preferred)
 Single Responsibility · High Cohesion · Low Coupling · Reuse over Rewrite · Composition over
-Duplication · Explicit over Implicit. Không hy sinh kiến trúc để đổi lấy tốc độ hoàn thành.
+Duplication · Explicit over Implicit. **Never sacrifice architecture for speed of completion.**
 
-### Quy tắc về AI: không giả định, không suy diễn
-Không chắc chắn → kiểm tra source code. Source code chưa đủ → đọc tài liệu. Tài liệu chưa đủ → NÓI
-RÕ điều còn thiếu, không tự suy đoán rồi trình bày như sự thật. Đây CHÍNH XÁC là nguyên tắc chống-
-bịa đã áp dụng cho AI Coach (`src/engine/coach/guard.js`, xem `ARCHITECTURE.md` mục 3) — áp dụng
-lại cho chính AI đang code, không chỉ cho AI Coach của app.
+### Rule about AI: no assumptions, no inference
+Not sure → check the source code. Source not enough → read the docs. Docs not enough → **STATE what
+is missing**; never guess and present it as fact. This is exactly the anti-hallucination principle
+applied to the AI Coach (`src/engine/coach/guard.js`, see `ARCHITECTURE.md` §3) — applied here to the
+AI writing the code, not just to the app's Coach.
 
-### Quy tắc Review (bổ sung, không lặp Self-audit ở Governance Protocol)
-Ngoài checklist Self-audit đã có ở trên, trước khi kết thúc task tự hỏi thêm: có ADR mới cần ghi
-không? có Migration cần ghi không? có cần ghi Lesson Learned không? Câu trả lời Có → xử lý trước
-khi kết thúc, không để lại cho phiên sau.
+### Review rules (in addition to the Self-audit above)
+Beyond the Self-audit checklist, before finishing ask: is there a new ADR to write? a migration to
+record? a lesson learned to capture? If yes → handle it before finishing, never leave it to the next
+session.
 
-### Quy tắc Commit
-Mỗi commit: mục tiêu rõ ràng, phạm vi rõ ràng, KHÔNG trộn nhiều thay đổi không liên quan, có thể
-rollback độc lập. Không tạo commit chỉ để "tiện tay".
+### Commit rules
+Every commit: one clear goal, one clear scope, NO unrelated changes mixed in, independently
+revertable. Never create a commit just because it is convenient.
 
-### Continuous Improvement
-Sau mỗi task, tự hỏi: project hiện sạch hơn/ít nợ kỹ thuật hơn/ít duplicate hơn/ít coupling hơn/
-tài liệu tốt hơn/AI sau dễ tiếp quản hơn so với TRƯỚC khi bắt đầu không? Nếu Không → cân nhắc làm
-thêm vài cải tiến nhỏ rủi ro thấp trước khi kết thúc. Thành công không đo bằng số dòng code viết ra
-— đo bằng việc project rõ ràng hơn, ổn định hơn, dễ phát triển hơn sau mỗi phiên.
-
+### Continuous improvement
+After each task ask: is the project now cleaner / less indebted / less duplicated / less coupled /
+better documented / easier for the next AI to take over than BEFORE you started? If no → consider a
+few low-risk improvements before finishing. Success is not measured in lines of code written — it is
+measured by the project being clearer, more stable and easier to grow after every session.

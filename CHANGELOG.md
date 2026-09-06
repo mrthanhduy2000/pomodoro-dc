@@ -10,6 +10,19 @@
 > **Muốn hiểu VÌ SAO một quyết định được chọn** → `ARCHITECTURE_DECISIONS.md`. **Muốn biết migration
 > cụ thể nào cần chạy** → `MIGRATION.md`.
 
+## 2026-09-06 (tối) — Tài liệu tự-nạp chuyển sang tiếng Anh + cổng canh ngôn ngữ (ADR-074)
+
+- **Mục đích**: tiếng Việt tốn ~2,3 lần token so với tiếng Anh cho cùng một ý (1,723 vs ~4 ký
+  tự/token). Với file tự nạp mỗi phiên, chi phí đó nhân với số phiên.
+- **Phạm vi**: dịch + tái cấu trúc `CLAUDE.md` · `START_HERE.md` · `PHASE_RULES.md` · `AGENTS.md` ·
+  `docs/GOVERNANCE.md` · `docs/OPERATIONS.md`. Thêm cổng canh ngôn ngữ vào
+  `scripts/docBudget.test.js` (đoạn tiếng Việt trong file tự-nạp = test đỏ), đo theo ĐOẠN chứ không
+  theo toàn file. Kho tra cứu (2,6 triệu ký tự) **không dịch** — phần cũ giữ tiếng Việt, phần mới
+  viết tiếng Anh; ranh giới ghi thành bảng trong `CLAUDE.md`.
+- **Ảnh hưởng**: 4 file bắt buộc mỗi phiên **25.702 → 10.075 token (−61%)**; riêng `CLAUDE.md` cả
+  ngày đi từ 21.600 → 3.839 token (−82%). Báo cáo cho Đàm vẫn 100% tiếng Việt.
+- **Tương thích**: không đụng một dòng mã sản phẩm nào. Test 1.602 → 1.605 bài.
+
 ## 2026-09-06 (chiều) — Ngân sách token cho tài liệu: tách file + cổng canh bằng test (ADR-073)
 
 - **Mục đích**: cửa sổ ngữ cảnh bị chính tài liệu dự án ăn hết. Đo được 18 file `.md` =

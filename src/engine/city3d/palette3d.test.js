@@ -586,7 +586,7 @@ test('MÁI NHÀ: 15 KỶ PHẢI RA 15 MÀU — đi hết 15 kỷ mà thành ph�
 });
 
 test('ĐỐI CHỨNG: bộ hàng rào mới PHẢI còn bắt được bảng mái hỏng đã từng chạy thật', () => {
-  // ⚠️ VÌ SAO CÓ BÀI NÀY. Bài trên vừa **nới** một hàng rào (múi màu 6 → 4). `CLAUDE.md` có luật
+  // ⚠️ VÌ SAO CÓ BÀI NÀY. Bài trên vừa **nới** một hàng rào (múi màu 6 → 4). `docs/LESSONS_3D.md` có luật
   // riêng cho đúng tình huống ấy: *"nhốt sẵn bộ giá trị HỎNG cũ vào một bài đối chứng bắt buộc phép
   // đo phải còn bắt được nó — đó là cách duy nhất giữ cho ngưỡng không bị nới dần cho tiện"*.
   // May mắn là ở đây bản hỏng KHÔNG cần dựng lại bằng tay: nó vẫn còn sống trong mã, chính là nhánh

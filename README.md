@@ -67,6 +67,10 @@ thực sự lên production (xem bài học sự cố trong `BAN_GIAO.md`/`AI_HA
   **`node scripts/doc-budget.mjs --map <file>`**. Xem toàn bộ ngân sách: `node scripts/doc-budget.mjs`.
 - Quy trình làm việc + Governance Protocol + mẫu báo cáo cuối task → **`docs/GOVERNANCE.md`**.
   Hạ tầng (sync · deploy · Vercel · Web Push · Electron tray) → **`docs/OPERATIONS.md`**.
+- ⚠️ **NGÔN NGỮ (ADR-074)**: sáu file quy tắc (`CLAUDE.md` · `START_HERE.md` · `PHASE_RULES.md` ·
+  `AGENTS.md` · `docs/GOVERNANCE.md` · `docs/OPERATIONS.md`) viết bằng **tiếng Anh** — tiếng Việt tốn
+  ~2,3 lần token cho cùng một ý, và các file này được nạp lại mỗi phiên AI. Kho tra cứu giữ tiếng
+  Việt. **Mọi báo cáo và trao đổi với Đàm vẫn 100% tiếng Việt.**
 - Đọc nhanh 10–15 phút để có đủ ngữ cảnh → `AI_ONBOARDING.md`.
 - Muốn biết file nằm ở đâu → `PROJECT_STRUCTURE.md`. Bức tranh kiến trúc lớn (luồng dữ liệu) →
   `ARCHITECTURE.md`.

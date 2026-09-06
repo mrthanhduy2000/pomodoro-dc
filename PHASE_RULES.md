@@ -1,138 +1,123 @@
-# PHASE_RULES — cách làm việc, cách ra prompt, cách báo cáo
+# PHASE_RULES — how to work, how to write a prompt, how to report
 
-> Thay thế toàn bộ nghi thức đã dùng ở Phase 9–18. Lý do phải viết file này: đo lại chính
-> dự án ngày 2026-08-24 cho thấy mỗi phiên tiêu **~80% sức vào đọc / đo / viết tài liệu** và
-> chỉ ~20% vào xây. Ba phase liên tiếp qua sạch mọi cổng số và **đều bị mắt Đàm bác**.
-> File này cắt phần lãng phí, giữ đúng phần đang bảo vệ thứ có giá trị.
+> Replaces every ritual used in Phases 9–18. Why this file exists: measuring the project on
+> 2026-08-24 showed each session spent **~80% of its budget reading / measuring / writing docs** and
+> only ~20% building. Three consecutive phases passed every numeric gate and were **all rejected by
+> Đàm's eyes**. This file cuts the waste and keeps only what protects something valuable.
 
 ---
 
-## 1. Sản phẩm là ẢNH
+## 1. The deliverable is a SCREENSHOT
+Đàm's eyes are the final judge of visuals. Numbers exist so you don't fool yourself, **not** to win
+an argument against his verdict. A session with only a table of numbers **delivered nothing**.
 
-Mắt Đàm là quyền phán xử cuối cùng cho mỹ thuật. Con số dùng để **không tự lừa mình**,
-không dùng để **thắng một lời bác**. Một phiên chỉ có bảng số là một phiên **chưa giao gì**.
+**A successful session = ≥4 changes Đàm can see in a screenshot.** Not "all gates green".
 
-**Định nghĩa phiên thành công: ≥4 thay đổi Đàm nhìn thấy được trong ảnh chụp.**
-Không phải "mọi cổng xanh".
+## 2. Do NOT measure performance
+Already settled on real hardware (Apple M3 · ANGLE Metal · 1100×700 · DPR 2, see `PERFORMANCE.md`):
+the slowest scene is **5.20 ms** against a 16.67 ms budget ⇒ **3.2× headroom**; cost is ≈0.87 ms
+fixed + 1.14 ms per million real pixels ⇒ **80% of cost follows PIXELS**, geometry is nearly free
+(triangles differ 43% between eras 3 and 11 while time differs 2.4%). **That budget exists to be
+spent.**
 
-## 2. KHÔNG đo hiệu năng
+- No ms timings · no draw-call/triangle gates · no `bench-macbook.sh` · no 1.25× CPU gate.
+- Measure again **ONLY IF** Đàm reports stutter on the real machine.
+- Two permanent bans, no measurement needed: **never lower DPR** · **never add a fourth light**
+  (each light ≈ +0.8 ms, and three fill lights already exist — more brings back the "milky pale" bug).
 
-Đã đo dứt điểm trên máy thật (Apple M3 · ANGLE Metal · 1100×700 · DPR 2, xem
-`PERFORMANCE.md`): cảnh chậm nhất **5,20 ms** trên trần 16,67 ms ⇒ **dư 3,2 lần**; chi phí
-≈ 0,87 ms cố định + 1,14 ms mỗi triệu điểm ảnh thật ⇒ **80% chi phí theo ĐIỂM ẢNH**, hình
-học gần như miễn phí (tam giác chênh 43% giữa kỷ 3 và 11 mà thời gian chênh 2,4%).
-**Ngân sách ấy sinh ra để TIÊU.**
+## 3. Do NOT write new measuring tools
+`scripts/` once held 18 measuring tools, most written to prove **one number once**, and home-made
+tools have lied more than 20 times in this project's history. Four are still alive:
 
-- KHÔNG đo ms · KHÔNG đếm lệnh vẽ / tam giác làm cổng · KHÔNG `bench-macbook.sh` ·
-  KHÔNG cổng CPU 1,25×.
-- Đo lại **CHỈ KHI** Đàm nói khung hình giật trên máy thật.
-- Hai điều cấm vĩnh viễn, không cần đo để biết: **không hạ DPR** · **không thêm nguồn sáng
-  thứ tư** (mỗi đèn ≈ +0,8 ms, và đã có ba đèn nền — thêm nữa là tái phát bệnh "nhợt như sữa").
-
-## 3. KHÔNG viết công cụ đo mới
-
-`scripts/` từng có 18 file đo, phần lớn viết ra để chứng minh **một con số đúng một lần**,
-và công cụ tự chế đã nói dối hơn 20 lần trong lịch sử dự án. Bốn công cụ còn sống:
-
-| Công cụ | Dùng khi |
+| Tool | Use when |
 |---|---|
-| `city-preview.mjs` | dựng ảnh một kỷ (`--era N --hour H --width 1500`) hoặc bảng quét (`--sweep`) |
-| `sweep-score.mjs` | 15 kỷ có còn phân biệt được không (cổng chống trôi) |
-| `png-probe.mjs` | đo màu thật trên ảnh đã dựng |
-| `shot.mjs` | chụp giao diện 2D (nhớ `npm run build` trước) |
+| `city-preview.mjs` | render one era (`--era N --hour H --width 1500`) or a sweep (`--sweep`) |
+| `sweep-score.mjs` | are the 15 eras still distinguishable (anti-drift gate) |
+| `png-probe.mjs` | real colour on a rendered image |
+| `shot.mjs` | 2D UI screenshots (run `npm run build` first) |
 
-Cần cái thứ năm → **hỏi trước**, đừng tự viết.
+Need a fifth → **ask first**, do not write one.
 
-`sweepMetric.mjs` · `mask-count.mjs` · `plan-coverage.mjs` · `water-view.mjs` ·
-`water-score.mjs` · `scene-tri.mjs` · `plinth-tri.mjs` ở lại `scripts/` vì có bài test hoặc bị import.
-10 công cụ dùng-một-lần đã chuyển sang **`scripts/archive/`** (còn nguyên trong git, chạy
-được bằng đường dẫn đầy đủ khi thật sự cần): `depth-score` · `frame-fit` · `frame-score` ·
-`plateau-score` · `road-bend` · `road-score` · `scene-count` ·
-`shadow-score` · `sweep-diff` · `terrain-score`.
+`sweepMetric.mjs` · `mask-count.mjs` · `plan-coverage.mjs` · `water-view.mjs` · `water-score.mjs` ·
+`scene-tri.mjs` · `plinth-tri.mjs` stay in `scripts/` because a test uses or imports them.
+Ten single-use tools moved to **`scripts/archive/`** (still in git, runnable by full path):
+`depth-score` · `frame-fit` · `frame-score` · `plateau-score` · `road-bend` · `road-score` ·
+`scene-count` · `shadow-score` · `sweep-diff` · `terrain-score`.
 
-## 4. Test: chỉ giữ thứ bảo vệ dữ liệu thật
+## 4. Tests: keep only what protects real data
+Per-session gates: `npm test` **adds no new red** · `npm run lint` clean · `npm run build` green.
 
-Cổng mỗi phiên: `npm test` **không đỏ thêm bài nào** · `npm run lint` sạch · `npm run build` xanh.
+Exactly **ONE** test is mandatory: **the ADR-007 invariant** — the coordinates of the 5 wonders and
+every EXISTING house must be identical before and after, at every session milestone 1…120 × 15 eras.
 
-Bắt buộc đúng **MỘT** bài: **bất biến ADR-007** — toạ độ 5 kỳ quan và các nhà dân ĐÃ CÓ
-phải y hệt trước/sau, ở mọi mốc phiên 1…120 × 15 kỷ.
+Dropped: break-each-assert-until-red · injection controls · frozen-old-number controls ·
+`--selftest` · re-baselining for every change. Re-apply the break-it-until-red discipline **only**
+when adding a NEW invariant that protects user data — not for roof colour, tree shape, or pavement
+width (breaking those is visible in a screenshot).
 
-BỎ: phá-từng-assert-cho-đỏ · đối chứng tiêm · đối chứng nhốt-số-cũ · `--selftest` ·
-đo lại mốc nền cho mọi thay đổi. Chỉ áp lại kỷ luật phá-cho-đỏ khi thêm một **bất biến MỚI
-bảo vệ dữ liệu người dùng** — không áp cho màu mái, hình cây, bề rộng vỉa hè (hỏng mấy thứ
-đó thì nhìn ảnh là thấy ngay).
+## 5. Docs: two files
+`BAN_GIAO.md` (prepend, ~30 lines per phase) + `CHANGELOG.md`. Other files change **only when your
+change makes their content FALSE**: new module → `PROJECT_STRUCTURE.md` · flow changed →
+`ARCHITECTURE.md` · a decision with ≥2 genuinely weighed options → new ADR · debt found →
+`TECH_DEBT.md` · status or next-steps changed → `START_HERE.md`. **Never update "for completeness".**
 
-## 5. Tài liệu: hai file
+`BAN_GIAO.md` is a journal: **append only, read only the first 60 lines.** Past ~500 lines, move the
+old part to `docs/archive/`. Never read it whole.
 
-`BAN_GIAO.md` (ghi thêm ở đầu, ~30 dòng mỗi phase) + `CHANGELOG.md`.
-File khác **chỉ sửa khi thay đổi làm nội dung nó SAI SỰ THẬT**:
-thêm module → `PROJECT_STRUCTURE.md` · đổi luồng → `ARCHITECTURE.md` ·
-quyết định có ≥2 phương án thật cân nhắc → ADR mới · phát hiện nợ → `TECH_DEBT.md` ·
-đổi trạng thái/việc tiếp theo → `START_HERE.md`.
-**Không sửa cho đủ bộ.**
-
-`BAN_GIAO.md` là nhật ký: **chỉ ghi thêm, chỉ đọc 60 dòng đầu.** Khi vượt ~500 dòng thì
-chuyển phần cũ sang `docs/archive/`. Không bao giờ đọc trọn.
-
-## 6. Báo cáo: 5 dòng
-
+## 6. Reports: 5 lines
 ```
-1. Đã làm    — mỗi việc một dòng
-2. Ảnh       — đường dẫn
-3. Chưa xong — việc nào + vì sao
-4. Rủi ro    — hoặc "không có"
-5. Kế tiếp   — đúng MỘT đề xuất
+1. Done      — one line per item
+2. Evidence  — screenshot path / numbers
+3. Not done  — what and why
+4. Risk      — or "none"
+5. Next      — exactly ONE proposal
 ```
+The 11-point TECHNICAL ADVISOR REPORT is **kept only for architecture/infrastructure phases**
+(Supabase sync, database, AI Coach, deploy, security, large refactor, incident). Art phases drop it
+entirely. Template: `docs/GOVERNANCE.md`. **Never write both kinds for one task** — before
+2026-09-06 two overlapping 11-point reports burned ~2,500 output tokens per task saying the same
+thing. **Reports are written in Vietnamese** (they are for Đàm); docs and code are English.
 
-TECHNICAL ADVISOR REPORT 11 mục **chỉ giữ cho phase kiến trúc/hạ tầng** (Supabase sync,
-database, AI Coach, deploy, bảo mật, refactor lớn, sự cố). Phase mỹ thuật thì bỏ hẳn.
-Mẫu 11 mục: `docs/GOVERNANCE.md`. **Không bao giờ viết cả hai loại báo cáo cho cùng một task** —
-trước 2026-09-06 có hai bản 11 mục chồng nhau, tốn ~2.500 token output mỗi task để nói cùng một chuyện.
+## 7. Finish the whole turn
+A prompt listing 4–8 items means **doing all 4–8 before reporting**. Do not stop halfway to ask.
+Blocked on one → skip it, log one line, keep going.
 
-## 7. Làm hết trong một lượt
+**Priority when forced to choose: 6 items at 90% > 1 item at 100%.**
 
-Prompt liệt kê 4–8 việc thì **làm hết cả 4–8 rồi mới báo cáo**. Không dừng giữa chừng xin
-ý kiến. Việc nào bị chặn → bỏ qua, ghi lại một dòng, làm tiếp việc khác.
+The ONLY stopping condition: **the ADR-007 test goes red** — produce the first displaced building;
+never loosen the test.
 
-**Ưu tiên khi phải chọn: xong 6 việc mức 90% > xong 1 việc mức 100%.**
-
-Điều kiện dừng DUY NHẤT: **bài test ADR-007 đỏ** — trình ra ca dời nhà đầu tiên, không nới
-bài test.
-
-## 8. Khung prompt cố định (dành cho người ra đề)
-
-Prompt tối đa **~60 dòng**, đúng 4 mục, **không chép lại luật quy trình** (chúng nằm ở file này):
-
+## 8. Fixed prompt shape (for whoever writes the prompt)
+Max **~60 lines**, exactly 4 sections, **never restating process rules** (they live here):
 ```
-BỐI CẢNH   — Đàm nói gì, nguyên văn. ≤3 dòng.
-CHẨN ĐOÁN  — nguyên nhân gốc kèm con số. ≤6 dòng.
-VIỆC       — 4 đến 8 việc, mỗi việc ≤6 dòng.      ← 80% prompt nằm ở đây
-GIAO       — ảnh nào + tổng kết 5 dòng.
+CONTEXT   — Đàm's own words. ≤3 lines.
+DIAGNOSIS — root cause with numbers. ≤6 lines.
+WORK      — 4 to 8 items, ≤6 lines each.      ← 80% of the prompt
+DELIVER   — which screenshots + the 5-line summary.
 ```
+Constraints on the prompt author:
+- **Every prompt must carry 4–8 items.** A one-item prompt is a badly written prompt.
+- **No "measure first" phases** unless the previous phase was genuinely ambiguous. The last three
+  were not — Đàm said plainly it was small.
+- The author's hypothesis must be refuted by a **SCREENSHOT**, not by a metric.
+- One prompt block per turn, nothing else attached.
 
-Ràng buộc lên người ra đề:
-- **Mỗi prompt bắt buộc có 4–8 việc.** Ra 1 việc là ra đề sai.
-- **Không ra phase "đo trước"** trừ khi kết quả phase trước thật sự mơ hồ. Ba lần gần nhất
-  nó không hề mơ hồ — Đàm đã nói thẳng là nhỏ.
-- Giả thuyết của người ra đề phải bị **ẢNH** bác, không phải bị một chỉ số bác.
-- Mỗi lượt ra **đúng một khối prompt**, không kèm gì khác.
+## 9. Unchanged
+Never touch the camera or `gridSize` · never rebuild a tool from memory (take it from git, or write
+it fresh and cross-check against production code) · commit + push after every valuable milestone
+(the sandbox has been rolled back to an old snapshot mid-session before, costing a full measuring run).
 
-## 9. Không đổi
+⚠️ *"Never merge `main` yourself" was REPLACED on 2026-08-22* — Đàm: *"sau này tự deploy, tôi không có
+việc gì phải tự deploy cả"* ⇒ **merge into `main` and push yourself, do not ask**, and state clearly
+what reached production beyond your own work (`CLAUDE.md` §Infrastructure law 1).
 
-~~Không tự gộp `main`~~ → **ĐÃ BỊ THAY THẾ 2026-08-22**: Đàm chốt *"sau này tự deploy, tôi
-không có việc gì phải tự deploy cả"* ⇒ **TỰ gộp `main` rồi push, KHÔNG hỏi**, và phải BÁO RÕ
-những gì NGOÀI phần việc của mình cũng vừa lên production (xem `CLAUDE.md` mục Hạ tầng, luật 1).
-Không đụng camera/`gridSize` · không dựng lại công cụ từ trí nhớ
-(lấy từ git, hoặc viết mới rồi đối chiếu chéo với mã sản phẩm) · commit + push sau mỗi mốc
-có giá trị (hộp cát đã từng bị khôi phục về snapshot cũ giữa phiên, tiêu mất trọn một lượt đo).
-
-## 10. Ba hình dạng thất bại đã trả giá — chặn bằng ảnh, không bằng thiện chí
-
-1. **`TECH_DEBT #41`** — chi tiết mái Phase 11: xây xong, đẹp, và **90/90 ô dưới ngưỡng mắt**.
-   ⇒ Trước khi tiêu ngân sách vào chi tiết nhỏ, hỏi: *ở khoảng cách Đàm nhìn, thứ này chiếm
-   bao nhiêu điểm ảnh?* Dưới ~12px thì không ai thấy.
-2. **Lùm cây Phase 8D** — cơ chế chạy, ảnh thuyết phục, đo ra là **chưa bao giờ làm gì**.
-   ⇒ Mắt người rất giỏi tìm ra cụm trong nhiễu. Bật/tắt rồi so ảnh.
-3. **Một cổng đạt bằng cách xây thứ không nên tồn tại** — nhà trên sườn núi chân trời,
-   ruộng ô vuông ở kỷ đồ đá mới. ⇒ Mọi con số bản sắc 15 kỷ phải buộc vào `country` mà
-   `eraStyle.js` khai, và phải trả lời được *"nơi có thật nào trông như vậy?"*
+## 10. Three shapes of failure already paid for — blocked by screenshots, not by good intentions
+1. **`TECH_DEBT #41`** — Phase 11 roof detail: built, beautiful, and **90/90 tiles below the eye
+   threshold**. ⇒ Before spending budget on small detail, ask: *at Đàm's viewing distance, how many
+   pixels does this occupy?* Under ~12px nobody sees it.
+2. **Phase 8D shrubbery** — the mechanism ran, the screenshot convinced, measurement showed it had
+   **never done anything**. ⇒ Human eyes are excellent at finding clusters in noise. Toggle it off
+   and compare images.
+3. **A gate passed by building something that should not exist** — houses on a skyline ridge, square
+   paddies in the neolithic era. ⇒ Every 15-era identity number must be tied to the `country` declared
+   in `eraStyle.js`, and must answer *"what real place looks like this?"*

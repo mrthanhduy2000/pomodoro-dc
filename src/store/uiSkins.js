@@ -12,7 +12,7 @@
  * File này CỐ Ý không import gì cả (thuần, không phụ thuộc): `settingsStore.js` kéo theo engine âm
  * thanh + engine thông báo, nên một script Node (vd `scripts/shot.mjs`) không nạp nổi store chỉ để
  * hỏi "mặc định là skin nào". Chép tay con số ấy sang script là đúng quả mìn `BUILDING_SCALE = 0.86`
- * đã ghi ở `CLAUDE.md`: hôm nay đúng, và sai vĩnh viễn trong im lặng vào ngày ai đó đổi mặc định.
+ * đã ghi ở `docs/LESSONS_3D.md`: hôm nay đúng, và sai vĩnh viễn trong im lặng vào ngày ai đó đổi mặc định.
  */
 
 /** Mọi skin hợp lệ. Thứ tự ở đây KHÔNG quyết định thứ tự hiện trên màn hình (đó là việc của

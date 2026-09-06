@@ -496,7 +496,7 @@ export const MOC_CONTAINER = 13;
  *
  * ⚠️ VÌ SAO PHẢI CHÉP `country` VÀO ĐÂY thay vì đọc thẳng `eraStyle` lúc chạy: trường này không
  * phải dữ liệu để dùng, nó là **câu hỏi buộc người điền dòng phải trả lời**. `streetStyle.js` và
- * `settingStyle.js` đều làm đúng thế, và CLAUDE.md ghi rõ lý do: *"không có ràng buộc ấy thì 15
+ * `settingStyle.js` đều làm đúng thế, và docs/LESSONS_3D.md ghi rõ lý do: *"không có ràng buộc ấy thì 15
  * dòng là 15 lần chọn bừa, mà chọn bừa chính là thứ đã sinh ra 15 kỷ giống hệt nhau"*. Bản chép
  * không trôi được vì hàm này khoá nó.
  */

@@ -1,3 +1,47 @@
+> Cập nhật lần cuối: **2026-09-06 (tối, cùng phiên "tối ưu context window")** — **TÀI LIỆU TỰ-NẠP
+> CHUYỂN SANG TIẾNG ANH + CỔNG CANH NGÔN NGỮ (ADR-074).** Đàm: *"chuyển thành tiếng Anh đi… khi giao
+> tiếp với tôi thì sử dụng tiếng Việt để tiết kiệm token"*.
+>
+> ### Vì sao đổi ngôn ngữ lại là tiết kiệm lớn nhất còn lại
+> Hệ số đo được: tiếng Việt **1,723 ký tự/token**, tiếng Anh khoảng **4** ⇒ cùng một ý, bản tiếng
+> Việt tốn **~2,3 lần** token. Với file TỰ NẠP MỖI PHIÊN, chi phí ấy nhân với số phiên.
+> ⚠️ **Hệ số tiếng Anh CHƯA đo được trong phiên này** — `tiktoken` cần tải bảng BPE qua mạng, proxy
+> chặn (403). Mọi con số token tiếng Anh dưới đây là ƯỚC LƯỢNG; phép kiểm thật: Đàm gõ `/context` ở
+> phiên mới và đọc dòng "Memory files".
+>
+> ### Đã làm
+> 1. **Dịch + tái cấu trúc 6 file**: `CLAUDE.md` · `START_HERE.md` · `PHASE_RULES.md` · `AGENTS.md` ·
+>    `docs/GOVERNANCE.md` · `docs/OPERATIONS.md`. Bốn file tự-nạp: **25.702 → 10.075 token (−61%)**;
+>    `docs/OPERATIONS.md` 9.160 → 4.469; `docs/GOVERNANCE.md` 7.382 → 3.287.
+> 2. **Dọn cấu trúc `START_HERE.md`**: mục "Việc tiếp theo" vốn có HAI danh sách đánh số chồng lên
+>    nhau (0, 0b, 1, 2, 3 rồi lại 0, 1, 2, 3, 4) — nay chia bốn nhóm rõ: A. Đàm phải chọn ·
+>    B. Sẵn sàng làm · C. Chờ mắt Đàm · D. Điểm mù của công cụ.
+> 3. **Cổng canh ngôn ngữ** (`scripts/docBudget.test.js`): một đoạn tiếng Việt lọt vào file tự-nạp
+>    = test ĐỎ. Trần mới theo tiếng Anh: `CLAUDE.md` 16.000 · `START_HERE.md` 16.000 ·
+>    `PHASE_RULES.md` 8.000 · `AGENTS.md` 3.500 ký tự.
+> 4. **Bảng ranh giới ngôn ngữ** trong `CLAUDE.md` để không sinh mâu thuẫn mới: file tự-nạp + 2 file
+>    `docs/` = tiếng Anh (có cổng) · kho tra cứu = phần cũ giữ tiếng Việt, phần MỚI viết tiếng Anh ·
+>    **báo cáo cho Đàm = tiếng Việt**.
+> 5. **KHÔNG dịch kho tra cứu 2,6 triệu ký tự** — tốn ~700.000 token output cho một lần, và rủi ro
+>    mất tri thức mà mỗi mục đã trả giá bằng một phase.
+>
+> ### ⚠️ Hai bài học đắt nhất phiên này — cả hai đều là CÔNG CỤ ĐO nói dối
+> **(a) Cổng canh ngôn ngữ bản đầu KHÔNG NỔ khi thử phá.** Nó đo tỉ lệ ký tự tiếng Việt trên TOÀN
+> FILE; chèn một đoạn tiếng Việt vào `CLAUDE.md` chỉ đẩy tỉ lệ 0,21% → **0,59%**, bị 15.000 ký tự
+> tiếng Anh pha loãng. Đúng luật *"mẫu số có lẫn thứ không thuộc câu hỏi không"* — câu hỏi là "có
+> ĐOẠN nào tiếng Việt không", nên mẫu số phải là một ĐOẠN. Bản sửa quét theo đoạn ≥200 ký tự, ngưỡng
+> **8%** chọn từ số đo thật (đoạn tiếng Anh có trích lời Đàm cao nhất **4,21%** · đoạn tiếng Việt
+> thuần **13,95–15,69%**), kèm một assert khoá ngưỡng phải nằm GIỮA hai con số ấy.
+> **(b) Cổng chống-mất-luật quá giòn**: báo mất *"Composition over Duplication"* chỉ vì markdown ngắt
+> dòng giữa hai từ. Đã sửa CÔNG CỤ (chuẩn hoá khoảng trắng), không sửa văn bản cho vừa công cụ.
+>
+> ### Kết quả đo
+> Mỗi phiên gánh **41.076 ký tự ≈ 10.196 token = 5,1% cửa sổ 200k** cho cả 4 file bắt buộc.
+> Cộng dồn cả ngày: **21.600 → 3.839 token cho riêng `CLAUDE.md` (−82%)**.
+> Kiểm bất cứ lúc nào: `node scripts/doc-budget.mjs`.
+
+---
+
 > Cập nhật lần cuối: **2026-09-06 (chiều, phiên "tối ưu context window")** — **NGÂN SÁCH TOKEN CHO
 > TÀI LIỆU: TÁCH FILE + CỔNG CANH BẰNG TEST (ADR-073).** Đàm gửi ảnh `/context`: cửa sổ 699,8k/1M
 > (70%), `Messages` chiếm **624,7k = 62,5%** trong khi `CLAUDE.md` chỉ 21,6k = 2,2%.

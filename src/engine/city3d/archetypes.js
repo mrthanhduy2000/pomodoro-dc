@@ -199,7 +199,7 @@ export const ARCHETYPES = {
   //   `rarity` = common / rare / epic      → **CỠ NHÀ nhỏ / vừa / lớn** (KHÔNG phải độ quý)
   // Đàm yêu cầu đích danh *"nhà dân nhỏ/vừa/lớn"*, và trục `rarity` đã có sẵn đúng ba nấc cùng
   // toàn bộ hệ số nhân đi kèm. Đặt thêm một trục thứ tư chỉ để nói "cỡ nhà" là tạo pattern mới
-  // trong khi pattern cũ dùng được — đúng thứ mục "Tính nhất quán kiến trúc" ở `CLAUDE.md` cấm.
+  // trong khi pattern cũ dùng được — đúng thứ mục "Tính nhất quán kiến trúc" ở `docs/LESSONS_3D.md` cấm.
   //
   // ⚠️ `plain: true` LÀ THỨ GIỮ CHO LANDMARK CÒN LÀ LANDMARK. Đàm: *"5 landmark phải có silhouette
   // đặc trưng, detail cao hơn nhà dân và nhận ra được từ xa"*. Cờ này bỏ CHỮ KÝ KIẾN TRÚC

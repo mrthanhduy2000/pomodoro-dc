@@ -176,7 +176,7 @@ test('TRỤC LOẠI: mỗi loại công trình cho ra một khối tích khác n
   }
   // ⚠️ ĐẾM THEO CHÍNH BẢNG, KHÔNG VIẾT CỨNG CON SỐ. Dòng này trước đây là `assert.equal(seen.size, 4)`
   // và nó đỏ ngay khi Phase 7C thêm 3 nguyên mẫu nhà dân — không phải vì mã hỏng mà vì **phép đo đã
-  // già đi**, đúng bài học đã ghi ở `CLAUDE.md` (bài "kỳ quan đối xứng" lọc tháp góc bằng ngưỡng
+  // già đi**, đúng bài học đã ghi ở `docs/LESSONS_3D.md` (bài "kỳ quan đối xứng" lọc tháp góc bằng ngưỡng
   // tuyệt đối rồi đỏ oan khi `spread` co lại). Việc dòng này canh là "vòng lặp có chạy hết bảng
   // không", nên nó phải HỎI chính cái bảng ấy; viết cứng số là gài mìn cho lần thêm nguyên mẫu sau.
   assert.equal(seen.size, Object.keys(ARCHETYPES).length);

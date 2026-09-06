@@ -11,6 +11,56 @@
 
 ---
 
+## ADR-074 — Tài liệu tự-nạp viết bằng TIẾNG ANH, có cổng canh ngôn ngữ đo theo ĐOẠN
+
+- **Ngày**: 2026-09-06 (tối, cùng ngày ADR-073)
+- **Bối cảnh**: sau ADR-073, `CLAUDE.md` còn 16.503 ký tự ≈ 9.600 token/phiên. Đàm yêu cầu tiếp:
+  *"chuyển thành tiếng Anh đi… khi giao tiếp với tôi thì sử dụng tiếng Việt để tiết kiệm token"*.
+  Hệ số đo được của dự án: tiếng Việt **1,723 ký tự/token**; tiếng Anh khoảng **4** (con số phổ biến
+  của BPE, **CHƯA đo được trong phiên này** — `tiktoken` cần tải bảng BPE qua mạng và proxy chặn).
+- **Vấn đề gốc**: cùng một ý, bản tiếng Việt tốn ~2,3 lần token. Với các file **tự nạp mỗi phiên**,
+  chi phí ấy nhân với SỐ PHIÊN. Đây là khoản duy nhất trong ngân sách token mà việc đổi ngôn ngữ
+  cắt được mà không mất một chữ nội dung nào.
+- **Phương án cân nhắc**:
+  1. Dịch TOÀN BỘ 2,6 triệu ký tự tài liệu sang tiếng Anh.
+  2. Không dịch gì; chỉ tiếp tục tách file.
+  3. Dịch đúng phần bị nhân với số phiên (4 file tự-nạp + 2 file `docs/` hay mở), phần kho tra cứu
+     giữ tiếng Việt và chuyển dần khi đụng tới.
+- **Lý do loại bỏ**: (1) tốn ~700.000 token output cho MỘT lần, và quan trọng hơn là rủi ro **mất
+  tri thức** — mỗi mục trong `docs/LESSONS_3D.md`/`TECH_DEBT.md` là một phase đã trả giá, đúng thất
+  bại `AGENTS.md` 2026-07-31 (bản dịch máy móc trôi khỏi bản gốc sau 5 ngày, mất nguyên một mục).
+  (2) bỏ qua khoản tiết kiệm lớn nhất còn lại mà không có lý do kỹ thuật nào.
+- **Giải pháp được chọn**: phương án (3).
+  - Dịch + tái cấu trúc: `CLAUDE.md` · `START_HERE.md` · `PHASE_RULES.md` · `AGENTS.md` ·
+    `docs/GOVERNANCE.md` · `docs/OPERATIONS.md`. Bốn file tự-nạp: **25.702 → 10.075 token (−61%)**.
+  - **Cổng canh ngôn ngữ** trong `npm test`: một đoạn tiếng Việt lọt vào file tự-nạp = test ĐỎ.
+  - Ranh giới ngôn ngữ ghi thành BẢNG trong `CLAUDE.md` để không sinh mâu thuẫn mới: file tự-nạp +
+    2 file `docs/` = tiếng Anh (có cổng) · kho tra cứu = phần cũ giữ tiếng Việt, phần MỚI viết tiếng
+    Anh · **báo cáo cho Đàm = tiếng Việt**.
+- **⚠️ Bài học đắt nhất của quyết định này — cổng canh đầu tiên KHÔNG NỔ khi thử phá.**
+  Bản đầu đo tỉ lệ ký tự tiếng Việt trên **TOÀN FILE**. Chèn một đoạn tiếng Việt vào `CLAUDE.md` chỉ
+  đẩy tỉ lệ từ 0,21% lên **0,59%** — bị 15.000 ký tự tiếng Anh pha loãng, không ngưỡng nào bắt nổi.
+  Đúng luật *"trước khi tin một tỉ lệ, hỏi mẫu số có lẫn thứ không thuộc câu hỏi không"*: câu hỏi là
+  *"có ĐOẠN nào viết bằng tiếng Việt không"*, nên mẫu số phải là một ĐOẠN, không phải cả file.
+  Bản sửa quét theo đoạn ≥200 ký tự. Ngưỡng **8%** chọn từ số đo thật: đoạn tiếng Anh có trích dẫn
+  nguyên văn lời Đàm cao nhất **4,21%**; đoạn tiếng Việt thuần **13,95–15,69%** — biên gần 2 lần cả
+  hai phía. Bài test kèm một assert đòi ngưỡng phải nằm GIỮA hai con số ấy, để phiên sau không nới
+  ngưỡng cho tiện.
+- **⚠️ Bài học thứ hai — cổng chống-mất-luật quá giòn.** Nó so chuỗi thô, nên báo mất
+  *"Composition over Duplication"* chỉ vì markdown ngắt dòng giữa hai từ. Đã sửa để chuẩn hoá khoảng
+  trắng trước khi so — sửa CÔNG CỤ ĐO, không sửa văn bản cho vừa công cụ.
+- **Trade-off**: (a) Đàm không đọc trực tiếp được 6 file này nữa — chấp nhận được vì anh nói rõ
+  *"có thể sử dụng toàn bộ là tiếng Anh luôn"*, và mọi báo cáo vẫn là tiếng Việt. (b) Kho tra cứu
+  thành song ngữ trong giai đoạn chuyển tiếp; bảng ranh giới trong `CLAUDE.md` là thứ giữ cho nó
+  không thành mớ hỗn độn. (c) Hệ số tiếng Anh = 4 **chưa đo được** ⇒ mọi con số token tiếng Anh
+  trong tài liệu là ƯỚC LƯỢNG; phép kiểm thật là Đàm gõ `/context` ở phiên mới và đọc "Memory files".
+- **Ảnh hưởng**: mỗi phiên gánh **41.000 ký tự ≈ 10.200 token = 5,1% cửa sổ 200k** (trước ADR-073:
+  riêng `CLAUDE.md` đã 21.600 token). `docs/OPERATIONS.md` 9.160 → 4.469 token ·
+  `docs/GOVERNANCE.md` 7.382 → 3.287 token. Test 1.602 → 1.605 bài.
+- **Điều kiện xem lại**: khi đo được hệ số tiếng Anh thật (nếu lệch >20% so với 4,0 thì cập nhật
+  `CHARS_PER_TOKEN_EN` và mọi con số dẫn xuất); hoặc nếu Đàm cần tự đọc một trong 6 file ấy thường
+  xuyên; hoặc khi kho tra cứu đã chuyển đủ sang tiếng Anh để bỏ hẳn ranh giới song ngữ.
+
 ## ADR-073 — Ngân sách token của TÀI LIỆU: tách file + cổng canh bằng test, không nới trần
 
 - **Ngày**: 2026-09-06 (chiều)

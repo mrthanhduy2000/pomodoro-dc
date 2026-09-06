@@ -158,7 +158,7 @@ const GAME = FIXTURE ? JSON.parse(readFileSync(FIXTURE, 'utf8')) : {
     // ⚠️ HAI PHIÊN CỦA HÔM NAY. Không có chúng thì "phiên hôm nay" LUÔN bằng 0, nên vòng MỤC TIÊU
     // NGÀY quanh đồng hồ vẽ ra 0% — tức VÔ HÌNH — trong mọi ảnh chụp; một fixture không thể hiện
     // nổi tính năng đang soi thì không soi được gì (bài học "fixture đều tăm tắp là fixture vô
-    // dụng", `CLAUDE.md`).
+    // dụng", `docs/LESSONS_3D.md`).
     // ⚠️ Phải seed vào `history` chứ KHÔNG phải vào `dailyTracking`: store DỰNG LẠI `dailyTracking`
     // từ `history` mỗi lần nạp (`rebuildCurrentDailyTrackingFromHistory`), nên một bộ đếm seed
     // thẳng sẽ bị ghi đè về 0 trong im lặng — đã thử và đo được đúng như vậy.

@@ -472,7 +472,7 @@ test('⚠️ CỔNG "CHẠY THẲNG" PHẢI DÙNG `pathToFileURL` — không th�
   //     if (import.meta.url === `file://${process.argv[1]}`)
   // Nghe đúng, và sai ở hai chỗ mà dự án này gặp CẢ HAI mỗi ngày:
   //   (a) `process.argv[1]` giữ nguyên đường dẫn TƯƠNG ĐỐI người ta gõ (`scripts/city-preview.mjs`),
-  //       còn `import.meta.url` luôn TUYỆT ĐỐI ⇒ không bao giờ bằng nhau. Chính lệnh mà `CLAUDE.md`
+  //       còn `import.meta.url` luôn TUYỆT ĐỐI ⇒ không bao giờ bằng nhau. Chính lệnh mà `docs/LESSONS_3D.md`
   //       ghi để chạy bản quét là lệnh tương đối.
   //   (b) đường dẫn dự án có dấu tiếng Việt + khoảng trắng ("Bản sao Pomodoro Game - USING") nên
   //       `import.meta.url` mã hoá phần trăm còn phép nối chuỗi thì không — cùng họ với cái bẫy

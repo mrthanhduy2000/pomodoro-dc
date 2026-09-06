@@ -185,7 +185,7 @@ export const HUMAN_STYLES = {
     // ⚠️ ĐÍNH CHÍNH 2026-08-23 — CHÚ THÍCH CŨ Ở ĐÂY LÀ MỘT LÝ DO ĐI SAU CON SỐ, VÀ ĐÃ BỊ ĐO BÁC BỎ.
     // Bản cũ viết: *"cao hơn preset, VÀ ĐÓ LÀ SỰ THẬT NHÂN CHỦNG HỌC CHỨ KHÔNG PHẢI ĐỂ DỄ NHÌN"*,
     // rồi mở ngoặc thừa nhận phần điểm ảnh như một *"tiện lợi đi kèm"*. Đem kiểm đúng cách mà
-    // `CLAUDE.md` đòi cho mọi câu tự trấn an (bài học Phase 4G) thì nó không đứng vững:
+    // `docs/LESSONS_3D.md` đòi cho mọi câu tự trấn an (bài học Phase 4G) thì nó không đứng vững:
     //
     //   HƯỚNG thì suy được từ nguồn. Xương người săn bắt hái lượm Cận Đông trước Cách mạng Đá mới
     //   CAO HƠN người nông nghiệp ngay sau đó — tầm vóc tụt khi khẩu phần chuyển sang ngũ cốc đơn

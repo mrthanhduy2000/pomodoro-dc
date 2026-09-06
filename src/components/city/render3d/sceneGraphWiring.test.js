@@ -61,7 +61,7 @@ const SHELL_CODE = codeOnly(SHELL_SOURCE);
  *
  * Vá bằng cách rắc `(?<!function )` vào từng chỗ là vá theo TRIỆU CHỨNG: chỗ thứ tư viết sau này
  * sẽ lại quên. Lọc một lần ở đây thì không assert nào trong file còn khả năng mắc lại — đúng luật
- * "một luật một công thức" của `CLAUDE.md`.
+ * "một luật một công thức" của `docs/LESSONS_3D.md`.
  */
 const CALLS = CODE.replace(/^\s*(export\s+)?function\s+\w+\s*\(/gm, '');
 
@@ -71,7 +71,7 @@ test('mảng vật liệu công trình PHẢI dựng từ chính `merged.familie
   assert.ok(
     /merged\.families\.map\(/.test(CODE),
     'Không còn chỗ nào dựng mảng vật liệu từ `merged.families`. Liệt kê lại danh sách họ ở đây là '
-    + 'tạo công thức thứ hai cho cùng một luật — đúng thứ `CLAUDE.md` cấm ("một luật một công thức").',
+    + 'tạo công thức thứ hai cho cùng một luật — đúng thứ `docs/LESSONS_3D.md` cấm ("một luật một công thức").',
   );
   assert.ok(
     /new Mesh\(merged\.geometry, buildingMaterial\)/.test(CODE),
@@ -432,7 +432,7 @@ test('⚠️ ĐÈN TRỜI PHẢI BÁM THEO NẮNG — một tỉ lệ, không ph
 test('⚠️ BÓNG ĐỔ CHỈ ĐƯỢC CẤU HÌNH Ở MỘT CHỖ — công cụ xem thử phải thấy đúng thứ app thấy', () => {
   // ⚠️ BÀI ĐỐI CHỨNG NHỐT MỘT LỖI ĐÃ CHẠY THẬT. Cỡ bản đồ bóng đổ từng được viết cứng ở BA nơi với
   // BA giá trị: app 1024, trang xem thử một-kỷ 1024, bản QUÉT 15 kỷ chỉ 512. Mà bản quét chính là
-  // công cụ `CLAUDE.md` bắt buộc dùng để duyệt mỹ thuật ⇒ mọi nhận xét về bóng đổ rút ra từ nó đều
+  // công cụ `docs/LESSONS_3D.md` bắt buộc dùng để duyệt mỹ thuật ⇒ mọi nhận xét về bóng đổ rút ra từ nó đều
   // đang nói về một thế giới thô gấp đôi thứ Đàm nhìn thấy. Không có gì đỏ lên: ảnh vẫn dựng ra.
   assert.match(
     CODE, /sun\.shadow\.mapSize\.setScalar\(isMobile \? SHADOW_MAP_MOBILE : SHADOW_MAP_DESKTOP\)/,
@@ -705,7 +705,7 @@ test('⚠️ PHÉP GHÉP MA TRẬN CỦA CẢNH PHẢI KHỚP VỚI `partCenterA
   // (quaternion của three, đúng biểu thức trong `sceneGraph.js`) và đường của tầng thuần
   // (`partCenterAt`). Không bên nào được so với một con số thứ ba.
   //
-  // ⚠️ VÀ ĐÂY LÀ MỘT BÀI TEST CHÉP BIỂU THỨC — thứ mà `CLAUDE.md` vốn cấm. Ngoại lệ có lý do: cái
+  // ⚠️ VÀ ĐÂY LÀ MỘT BÀI TEST CHÉP BIỂU THỨC — thứ mà `docs/LESSONS_3D.md` vốn cấm. Ngoại lệ có lý do: cái
   // đang được canh CHÍNH LÀ "hai cách viết khác nhau có ra cùng một điểm không". Bỏ bản chép đi
   // thì không còn gì để đối chiếu. Nhưng phải biết giới hạn của nó: sửa CẢ HAI bên cùng lúc thì
   // bài này vẫn xanh (đã thử ngược đúng như vậy), nên nó canh sự TRÔI KHỎI NHAU, không canh tính

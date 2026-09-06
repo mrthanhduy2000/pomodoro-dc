@@ -14,7 +14,7 @@
  * Nếu mỗi ô tự tính lấy độ lệch tim đường của mình, thì hai ô kề nhau sẽ tính ra hai con số khác
  * nhau tại chỗ giáp ⇒ con đường bị **GÃY MỘT BẬC** ở mọi ranh giới ô. Đó đúng khuyết tật mà Phase
  * 12 đã mất cả một phase để chữa cho BỀ RỘNG (`TECH_DEBT #31`: 45% số mép đường có một bậc vuông
- * góc, bậc lớn nhất 0,380 ô), và bài học rút ra khi ấy được ghi nguyên văn trong `CLAUDE.md`:
+ * góc, bậc lớn nhất 0,380 ô), và bài học rút ra khi ấy được ghi nguyên văn trong `docs/LESSONS_3D.md`:
  *
  *   > *"thứ xoá bậc là tính ĐỐI XỨNG của phép `min`, không phải giá trị nào cả — hai ô kề nhau
  *   > cùng suy ra một con số từ CÙNG một biểu thức thì không có cách nào lệch. Một cái bậc chỉ

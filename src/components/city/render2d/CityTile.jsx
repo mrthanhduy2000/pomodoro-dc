@@ -163,7 +163,7 @@ function Bush({ variant, palette }) {
 // ⚠️ BẢY HÌNH DƯỚI ĐÂY LÀ BẮT BUỘC, KHÔNG PHẢI "làm cho đủ bộ". `CityTile` trả `null` **trong im
 // lặng** cho loại lạ (dòng cuối file), nên thêm một loại cảnh vật ở tầng engine mà quên vẽ ở đây
 // thì bản 2D sẽ lặng lẽ thưa đi — không lỗi, không cảnh báo, chỉ là một thành phố nghèo hơn cho
-// đúng người dùng máy yếu nhất. Luật này đã ghi ở `CLAUDE.md` sau Phase 8D.
+// đúng người dùng máy yếu nhất. Luật này đã ghi ở `docs/LESSONS_3D.md` sau Phase 8D.
 //
 // Ở đây chúng cố tình chỉ là "hình thoi có một dấu hiệu": bộ vẽ 2D là ĐƯỜNG LÙI, nó phải nói đúng
 // NỘI DUNG (ô này được dùng vào việc gì) chứ không cần đẹp bằng bản 3D.

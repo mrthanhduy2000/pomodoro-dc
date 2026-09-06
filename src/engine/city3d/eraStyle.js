@@ -456,7 +456,7 @@ export const ERA_STYLES = {
  * mái; `signature.js` cũng cần nó để đặt những thứ NẰM TRÊN MÁI (bồn nước kỷ 11, sàn trời kỷ 14).
  * Hai bên tự tính lấy thì sớm muộn sẽ lệch nhau, và triệu chứng là một cái bồn nước lửng lơ giữa
  * không trung hoặc chôn nửa trong mái — đúng loại lỗi "một luật hai công thức" mà dự án này đã trả
- * giá nhiều lần (xem `CLAUDE.md`).
+ * giá nhiều lần (xem `docs/LESSONS_3D.md`).
  */
 export function roofRise(style, w, d) {
   const pitch = Number.isFinite(style?.roofPitch) ? style.roofPitch : 0.3;

@@ -10,6 +10,16 @@
 > **Muốn hiểu VÌ SAO một quyết định được chọn** → `ARCHITECTURE_DECISIONS.md`. **Muốn biết migration
 > cụ thể nào cần chạy** → `MIGRATION.md`.
 
+## 2026-09-06 (night, third pass) — TECH_DEBT split by subsystem; UI invariants lazy-loaded (ADR-075)
+
+- **Purpose**: `TECH_DEBT.md` was the most-grepped reference file, and 87% of it was debts on the
+  frozen 3D city that nobody may act on.
+- **Scope**: 52 3D debts → `docs/TECH_DEBT_3D.md` (still open, split by subsystem); 4 mislabelled
+  closed entries → archive; `START_HERE.md` UI invariants → `docs/UI_INVARIANTS.md`; stale routing
+  repointed in `AI_ONBOARDING.md`, `AI_HANDOFF_KNOWLEDGE.md`, `ARCHITECTURE.md`.
+- **Impact**: `TECH_DEBT.md` 250,190 → 43,559 chars (−83%); startup context 10,020 → 9,145 tokens.
+  Nothing deleted; 103 entries still accounted for.
+
 ## 2026-09-06 (night, second pass) — Journal rotation enforced (ADR-075)
 
 - **Purpose**: `CHANGELOG.md` (78% of a context window) and `BAN_GIAO.md` (70%, growing ~17,700

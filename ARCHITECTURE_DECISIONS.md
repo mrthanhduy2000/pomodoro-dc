@@ -132,6 +132,18 @@ roughly 44%. Titles below are the lookup key; read one with
   simply enforcing `PHASE_RULES.md` §5, a rule that had existed unenforced while the file tripled.
   A sixth guard (**rotation**) now fails `npm test` if either grows past 120,000 chars, so the rule
   no longer depends on someone remembering it.
+- **Third pass — split by SUBSYSTEM, not by status.** `TECH_DEBT.md` still held 63 "open" entries, but
+  classifying them showed only **7 were actionable**: **52 belong to the 3D city**, a finished black
+  box Đàm forbids touching, and were **87% of the file** (218,861 of 250,190 chars). Three more had
+  titles saying ĐÃ ĐÓNG yet were never archived. The 52 moved to `docs/TECH_DEBT_3D.md` — **still
+  open, relocated by subsystem** so a `grep` for live work stops wading through frozen work — and the
+  file went **250,190 → 43,559 chars (−83%)**. ⚠️ The Maintenance Sprint threshold must now be judged
+  on the actionable list, not the total: a frozen subsystem cannot be worked on, and counting it was
+  making the threshold meaningless.
+- **Also**: `START_HERE.md`'s UI invariants (~4,000 chars) moved to `docs/UI_INVARIANTS.md` behind an
+  imperative pointer — every session was loading them before knowing whether the task touched the UI.
+  Stale routing repointed in `AI_ONBOARDING.md`, `AI_HANDOFF_KNOWLEDGE.md` and `ARCHITECTURE.md`,
+  which all still told a new session to read `BAN_GIAO.md` in full first.
 - **Impact**: largest single file 486,294 → 266,956 chars. No file exceeds a context window.
   Always-loaded: 10,171 → 9,942 tokens/session. `npm test` 1,605 → 1,609 tests.
 - **Review conditions**: when an active reference doc passes ~50% of a window again (the warning

@@ -1,3 +1,21 @@
+> Last update: **2026-09-06 (night, third pass)** — **TECH_DEBT SPLIT BY SUBSYSTEM (ADR-075).**
+>
+> Classifying the 63 "open" debts showed only **7 are actionable**. **52 belong to the frozen 3D city**
+> — a black box Đàm forbids touching — and were **87% of the file**; 3 more said ĐÃ ĐÓNG in their own
+> titles yet had never been archived. The 52 moved to `docs/TECH_DEBT_3D.md`, **still open, split by
+> SUBSYSTEM not by status**, so a `grep` for live work no longer wades through frozen work.
+> `TECH_DEBT.md` **250,190 → 43,559 chars (−83%)**; total still 103 entries, nothing lost.
+> ⚠️ **Judge the Maintenance Sprint threshold on the 7 actionable entries, not the total** — counting
+> a frozen subsystem made that threshold meaningless (the one Priority High, #53, is a 3D debt).
+>
+> Also: `START_HERE.md` UI invariants → `docs/UI_INVARIANTS.md` behind an imperative pointer
+> (every session was loading them before knowing if the task touched the UI); startup context
+> **10,020 → 9,145 tokens**. Stale routing fixed in `AI_ONBOARDING.md`, `AI_HANDOFF_KNOWLEDGE.md`,
+> `ARCHITECTURE.md` — all three still told a new session to read `BAN_GIAO.md` in full first, and one
+> promised "208 tests" when there are 1,610.
+
+---
+
 > Last update: **2026-09-06 (night, second pass)** — **JOURNAL ROTATION ENFORCED (ADR-075).**
 >
 > `CHANGELOG.md` **266,956 → 56,535 chars** (78% → 16% of a 200k window): 80% of its bulk was a single

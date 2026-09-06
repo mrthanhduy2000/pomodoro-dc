@@ -121,6 +121,8 @@ export const REFERENCE_DOCS = [
   'docs/GOVERNANCE.md',
   'docs/OPERATIONS.md',
   'docs/AI_COACH.md',
+  'docs/TECH_DEBT_3D.md',
+  'docs/UI_INVARIANTS.md',
   'MIGRATION.md',
   'AI_ONBOARDING.md',
   'README.md',

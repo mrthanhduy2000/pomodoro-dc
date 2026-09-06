@@ -41,16 +41,11 @@ the whole context.
 for Vietnamese docs here is **1.72 chars/token**; English is roughly **4**. Full reasoning:
 header comment of `scripts/doc-budget.mjs`.
 
-**❌ NEVER `cat` these** — each is 46–78% of a 200k window, and several were over 100% before the
-2026-09-06 split (ADR-075):
-`CHANGELOG.md` · `BAN_GIAO.md` (**`head -60` only**) · `TECH_DEBT.md` · `docs/LESSONS_3D.md` ·
-`PERFORMANCE.md` · `ARCHITECTURE_DECISIONS.md` · `PROJECT_STRUCTURE.md` ·
-`AI_HANDOFF_KNOWLEDGE.md` · `ARCHITECTURE.md` · `docs/archive/*` (frozen history).
-Closed debt entries live in `docs/archive/TECH_DEBT_CLOSED_2026-09-06.md`; ADR-001…050 in
-`docs/archive/ADR_ARCHIVE_001-050.md`.
-
-Exact sizes drift, so they are **not copied here** — `node scripts/doc-budget.mjs` prints them fresh.
-**No file may exceed one context window**: a guarded ceiling, and crossing it means SPLIT, not raise.
+**❌ NEVER `cat` a reference file** — every one is 30–78% of a 200k window, and several were over
+100% before the 2026-09-06 split. Which file is which, and how to open it, is the DOC MAP below —
+the single place that list is maintained. Exact sizes drift, so they are not copied into any doc:
+`node scripts/doc-budget.mjs` prints them fresh. **No file may exceed one context window**: a guarded
+ceiling, and crossing it means SPLIT, not raise.
 
 **Three obligations, not suggestions:**
 1. **Before opening any `.md` other than `CLAUDE.md` / `START_HERE.md` / `PHASE_RULES.md`:
@@ -165,9 +160,11 @@ files**. Done in three passes on 2026-09-06: 190,700 → 21,600 tokens (split `L
 | `AGENTS.md` | pointer for Codex — limit **3,500** | Codex session start |
 | **`docs/GOVERNANCE.md`** | on demand | substantial task · need the 11-point template |
 | **`docs/OPERATIONS.md`** | on demand | sync · deploy · `api/` · push · tray |
-| `docs/UI_INVARIANTS.md` | **read before any UI change** | `src/components/` · `uiSkins.js` |
 | `docs/LESSONS_3D.md` · `docs/AI_COACH.md` | **`grep`, NEVER whole** | 3D art · AI Coach |
-| `TECH_DEBT.md` · `ARCHITECTURE_DECISIONS.md` · `PERFORMANCE.md` · `BAN_GIAO.md` · `CHANGELOG.md` | **`grep`/`head`, never whole** | lookup |
+| `TECH_DEBT.md` | 7 **actionable** debts only | before adding debt |
+| `docs/TECH_DEBT_3D.md` | 52 frozen-3D debts (still open) · `docs/UI_INVARIANTS.md` before UI work | 3D unfrozen · UI change |
+| `ARCHITECTURE_DECISIONS.md` (ADR-051+) · `PERFORMANCE.md` · `BAN_GIAO.md` (**`head -60`**) · `CHANGELOG.md` | **`grep`/`head`, never whole** | lookup |
+| `docs/archive/*` | closed debts · ADR-001…050 · old journals/changelog | history only |
 
 ⚠️ **New lessons go into the topic file** (`docs/LESSONS_3D.md` for 3D, `docs/OPERATIONS.md` for
 infra, `docs/GOVERNANCE.md` for process) — then, **only if it changes a RULE**, add ONE pointer line

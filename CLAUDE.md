@@ -165,6 +165,7 @@ files**. Done in three passes on 2026-09-06: 190,700 → 21,600 tokens (split `L
 | `AGENTS.md` | pointer for Codex — limit **3,500** | Codex session start |
 | **`docs/GOVERNANCE.md`** | on demand | substantial task · need the 11-point template |
 | **`docs/OPERATIONS.md`** | on demand | sync · deploy · `api/` · push · tray |
+| `docs/UI_INVARIANTS.md` | **read before any UI change** | `src/components/` · `uiSkins.js` |
 | `docs/LESSONS_3D.md` · `docs/AI_COACH.md` | **`grep`, NEVER whole** | 3D art · AI Coach |
 | `TECH_DEBT.md` · `ARCHITECTURE_DECISIONS.md` · `PERFORMANCE.md` · `BAN_GIAO.md` · `CHANGELOG.md` | **`grep`/`head`, never whole** | lookup |
 

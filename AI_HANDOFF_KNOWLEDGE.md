@@ -582,14 +582,22 @@ Vì dev dùng CHUNG một dòng Supabase với production — bắt đầu một
 # PHẦN 16 — HƯỚNG DẪN TIẾP QUẢN DỰ ÁN
 
 ## Ngày đầu tiên cần đọc gì (theo đúng thứ tự)
-1. `BAN_GIAO.md` — trạng thái hiện tại, việc đang dở, nhật ký cập nhật gần nhất. Đây LUÔN là file đọc đầu tiên của mọi phiên, không có ngoại lệ.
-2. `CLAUDE.md` — quy tắc bắt buộc + bối cảnh kỹ thuật chi tiết (đặc biệt mục "HỎI TRƯỚC KHI LÀM" và "NGUYÊN TẮC ƯU TIÊN SỐ 1" ở đầu file — đây là 2 quy tắc quan trọng hơn mọi thứ khác).
+1. **`START_HERE.md`** — trạng thái hiện tại + việc tiếp theo; file DUY NHẤT bắt buộc mỗi phiên.
+   ⚠️ *(Đính chính 2026-09-06, ADR-073/075: mục này từng ghi "`BAN_GIAO.md` LUÔN đọc đầu tiên, không
+   có ngoại lệ". `BAN_GIAO.md` là nhật ký 3.109 dòng khi ấy — chỉ đọc `head -60`, không bao giờ đọc
+   trọn, theo `PHASE_RULES.md` §5.)*
+2. `CLAUDE.md` — quy tắc bắt buộc (đặc biệt "ASK BEFORE ACTING", "TOKEN BUDGET", "PRIORITY RULE #1").
+   Chi tiết kỹ thuật đã TÁCH khỏi đây từ 2026-09-06: quy trình/Governance → `docs/GOVERNANCE.md`;
+   hạ tầng/deploy/sync/tray → `docs/OPERATIONS.md`; bất biến giao diện → `docs/UI_INVARIANTS.md`;
+   bài học 3D → `docs/LESSONS_3D.md`. Bảng định tuyến canonical: `CLAUDE.md` §DOC MAP.
 3. `ARCHITECTURE.md` — bức tranh kiến trúc lớn, luồng dữ liệu, lý do chia lớp.
 4. `PROJECT_STRUCTURE.md` — bản đồ thư mục chi tiết, để biết file nào nằm ở đâu khi cần tra cứu.
 5. Tài liệu này (`AI_HANDOFF_KNOWLEDGE.md`) — bối cảnh sâu, lịch sử quyết định, bài học.
 
 ## Ngày thứ hai cần làm gì
-Chạy thử `npm test` và `npm run build` để tự xác nhận môi trường dev hoạt động đúng và làm quen với con số hiện tại (208 bài test, build thành công, 10 Vercel function). Đọc lướt qua `src/engine/gameMath.js` và `src/engine/coach/guard.js` — đây là 2 file THUẦN dễ đọc nhất và mang tính đại diện cao nhất cho triết lý code của dự án (thuần, có test, có comment giải thích "vì sao"). KHÔNG thử chạy một phiên tập trung thật trên dev (xem Phần 14, mục 4).
+Chạy thử **`npm run test:quiet`** và `npm run build` để tự xác nhận môi trường dev hoạt động đúng.
+⚠️ Đừng chép số bài test vào tài liệu — nó đổi mỗi phiên (bản trước ghi "208 bài" trong khi thực tế
+đã hơn 1.600); con số THẬT là dòng cuối của lượt FAST. Đọc lướt qua `src/engine/gameMath.js` và `src/engine/coach/guard.js` — đây là 2 file THUẦN dễ đọc nhất và mang tính đại diện cao nhất cho triết lý code của dự án (thuần, có test, có comment giải thích "vì sao"). KHÔNG thử chạy một phiên tập trung thật trên dev (xem Phần 14, mục 4).
 
 ## Module nào nên hiểu trước
 Theo thứ tự ưu tiên: (1) `src/engine/time.js` (nền tảng — mọi khái niệm "ngày/tuần" phụ thuộc vào đây); (2) `src/engine/gameMath.js` (công thức game + tín hiệu phân tích — nền cho mọi thứ khác); (3) `src/hooks/useTimer.js` + `PomodoroEngine.jsx` (luồng chính người dùng tương tác hằng ngày); (4) `src/store/gameStore.js`'s `completeFocusSession` (nút thắt trung tâm, hiểu nó = hiểu cách toàn bộ hệ thống thưởng kết nối với nhau); (5) `src/engine/coach/` (nếu công việc liên quan AI Coach).

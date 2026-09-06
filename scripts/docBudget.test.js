@@ -124,7 +124,8 @@ test('docs/GOVERNANCE.md + docs/OPERATIONS.md still hold everything split out of
  */
 test('START_HERE.md: keeps its state-file essentials and entry pointers', () => {
   const s = flat('START_HERE.md')
-  for (const needle of ['PHASE_RULES.md', 'CLAUDE.md', 'ADR-007', 'doc-budget.mjs', 'docs/archive/']) {
+  for (const needle of ['PHASE_RULES.md', 'CLAUDE.md', 'ADR-007', 'doc-budget.mjs', 'docs/archive/',
+    'docs/UI_INVARIANTS.md']) {
     assert.ok(s.includes(needle), `START_HERE.md lost: ${needle}`)
   }
 })

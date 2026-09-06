@@ -17,10 +17,16 @@ SaaS, không multi-tenant, mọi rủi ro dữ liệu là rủi ro với dữ li
 
 ## Đọc gì trước khi làm bất cứ việc gì (bắt buộc, theo thứ tự)
 
-1. `BAN_GIAO.md` — trạng thái hiện tại, việc đang dở, nhật ký gần nhất (luôn đọc đầu tiên).
-2. `CLAUDE.md` — quy tắc bắt buộc (đặc biệt mục "HỎI TRƯỚC KHI LÀM" — phân loại lệnh
-   nghiên-cứu-vs-làm — và "Project Governance Protocol"). Đây là quy tắc quan trọng hơn mọi thứ.
-3. File này, rồi `ARCHITECTURE.md` (bức tranh lớn) + `PROJECT_STRUCTURE.md` (bản đồ thư mục).
+1. **`START_HERE.md`** — trạng thái hiện tại + việc tiếp theo. Đây là file DUY NHẤT bắt buộc mỗi phiên.
+2. `CLAUDE.md` — quy tắc bắt buộc (đặc biệt "ASK BEFORE ACTING" và "TOKEN BUDGET"); Claude Code tự
+   nạp file này, Codex phải tự mở.
+3. `PHASE_RULES.md` nếu đang làm một phase. Rồi mới `grep` các file liên quan tới việc sắp làm.
+
+⚠️ **ĐÍNH CHÍNH 2026-09-06 (ADR-073/074/075)**: bản trước của mục này ghi *"`BAN_GIAO.md` luôn đọc
+đầu tiên"*. **Sai và tốn kém** — `BAN_GIAO.md` là nhật ký, chỉ đọc `head -60`, không bao giờ đọc trọn
+(`PHASE_RULES.md` §5). Quy trình/Governance nay ở `docs/GOVERNANCE.md`; hạ tầng/deploy/sync ở
+`docs/OPERATIONS.md`; bất biến giao diện ở `docs/UI_INVARIANTS.md`. Bảng định tuyến canonical:
+`CLAUDE.md` §DOC MAP.
 
 ## Kiến trúc — nhìn nhanh
 

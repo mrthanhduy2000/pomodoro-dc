@@ -85,7 +85,9 @@ chuyển phần cũ sang `docs/archive/`. Không bao giờ đọc trọn.
 ```
 
 TECHNICAL ADVISOR REPORT 11 mục **chỉ giữ cho phase kiến trúc/hạ tầng** (Supabase sync,
-database, AI Coach, deploy, bảo mật). Phase mỹ thuật thì bỏ hẳn.
+database, AI Coach, deploy, bảo mật, refactor lớn, sự cố). Phase mỹ thuật thì bỏ hẳn.
+Mẫu 11 mục: `docs/GOVERNANCE.md`. **Không bao giờ viết cả hai loại báo cáo cho cùng một task** —
+trước 2026-09-06 có hai bản 11 mục chồng nhau, tốn ~2.500 token output mỗi task để nói cùng một chuyện.
 
 ## 7. Làm hết trong một lượt
 
@@ -117,7 +119,10 @@ Ràng buộc lên người ra đề:
 
 ## 9. Không đổi
 
-Không tự gộp `main` · không đụng camera/`gridSize` · không dựng lại công cụ từ trí nhớ
+~~Không tự gộp `main`~~ → **ĐÃ BỊ THAY THẾ 2026-08-22**: Đàm chốt *"sau này tự deploy, tôi
+không có việc gì phải tự deploy cả"* ⇒ **TỰ gộp `main` rồi push, KHÔNG hỏi**, và phải BÁO RÕ
+những gì NGOÀI phần việc của mình cũng vừa lên production (xem `CLAUDE.md` mục Hạ tầng, luật 1).
+Không đụng camera/`gridSize` · không dựng lại công cụ từ trí nhớ
 (lấy từ git, hoặc viết mới rồi đối chiếu chéo với mã sản phẩm) · commit + push sau mỗi mốc
 có giá trị (hộp cát đã từng bị khôi phục về snapshot cũ giữa phiên, tiêu mất trọn một lượt đo).
 

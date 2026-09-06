@@ -827,6 +827,8 @@
 ├── electron/                   # App phụ Mac (menu bar/tray) — mở URL Vercel, đọc timer từ Supabase
 ├── public/                     # Asset tĩnh (icon, service worker push-worker.js, manifest PWA)
 ├── scripts/                    # Công cụ dev chạy tay (không vào app) — xem CLAUDE.md mục nào còn dùng
+│   ├── doc-budget.mjs          # ADR-073: đo ngân sách token của tài liệu; `--map <file>` in mục lục thay vì cat
+│   └── docBudget.test.js       # cổng canh trần — ĐỎ khi file tự-nạp phình quá trần
 │   └── shot.mjs                #   CHỤP MÀN HÌNH ĐÁNG TIN (qua CDP). ⚠️ DÙNG CÁI NÀY, đừng tự dựng
 │                               #   lệnh Chromium mới: `--virtual-time-budget` đóng băng hoạt hoạ rAF
 │                               #   (khối framer-motion biến mất im lặng) và `--window-size` không
@@ -1061,13 +1063,27 @@ tới **190.700 token = 95% cửa sổ 200k**. Cách chữa **duy nhất** là t
 
 | File | Nội dung | Cách dùng |
 |---|---|---|
-| `docs/LESSONS_3D.md` | 89 bài học cấp 1 + 96 mục "KÈM THEO" về mỹ thuật thành phố 3D (~146.700 token) | **`grep`, KHÔNG đọc trọn**; có mục lục 89 dòng ở đầu |
+| `docs/LESSONS_3D.md` | 89 bài học cấp 1 + 96 mục "KÈM THEO" về mỹ thuật thành phố 3D (261.236 ký tự ≈ 152k token) | **`grep`, KHÔNG đọc trọn**; có mục lục 89 dòng ở đầu |
 | `docs/AI_COACH.md` | Chi tiết Gemini · chuỗi model · `tier:'deep'` · lưới chống-bịa · CoachChat/Offline/Nudge · `coach-digest` | `grep` khi sửa AI Coach |
-| `docs/archive/` | Nhật ký đã đóng băng (`BAN_GIAO_ARCHIVE_2026-08-24.md`, `START_HERE_LOG_2026-09-06.md`) | chỉ tra cứu lịch sử |
+| **`docs/GOVERNANCE.md`** | *(2026-09-06 chiều, ADR-073)* Nguyên văn PROJECT GOVERNANCE PROTOCOL + AI ENGINEERING PLAYBOOK: bảng "loại thay đổi → tài liệu phải sửa" · Definition of Done · quy trình 7 giai đoạn · **mẫu TECHNICAL ADVISOR REPORT 11 mục** | mở khi làm task đáng kể / cần mẫu báo cáo |
+| **`docs/OPERATIONS.md`** | *(2026-09-06 chiều, ADR-073)* Nguyên văn hạ tầng: Vercel 12 Serverless Functions · sync CAS/`version` + bản vá C1 · Web Push iPhone · 4 cái bẫy Electron tray · quy trình deploy · MCP giữ cái nào | mở khi đụng sync/deploy/`api/`/push/tray |
+| `docs/archive/` | Nhật ký đã đóng băng (`BAN_GIAO_ARCHIVE_2026-08-24.md`, `START_HERE_LOG_2026-09-06.md` — nay giữ thêm VÒNG 33 + chi tiết Thành phố 3D) | chỉ tra cứu lịch sử |
 
 **Quy tắc thêm tri thức mới (bắt buộc):**
 1. Bài học về mỹ thuật 3D → viết vào `docs/LESSONS_3D.md`, **không** viết vào `CLAUDE.md`.
 2. Chi tiết AI Coach → `docs/AI_COACH.md`.
 3. Chỉ khi tri thức ấy **đổi một QUY TẮC** thì mới thêm MỘT DÒNG trỏ ở `CLAUDE.md`.
-4. **Trần đếm được**: `CLAUDE.md` ≤ ~32.000 ký tự · `START_HERE.md` ≤ ~250 dòng. Kiểm nhanh:
-   `node -e "console.log(require('fs').readFileSync('CLAUDE.md','utf8').length)"`
+4. Chi tiết hạ tầng/vận hành → `docs/OPERATIONS.md`; quy trình/quản trị → `docs/GOVERNANCE.md`.
+5. **Trần NAY CÓ CỔNG CANH THẬT** (ADR-073) — `scripts/docBudget.test.js` chạy trong `npm test` và
+   **ĐỎ** khi vượt: `CLAUDE.md` ≤ **20.000** ký tự · `START_HERE.md` ≤ **20.000** ·
+   `PHASE_RULES.md` ≤ **10.000** · `AGENTS.md` ≤ **4.000**.
+   Kiểm: **`node scripts/doc-budget.mjs`** (bảng đầy đủ + %cửa sổ 200k của từng file kho tra cứu).
+   ⚠️ Đo bằng **ký tự Unicode**, KHÔNG bằng `wc -c` — tiếng Việt có dấu là 2–3 byte/ký tự nên
+   `wc -c` thổi phồng ~21% (`CLAUDE.md`: 37.220 ký tự nhưng 45.011 byte). Hệ số đo được:
+   **1,723 ký tự = 1 token**.
+   *(Trần cũ ghi ở đây là 32.000 còn `CLAUDE.md` ghi 40.000 — hai con số khác nhau cho cùng một
+   file, không cái nào được canh. Đó đúng là hình dạng lỗi mà cổng canh sinh ra để chặn.)*
+6. ❌ **CẤM `cat` kho tra cứu**: `TECH_DEBT.md` (250k token = 125% cửa sổ 200k) ·
+   `ARCHITECTURE_DECISIONS.md` (223k) · `CHANGELOG.md` (154k) · `docs/LESSONS_3D.md` (152k) ·
+   `BAN_GIAO.md` (134k, chỉ `head -60`) · `PERFORMANCE.md` (98k). Dùng `grep -n`, `sed -n 'A,Bp'`,
+   hoặc `node scripts/doc-budget.mjs --map <file>` để lấy mục lục + khoảng dòng.

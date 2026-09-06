@@ -58,8 +58,15 @@ thực sự lên production (xem bài học sự cố trong `BAN_GIAO.md`/`AI_HA
 
 ## Đọc tiếp tài liệu nào?
 
-- **Đang sửa code / là AI session mới?** Đọc `BAN_GIAO.md` (đang ở đâu) rồi `CLAUDE.md` (quy tắc
-  bắt buộc + Project Governance Protocol) TRƯỚC KHI LÀM BẤT CỨ GÌ.
+- **Đang sửa code / là AI session mới?** Đọc **`START_HERE.md`** — file DUY NHẤT bắt buộc đọc mỗi
+  phiên (đang ở đâu · việc tiếp theo · 5 luật cắn), rồi `CLAUDE.md` (quy tắc + **ngân sách token**).
+  Đang làm một phase → thêm `PHASE_RULES.md`. ⚠️ **KHÔNG đọc trọn `BAN_GIAO.md`** — nó là nhật ký
+  230.649 ký tự ≈ **134.000 token** (67% cửa sổ 200k); chỉ `head -60`.
+- ❌ **CẤM `cat` các file kho tra cứu** — `TECH_DEBT.md` một mình là **250.000 token = 125% cửa sổ
+  200k trong MỘT lệnh**. Dùng `grep -n` / `sed -n 'A,Bp'`, hoặc lấy mục lục bằng
+  **`node scripts/doc-budget.mjs --map <file>`**. Xem toàn bộ ngân sách: `node scripts/doc-budget.mjs`.
+- Quy trình làm việc + Governance Protocol + mẫu báo cáo cuối task → **`docs/GOVERNANCE.md`**.
+  Hạ tầng (sync · deploy · Vercel · Web Push · Electron tray) → **`docs/OPERATIONS.md`**.
 - Đọc nhanh 10–15 phút để có đủ ngữ cảnh → `AI_ONBOARDING.md`.
 - Muốn biết file nằm ở đâu → `PROJECT_STRUCTURE.md`. Bức tranh kiến trúc lớn (luồng dữ liệu) →
   `ARCHITECTURE.md`.

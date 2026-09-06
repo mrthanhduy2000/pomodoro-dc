@@ -10,6 +10,23 @@
 > **Muốn hiểu VÌ SAO một quyết định được chọn** → `ARCHITECTURE_DECISIONS.md`. **Muốn biết migration
 > cụ thể nào cần chạy** → `MIGRATION.md`.
 
+## 2026-09-06 (chiều) — Ngân sách token cho tài liệu: tách file + cổng canh bằng test (ADR-073)
+
+- **Mục đích**: cửa sổ ngữ cảnh bị chính tài liệu dự án ăn hết. Đo được 18 file `.md` =
+  2.650.448 ký tự ≈ **1,54 triệu token = 769% cửa sổ 200k**; riêng `cat TECH_DEBT.md` = 250k token.
+- **Phạm vi**: `CLAUDE.md` tách còn 16.310 ký tự (−56%, 21.600 → 9.468 token) sang hai file mới
+  `docs/GOVERNANCE.md` + `docs/OPERATIONS.md` — **không xoá một chữ nào**. Thêm
+  `scripts/doc-budget.mjs` (công cụ đo + `--map` in mục lục) và `scripts/docBudget.test.js` (5 bài:
+  trần · chống cổng-canh-file-ma · đo bằng ký tự Unicode không phải byte · chống mất luật khi tách
+  file). `START_HERE.md` 20.200 → 18.132 ký tự. Gỡ 3 mâu thuẫn tài liệu (`AGENTS.md` bảo đọc toàn
+  văn `BAN_GIAO.md` = 134k token · `PHASE_RULES.md` §9 nói ngược luật tự-gộp-`main` · hai bản báo
+  cáo 11 mục chồng nhau).
+- **Ảnh hưởng**: mỗi phiên AI gánh 25.702 token thay vì phải nạp 21.600 token chỉ riêng `CLAUDE.md`;
+  trần tài liệu từ "câu chữ không ai canh" thành **test đỏ trong `npm test`**. Báo cáo cuối task
+  gộp hai bản 11 mục thành một bảng chọn (5 dòng / 11 mục), tiết kiệm ~2.500 token output mỗi task.
+- **Tương thích**: không đụng một dòng mã sản phẩm nào — chỉ tài liệu + hai file `scripts/`.
+  Test 1.597 → 1.602 bài, lint sạch, build xanh.
+
 ## 2026-09-06 — Sửa gốc: menu bar Mac mất đếm ngược, lặp lại nhiều lần (ADR-072)
 
 **Mục đích.** Đàm báo (kèm ảnh) tray menu bar Mac không hiện đếm ngược dù phiên đang chạy thật —

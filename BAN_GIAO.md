@@ -1,3 +1,53 @@
+> Cập nhật lần cuối: **2026-09-06 (chiều, phiên "tối ưu context window")** — **NGÂN SÁCH TOKEN CHO
+> TÀI LIỆU: TÁCH FILE + CỔNG CANH BẰNG TEST (ADR-073).** Đàm gửi ảnh `/context`: cửa sổ 699,8k/1M
+> (70%), `Messages` chiếm **624,7k = 62,5%** trong khi `CLAUDE.md` chỉ 21,6k = 2,2%.
+>
+> ### Chẩn đoán: nhắm sai chỗ thì tối ưu bao nhiêu cũng vô ích
+> Đo 18 file `.md`: **2.650.448 ký tự ≈ 1,54 triệu token = 769% cửa sổ 200k**. Thủ phạm không phải
+> file tự-nạp mà là **kho tra cứu bị `cat`**: `TECH_DEBT.md` = 250k token (**125% cửa sổ 200k trong
+> MỘT lệnh**), `ARCHITECTURE_DECISIONS.md` = 223k, `CHANGELOG.md` = 154k, `BAN_GIAO.md` = 134k.
+> Đó là cách `Messages` leo tới 62,5%.
+>
+> ### ⚠️ Công cụ đo suýt nói dối lần thứ 29 — `wc -c` ĐẾM BYTE, KHÔNG ĐẾM KÝ TỰ
+> Vòng đo đầu tiên kết luận *"`CLAUDE.md` 45.011 ký tự, vượt trần 40.000 nó tự đặt"*. **SAI.**
+> Đó là 45.011 **byte**; số ký tự thật là **37.220** (dưới trần). Tiếng Việt có dấu là 2–3 byte/ký
+> tự nên `wc -c` thổi phồng ~21%, còn trần trong tài liệu đo bằng `String.length`. Đúng luật số 1
+> của dự án: *nghi CÔNG CỤ ĐO trước, nghi mã sau*. Hệ số quy đổi đo được: **1,723 ký tự = 1 token**
+> (tiếng Anh ~4). Nhưng cái vượt trần THẬT vẫn có: **`START_HERE.md` 20.200/20.000**, và nó giữ
+> **4 vòng** thay vì 3 như luật của chính nó — không phiên nào biết, vì trần chỉ là một câu chữ.
+>
+> ### Đã làm (8 việc)
+> 1. **Tách `CLAUDE.md` 37.220 → 16.310 ký tự (−56%)**, không xoá một chữ: → `docs/GOVERNANCE.md`
+>    (Governance Protocol + AI Engineering Playbook) + `docs/OPERATIONS.md` (hạ tầng · Vercel 12
+>    Functions · sync/CAS · Web Push · Electron tray · deploy · MCP). Giữ lại LUẬT dạng một dòng
+>    + con trỏ. Token: 21.600 → **9.468**.
+> 2. **Mục "NGÂN SÁCH TOKEN" đứng ĐẦU `CLAUDE.md`** — bảng "file nào CẤM `cat`" kèm %cửa sổ, vì
+>    luật rẻ nhất là luật ngăn một lệnh 250k token chứ không phải luật tiết kiệm 2k.
+> 3. **`scripts/doc-budget.mjs`** — đo ký tự/token mọi tài liệu, in bảng có thanh mức dùng;
+>    `--map <file>` in mục lục + khoảng dòng để `sed -n 'A,Bp'` thay vì `cat`.
+> 4. **`scripts/docBudget.test.js` (5 bài) — trần NAY LÀ CỔNG CANH THẬT**, đỏ trong `npm test`.
+>    Ba phép phá đã thử và đều nổ đúng chỗ: nhồi 5.000 ký tự vào `CLAUDE.md` → đỏ · gỡ luật
+>    `api/_tests/` khỏi `CLAUDE.md` → đỏ · đổi tên file có trần (cổng canh file ma) → đỏ.
+> 5. **`START_HERE.md` 20.200 → 18.132 ký tự (91% trần)**: đẩy VÒNG 33 + chi tiết Thành phố 3D
+>    (hộp đen Đàm cấm đụng — không đáng trả token mỗi phiên) sang `docs/archive/`. Giữ nguyên các
+>    luật 2D đang dùng (chuyển động · điều hướng · skin · phần thưởng · toast).
+> 6. **Gỡ mâu thuẫn `AGENTS.md`**: nó bảo Codex *"đọc `BAN_GIAO.md` toàn văn"* = **134k token ngay
+>    câu thứ hai của phiên**, ngược hẳn `PHASE_RULES.md` §5 (*"chỉ đọc 60 dòng đầu"*). Nay:
+>    `START_HERE.md` trước, `head -60 BAN_GIAO.md`, + danh sách file cấm `cat`.
+> 7. **Gỡ mâu thuẫn `PHASE_RULES.md` §9** (*"Không tự gộp `main`"*) — đã bị lệnh Đàm 2026-08-22 thay
+>    thế (*"sau này tự deploy"*), nay ghi rõ là đã bị thay thế thay vì để hai file nói ngược nhau.
+> 8. **Gộp hai báo cáo 11 mục chồng nhau thành MỘT bảng chọn theo loại task** — việc gọn thì 5 dòng,
+>    kiến trúc/hạ tầng/sự cố thì TECHNICAL ADVISOR REPORT 11 mục. Tiết kiệm ~2.500 token **output**
+>    mỗi task, đây là phần "output hiệu quả nhất" mà Đàm yêu cầu.
+>
+> ### Kết quả đo
+> Mỗi phiên gánh **44.284 ký tự ≈ 25.702 token = 12,9% cửa sổ 200k** cho cả 4 file bắt buộc
+> (trước đây riêng `CLAUDE.md` đã 21.600). `npm test` **1.602 bài (1.601 pass · 0 fail · 1 skipped)**
+> — thêm đúng 5 bài mới; `test:cross` 32,6 giây; lint sạch; build xanh.
+> Kiểm bất cứ lúc nào: `node scripts/doc-budget.mjs`.
+
+---
+
 > Cập nhật lần cuối: **2026-09-06 (cùng ngày, phiên khác)** — **SỬA GỐC: MENU BAR MAC MẤT ĐẾM
 > NGƯỢC, LẶP LẠI NHIỀU LẦN (ADR-072).** Đàm báo kèm ảnh chụp: thanh menu Mac chỉ hiện icon đồng
 > hồ, không có chữ đếm ngược, dù web app (tab trình duyệt) vẫn đang chạy phiên thật ("24:56").

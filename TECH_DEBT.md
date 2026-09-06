@@ -13,7 +13,12 @@
 > mà không được refactor triệt để, phải CHỦ ĐỘNG đề xuất mở một "Maintenance Sprint" (nêu rõ mục
 > tiêu/phạm vi/lợi ích/rủi ro/tiêu chí hoàn thành) thay vì tiếp tục cộng thêm tính năng mới.
 >
-> **Trạng thái ngưỡng (2026-09-06, sau ADR-072 "tray: realtime không phải nguồn duy nhất")**: thêm
+> **Trạng thái ngưỡng (2026-09-06 chiều, sau ADR-073 "ngân sách token cho tài liệu")**: thêm
+> **#103** (Medium — kho tra cứu đã lớn tới mức một lệnh `cat` nổ cửa sổ ngữ cảnh; luật cấm `cat`
+> hiện là văn bản, chưa phải cổng). **103 mục · 43 đã đóng · 60 còn mở**. Vẫn **1 mục Priority High
+> còn mở** (#53), **0 mục Critical** → xa ngưỡng Maintenance Sprint.
+>
+> *(mốc trước)* **(2026-09-06, sau ADR-072 "tray: realtime không phải nguồn duy nhất")**: thêm
 > **#102** (Medium — `main.js` không có test tự động cho lưới poll/`powerMonitor` vừa thêm). **102
 > mục · 43 đã đóng · 59 còn mở**. Vẫn **1 mục Priority High còn mở** (#53), **0 mục Critical** → xa
 > ngưỡng Maintenance Sprint.
@@ -5725,6 +5730,43 @@ trong chú thích thì đừng để `--selftest` của chính nó vẫn dùng �
 - **Review Trigger**: Khi có ai định xoá/đổi tên mục «🎨 Bài học mỹ thuật thành phố 3D» trong
   `CLAUDE.md`, hoặc khi đổi tên `docs/LESSONS_3D.md`.
 - **Owner**: chưa ai · **Status**: MỞ (chấp nhận có chủ đích)
+
+## #103 — Kho tra cứu đã lớn tới mức MỘT lệnh `cat` nổ cửa sổ ngữ cảnh, và không có cổng nào canh chúng
+
+- **Tên**: `TECH_DEBT.md` · `ARCHITECTURE_DECISIONS.md` · `CHANGELOG.md` · `BAN_GIAO.md` phình
+  không giới hạn; luật "cấm `cat`" (ADR-073) là VĂN BẢN, không phải cổng thi hành được
+- **Module**: tài liệu gốc repo + `docs/`
+- **Priority**: Medium · **Severity**: Medium
+- **Impact**: `cat TECH_DEBT.md` = 430.761 ký tự ≈ **250.000 token = 125% cửa sổ 200k trong MỘT
+  lệnh** — phiên chết ngay tại đó. `ARCHITECTURE_DECISIONS.md` 223k · `CHANGELOG.md` 154k ·
+  `BAN_GIAO.md` 134k. Chính hình dạng này đã đẩy `Messages` lên 62,5% cửa sổ 1M trong phiên
+  2026-09-06 khiến Đàm phải yêu cầu tối ưu.
+- **Root Cause**: cả bốn file đều là sổ **CHỈ GHI THÊM** (append-only) theo thiết kế — mỗi phase
+  cộng thêm mục mới, không bao giờ có nhịp đóng băng. `BAN_GIAO.md` từng được cắt (còn
+  `docs/archive/BAN_GIAO_ARCHIVE_2026-08-24.md` = 486.294 ký tự ≈ 282k token) nhưng đã phình lại
+  230.649 ký tự chỉ trong 13 ngày ⇒ **tốc độ phình ~17.700 ký tự/ngày**, tức chạm lại mốc cũ sau
+  ~2 tuần nữa. Không có cơ chế tự động nào cắt hay cảnh báo.
+- **Current Risk**: Trung bình — ADR-073 đã đặt luật "cấm `cat`" ở ĐẦU `CLAUDE.md` (nơi AI chắc
+  chắn đọc) và `node scripts/doc-budget.mjs` in ra %cửa sổ của từng file, nên khả năng một phiên
+  vô tình `cat` đã giảm mạnh. Nhưng đó vẫn là kỷ luật, không phải cơ chế.
+- **Future Risk**: Trung bình–Cao — mỗi phase cộng thêm ~10–50k ký tự vào bốn file này. Khi
+  `TECH_DEBT.md` vượt ~340.000 ký tự thì ngay cả `grep` với nhiều dòng ngữ cảnh cũng bắt đầu đắt,
+  và `docs/archive/BAN_GIAO_ARCHIVE_2026-08-24.md` (282k token) hiện đã lớn hơn cả cửa sổ 200k.
+- **Recommended Solution**: (a) cho `scripts/doc-budget.mjs` một **ngưỡng CẢNH BÁO** cho kho tra
+  cứu (vd. in ⚠️ khi một file vượt 50% cửa sổ 200k) — cảnh báo, KHÔNG chặn, vì chúng được phép lớn;
+  (b) đặt nhịp đóng băng định kỳ: `TECH_DEBT.md` chuyển mục ✅ đã đóng >60 ngày sang
+  `docs/archive/TECH_DEBT_CLOSED_*.md`, `ARCHITECTURE_DECISIONS.md` chuyển ADR cũ hơn 50 số sang
+  `docs/archive/`, `CHANGELOG.md` cắt theo quý; (c) mỗi file lớn có **mục lục ở đầu** (như
+  `docs/LESSONS_3D.md` đã có 89 dòng) để `head -80` là đủ định vị, khỏi `grep` mò.
+- **Estimated Complexity**: Thấp–Trung bình (thao tác cắt + sửa con trỏ; rủi ro chính là làm đứt
+  các lời trỏ chéo giữa các file — xem #101)
+- **Blocking Conditions**: Không có. Làm được ngay, nhưng nên làm SAU khi #101 (47 lời trỏ
+  "xem `CLAUDE.md`" trong 38 file mã) được xử lý, để không phải sửa con trỏ hai lần.
+- **Review Trigger**: khi `node scripts/doc-budget.mjs` cho thấy `TECH_DEBT.md` vượt 340.000 ký tự
+  (~200k token = 100% cửa sổ 200k), hoặc khi `BAN_GIAO.md` vượt 250.000 ký tự.
+- **Owner**: chưa phân công · **Status**: 🔵 Còn mở (ghi 2026-09-06 chiều, ADR-073)
+
+---
 
 ## #102 — `electron/main.js` (tray menu bar) không có test tự động nào cho vòng đời realtime/poll/resume
 

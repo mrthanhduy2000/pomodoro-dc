@@ -11,6 +11,57 @@
 
 ---
 
+## ADR-073 — Ngân sách token của TÀI LIỆU: tách file + cổng canh bằng test, không nới trần
+
+- **Ngày**: 2026-09-06 (chiều)
+- **Bối cảnh**: Đàm gửi ảnh chụp `/context` — cửa sổ ngữ cảnh 699,8k/1M (70%), trong đó `Messages`
+  chiếm **624,7k = 62,5%** còn `CLAUDE.md` chỉ 21,6k = 2,2%. Yêu cầu: *"tối ưu token nhất nhưng vẫn
+  đem ra output hiệu quả nhất"*. Đo lại toàn bộ tài liệu: 18 file `.md` = **2.650.448 ký tự ≈ 1,54
+  triệu token = 769% cửa sổ 200k**. `TECH_DEBT.md` một mình là 250k token (125% cửa sổ 200k).
+- **Vấn đề gốc**: thủ phạm KHÔNG phải file tự-nạp mà là **kho tra cứu bị `cat`**. Một lệnh
+  `cat TECH_DEBT.md` nổ cửa sổ 200k trong MỘT lượt; đó là cách `Messages` leo tới 62,5%. Đồng thời,
+  ba trần đã ghi trong tài liệu (`CLAUDE.md` 40.000 · `START_HERE.md` 20.000 · quy tắc "3 vòng gần
+  nhất") **chỉ tồn tại dưới dạng câu chữ, không có gì canh** — `START_HERE.md` đã âm thầm vượt trần
+  của chính nó (20.200/20.000) và giữ 4 vòng thay vì 3, không phiên nào biết. Thêm ba mâu thuẫn
+  làm phiên sau đốt token hoặc làm sai: `AGENTS.md` bảo Codex *"đọc `BAN_GIAO.md` toàn văn"*
+  (**134k token** ngay câu thứ hai của phiên) trong khi `PHASE_RULES.md` §5 nói *"chỉ đọc 60 dòng
+  đầu"*; `PHASE_RULES.md` §9 ghi *"Không tự gộp `main`"* trong khi `CLAUDE.md` + `START_HERE.md`
+  ghi *"TỰ gộp `main`, KHÔNG hỏi"*; và hai bản báo cáo 11 mục chồng nhau (Báo cáo bàn giao +
+  TECHNICAL ADVISOR REPORT) tốn ~2.500 token **output** mỗi task để nói phần lớn cùng một chuyện.
+- **Phương án cân nhắc**:
+  1. Nén văn bản: viết lại tài liệu cho súc tích, xoá phần dài dòng.
+  2. Nới trần cho khớp thực tế (40.000 → 50.000) và chấp nhận chi phí.
+  3. Tách file theo chủ đề + đặt trần có **cổng canh bằng test thật** + cấm `cat` kho tra cứu.
+- **Lý do loại bỏ từng phương án**: (1) bị loại vì tri thức trong tài liệu này là thứ đắt nhất dự án
+  — mỗi mục là một phase đã trả giá; nén văn bản là con đường ngắn nhất tới việc **đánh mất một luật
+  vận hành**, đúng thất bại `AGENTS.md` 2026-07-31 (bản sao trôi khỏi bản gốc sau 5 ngày, mất nguyên
+  mục "3 cái bẫy menu bar"). (2) bị loại vì nới trần là *chữa cái nhiệt kế* — và trần cũ 40.000 ký tự
+  vốn đã tương đương 21,6k token/phiên, tức bản thân con số ấy mới là vấn đề chứ không phải việc
+  chạm nó.
+- **Giải pháp được chọn**: phương án (3), lặp lại đúng mẫu hình đã thành công sáng cùng ngày (tách
+  `docs/LESSONS_3D.md` + `docs/AI_COACH.md`, giảm 190.700 → 21.600 token mà **không xoá một chữ nào**):
+  - Tách `CLAUDE.md` → `docs/GOVERNANCE.md` (Governance Protocol + AI Engineering Playbook, nguyên
+    văn) + `docs/OPERATIONS.md` (hạ tầng · Vercel 12 Functions · sync/CAS · Web Push · Electron tray ·
+    deploy · MCP, nguyên văn). `CLAUDE.md` giữ lại LUẬT ở dạng một dòng + con trỏ: **37.220 → 16.310
+    ký tự (−56%)**, 21.600 → 9.468 token.
+  - `scripts/doc-budget.mjs` + `scripts/docBudget.test.js`: trần trở thành **cổng canh chạy trong
+    `npm test`**, đỏ khi vượt. Đo bằng **ký tự Unicode** (`String.length`), KHÔNG bằng `wc -c` —
+    tiếng Việt có dấu là 2–3 byte/ký tự nên `wc -c` thổi phồng ~21% và trong chính phiên này đã suýt
+    cho kết luận sai *"CLAUDE.md vượt trần 40.000"* (thật ra 37.220 ký tự / 45.011 byte).
+  - Mục "NGÂN SÁCH TOKEN" đứng ĐẦU `CLAUDE.md` với bảng "file nào cấm `cat`" — vì luật rẻ nhất là
+    luật ngăn một lệnh 250k token, không phải luật tiết kiệm 2k token.
+  - Gộp hai báo cáo 11 mục thành MỘT bảng chọn theo loại task (5 dòng cho việc gọn · 11 mục cho
+    kiến trúc/hạ tầng/sự cố).
+- **Trade-off**: (a) tri thức nay nằm xa hơn một bước — phiên nào cần quy trình hay chi tiết hạ tầng
+  phải mở thêm một file; đổi lại mọi phiên KHÔNG cần chúng thì không trả tiền. (b) Trần cứng sẽ đỏ
+  khi `START_HERE.md` nhận vòng mới (đang ở 91%) — đó là **hành vi mong muốn**: nó buộc phiên sau
+  đẩy vòng cũ sang `docs/archive/`, đúng luật vốn có mà trước đây không ai thi hành.
+- **Ảnh hưởng**: mỗi phiên gánh 44.284 ký tự ≈ **25.702 token = 12,9% cửa sổ 200k** cho toàn bộ
+  4 file bắt buộc (trước: `CLAUDE.md` một mình đã 21.600). Test 1.597 → **1.602 bài**.
+- **Điều kiện xem lại**: khi Claude Code đổi cơ chế nạp `CLAUDE.md` (ví dụ cho phép nạp một phần),
+  hoặc khi hệ số 1,723 ký tự/token đo lại thấy lệch >10%, hoặc khi `docs/GOVERNANCE.md` /
+  `docs/OPERATIONS.md` tự phình quá 30.000 ký tự (lúc đó tách tiếp, đừng nén).
+
 ## ADR-072 — Tray menu bar: realtime KHÔNG được là nguồn cập nhật DUY NHẤT, luôn cần một lưới poll dự phòng
 
 - **Ngày**: 2026-09-06

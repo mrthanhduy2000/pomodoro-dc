@@ -244,3 +244,44 @@
   VIEWPORT — ảnh `--full` KHÔNG thấy lỗi này** (nó là ảnh ghép nên thanh `fixed` không đè lên gì).
   Số đo khác: màn Tập trung 2.920→2.660px · tab Kỹ năng 3.145→2.032px · Thành tích 14.254→12.633px
   · nhãn tiếng Anh trên màn hình 11→0.
+
+- **Trò chơi — VÒNG 33 (2026-09-05): CÁCH MẠNG VÒNG LẶP CHÍNH (ADR-068), không đụng
+  Thành phố.** Ba chỗ đổi: (1) `TodayHero` mở đầu màn Tập trung — chuỗi · dải bảy ngày T2→CN ·
+  mốc kế tiếp (thay ô Chuỗi ở thanh tiêu đề tại tab này + hai thẻ ở cột phải desktop); (2) nhiệm
+  vụ ngày nằm ngay dưới đồng hồ, tab `missions` đổi nhãn "Tiến trình" và vào menu Thêm ⇒ thanh dưới
+  **4 nút**; (3) **`SessionRewardStory`** sau MỌI phiên (xp → chuỗi → hôm nay → nhiệm vụ → cấp →
+  kỷ), hộp thoại 7 giai đoạn chỉ còn mở khi lên kỷ hoặc bấm "Xem chi tiết". ADR-060 đảo ngược MỘT
+  NỬA (vế toast-sau-mọi-phiên). Cửa soi: `--preview "loot&dc-preview-card=streak"`.
+  ⚠️ Nút Bắt đầu suýt tụt dưới thanh tab lần thứ TƯ — mọi thứ thêm vào cột giữa tiêu vào biên ấy.
+  Nợ mới: `TECH_DEBT #98` (`LootDropModal` trùng vai với chuỗi thẻ).
+
+*(VÒNG 33 chuyển về đây 2026-09-06 chiều: `START_HERE.md` giữ tối đa 3 vòng gần nhất — luật của chính nó — và đã vượt trần 20.000 ký tự, 20.200.)*
+
+## Chi tiết THÀNH PHỐ 3D — chuyển từ `START_HERE.md` ngày 2026-09-06 (chiều)
+
+*Lý do: `START_HERE.md` là file BẮT BUỘC đọc mỗi phiên, mà Thành phố 3D là **HỘP ĐEN đã xong, Đàm cấm đụng**. Trả tiền token mỗi phiên cho chi tiết của một thứ không được đụng tới là lãng phí thuần tuý. Các luật 2D vẫn đang dùng (chuyển động · điều hướng · skin · phần thưởng · toast) được GIỮ LẠI ở `START_HERE.md`. Đụng 3D thì `grep` file này + `docs/LESSONS_3D.md`.*
+
+- **Thành phố 3D (từ nhánh Phase 19–21): ADR-064 · ADR-065 · ADR-066.** Bộ xương thành phố sinh
+  theo kỷ: BSP quyết cắt Ở ĐÂU, cung cong quyết cắt theo HÌNH GÌ; **một thửa là TẬP Ô**, không phải
+  hình chữ nhật đã khai. Trước đó: ADR-059 (mỗi kỷ MỘT MẠNG ĐƯỜNG riêng — hết bàn cờ).
+- ⚠️ **PHÉP GỘP 2026-08-28 CÓ MỘT QUYẾT ĐỊNH PHẢI BIẾT — `reach` LẤY 0,8 CỦA NHÁNH, KHÔNG LẤY 0,75
+  CỦA `main`.** Hai phiên đo cùng một đại lượng trên hai THẾ GIỚI khác nhau: `main` đo trên bố cục
+  cũ và chốt 0,75; nhánh đo trên bố cục Phase 21 §4 (thành phố LAN RA NGOÀI ô lưới) và thấy khối đổ
+  bóng xa tâm nhất đi tới bán kính **9,2275** — xa hơn cả `reach` mà 0,75 cho ra (9,00). Sau gộp,
+  thế giới là bố cục MỚI, nên số của nhánh mới là số đúng; giữ 0,75 là cắt cụt bóng ở vành ngoài.
+  Đúng bài học `TECH_DEBT #43`: **một bảng số chỉ đúng cho đúng hai commit đã sinh ra nó.**
+- ⚠️ **Bóng đổ nay có HAI tầng nướng sẵn, nhân vào nhau** — `contactShade` (trục ĐỨNG, đo từ nền của
+  CHÍNH công trình nhờ bản vá của `main`) × `occlusionShade` (đủ BA chiều, từ nhánh Phase 21). Phép
+  gộp giữ cả hai; đừng gỡ tầng nào mà chưa đọc `geometryFactory.js` dòng ~90.
+- Cảnh 3D: 15 kỷ, mỗi kỷ buộc vào một nước có thật (`country`/`landmark` ở `eraStyle.js`).
+  Các bảng bản sắc 15 kỷ đã có: mái · tầng trệt · mặt đường · thực vật · địa thế/nước ·
+  vùng phụ cận · khu phố (có trục `layout`) · dáng đi · mạng đường.
+- Lưới thành phố **12×12**. Mỗi kỷ có mạng đường RIÊNG (**44…88 ô**, không còn là 80 ô chung).
+  Thửa chia vai ở `city3d/parcelRoles.js`: 5 kỳ quan (536 ô) · 1–2 sân bỏ trống (155 ô) ·
+  còn lại nhà dân (**371 ô trên cả 15 kỷ**, đã chạm trần). Muốn thành phố đông hơn thì đổi thứ
+  NẰM TRONG một ô, đừng thêm ô.
+  ⚠️ Hỏi mạng đường thì phải truyền `era`: `roadCellCandidates(era)` / `roadCellCount(era)`
+  (ở `src/engine/cityLayout.js`) — gọi thiếu tham số sẽ **im lặng** trả lời về kỷ 1.
+- Hiệu năng: đã đo dứt điểm trên Apple M3 — **dư 3,2 lần**, hình học gần như miễn phí.
+  **KHÔNG đo lại** trừ khi Đàm thấy khung hình giật trên máy thật.
+

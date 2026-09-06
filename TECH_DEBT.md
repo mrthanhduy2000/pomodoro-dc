@@ -13,7 +13,12 @@
 > mà không được refactor triệt để, phải CHỦ ĐỘNG đề xuất mở một "Maintenance Sprint" (nêu rõ mục
 > tiêu/phạm vi/lợi ích/rủi ro/tiêu chí hoàn thành) thay vì tiếp tục cộng thêm tính năng mới.
 >
-> **Threshold status (2026-09-06 night, after ADR-075 "retrieval architecture")**: closed **#103**
+> **Threshold status (2026-09-06 late night, after ADR-076 "round 37")**: no entry opened or closed;
+> **#2** progressed (`gameStore.js` 5,413 → 4,696 · `PomodoroEngine.jsx` 2,958 → 1,922) and **#86**
+> got its single door (`shared/ActionButton.jsx`, tenants not yet moved). **103 entries · 45 closed ·
+> 58 open.** Still **1 Priority High open** (#53), **0 Critical** → far from the Maintenance Sprint threshold.
+>
+> *(previous)* **Threshold status (2026-09-06 night, after ADR-075 "retrieval architecture")**: closed **#103**
 > (reference archive capped and guarded). **103 entries · 45 closed · 58 open.** Still **1 Priority
 > High open** (#53), **0 Critical** → far from the Maintenance Sprint threshold.
 >
@@ -121,7 +126,7 @@ Look one up with `grep -n '^## #<number>' docs/archive/TECH_DEBT_CLOSED_2026-09-
 
 ---
 
-## #2 — God File: `gameStore.js` (~5.400 dòng) — CÒN MỞ; nửa `StatsDashboard.jsx` đã xử lý 2026-09-06 (ADR-071: 3.792 → 294 dòng)
+## #2 — God File: `gameStore.js` (~4,700 dòng) — CÒN MỞ; `StatsDashboard.jsx` đã xử lý (ADR-071: 3.792 → 294) · `PomodoroEngine.jsx` 2,958 → 1,922 (ADR-076)
 
 - **Module**: `src/store/gameStore.js`, `src/components/StatsDashboard.jsx`
 - **Priority**: Low
@@ -144,6 +149,7 @@ Look one up with `grep -n '^## #<number>' docs/archive/TECH_DEBT_CLOSED_2026-09-
 
 ---
 - **Cập nhật 2026-09-06 (ADR-071)**: `StatsDashboard.jsx` 3.792 → **294 dòng** (ba thẻ trả lời + sổ tra cứu gấp); phần tra cứu tách nguyên văn sang `StatsJournal.jsx` (881) · `StatsNotes.jsx` (275) · `statsTheme.js` (45); logic ba câu trả lời ở `engine/statsAnswers.js` (171, thuần). `gameStore.js` 5.744 → 5.413 nhờ đóng #99 (xoá kinh tế ngủ), `gameMath.js` 2.044 → 1.732. Vế `gameStore.js` VẪN MỞ — ứng viên tách kế tiếp: chuỗi tuần (`autoClaimWeeklySteps` + `refreshWeeklyChain`) và nhiệm vụ ngày sang engine thuần.
+- **Update 2026-09-06 (ADR-076)**: done — daily missions and the weekly chain are `engine/missions.js` + `engine/weeklyChain.js` (pure, `now`/`today` params, 14 tests); the hand-written live mission tick inside `completeFocusSession` is gone (`tickDailyMissions`, live = reload); `forgiveness` removed. `gameStore.js` **5,413 → 4,696**. `PomodoroEngine.jsx` **2,958 → 1,922** (`shared/ActionButton.jsx`, `components/focus/*`, helpers to `engine/timerSession.js`). Still open: `completeFocusSession` itself (~700 lines) and the setup/support cards still inline in `PomodoroEngine.jsx`. Next candidate: `completeFocusSession` reward assembly → `engine/sessionRewards.js`.
 
 ## #3 — ⚠️ **PHẦN LỚN ĐÃ XỬ LÝ (2026-09-02)** — mô tả kỹ năng prestige (Thăng Hoa) không khớp code thật
 
@@ -2916,6 +2922,8 @@ trong chú thích thì đừng để `--selftest` của chính nó vẫn dùng �
 - **Owner**: chưa ai · **Status**: MỞ (2026-08-27)
 
 ## #86 — ⚠️ **NỬA GỐC ĐÃ XỬ LÝ (2026-09-02)** — 137 nút tự vẽ trên 28 file KHÔNG đọc token skin, và `ActionButton` không nhận nổi chúng
+
+- **Update 2026-09-06 (ADR-076)**: the ROOT CAUSE is fixed — `ActionButton` is now `src/components/shared/ActionButton.jsx` (exported, token colours only, `sizeMap` opened with `sm`/`md`; guarded by `actionButtonPress.test.js` + `actionButtonSizing.test.js`). Remaining: the hand-drawn buttons in `Settings.jsx` (15, `lightTheme`-branched), `StatsJournal.jsx` (14), `NotificationCenter.jsx` (8), `CoachChat.jsx` (6) … still draw themselves; migrate them through the door, file by file, and count with `grep -c '<button' src/components/*.jsx`.
 
 - **Tên**: nút hành động của app tồn tại hai thế giới — `ActionButton` (nay đọc token, đúng ở cả 10
   tổ hợp skin × chế độ) và 137 thẻ `<button>`/`<motion.button>` tự vẽ bằng lớp Tailwind chốt cứng.

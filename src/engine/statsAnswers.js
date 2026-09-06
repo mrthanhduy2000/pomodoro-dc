@@ -4,7 +4,8 @@
  * Màn Thống kê cũ TRÌNH BÀY: 5 tab · 6 kỳ · 3.792 dòng biểu đồ, và không câu nào trong ba câu Đàm
  * thật sự hỏi được trả lời ở nếp gấp đầu. File này chỉ GHÉP những phép phân tích ĐÃ CÓ, ĐÃ TEST, ĐÃ
  * GÁC CỠ MẪU (`coach/coachIntel.js` · `gameMath.js`) thành ba câu trả lời:
- *   (1) Tôi có đang khá lên không?  — tuần này so với CÙNG QUÃNG của tuần trước, kèm 7 cặp cột.
+ *   (1) Tôi có đang khá lên không?  — tuần này so với CÙNG QUÃNG của tuần trước, kèm 7 cặp cột;
+ *       đầu tuần chưa có gì để so thì lùi một tuần: trọn tuần trước so với tuần trước nữa (ADR-076).
  *   (2) Khi nào tôi mạnh nhất?      — giờ · độ dài · loại việc trên PHIÊN TRỌN VẸN, mỗi thứ kèm cỡ mẫu.
  *   (3) Làm gì tiếp?                — ĐÚNG MỘT gợi ý (phút + loại việc), đủ để bấm là chạy.
  *
@@ -52,43 +53,68 @@ export function formatMinutesVi(minutes) {
  *   thisMinutes, prevMinutes, thisN, prevN, elapsedDays, days:Array<{label,thisMinutes,prevMinutes,elapsed}>,
  *   headline:string, detail:string}}
  */
+/** Minutes/sessions of completed entries inside [start, end], split into 7 weekday buckets from `start`. */
+function sumWindow(entries, start, end) {
+  const perDay = Array(7).fill(0);
+  let minutes = 0; let n = 0;
+  for (const e of entries) {
+    const ts = entryTs(e);
+    if (ts < start || ts > end) continue;
+    perDay[Math.min(6, Math.floor((ts - start) / DAY_MS))] += e.minutes;
+    minutes += e.minutes; n += 1;
+  }
+  return { minutes, n, perDay };
+}
+
+function compareWindows(cur, prev, scope, elapsedDays) {
+  const days = WEEKDAY_SHORT.map((label, i) => ({ label, thisMinutes: cur.perDay[i], prevMinutes: prev.perDay[i], elapsed: i < elapsedDays }));
+  const base = { thisMinutes: cur.minutes, prevMinutes: prev.minutes, thisN: cur.n, prevN: prev.n, elapsedDays, days, scope, pct: null, direction: 'flat' };
+  const sameSpan = scope.kind === 'same-span';
+  if (prev.n === 0) {
+    return { ...base, status: 'no-baseline', direction: 'up', headline: `${scope.current} đã có ${cur.n} phiên, ${formatMinutesVi(cur.minutes)}.`, detail: sameSpan ? 'Cùng quãng này tuần trước chưa có phiên nào để so — sang tuần sau ô này mới thành một phép so sánh.' : 'Tuần trước nữa chưa có phiên nào để so.' };
+  }
+  if (cur.n === 0) {
+    return { ...base, status: 'ready', pct: -100, direction: 'down', headline: `${scope.current} chưa có phiên nào.`, detail: `${sameSpan ? 'Tới cùng lúc này tuần trước' : 'Tuần trước nữa'} bạn đã có ${prev.n} phiên, ${formatMinutesVi(prev.minutes)}.` };
+  }
+  const delta = Math.round(((cur.minutes - prev.minutes) / prev.minutes) * 100);
+  const direction = delta >= WEEK_TREND_THRESHOLD_PCT ? 'up' : delta <= -WEEK_TREND_THRESHOLD_PCT ? 'down' : 'flat';
+  const vs = sameSpan ? 'tuần trước' : 'tuần trước nữa';
+  const headline = direction === 'up'
+    ? `${scope.current} bạn tập trung nhiều hơn ${vs} ${delta}%.`
+    : direction === 'down'
+      ? `${scope.current} bạn tập trung ít hơn ${vs} ${Math.abs(delta)}%.`
+      : `${scope.current} bạn giữ nhịp ngang ${vs}.`;
+  const detail = `${formatMinutesVi(cur.minutes)} qua ${cur.n} phiên, so với ${formatMinutesVi(prev.minutes)} qua ${prev.n} phiên ${sameSpan ? 'tính tới cùng lúc này tuần trước' : 'của tuần trước nữa'}.`;
+  return { ...base, status: sameSpan ? 'ready' : 'last-week', pct: delta, direction, headline, detail };
+}
+
+/** Legend labels the screen prints — the engine names the windows so the bars never mislabel them. */
+export const WEEK_SCOPE = Object.freeze({
+  sameSpan: Object.freeze({ kind: 'same-span', current: 'Tuần này', baseline: 'Tuần trước, tới cùng lúc này' }),
+  lastWeek: Object.freeze({ kind: 'last-week', current: 'Tuần trước', baseline: 'Tuần trước nữa' }),
+});
+
 export function buildWeekComparison(history = [], { now = new Date() } = {}) {
   const nowTs = now instanceof Date ? now.getTime() : Number(now);
   const thisStart = startOfVietnamWeekTs(nowTs);
   const prevStart = thisStart - WEEK_MS;
-  const prevEnd = nowTs - WEEK_MS;
+  const entries = coachCompletedSessions(Array.isArray(history) ? history : []);
   const elapsedDays = Math.min(7, Math.floor((nowTs - thisStart) / DAY_MS) + 1);
-  const days = WEEKDAY_SHORT.map((label, i) => ({ label, thisMinutes: 0, prevMinutes: 0, elapsed: i < elapsedDays }));
-  let thisMinutes = 0; let prevMinutes = 0; let thisN = 0; let prevN = 0;
-  for (const e of coachCompletedSessions(Array.isArray(history) ? history : [])) {
-    const ts = entryTs(e);
-    if (ts >= thisStart && ts <= nowTs) {
-      days[Math.min(6, Math.floor((ts - thisStart) / DAY_MS))].thisMinutes += e.minutes;
-      thisMinutes += e.minutes; thisN += 1;
-    } else if (ts >= prevStart && ts <= prevEnd) {
-      days[Math.min(6, Math.floor((ts - prevStart) / DAY_MS))].prevMinutes += e.minutes;
-      prevMinutes += e.minutes; prevN += 1;
-    }
-  }
-  const base = { thisMinutes, prevMinutes, thisN, prevN, elapsedDays, days, pct: null, direction: 'flat' };
-  if (thisN === 0 && prevN === 0) {
-    return { ...base, status: 'empty', headline: 'Chưa có phiên nào trong hai tuần gần đây.', detail: 'Xong một phiên là ô này bắt đầu so tuần này với tuần trước.' };
-  }
-  if (prevN === 0) {
-    return { ...base, status: 'no-baseline', direction: 'up', headline: `Tuần này đã có ${thisN} phiên, ${formatMinutesVi(thisMinutes)}.`, detail: 'Cùng quãng này tuần trước chưa có phiên nào để so — sang tuần sau ô này mới thành một phép so sánh.' };
-  }
-  if (thisN === 0) {
-    return { ...base, status: 'ready', pct: -100, direction: 'down', headline: 'Tuần này chưa có phiên nào.', detail: `Tới cùng lúc này tuần trước bạn đã có ${prevN} phiên, ${formatMinutesVi(prevMinutes)}.` };
-  }
-  const delta = Math.round(((thisMinutes - prevMinutes) / prevMinutes) * 100);
-  const direction = delta >= WEEK_TREND_THRESHOLD_PCT ? 'up' : delta <= -WEEK_TREND_THRESHOLD_PCT ? 'down' : 'flat';
-  const headline = direction === 'up'
-    ? `Tuần này bạn tập trung nhiều hơn tuần trước ${delta}%.`
-    : direction === 'down'
-      ? `Tuần này bạn tập trung ít hơn tuần trước ${Math.abs(delta)}%.`
-      : 'Tuần này bạn giữ nhịp ngang tuần trước.';
-  const detail = `${formatMinutesVi(thisMinutes)} qua ${thisN} phiên, so với ${formatMinutesVi(prevMinutes)} qua ${prevN} phiên tính tới cùng lúc này tuần trước.`;
-  return { ...base, status: 'ready', pct: delta, direction, headline, detail };
+  const cur = sumWindow(entries, thisStart, nowTs);
+  const prev = sumWindow(entries, prevStart, nowTs - WEEK_MS);
+  if (cur.n > 0 || prev.n > 0) return compareWindows(cur, prev, WEEK_SCOPE.sameSpan, elapsedDays);
+  // ADR-076 (settles the round-36 §9 question): early in a week BOTH same-span windows can be empty
+  // (Monday 04:00: this week has nothing yet, and neither did last Monday by 04:00). "No sessions in
+  // two weeks" would be false. The one law stays "compare equal windows"; only the window moves back
+  // one full week: last week against the week before it.
+  const lastWeek = sumWindow(entries, prevStart, thisStart - 1);
+  const weekBefore = sumWindow(entries, prevStart - WEEK_MS, prevStart - 1);
+  if (lastWeek.n > 0 || weekBefore.n > 0) return compareWindows(lastWeek, weekBefore, WEEK_SCOPE.lastWeek, 7);
+  return {
+    thisMinutes: 0, prevMinutes: 0, thisN: 0, prevN: 0, elapsedDays, scope: WEEK_SCOPE.sameSpan, pct: null, direction: 'flat',
+    days: WEEKDAY_SHORT.map((label, i) => ({ label, thisMinutes: 0, prevMinutes: 0, elapsed: i < elapsedDays })),
+    status: 'empty', headline: 'Chưa có phiên nào trong hai tuần gần đây.', detail: 'Xong một phiên là ô này bắt đầu so tuần này với tuần trước.',
+  };
 }
 
 /**

@@ -285,3 +285,17 @@
 - Hiệu năng: đã đo dứt điểm trên Apple M3 — **dư 3,2 lần**, hình học gần như miễn phí.
   **KHÔNG đo lại** trừ khi Đàm thấy khung hình giật trên máy thật.
 
+## ROUND 34 (moved from `START_HERE.md` on 2026-09-06, late night — ADR-076 pushed it out; verbatim)
+
+- **Game — ROUND 34 (2026-09-06): THE ONLY CURRENCY IS A SESSION (ADR-069).**
+  Order: *"SIMPLIFY. MINIMIZE. AMPLIFY FUN."* (1) Building is one screen, one button
+  (`BuildScreen.jsx`; `startProject` asks for no RP or materials — the price is N sessions + a queue
+  slot); (2) ranks self-promote from history, era crises became soft quests — no button, no deadline,
+  no penalty, no blocking of Start (`engine/rankLadder.js`; deleted `EraCrisisModal` · `DisasterModal`
+  · `StakePanel` · `ResourceDisplay`); (3) the reward chain gained a City card · level-up offers ≤3
+  skills inline · era challenge · rank · relic; (4) **every reward sits on the living axis** — odd
+  ranks → EP, 12/15 relics → EP/XP/combo, Luck → +XP/+EP, Forgiveness → +6% XP after a cancel
+  (`rewardAxes.test.js`). Resources/RP/refining became DORMANT DATA (`TECH_DEBT #99`, deliberate — do
+  not delete what Đàm earned, do not touch synced state). ⚠️ Lesson: a Rank card printed «+12% Tài
+  Nguyên» — *a valid reward table with green tests can still grant something nobody can see; only a
+  SCREENSHOT catches it.*

@@ -33,13 +33,14 @@ export function pickSessionProject({ craftingQueue = [], activeBook = 1, buildin
 }
 
 /**
- * For the store, right before the queue advances: if nothing in the current era is being built and a
- * project can be chosen, queue it — so the finished session lays its brick somewhere real.
+ * For the store, right before the queue advances: if nothing at all is being built and a project can
+ * be chosen, queue it — so the finished session lays its brick somewhere real.
  * Returns the SAME array reference when nothing changes.
  */
 export function autoQueueSessionProject({ craftingQueue = [], activeBook = 1, buildings = [], now = Date.now() } = {}) {
-  const hasCurrentEra = describeQueue({ craftingQueue, activeBook }).some((q) => !q.restoration);
-  if (hasCurrentEra) return { craftingQueue, autoQueuedId: null };
+  // Only when NOTHING is being built — a legacy restoration in the queue is a project the player chose,
+  // and it is the one the strip names (`pickSessionProject`), so the brick lands there, nowhere else.
+  if (describeQueue({ craftingQueue, activeBook }).length > 0) return { craftingQueue, autoQueuedId: null };
   const next = listNextProjects({ activeBook, buildings, craftingQueue })[0] ?? null;
   if (!next) return { craftingQueue, autoQueuedId: null };
   return {

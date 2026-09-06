@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {
-  buildStatsAnswers, buildWeekComparison, buildBestWindow, buildNextAction, formatMinutesVi, WEEKDAY_SHORT,
+  buildStatsAnswers, buildWeekComparison, buildBestWindow, buildNextAction, formatMinutesVi, WEEKDAY_SHORT, WEEK_SCOPE,
 } from './statsAnswers.js';
 import { buildFocusProfile } from './coach/coachIntel.js';
 import { WEEK_TREND_THRESHOLD_PCT } from './gameMath.js';
@@ -52,6 +52,23 @@ test('so tuần: phiên huỷ không được đếm, và ngưỡng "giữ nhị
   assert.equal(w2.direction, 'flat');
   assert.match(w2.headline, /giữ nhịp/);
   assert.ok(Math.abs(w2.pct) < WEEK_TREND_THRESHOLD_PCT);
+});
+
+test('so tuần (ADR-076): Monday 04:00 with both same-span windows empty ⇒ last FULL week vs the week before, never "no sessions"', () => {
+  const MONDAY_EARLY = new Date('2026-09-07T04:00:00+07:00');
+  const TUAN_TRUOC_NUA = [at('2026-08-25T09:00:00+07:00', 60), at('2026-08-27T09:00:00+07:00', 40)]; // 100′
+  const w = buildWeekComparison([...TUAN_TRUOC, ...TUAN_TRUOC_NUA], { now: MONDAY_EARLY });
+  assert.equal(w.status, 'last-week');
+  assert.equal(w.scope, WEEK_SCOPE.lastWeek);
+  assert.deepEqual([w.thisMinutes, w.thisN, w.prevMinutes, w.prevN], [304, 5, 100, 2]); // all of last week counts now
+  assert.match(w.headline, /^Tuần trước bạn tập trung nhiều hơn tuần trước nữa 204%/);
+  assert.ok(w.days.every((d) => d.elapsed), 'a full week has no "not yet" days');
+  assert.equal(w.days[0].thisMinutes, 60); // Monday of last week
+  // same-span still wins as soon as this week has a session
+  const w2 = buildWeekComparison([at('2026-09-07T03:30:00+07:00', 20), ...TUAN_TRUOC], { now: MONDAY_EARLY });
+  assert.equal(w2.scope, WEEK_SCOPE.sameSpan);
+  // and with truly nothing in three weeks the honest word is "empty"
+  assert.equal(buildWeekComparison([], { now: MONDAY_EARLY }).status, 'empty');
 });
 
 test('so tuần: ba trạng thái biên đều có câu riêng, không có câu nào in "NaN" hay "−100%"', () => {

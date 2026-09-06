@@ -10,6 +10,28 @@
 > **Muốn hiểu VÌ SAO một quyết định được chọn** → `ARCHITECTURE_DECISIONS.md`. **Muốn biết migration
 > cụ thể nào cần chạy** → `MIGRATION.md`.
 
+## 2026-09-06 (late night) — Round 37: a session always lays a brick (ADR-076)
+
+- **Purpose**: Đàm's round-37 order — *build big, simplify hard, more fun, more UX/UI*. Four rounds of
+  removal had left the loop thin; this round adds ONE thing that lives in the loop and removes what
+  only existed because it had been coded.
+- **Scope**: (1) "this session's brick" — the Focus strip names the building this session pushes and
+  fills the brick with the timer; the ending's project card lands it with its own sound; a session
+  with an empty queue auto-queues the next project. (2) Stats "strongest" lines rank on whole sessions
+  (not cancelled, not self-rated missed) — they always have numbers; Monday mornings compare last full
+  week vs the week before instead of saying "no sessions". (3) The session goal is optional; recent
+  goals are one-tap chips. (4) Sound: last-minute bell, break-over cue, brick landing; dead tick sound
+  and setting deleted; XP card silent. (5) `PomodoroEngine.jsx` 2,958 → 1,922 lines (`ActionButton` is
+  now `shared/ActionButton.jsx`, seven leaf controls in `components/focus/`). (6) `gameStore.js`
+  5,413 → 4,696: daily missions + weekly chain are pure engine modules; the duplicated live mission
+  tick is gone; `forgiveness` removed. (7) Weekly report dialog deleted — the Stats screen answers it;
+  the unseen dot moved to the Thống kê tab. (8) First open: onboarding overlay deleted, City empty
+  state names the first project. Fixture now carries goals + reviews.
+- **Impact**: 13 source files deleted, 20 added; `gameStore.js` −717 lines, `PomodoroEngine.jsx` −1,036;
+  tests green (30 new engine/store tests — exact count in `BAN_GIAO.md`); lint clean; build green.
+- **Compatibility**: saves unchanged except `forgiveness` is no longer written; old rows carry it
+  harmlessly. No migration.
+
 ## 2026-09-06 (night, second pass) — Journal rotation enforced (ADR-075)
 
 - **Purpose**: `CHANGELOG.md` (78% of a context window) and `BAN_GIAO.md` (70%, growing ~17,700

@@ -19,6 +19,17 @@
 │   │   │                         #   store, không biết luật chơi ⇒ dùng được cả trong hộp thoại
 │   │   │                         #   lẫn trong toast. Độ hiếm lấy từ `engine/rewardTiers.js` và
 │   │   │                         #   phải đọc được KHI KHÔNG NHÌN MÀU (nhãn chữ + dải chấm)
+│   │   │   └── ActionButton.jsx   # THE button (ADR-076, TECH_DEBT #86 door): token colours only, one `sizeMap`
+│   │   │                         #   (`default`·`compactMobile`·`compactPrimary`·`sm`·`md`), press depth = shadow depth.
+│   │   ├── focus/            # Leaf controls of the Focus screen, extracted from PomodoroEngine.jsx (ADR-076)
+│   │   │   ├── SessionBrickStrip.jsx # "This session's brick" above the ring — reads craftingQueue/buildings, engine/sessionBrick.js
+│   │   │   ├── BrickRow.jsx          # Brick cells (laid · laying · new · empty), shared with the ending's project card
+│   │   │   ├── QuickPresets.jsx      # 25/5 · 50/10 … presets (+ `CHU_KY_NGHI_CO_KHAC_NHAU`)
+│   │   │   ├── ModeSwitch.jsx        # Pomodoro ↔ Stopwatch
+│   │   │   ├── StrictModeToggle.jsx  # strict mode switch
+│   │   │   ├── CategoryChip.jsx · CategoryManager.jsx # task-type pills + add/delete
+│   │   │   ├── SessionReviewCard.jsx # post-session Đạt / Chưa đạt (feeds `goalAchieved`)
+│   │   │   └── CancelConfirmDialog.jsx
 │   │   ├── RewardToastHost.jsx   # Chồng toast phần thưởng ở góc màn hình (thay `AchievementToast.jsx`,
 │   │   │                         #   đã xoá). Tối đa 3 thẻ + dòng "và N phần thưởng khác"; mỗi thẻ
 │   │   │                         #   MỘT đồng hồ riêng 4 giây, và đồng hồ DỪNG khi có hộp thoại
@@ -40,8 +51,6 @@
 │   │   │                         #   "Bỏ qua" một chạm. Đóng qua `onDone` — điều phối ở OverlayStack
 │   │   ├── sessionRewardStory.js # LUẬT thuần dựng thẻ (`buildRewardStoryCards`) + nhịp lật. Đọc
 │   │   │                         #   `reward.*` ⇒ `previewStage.test.js` soi cả file này
-│   │   ├── missionXp.js          # `scaleMissionXP` + `dailyAllBonusXP` dùng CHUNG cho DailyMissions
-│   │   │                         #   và chuỗi thẻ — một luật một công thức
 │   │   ├── icons/            # Bộ icon SVG tự vẽ (thay emoji), 1 component Glyph + data tách riêng
 │   │   ├── CityView.jsx      # Tab Thành Phố — CHỈ lấy dữ liệu + chọn bộ vẽ, giữ mỏng có chủ ý
 │   │   ├── city/             # Màn hình Thành Phố. Luật: KHUNG tách khỏi BỘ VẼ (ADR-008)
@@ -52,10 +61,6 @@
 │   │   │   │                     #   ResizeObserver (font nạp xong mới tràn) — xem BAN_GIAO 3J
 │   │   │   ├── BuildingCard.jsx  # Thẻ hiện ra khi CHẠM vào một công trình trong cảnh 3D.
 │   │   │   │                     #   Thuần trình bày — nhận sẵn phần tử của layout, không tra cứu
-│   │   │   ├── CityGrowthMoment.jsx # 3,2 GIÂY THÀNH PHỐ LỚN LÊN, chen giữa "hết phiên" và hộp
-│   │   │   │                     #   thoại phần thưởng. ⚠️ Đứng CHẶN TRƯỚC màn hình phần thưởng
-│   │   │   │                     #   của một phiên THẬT ⇒ mọi thứ hỏng-theo-hướng-mở (ADR-010).
-│   │   │   │                     #   KHÔNG dựng cảnh 3D ở đây (context WebGL thứ hai)
 │   │   │   ├── cityTokens.js     # Token DÙNG CHUNG mọi bộ vẽ: eraTint/eraSolid/cardStyle
 │   │   │   ├── render2d/         # Bộ vẽ SVG isometric — nền VĨNH VIỄN, không phải bản nháp:
 │   │   │   │                     #   đường lui khi máy không có WebGL / mất context / Đàm chọn 2D
@@ -121,7 +126,7 @@
 │   │   ├── StatsNotes.jsx     # Sổ tra cứu 2: ghi chú đã lưu. Cùng lý do tách.
 │   │   ├── statsTheme.js      # Biến màu/chữ dùng chung ba file Thống kê (CSS var có mặc định).
 │   │   │                     #   Hàm định dạng thuần của sổ tra cứu ở statsFormatters.js cạnh nó.
-│   │   ├── PomodoroEngine.jsx # Khung chính chứa đồng hồ Pomodoro/Stopwatch (UI, logic timer
+│   │   ├── PomodoroEngine.jsx # ~1,900 dòng (ADR-076) — khung đồng hồ Pomodoro/Stopwatch (UI, logic timer
 │   │   │                     #   thật nằm ở src/hooks/useTimer.js)
 │   │   ├── BuildScreen.jsx    # Màn CÔNG TRÌNH một nút (ADR-069): Đang xây · Xây tiếp (≤3 lựa chọn,
 │   │   │                     #   "Khởi công") · Đã xây · Trùng tu. Luật ở engine/buildChoices.js; gọi
@@ -160,6 +165,10 @@
 │   │   │                     #   ⚠️ Không chế công thức mới ở đây (một luật hai công thức). Bộ
 │   │   │                     #   getter giờ VN: time.vietnamHistoryTimeOpts (dùng chung với Coach).
 │   │   │                     #   ⚠️ statsPeriod.js · statsFocus.js ĐÃ XOÁ 2026-09-06 cùng 3 tab cũ.
+│   │   ├── sessionBrick.js    # "This session's brick" (ADR-076): pickSessionProject · autoQueueSessionProject · describeSessionBrick
+│   │   ├── missions.js        # Daily missions, PURE (ADR-076): roll · normalize · snapshot progress · tickDailyMissions (live = reload)
+│   │   ├── weeklyChain.js     # Weekly step chain, PURE (`now` param): refreshWeeklyChain · autoClaimWeeklySteps · rebuild
+│   │   ├── seededRng.js       # String-seeded PRNG shared by missions.js + weeklyChain.js
 │   │   ├── statsInsights.js   # "Điều đáng chú ý" — dải insight dưới ba thẻ trả lời của màn Thống kê.
 │   │   │                     #   ⚠️ CHỈ GỌI hàm tín hiệu đã có ở gameMath.js rồi diễn đạt lại;
 │   │   │                     #   TUYỆT ĐỐI không chế công thức mới ở đây (chế thêm = "một luật
@@ -223,11 +232,6 @@
 │   │   │                     #   vị trí thẻ không nhảy giữa các phiên.
 │   │   │                     #   ⚠️ Nó chỉ ĐỌC `ui.*` mà store đã ghi sẵn — không đổi một luật
 │   │   │                     #   tính thưởng nào, và không đụng `completeFocusSession`
-│   │   ├── cityMoment.js      # Điều đáng nói về thành phố ở CẢ HAI đầu một phiên: buildFocusTease
-│   │   │                     #   (trước — phiên này đẩy cái gì tới đâu) + buildGrowthMoment (sau —
-│   │   │                     #   thành phố vừa lớn lên thế nào). Chung một phép chọn công trường.
-│   │   │                     #   ⚠️ Trả `null` khi không có gì thật để nói — thà im lặng còn hơn
-│   │   │                     #   một câu chúc mừng rỗng (cùng luật chống-bịa với AI Coach)
 │   │   ├── city3d/            # Logic THUẦN của bộ vẽ 3D — cấm import three, cấm DOM
 │   │   │   ├── networkStyle.js    # BẢNG BỘ XƯƠNG THÀNH PHỐ, 15 kỷ — khuôn ba lớp lần thứ TÁM,
 │   │   │   │                      #   HỢP NHẤT hai nhánh ở Phase 21 (ADR-064). Tám trục:
@@ -761,10 +765,8 @@
 │   │   ├── timerSession.js / breaks.js / challengeEngine.js / notifications.js # engine chuyên biệt khác
 │   ├── hooks/                 # React hook — cầu nối giữa store và engine/component
 │   │   ├── useTimer.js         # LỚN — toàn bộ state machine đồng hồ Pomodoro/Stopwatch
+│   │   ├── useMinWidth.js      # `matchMedia(min-width)` as a hook (from PomodoroEngine.jsx, ADR-076)
 │   │   ├── useCoachContext.js  # build bảng số liệu cho AI Coach (gọi engine/coach/coachContext.js)
-│   │   ├── useCityMoment.js   # Cầu nối store → engine/cityMoment.js, CẢ HAI đầu của một phiên:
-│   │   │                     #   useCityFocusTease (trước) + useCityGrowthMoment (sau). Dùng chung
-│   │   │                     #   một snapshot memo theo NỘI DUNG
 │   │   ├── useInventoryAttention.js # Chấm "có việc cần xem" trên tab Hành trang. Đọc engine/
 │   │   │                     #   opportunities.js (dùng CHUNG với chuông thông báo) + dấu "đã xem"
 │   │   │                     #   ở engine/navAttention.js. ⚠️ Selector trả về BOOLEAN, không phải
@@ -780,6 +782,7 @@
 │   │   └── useGameLoop.js
 │   ├── lib/                   # Hạ tầng dùng chung, KHÔNG phải logic game thuần: tích hợp dịch vụ
 │   │                          #   ngoài, và từ 2026-08-27 thêm từ vựng chuyển động của giao diện
+│   │   ├── keyboard.js         # `isEditableShortcutTarget` · `isSpaceKeyEvent` for the Space shortcut (ADR-076)
 │   │   ├── motionPresets.js    # BA NHỊP CHUYỂN ĐỘNG DUY NHẤT của app (`enter`/`press`/`reward`).
 │   │   │                       #   ⚠️ ĐÚNG BA, KHÔNG HƠN — nhịp thứ tư là bước đầu quay lại tình
 │   │   │                       #   trạng cũ (hơn 30 file mỗi chỗ một thời lượng). Cả ba TỰ trả về
@@ -796,7 +799,7 @@
 │   │   ├── pushService.js      # Web Push phía trình duyệt (đăng ký, huỷ, lên lịch)
 │   │   └── appIdentity.js      # Hằng số key localStorage, tên app (đổi tên app thì sửa ở đây)
 │   ├── store/                  # State toàn app (Zustand)
-│   │   ├── gameStore.js         # RẤT LỚN (~6000 dòng) — mọi state + action của game. Điểm nóng:
+│   │   ├── gameStore.js         # RẤT LỚN (~4,700 dòng sau ADR-076) — mọi state + action của game. Điểm nóng:
 │   │   │                       #   completeFocusSession (~760 dòng). Sửa công thức → gameMath.js,
 │   │   │                       #   ĐỪNG nhồi thêm vào đây.
 │   │   └── settingsStore.js     # Cài đặt UI riêng (theme, âm thanh...) — KHÔNG lẫn với gameStore
@@ -1025,7 +1028,7 @@ mươi file — đo được **năm** thời lượng khác nhau (0,18 · 0,22 �
 - **Hai chỗ CỐ Ý đứng ngoài, đừng "dọn" chúng:**
   - `src/components/city/render3d/` — chuyển động thành phố 3D là một hệ khác hẳn (three.js,
     không phải framer-motion).
-  - `ActionButton` (`PomodoroEngine.jsx`) — cú lún `whileTap y:4` BẰNG ĐÚNG chiều dày vạch bóng
+  - `ActionButton` (`shared/ActionButton.jsx`) — cú lún `whileTap y:4` BẰNG ĐÚNG chiều dày vạch bóng
     đặc bên dưới nó; `actionButtonPress.test.js` khoá cứng quan hệ ấy và cấm `scale` ở
     `whileHover`. Một nhịp `press` dùng `scale` sẽ phá cả hai. Nó vẫn được gác Giảm chuyển động
     bằng một phép trải ghi đè đặt SAU hai dòng đó.

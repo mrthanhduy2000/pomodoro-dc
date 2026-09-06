@@ -32,7 +32,25 @@ Production branch `main` carries **both** work streams (merged 2026-08-28 on Đ�
 ⚠️ Phase 21 therefore shipped **before** Đàm reviewed its screenshots — the "waiting on Đàm's eyes"
 item below is still live, it just now reviews something already running.
 
-- **Stats + economy — ROUND 36 (2026-09-06, LATEST): STATS ANSWER, THEY DO NOT PRESENT; #99 CLOSED
+- **Loop — ROUND 37 (2026-09-06, LATEST): A SESSION ALWAYS LAYS A BRICK (ADR-076).** Order: *"Build
+  lớn. Simplify mạnh. Làm game vui hơn. Tập trung nhiều hơn vào UX/UI. TOÀN QUYỀN."* Seven streams, all
+  on `main`. (1) **The brick**: `engine/sessionBrick.js` names the building THIS session pushes; the
+  strip above the ring (`focus/SessionBrickStrip.jsx`, replacing the milestone toast + combo badges +
+  city tease) fills the current brick with the timer; the ending's project card lands it (`BrickRow`,
+  `playBrickLaid`); an empty queue is auto-filled before the queue advances (`autoQueueSessionProject`)
+  — changeable on the Build screen. (2) **Stats never asks for homework**: the three "strongest" lines
+  rank on the WHOLE-SESSION rate (`started`/`whole` in `buildFocusProfile`), goal reviews only sharpen
+  it; Monday 04:00 compares last full week vs the week before (`WEEK_SCOPE`); the session goal is
+  OPTIONAL (chips in the goal card, same task type first). (3) **Sound**: last-minute bell ·
+  break-over cue · brick landing; dead tick + 5-minute chime deleted; no haptics (iOS has no API).
+  (4) `PomodoroEngine.jsx` 2,958 → 1,922 (`shared/ActionButton.jsx` = the #86 door, seven controls in
+  `components/focus/`). (5) `gameStore.js` 5,413 → 4,696 (`engine/missions.js` + `engine/weeklyChain.js`
+  + `engine/seededRng.js`; live mission tick = reload path; `forgiveness` removed). (6) **Weekly report
+  dialog deleted** — Stats answers it; the unseen dot sits on the Thống kê tab. (7) First open: no
+  overlay; Focus + City name the first project. ⚠️ Lessons: *the shot tool's default seed is era 7 with
+  5/5 built — a fresh save needs `--fixture` with `{"state":{},"version":4}`*; *`$SP` does not survive
+  between Bash calls*. Inspect: `--fixture <fx> --tab "Tập trung"` · `--preview "loot&dc-preview-card=project"`.
+- **Stats + economy — ROUND 36 (2026-09-06): STATS ANSWER, THEY DO NOT PRESENT; #99 CLOSED
   (ADR-071).** Order: *"build lớn · simplify mạnh · vui hơn · UX/UI · TOÀN QUYỀN"*.
   (1) `StatsDashboard.jsx` **3,792 → 294 lines**: opening it shows three cards — *am I improving?*
   (this week vs the SAME span last week, 7 column pairs) · *when am I strongest?* (hour · length ·
@@ -61,23 +79,11 @@ item below is still live, it just now reviews something already running.
   the old «Nhận» button also reconciled quests against history; that now lives in
   `completeFocusSession`. Inspect: `--preview "loot-max&dc-preview-card=quests|chain|evolve"` and
   `--preview era`.
-- **Game — ROUND 34 (2026-09-06): THE ONLY CURRENCY IS A SESSION (ADR-069).**
-  Order: *"SIMPLIFY. MINIMIZE. AMPLIFY FUN."* (1) Building is one screen, one button
-  (`BuildScreen.jsx`; `startProject` asks for no RP or materials — the price is N sessions + a queue
-  slot); (2) ranks self-promote from history, era crises became soft quests — no button, no deadline,
-  no penalty, no blocking of Start (`engine/rankLadder.js`; deleted `EraCrisisModal` · `DisasterModal`
-  · `StakePanel` · `ResourceDisplay`); (3) the reward chain gained a City card · level-up offers ≤3
-  skills inline · era challenge · rank · relic; (4) **every reward sits on the living axis** — odd
-  ranks → EP, 12/15 relics → EP/XP/combo, Luck → +XP/+EP, Forgiveness → +6% XP after a cancel
-  (`rewardAxes.test.js`). Resources/RP/refining became DORMANT DATA (`TECH_DEBT #99`, deliberate — do
-  not delete what Đàm earned, do not touch synced state). ⚠️ Lesson: a Rank card printed «+12% Tài
-  Nguyên» — *a valid reward table with green tests can still grant something nobody can see; only a
-  SCREENSHOT catches it.*
-- 📚 **Rounds 20 → 33 moved to `docs/archive/START_HERE_LOG_2026-09-06.md`** (verbatim), together
+- 📚 **Rounds 20 → 34 moved to `docs/archive/START_HERE_LOG_2026-09-06.md`** (verbatim), together
   with the 3D city details (BSP skeleton · `reach` 0.8 · two-layer shadows · 15 eras/`country` ·
   12×12 grid · 3.2× perf headroom) — a finished black box is not worth paying tokens for every
   session. **Keep at most 3 rounds here**; a new round pushes the oldest down.
-  Older rounds: `grep -n 'VÒNG 2[0-9]\|VÒNG 33' docs/archive/START_HERE_LOG_2026-09-06.md`.
+  Older rounds: `grep -n 'VÒNG 2[0-9]\|VÒNG 33\|ROUND 34' docs/archive/START_HERE_LOG_2026-09-06.md`.
 
 ### UI invariants — read before touching the UI
 ⚠️ **Changing anything under `src/components/` or `src/store/uiSkins.js` means reading
@@ -90,14 +96,6 @@ stated twice drifts.
 
 ## Next up
 ### A. Đàm must choose — do not decide these alone
-- **`TECH_DEBT #94`** — break-start delay. `BREAK_START_DELAY_MS` waits 3.2s in **~82%** of sessions
-  that have no celebration to cover it (31.4 minutes per 180 days). The correct patch is known
-  (turn the constant into a relation: 3,200 with a celebration, 500 without).
-- **`TECH_DEBT #96`** — relic evolution is a **dead mechanic**: `evolveRelic` spends refining from a
-  PAST era, but refining only drops in the current era. Screenshot: 3/3 buttons permanently read
-  "Chưa đủ tài nguyên". ⚠️ After ADR-069 it is even deader — refining is dormant data (`#99`). The
-  exit consistent with ADR-069 is evolution by SESSION (e.g. N sessions ≥45′ in the new era), never
-  back to currency. Still Đàm's call: it changes how fast relics grow.
 - **"More 3D-looking" — needs Đàm's taste, not code.** Both cheap levers are spent (shadow map
   2048 → **4096** ✓, `sun.shadow.camera` tightened). What is left is purely artistic: (a) deeper /
   taller contact shadows (`CONTACT_FLOOR` 0.58 · `CONTACT_REACH` 0.38) · (b) harder shadow edges
@@ -123,7 +121,7 @@ at 20 and 120 sessions). Accepted by EYE: eras 1–9 must show no rows/alignment
   `loot-max` · `era` · `level` · `toasts`); round 33 added `dc-preview-card=<card>`. Why it was
   needed: `ui` is not in the store's `partialize`, so it cannot be seeded via `--fixture`/`--ls`, and
   the store is not exposed on `window`, so `--probe` cannot open dialogs either. **Never click Start
-  on dev.** This blind spot had blocked a REAL fix (`TECH_DEBT #94`), not just convenience.
+  on dev.** This blind spot had blocked a REAL fix (`TECH_DEBT #94`, since closed), not just convenience.
 - **Treasure › Relics tab** — the fixture never seeds `relics`/`research`, so it always shows 0/15 and
   15 "??? KHOÁ" rows. That emptiness belongs to the TOOL, not the app. Seed `relics` in
   `scripts/make-fixture.mjs` first.

@@ -60,24 +60,24 @@ function AnswerCard({ index, question, children }) {
 }
 
 // ─── (1) Bảy cặp cột: tuần này (đậm) cạnh tuần trước tới cùng lúc này (nhạt) ──
-function WeekBars({ days }) {
+function WeekBars({ days, scope }) {
   const max = Math.max(1, ...days.map((d) => Math.max(d.thisMinutes, d.prevMinutes)));
   const heightOf = (m) => `${Math.max(m > 0 ? 6 : 2, (m / max) * 100)}%`;
   return (
     <div className="mt-4">
-      <div className="grid grid-cols-7 gap-2" role="img" aria-label="Phút tập trung từng ngày, tuần này so với tuần trước">
+      <div className="grid grid-cols-7 gap-2" role="img" aria-label={`Phút tập trung từng ngày, ${scope.current.toLowerCase()} so với ${scope.baseline.toLowerCase()}`}>
         {days.map((d) => (
           <div key={d.label} className="flex flex-col items-center gap-1.5">
             <div className="flex h-16 w-full items-end justify-center gap-[3px]">
               <span
                 className="w-[38%] rounded-t-[4px]"
                 style={{ height: heightOf(d.prevMinutes), background: PANEL_BG_SOFT, opacity: d.elapsed ? 1 : 0.45 }}
-                title={`Tuần trước: ${formatMinutesVi(d.prevMinutes)}`}
+                title={`${scope.baseline}: ${formatMinutesVi(d.prevMinutes)}`}
               />
               <span
                 className="w-[38%] rounded-t-[4px]"
                 style={{ height: heightOf(d.thisMinutes), background: 'rgb(var(--accent-rgb))', opacity: d.elapsed ? 1 : 0.25 }}
-                title={`Tuần này: ${formatMinutesVi(d.thisMinutes)}`}
+                title={`${scope.current}: ${formatMinutesVi(d.thisMinutes)}`}
               />
             </div>
             <span className="text-[10px] font-semibold" style={{ color: d.elapsed ? TEXT_MUTED : TEXT_SOFT }}>{d.label}</span>
@@ -85,8 +85,8 @@ function WeekBars({ days }) {
         ))}
       </div>
       <div className="mt-2 flex flex-wrap items-center gap-x-4 gap-y-1 text-[10.5px]" style={{ color: TEXT_SOFT }}>
-        <span className="inline-flex items-center gap-1.5"><i className="inline-block h-2 w-2 rounded-sm" style={{ background: 'rgb(var(--accent-rgb))' }} />Tuần này</span>
-        <span className="inline-flex items-center gap-1.5"><i className="inline-block h-2 w-2 rounded-sm" style={{ background: PANEL_BG_SOFT }} />Tuần trước, tới cùng lúc này</span>
+        <span className="inline-flex items-center gap-1.5"><i className="inline-block h-2 w-2 rounded-sm" style={{ background: 'rgb(var(--accent-rgb))' }} />{scope.current}</span>
+        <span className="inline-flex items-center gap-1.5"><i className="inline-block h-2 w-2 rounded-sm" style={{ background: PANEL_BG_SOFT }} />{scope.baseline}</span>
       </div>
     </div>
   );
@@ -207,7 +207,7 @@ export default function StatsDashboard({ onNavigate }) {
             {answers.week.headline}
           </p>
           <p className="mt-1 text-[12.5px] leading-relaxed" style={{ color: TEXT_MUTED }}>{answers.week.detail}</p>
-          <WeekBars days={answers.week.days} />
+          <WeekBars days={answers.week.days} scope={answers.week.scope} />
         </AnswerCard>
       )}
 

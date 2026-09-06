@@ -34,7 +34,12 @@
 
 Mọi thiết bị chạy CHUNG một bản web (không có logic riêng cho Electron/iPhone) — khác biệt duy
 nhất là Electron mở app trong khung tray thay vì tab trình duyệt, và tự đọc thêm bảng `timer_live`
-qua Supabase Realtime để hiện đếm ngược trên menu bar.
+để hiện đếm ngược trên menu bar. ⚠️ **(ADR-072, 2026-09-06)** Supabase Realtime là đường đọc CHÍNH
+(độ trễ thấp) nhưng KHÔNG PHẢI nguồn duy nhất — kênh WebSocket có thể ngắt lặng lẽ (Mac ngủ/thức,
+đổi WiFi) mà không phát lại sự kiện đã lỡ. `electron/main.js` có 2 lưới an toàn tự chữa, không phụ
+thuộc trạng thái kênh: poll REST định kỳ mỗi 5 giây + đọc lại ngay khi `powerMonitor` báo Mac vừa
+thức dậy — cùng một hàm `applyTimerLiveUpdate` xử lý cả nhánh realtime lẫn nhánh poll (đừng thêm
+nhánh cập nhật `timerData` nào bỏ qua hàm này).
 
 ## 2. Vì sao đồng bộ là "First Action Wins" (không phải "ai ghi cuối thắng")
 

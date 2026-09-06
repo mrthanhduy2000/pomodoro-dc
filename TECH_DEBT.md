@@ -13,7 +13,12 @@
 > mà không được refactor triệt để, phải CHỦ ĐỘNG đề xuất mở một "Maintenance Sprint" (nêu rõ mục
 > tiêu/phạm vi/lợi ích/rủi ro/tiêu chí hoàn thành) thay vì tiếp tục cộng thêm tính năng mới.
 >
-> **Trạng thái ngưỡng hiện tại (2026-09-06, sau ADR-071 "Thống kê trả lời · đóng #99")**: đóng **#99 · #6**,
+> **Trạng thái ngưỡng (2026-09-06, sau ADR-072 "tray: realtime không phải nguồn duy nhất")**: thêm
+> **#102** (Medium — `main.js` không có test tự động cho lưới poll/`powerMonitor` vừa thêm). **102
+> mục · 43 đã đóng · 59 còn mở**. Vẫn **1 mục Priority High còn mở** (#53), **0 mục Critical** → xa
+> ngưỡng Maintenance Sprint.
+>
+> *(mốc trước)* **(2026-09-06, sau ADR-071 "Thống kê trả lời · đóng #99")**: đóng **#99 · #6**,
 > **#93 hết đối tượng** (khối ấy đã xoá cùng tab Phân Loại), **#2** xử lý xong vế `StatsDashboard.jsx` (vế `gameStore.js`
 > còn mở). **101 mục · 43 đã đóng · 58 còn mở** theo cách đếm của mốc trước (40 + 3, cộng **#101** mở cùng ngày bởi
 > phiên tối ưu context window); đếm dấu ✅ trên tiêu đề mục ra 39, vì bốn mục đóng cũ không mang dấu ✅. Vẫn **1 mục Priority High còn
@@ -5720,3 +5725,39 @@ trong chú thích thì đừng để `--selftest` của chính nó vẫn dùng �
 - **Review Trigger**: Khi có ai định xoá/đổi tên mục «🎨 Bài học mỹ thuật thành phố 3D» trong
   `CLAUDE.md`, hoặc khi đổi tên `docs/LESSONS_3D.md`.
 - **Owner**: chưa ai · **Status**: MỞ (chấp nhận có chủ đích)
+
+## #102 — `electron/main.js` (tray menu bar) không có test tự động nào cho vòng đời realtime/poll/resume
+
+- **Tên**: Lưới an toàn poll + `powerMonitor` (ADR-072) chỉ được xác nhận bằng đọc code, chưa có
+  test tự động chặn hồi quy
+- **Module**: `electron/main.js` (hàm `applyTimerLiveUpdate`, `fetchTimerLive`, khối `app.whenReady`)
+- **Priority**: Medium · **Severity**: Low
+- **Impact**: Đây đúng là lớp mã vừa gây ra bug "menu bar mất đếm ngược, lặp lại nhiều lần" (ADR-072)
+  — nếu một phiên sau lỡ xoá `setInterval(fetchTimerLive, …)` hoặc `powerMonitor.on('resume', …)`
+  (vd. tưởng là code thừa vì "đã có realtime rồi"), không có bài test nào đỏ để cản, và lỗi chỉ lộ
+  ra sau vài ngày dùng thật trên máy Đàm — đúng chu kỳ đã lặp lại trước khi vá lần này.
+- **Root Cause**: `electron/main.js` `require('electron')` trực tiếp (`Tray`, `nativeImage`,
+  `powerMonitor`, `Notification`...) nên không nạp được bằng `node --test` thường (không có
+  runtime Electron thật, và dự án chưa có cơ chế mock module `electron`). Vì vậy chỉ phần logic
+  THUẦN được tách sang `electron/trayTimer.js` mới có test (`trayTimer.test.js`); phần glue trong
+  `main.js` — bao gồm `applyTimerLiveUpdate` và toàn bộ dây nối `setInterval`/`powerMonitor` —
+  chưa từng có test kể từ khi file này tồn tại (không phải nợ mới do lần sửa này tạo ra, nhưng lần
+  sửa này làm nó rõ ràng hơn vì logic quan trọng nhất của tray nay nằm ở đúng lớp không test được).
+- **Current Risk**: Thấp — code hiện tại đã chạy qua build + lint + test hiện có, và cấu trúc
+  `applyTimerLiveUpdate` dùng chung cho cả 2 nhánh (realtime/poll) nên ít chỗ để trượt.
+- **Future Risk**: Trung bình — một lần "dọn dẹp tưởng là thừa" trong tương lai có thể xoá đúng
+  lưới an toàn này mà không ai biết cho tới khi bug tái diễn lần thứ N+1.
+- **Recommended Solution**: Tách phần logic QUYẾT ĐỊNH (không phải I/O) ra khỏi `main.js` thành một
+  module thuần thêm — ví dụ để `applyTimerLiveUpdate` (và các hàm `createActiveSessionSnapshot`/
+  `getCompletedSessionTotalSeconds`/`rememberActiveSessionSnapshot` nó gọi) sống trong
+  `electron/trayTimer.js` cùng chỗ với các hàm thuần khác, nhận state qua tham số thay vì biến
+  module-level (`timerData`/`prevIsRunning`/`lastActiveSessionSnapshot`) — khi đó viết test cho
+  toàn bộ vòng đời "phiên đang chạy → phiên xong → thông báo" mà không cần mock `electron`. Việc
+  polling/`powerMonitor` tự nó (I/O thật) vẫn phải ở `main.js` và vẫn không test được, nhưng phạm
+  vi không-test-được co lại chỉ còn đúng phần wiring, không còn ôm cả logic quyết định.
+- **Estimated Complexity**: Trung bình — đụng đường ranh giới module hiện có của `trayTimer.js`
+  nhưng không đổi hành vi, có thể làm dần khi có việc khác chạm `main.js`.
+- **Blocking Conditions**: Không có — không chặn việc gì khác.
+- **Review Trigger**: Lần tới có ai sửa `electron/main.js` vì bất kỳ lý do gì, hoặc nếu bug "menu
+  bar mất đếm ngược" tái diễn lần nữa sau bản vá ADR-072 này.
+- **Owner**: chưa ai · **Status**: MỞ

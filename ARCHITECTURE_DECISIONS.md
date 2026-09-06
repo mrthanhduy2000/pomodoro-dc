@@ -11,6 +11,52 @@
 
 ---
 
+## ADR-072 — Tray menu bar: realtime KHÔNG được là nguồn cập nhật DUY NHẤT, luôn cần một lưới poll dự phòng
+
+- **Ngày**: 2026-09-06
+- **Bối cảnh**: Đàm báo (kèm ảnh) menu bar Mac không hiện đếm ngược dù web app đang chạy phiên thật
+  — *"đã bị rất nhiều lần"*. `electron/main.js` chỉ gọi `fetchTimerLive()` (đọc REST một lần) lúc
+  khởi động, sau đó phó thác 100% cho kênh Supabase Realtime (`postgres_changes`) để cập nhật
+  `timerData`. Comment đầu file ghi "Polls Supabase timer_live table every 3 seconds" nhưng
+  `git log -p` xác nhận dòng polling đó **CHƯA BAO GIỜ tồn tại** trong lịch sử file — một lời hứa
+  chưa từng được giữ.
+- **Vấn đề gốc**: kênh realtime là một WebSocket có thể ngắt lặng lẽ (Mac ngủ/thức, đổi WiFi, socket
+  chết) mà không tự phát lại các sự kiện đã lỡ trong lúc ngắt. Với một app nền chạy cả ngày trên
+  laptop, việc "ngủ rồi thức" xảy ra nhiều lần/ngày ⇒ `timerData` kẹt ở trạng thái cũ VĨNH VIỄN cho
+  tới khi Đàm tự khởi động lại app — đúng khớp triệu chứng "lặp lại nhiều lần" mà không sửa gốc lần
+  nào từng đứng vững.
+- **Phương án cân nhắc**:
+  1. Theo dõi trạng thái kênh realtime (`.subscribe((status) => …)`) và tự resubscribe/refetch khi
+     thấy `CLOSED`/`CHANNEL_ERROR`.
+  2. Thêm polling định kỳ độc lập với sức khoẻ kênh realtime, cộng thêm refetch ngay khi
+     `powerMonitor` báo Mac vừa thức dậy.
+  3. Không sửa — dặn Đàm tự khởi động lại app khi thấy mất đếm ngược.
+- **Lý do loại bỏ từng phương án**: (1) bị loại vì hành vi callback trạng thái của supabase-js
+  realtime không ổn định giữa các phiên bản và khó kiểm chứng trong CI (main.js vốn không mock
+  được `electron`/`@supabase/supabase-js` để viết test), tức lại thêm một chỗ "tự tin nhưng chưa
+  từng đỏ" — đúng bẫy dự án đã cắn nhiều lần ở mảng 3D; (3) bị loại vì đây là sửa triệu chứng, và
+  Đàm chính là non-coder phải chịu áp lực nhớ việc vận hành thay vì phần mềm tự chữa.
+- **Giải pháp được chọn**: phương án (2) — mô phỏng ĐÚNG mẫu hình dự án đã dùng cho push notification
+  (`ARCHITECTURE.md` mục 4: "Đường chính tức thời" + "Đường dự phòng định kỳ"): realtime vẫn là
+  đường chính (độ trễ thấp), `setInterval(fetchTimerLive, TIMER_LIVE_POLL_INTERVAL_MS = 5000)` là
+  lưới an toàn tự chữa không phụ thuộc trạng thái kênh, và `powerMonitor.on('resume', fetchTimerLive)`
+  rút ngắn thời gian phục hồi ngay sau khi Mac thức dậy thay vì chờ hết chu kỳ poll. Gộp luôn logic
+  phát hiện "phiên vừa hoàn thành" (báo Notification) vào một hàm dùng chung `applyTimerLiveUpdate`
+  cho cả 2 nguồn — tránh lặp lại đúng lỗi này lần nữa cho nhánh thông báo.
+- **Trade-off**: thêm một request REST mỗi 5 giây tới Supabase (rất nhẹ, cùng bảng `timer_live` chỉ
+  1 dòng `singleton`) để đổi lấy việc KHÔNG BAO GIỜ kẹt liên tục quá 5 giây (hoặc tới lúc Mac thức
+  dậy) dù kênh realtime có chết theo bất kỳ cách nào.
+- **Ảnh hưởng**: `electron/main.js` không còn nơi nào giả định realtime là nguồn DUY NHẤT của sự
+  thật — mọi cập nhật tray PHẢI đi qua `applyTimerLiveUpdate`, đừng viết thêm một nhánh cập nhật
+  `timerData`/`prevIsRunning` riêng mà bỏ qua hàm này.
+- **Bài học đi kèm**: một dòng comment mô tả hành vi ("polls every 3 seconds") không phải bằng
+  chứng hành vi đó tồn tại — `git log -p` mới là bằng chứng; đọc code, đừng đọc lời hứa của code.
+- **Điều kiện xem xét lại**: nếu `main.js` được tách thành module thuần có thể mock `electron`/
+  `supabase-js` để test, có thể bổ sung theo dõi trạng thái kênh (phương án 1) làm lớp giảm độ trễ
+  thêm — nhưng polling vẫn PHẢI giữ làm lưới an toàn cuối cùng, không thay thế.
+
+---
+
 ## ADR-071 — THỐNG KÊ TRẢ LỜI, KHÔNG TRÌNH BÀY; ĐÓNG #99: BA ĐỒNG TIỀN NGỦ THÔI ĐƯỢC CỘNG; CHỮ TRONG SAVE ĐỌC TỪ BẢNG
 
 - **Ngày**: 2026-09-06 (vòng 36, ngay sau ADR-070)

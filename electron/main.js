@@ -2,11 +2,20 @@
  * electron/main.js — DC Pomodoro Menu Bar
  *
  * Tray-only app (no window, no dock icon).
- * Polls Supabase timer_live table every 3 seconds,
- * then ticks the countdown locally every second.
+ * Nguồn cập nhật CHÍNH là Supabase Realtime (`postgres_changes`) — độ trễ thấp.
+ * ⚠️ 2026-09-06 — SỬA GỐC "menu bar mất đếm ngược, lặp lại nhiều lần": trước đây realtime
+ * là nguồn DUY NHẤT (chỉ `fetchTimerLive()` một lần lúc khởi động, không có polling định kỳ
+ * nào dù comment cũ ở đây từng ghi "polls every 3 seconds" — dòng đó CHƯA BAO GIỜ đúng, xem
+ * lịch sử git). Khi Mac ngủ/thức, đổi WiFi, hay socket rớt lặng lẽ (rất thường với app nền
+ * chạy cả ngày), kênh realtime có thể ngắt và MẤT LUÔN sự kiện xảy ra trong lúc ngắt — tray
+ * kẹt ở dữ liệu cũ vĩnh viễn tới khi khởi động lại app. Nay có 2 lưới an toàn TỰ CHỮA, không
+ * phụ thuộc quản lý vòng đời của kênh realtime: (a) polling định kỳ `fetchTimerLive` mỗi
+ * `TIMER_LIVE_POLL_INTERVAL_MS` bất kể realtime còn sống hay không; (b) `powerMonitor.on('resume', …)`
+ * gọi lại ngay khi Mac thức dậy, để không phải chờ hết chu kỳ poll mới thấy đúng.
+ * Sau đó tick đếm ngược cục bộ mỗi giây từ `timerData` đã lưu.
  */
 
-const { app, Tray, Menu, nativeImage, shell, Notification, ipcMain } = require('electron');
+const { app, Tray, Menu, nativeImage, shell, Notification, ipcMain, powerMonitor } = require('electron');
 const path = require('path');
 const https = require('https');
 const { createClient } = require('@supabase/supabase-js');
@@ -36,6 +45,10 @@ let prevIsRunning = null; // null = chưa biết (lần fetch đầu tiên)
 let lastActiveSessionSnapshot = null;
 const FOCUS_COMPLETE_OWNER_NAME = 'Đàm';
 const SESSION_COMPLETE_GRACE_SECONDS = 2;
+// Lưới an toàn: đọc lại timer_live định kỳ dù kênh realtime còn sống hay không.
+// KHÔNG hạ thấp hơn nữa để "nhanh hơn" — đây là an toàn dự phòng, tick mỗi giây ở
+// `setInterval(updateTrayTitle, 1000)` mới là thứ làm đồng hồ chạy mượt giữa 2 lần poll.
+const TIMER_LIVE_POLL_INTERVAL_MS = 5000;
 
 function getRoundedFocusMinutes(totalSeconds) {
   return Math.max(1, Math.round((Number(totalSeconds) || 0) / 60));
@@ -108,6 +121,19 @@ function showSessionEndNotification(totalSeconds) {
   }).show();
 }
 
+// Dùng chung cho CẢ HAI nguồn cập nhật (realtime + poll) — để "lưới an toàn poll" không
+// chỉ vá lại countdown mà còn vá lại luôn thông báo "xong phiên" nếu realtime lỡ rớt đúng
+// lúc phiên kết thúc. Không trùng lặp logic phát hiện completed ở 2 nơi.
+function applyTimerLiveUpdate(newData, previousData) {
+  const completedSessionTotalSeconds = getCompletedSessionTotalSeconds(previousData, newData);
+  if (completedSessionTotalSeconds != null) {
+    showSessionEndNotification(completedSessionTotalSeconds);
+  }
+  rememberActiveSessionSnapshot(newData);
+  prevIsRunning = newData.is_running;
+  timerData = newData;
+}
+
 function fetchTimerLive() {
   const options = {
     hostname: SUPABASE_HOST,
@@ -125,10 +151,7 @@ function fetchTimerLive() {
       try {
         const rows = JSON.parse(raw);
         if (Array.isArray(rows) && rows.length > 0) {
-          const newData = rows[0];
-          rememberActiveSessionSnapshot(newData);
-          prevIsRunning = newData.is_running;
-          timerData = newData;
+          applyTimerLiveUpdate(rows[0], timerData);
         }
       } catch {
         return;
@@ -220,22 +243,22 @@ app.whenReady().then(() => {
       'postgres_changes',
       { event: '*', schema: 'public', table: 'timer_live', filter: 'id=eq.singleton' },
       (payload) => {
-        const newData = payload.new;
-        const previousData = payload.old ?? timerData;
-        const completedSessionTotalSeconds = getCompletedSessionTotalSeconds(previousData, newData);
-        if (completedSessionTotalSeconds != null) {
-          showSessionEndNotification(completedSessionTotalSeconds);
-        }
-        rememberActiveSessionSnapshot(newData);
-        prevIsRunning = newData.is_running;
-        timerData = newData;
+        applyTimerLiveUpdate(payload.new, payload.old ?? timerData);
       }
     )
     .subscribe();
 
-  // Tích tắc countdown mỗi giây (tính từ startedAt, không cần poll)
+  // Tích tắc countdown mỗi giây (tính từ startedAt, không cần poll cho việc này)
   setInterval(updateTrayTitle, 1000);
   updateTrayTitle();
+
+  // Lưới an toàn 1: poll định kỳ — tự chữa nếu kênh realtime lỡ rớt/mất sự kiện
+  // (xem chú thích ở đầu file). Không phụ thuộc trạng thái kênh, chỉ đọc lại DB.
+  setInterval(fetchTimerLive, TIMER_LIVE_POLL_INTERVAL_MS);
+
+  // Lưới an toàn 2: Mac ngủ rồi thức dậy gần như luôn làm rớt socket cũ — đọc lại
+  // NGAY khi thức thay vì chờ tới chu kỳ poll kế tiếp (tối đa TIMER_LIVE_POLL_INTERVAL_MS).
+  powerMonitor.on('resume', fetchTimerLive);
 });
 
 app.on('window-all-closed', () => {

@@ -1,3 +1,53 @@
+> Cập nhật lần cuối: **2026-09-06 (cùng ngày, phiên khác)** — **SỬA GỐC: MENU BAR MAC MẤT ĐẾM
+> NGƯỢC, LẶP LẠI NHIỀU LẦN (ADR-072).** Đàm báo kèm ảnh chụp: thanh menu Mac chỉ hiện icon đồng
+> hồ, không có chữ đếm ngược, dù web app (tab trình duyệt) vẫn đang chạy phiên thật ("24:56").
+>
+> ### Vì sao lặp lại nhiều lần: một dòng comment mô tả hành vi CHƯA TỪNG tồn tại
+> `electron/main.js` từ đầu tới giờ CHỈ gọi `fetchTimerLive()` (đọc REST) MỘT LẦN lúc khởi động,
+> sau đó phó thác 100% cho kênh Supabase Realtime để cập nhật `timerData`. Header file ghi "Polls
+> Supabase timer_live table every 3 seconds" — `git log -p --follow -- electron/main.js` xác nhận
+> dòng polling định kỳ đó **CHƯA BAO GIỜ được viết**, ở BẤT KỲ commit nào trong lịch sử file. Kênh
+> WebSocket realtime có thể ngắt lặng lẽ (Mac ngủ/thức, đổi WiFi, socket chết) mà KHÔNG phát lại
+> sự kiện đã lỡ trong lúc ngắt — với một app nền chạy cả ngày trên laptop, "ngủ rồi thức" xảy ra
+> nhiều lần/ngày, nên `timerData` kẹt ở trạng thái cũ VĨNH VIỄN tới khi Đàm tự khởi động lại app.
+> Đây đúng là root cause của việc bug này "đã bị rất nhiều lần" — không phải một lần hỏng ngẫu
+> nhiên, mà một thiết kế thiếu lưới an toàn từ đầu.
+>
+> ### Đã sửa (`electron/main.js`, không đụng web app/schema Supabase)
+> 1. **Poll định kỳ** — `setInterval(fetchTimerLive, TIMER_LIVE_POLL_INTERVAL_MS = 5000)`: đọc
+>    lại `timer_live` mỗi 5 giây BẤT KỂ kênh realtime còn sống hay không — tự chữa trong tối đa 5
+>    giây nếu realtime lỡ mất một sự kiện.
+> 2. **`powerMonitor.on('resume', fetchTimerLive)`** — đọc lại NGAY khi Mac vừa thức dậy, thay vì
+>    chờ hết chu kỳ poll (Mac ngủ/thức gần như luôn làm rớt socket cũ).
+> 3. **Gộp logic chung** — trước đây nhánh realtime và nhánh `fetchTimerLive()` mỗi nơi tự cập
+>    nhật `timerData`/`prevIsRunning`, nhánh poll không hề gọi logic phát hiện "phiên vừa xong"
+>    (báo Notification desktop). Nay cả hai đi qua một hàm `applyTimerLiveUpdate(newData,
+>    previousData)` duy nhất — tránh việc sau này chỉ có nhánh realtime "biết" báo xong phiên, còn
+>    nhánh poll thì câm lặng (đúng lỗi cùng họ, cho một triệu chứng khác).
+> Chi tiết trade-off + phương án đã loại: `ARCHITECTURE_DECISIONS.md` ADR-072.
+>
+> ### ⚠️ Đàm CẦN LÀM THÊM MỘT BƯỚC TRÊN MAC (khác web app)
+> App tray Electron chạy từ **thư mục dự án cục bộ trên Mac**, không tự cập nhật qua Vercel/GitHub
+> như web app. Web app đã lên `main` và tự deploy — không cần làm gì thêm ở đó. Nhưng để MENU BAR
+> nhận bản vá này, Đàm cần 2 bước trên Mac: (1) `git pull` bản mới nhất về máy; (2) khởi động lại
+> app tray — bấm "Thoát" ở menu tray rồi mở lại (⚠️ LaunchAgent tắt `KeepAlive` có chủ đích để nút
+> "Thoát" thoát được thật, nên nó **KHÔNG** tự bật lại ngay — Đàm cần khởi động lại Mac, HOẶC mở
+> Terminal chạy `launchctl kickstart -k gui/$(id -u)/com.dcpomodoro.tray`, HOẶC chạy lại lệnh
+> Electron thủ công ghi ở `CLAUDE.md` mục "App menu bar Mac"). Không làm 2 bước này thì tray Mac
+> vẫn chạy `main.js` CŨ, bug y nguyên.
+>
+> ### Bài học
+> Một dòng comment tả hành vi ("polls every 3 seconds") không phải bằng chứng hành vi đó tồn
+> tại — `git log -p` mới là bằng chứng thật. Đây là bản dịch Việt của luật đã có ở mục 3D: *"một
+> câu tự trấn an phải được kiểm như một con số"*.
+>
+> Test **1.597 bài (1.596 pass · 0 fail · 1 skipped)** · lint sạch · build xanh (không đổi số bài —
+> đây là mã Electron `main.js` không có test tự động, xem `TECH_DEBT #102` mới mở). Không đụng
+> web app, không đụng Thành phố.
+>
+
+---
+
 > Cập nhật lần cuối: **2026-09-06 (vòng 36)** — **THỐNG KÊ TRẢ LỜI, KHÔNG TRÌNH BÀY; ĐÓNG #99
 > (ADR-071).** Lệnh Đàm: *"Build lớn. Simplify mạnh. Làm game vui hơn. Tập trung nhiều hơn vào UX/UI.
 > TOÀN QUYỀN … Đừng hỏi lại tôi bất cứ điều gì rồi ngồi chờ."* Không đụng Thành phố. Đóng `#99 · #6`,

@@ -10,6 +10,35 @@
 > **Muốn hiểu VÌ SAO một quyết định được chọn** → `ARCHITECTURE_DECISIONS.md`. **Muốn biết migration
 > cụ thể nào cần chạy** → `MIGRATION.md`.
 
+## 2026-09-06 — Sửa gốc: menu bar Mac mất đếm ngược, lặp lại nhiều lần (ADR-072)
+
+**Mục đích.** Đàm báo (kèm ảnh) tray menu bar Mac không hiện đếm ngược dù phiên đang chạy thật —
+*"đã bị rất nhiều lần"*.
+
+**Nguyên nhân gốc.** `electron/main.js` chỉ đọc `timer_live` một lần lúc khởi động rồi phó thác
+100% cho kênh Supabase Realtime để cập nhật tiếp — dù comment đầu file ghi "polls every 3 seconds",
+dòng polling đó **chưa từng tồn tại** (xác nhận bằng `git log -p`). Kênh WebSocket có thể ngắt lặng
+lẽ khi Mac ngủ/thức hoặc đổi WiFi mà không phát lại sự kiện đã lỡ ⇒ tray kẹt ở dữ liệu cũ tới khi
+khởi động lại app bằng tay.
+
+**Phạm vi.** `electron/main.js`: thêm poll REST định kỳ (`fetchTimerLive` mỗi 5 giây) làm lưới an
+toàn không phụ thuộc trạng thái kênh realtime, cộng `powerMonitor.on('resume', …)` đọc lại ngay khi
+Mac vừa thức dậy. Gộp logic phát hiện "phiên vừa xong" (báo Notification) vào một hàm dùng chung
+`applyTimerLiveUpdate` cho cả nhánh realtime lẫn nhánh poll, tránh lặp lại đúng lỗi cho nhánh thông
+báo. Chi tiết trade-off: `ARCHITECTURE_DECISIONS.md` ADR-072.
+
+**Ảnh hưởng.** 1 file (`electron/main.js`), logic wiring — không đổi hình dạng dữ liệu `timer_live`,
+không đụng web app/Supabase schema. `TECH_DEBT #102` mở: phần logic này chưa có test tự động (không
+mock được `electron` trong `node --test`).
+
+**Tương thích.** ⚠️ App tray Electron chạy từ THƯ MỤC DỰ ÁN CỤC BỘ trên Mac — **không tự cập nhật
+qua Vercel/GitHub như web app**. Web app (`pomodoro-dc.vercel.app`) không đổi gì, không cần Đàm làm
+gì thêm ở đó. Để MENU BAR nhận bản vá: `git pull` về máy + khởi động lại app tray — `KeepAlive` của
+LaunchAgent đang TẮT có chủ đích nên "Thoát" không tự bật lại; cần khởi động lại Mac, hoặc
+`launchctl kickstart -k gui/$(id -u)/com.dcpomodoro.tray`. Chi tiết: `BAN_GIAO.md`.
+
+---
+
 ## 2026-09-06 (vòng 36) — Thống kê trả lời, không trình bày; đóng #99 (ADR-071)
 
 **Mục đích.** Lệnh Đàm *"Build lớn. Simplify mạnh. Làm game vui hơn. UX/UI. TOÀN QUYỀN"* với mặt trận

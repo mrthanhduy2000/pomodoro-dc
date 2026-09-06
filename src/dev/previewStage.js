@@ -72,7 +72,7 @@ const PHIEN_THUONG = {
   weeklyBonusSP: 0,
   relicsEvolved: [],
   acceleratedCraftingIds: [],
-  // ADR-076: the ending's project card reads these three (brick landed / building finished / auto-queued).
+  // ADR-077: the ending's project card reads these three (brick landed / building finished / auto-queued).
   newlyBuiltIds: [],
   autoQueuedId: null,
 };

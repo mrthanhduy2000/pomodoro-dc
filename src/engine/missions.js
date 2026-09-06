@@ -1,5 +1,5 @@
 /**
- * missions.js — daily missions as a PURE module (ADR-076, 2026-09-06).
+ * missions.js — daily missions as a PURE module (ADR-077, 2026-09-06).
  *
  * Everything here used to live inline in `store/gameStore.js` (~250 lines) next to the Zustand
  * actions. Nothing reads the store, the DOM or the clock: the two functions that need "today" take a
@@ -319,7 +319,7 @@ export function rebuildMissionsFromHistory(missions, history, nextStreak, { toda
 }
 
 /**
- * The live tick after a completed session (ADR-070 reconciliation + ADR-076 single formula).
+ * The live tick after a completed session (ADR-070 reconciliation + ADR-077 single formula).
  * `sessionEntry` is the just-finished session in history-entry shape; it is prepended to `history`
  * so progress is computed by the same snapshot the reload path uses. Returns the new `missions`
  * slice plus the XP that landed this session.

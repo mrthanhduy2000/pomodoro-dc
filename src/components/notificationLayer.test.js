@@ -67,7 +67,7 @@ test('MỌI hộp thoại đều nằm TRÊN chuông — kể cả hộp thoại
   // (Loot · LevelUp · Prestige · WeeklyReport). Con số này là số ĐO, không phải mong muốn — thêm/bớt
   // hộp thoại thì sửa nó kèm lý do, đừng nới cho qua.
   // ADR-070 (2026-09-06): `LootDropModal` đã gỡ — chuỗi thẻ thưởng là cái kết duy nhất. Còn 3 hộp thoại.
-  // ADR-076 (2026-09-06): `WeeklyReportModal` folded into the Stats screen. Còn 2 hộp thoại (LevelUp · Prestige).
+  // ADR-077 (2026-09-06): `WeeklyReportModal` folded into the Stats screen. Còn 2 hộp thoại (LevelUp · Prestige).
   assert.ok(MODAL_FILES.length >= 2, 'không tìm thấy hộp thoại nào — có phải thư mục đã đổi chỗ?');
 
   for (const file of MODAL_FILES) {

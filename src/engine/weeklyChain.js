@@ -1,5 +1,5 @@
 /**
- * weeklyChain.js — the weekly step chain as a PURE module (ADR-076, 2026-09-06).
+ * weeklyChain.js — the weekly step chain as a PURE module (ADR-077, 2026-09-06).
  *
  * Moved out of `store/gameStore.js` (~250 lines). No store, no DOM. The clock enters only through
  * a `now` argument (default `Date.now()`), so tests can pin the week and the store passes the same

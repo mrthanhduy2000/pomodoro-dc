@@ -43,7 +43,7 @@ test('progress is one formula: the day snapshot — singleSession is the LONGEST
   assert.equal(getDailyMissionProgressFromSnapshot({ type: 'focusMinutes', goal: 60 }, snap), 60);
 });
 
-test('tickDailyMissions: the live path IS the reload path with the finished session prepended (ADR-076)', () => {
+test('tickDailyMissions: the live path IS the reload path with the finished session prepended (ADR-077)', () => {
   const s22 = at('2026-09-09T10:00:00+07:00', 22);
   const live = tickDailyMissions({ missions: single30(), history: [], streak: { currentStreak: 0 }, sessionEntry: s22, today: TODAY });
   const reload = rebuildMissionsFromHistory(single30(), [s22], { currentStreak: 0 }, { today: TODAY });

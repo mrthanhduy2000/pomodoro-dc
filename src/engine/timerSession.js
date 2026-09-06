@@ -203,7 +203,7 @@ export function getWorkedMinutesForBreak({
     : Math.max(0, creditedMinutes);
 }
 
-/** Focus length as the timer accepts it: 1..180 minutes (ADR-076: moved from PomodoroEngine.jsx; statsAnswers uses the same clamp). */
+/** Focus length as the timer accepts it: 1..180 minutes (ADR-077: moved from PomodoroEngine.jsx; statsAnswers uses the same clamp). */
 export function clampFocusMinutes(value) {
   return Math.min(180, Math.max(1, value));
 }

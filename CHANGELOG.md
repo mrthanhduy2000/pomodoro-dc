@@ -10,7 +10,7 @@
 > **Muốn hiểu VÌ SAO một quyết định được chọn** → `ARCHITECTURE_DECISIONS.md`. **Muốn biết migration
 > cụ thể nào cần chạy** → `MIGRATION.md`.
 
-## 2026-09-06 (late night) — Round 37: a session always lays a brick (ADR-076)
+## 2026-09-06 (late night) — Round 37: a session always lays a brick (ADR-077)
 
 - **Purpose**: Đàm's round-37 order — *build big, simplify hard, more fun, more UX/UI*. Four rounds of
   removal had left the loop thin; this round adds ONE thing that lives in the loop and removes what
@@ -31,6 +31,25 @@
   tests green (30 new engine/store tests — exact count in `BAN_GIAO.md`); lint clean; build green.
 - **Compatibility**: saves unchanged except `forgiveness` is no longer written; old rows carry it
   harmlessly. No migration.
+## 2026-09-06 (night, fifth pass) — Document governance runs on discovery (ADR-076)
+
+- **Purpose**: the ADR-075 guards all read a hand-written list, so any document created later was
+  ungoverned — three archives created the same day were already outside it.
+- **Scope**: `discoverDocs()` + `classify()` replace the hardcoded list; classes come from the path,
+  so a file that does not exist yet is already governed. Rotation limits extended from 2 to 4
+  append-only logs (`TECH_DEBT.md`, `ARCHITECTURE_DECISIONS.md` added).
+- **Impact**: 28 documents governed instead of 20 listed; new files need no registration.
+- **Compatibility**: tooling and docs only. Break-tested both new gates.
+
+## 2026-09-06 (night, third pass) — TECH_DEBT split by subsystem; UI invariants lazy-loaded (ADR-075)
+
+- **Purpose**: `TECH_DEBT.md` was the most-grepped reference file, and 87% of it was debts on the
+  frozen 3D city that nobody may act on.
+- **Scope**: 52 3D debts → `docs/TECH_DEBT_3D.md` (still open, split by subsystem); 4 mislabelled
+  closed entries → archive; `START_HERE.md` UI invariants → `docs/UI_INVARIANTS.md`; stale routing
+  repointed in `AI_ONBOARDING.md`, `AI_HANDOFF_KNOWLEDGE.md`, `ARCHITECTURE.md`.
+- **Impact**: `TECH_DEBT.md` 250,190 → 43,559 chars (−83%); startup context 10,020 → 9,145 tokens.
+  Nothing deleted; 103 entries still accounted for.
 
 ## 2026-09-06 (night, second pass) — Journal rotation enforced (ADR-075)
 

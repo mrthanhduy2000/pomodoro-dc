@@ -54,7 +54,7 @@ test('so tuần: phiên huỷ không được đếm, và ngưỡng "giữ nhị
   assert.ok(Math.abs(w2.pct) < WEEK_TREND_THRESHOLD_PCT);
 });
 
-test('so tuần (ADR-076): Monday 04:00 with both same-span windows empty ⇒ last FULL week vs the week before, never "no sessions"', () => {
+test('so tuần (ADR-077): Monday 04:00 with both same-span windows empty ⇒ last FULL week vs the week before, never "no sessions"', () => {
   const MONDAY_EARLY = new Date('2026-09-07T04:00:00+07:00');
   const TUAN_TRUOC_NUA = [at('2026-08-25T09:00:00+07:00', 60), at('2026-08-27T09:00:00+07:00', 40)]; // 100′
   const w = buildWeekComparison([...TUAN_TRUOC, ...TUAN_TRUOC_NUA], { now: MONDAY_EARLY });
@@ -117,7 +117,7 @@ test('strongest: every line carries VALUE + whole-session rate + SAMPLE; a goal 
   }
 });
 
-test('strongest: with NO goal reviews the three lines still answer (ADR-076) — a cancel is the only thing that lowers the rate', () => {
+test('strongest: with NO goal reviews the three lines still answer (ADR-077) — a cancel is the only thing that lowers the rate', () => {
   const noGoals = HO_SO.map((e) => { const rest = { ...e }; delete rest.goalAchieved; return rest; });
   const cancelledEvening = { id: 'x', timestamp: new Date('2026-08-26T19:00:00+07:00').getTime(), minutes: 10, targetMinutes: 50, completed: false, cancelled: true, cancelledAt: 1, categoryId: 'viec', categorySnapshot: { label: 'Làm việc' } };
   const best = buildBestWindow(buildFocusProfile([...noGoals, cancelledEvening], optsOf(noGoals)));

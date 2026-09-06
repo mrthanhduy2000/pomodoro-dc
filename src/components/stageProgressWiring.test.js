@@ -78,7 +78,7 @@ test('dòng đếm ngược ở CỘT GIỮA, cạnh hai dòng kia', () => {
   assert.ok(/<FocusMoment\b/.test(APP_CODE), '`FocusMoment` không được dựng ở đâu cả');
   const moment = readFileSync(join(HERE, 'focusMomentPick.js'), 'utf8');
   assert.ok(/stage\.text/.test(moment), '`FocusMoment` không còn nhánh nào nói ra chặng');
-  const tease = APP_CODE.indexOf('<FocusIntro'); // ADR-076: the city tease became the brick strip inside the timer card
+  const tease = APP_CODE.indexOf('<FocusIntro'); // ADR-077: the city tease became the brick strip inside the timer card
   const countdown = APP_CODE.indexOf('<FocusMoment');
   assert.ok(tease > 0 && countdown > tease, 'không đứng sau `FocusIntro` — bố cục đã đổi, đọc lại');
   // ⚠️ Tìm đồng hồ SAU mốc neo: `App.jsx` dựng `<PomodoroEngine>` ở HAI nhánh (toàn màn hình và

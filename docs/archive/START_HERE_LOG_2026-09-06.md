@@ -285,8 +285,23 @@
 - Hiệu năng: đã đo dứt điểm trên Apple M3 — **dư 3,2 lần**, hình học gần như miễn phí.
   **KHÔNG đo lại** trừ khi Đàm thấy khung hình giật trên máy thật.
 
-## ROUND 34 (moved from `START_HERE.md` on 2026-09-06, late night — ADR-076 pushed it out; verbatim)
+---
 
+## Rounds 34 and 35 — full text (moved from START_HERE.md 2026-09-06 night)
+
+- **Game — ROUND 35 (2026-09-06): ONE ENDING, NO CLAIM BUTTONS, NO DEAD SCREENS (ADR-070).**
+  (1) Weekly step + full-day bonus land automatically inside `completeFocusSession` and are narrated
+  in the card chain — `claimWeeklyStep`/`claimMissionAllBonus` and every Claim button deleted;
+  (2) **relics grow by SESSION** (`engine/relicGrowth.js`, thresholds 20/50 sessions ≥25′ since
+  `earnedAt`; old saves stamped on load) — `evolveRelic` and refining costs gone (`#96` closed);
+  (3) 11/15 wonders + 2 building perks moved onto the living axis (`WONDER_EFFECT_REGISTRY.passive`,
+  `wonderEffects.js` is the single source); (4) **`LootDropModal` deleted** — the card chain is the
+  only ending; the «Kỷ nguyên mới» card carries a «Xem thành phố mới» button (`#98` closed);
+  (5) Badges gained a «Kế tiếp» block (4 closest, bar + «còn N»), tier filter removed (`#100` closed).
+  ⚠️ Lesson: *when you remove a button, hunt down everything it did BESIDES granting the reward* —
+  the old «Nhận» button also reconciled quests against history; that now lives in
+  `completeFocusSession`. Inspect: `--preview "loot-max&dc-preview-card=quests|chain|evolve"` and
+  `--preview era`.
 - **Game — ROUND 34 (2026-09-06): THE ONLY CURRENCY IS A SESSION (ADR-069).**
   Order: *"SIMPLIFY. MINIMIZE. AMPLIFY FUN."* (1) Building is one screen, one button
   (`BuildScreen.jsx`; `startProject` asks for no RP or materials — the price is N sessions + a queue

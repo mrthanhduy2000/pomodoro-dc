@@ -42,8 +42,8 @@ const NGOAI_PHAM_VI = 'components/city/render3d';
 const NGOAI_LE = {
   'components/DailyMissions.jsx': 2,         // mang bố cục: thanh tiến độ nhiệm vụ
   'components/LevelUpModal.jsx': 3,          // pháo hoa — `ParticleField` trả `null` khi Giảm chuyển động
-  'components/focus/QuickPresets.jsx': 1,    // thẻ preset đang chọn (ADR-076: tách khỏi PomodoroEngine)
-  'components/shared/ActionButton.jsx': 2,   // `ActionButton` (lún = chiều dày bóng) — ADR-076: tách ra làm cửa duy nhất (#86)
+  'components/focus/QuickPresets.jsx': 1,    // thẻ preset đang chọn (ADR-077: tách khỏi PomodoroEngine)
+  'components/shared/ActionButton.jsx': 2,   // `ActionButton` (lún = chiều dày bóng) — ADR-077: tách ra làm cửa duy nhất (#86)
   'components/city/CityViewShell.jsx': 2,    // mang bố cục: thanh tiến độ giàn giáo
 };
 

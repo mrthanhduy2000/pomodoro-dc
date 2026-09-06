@@ -1,5 +1,5 @@
 /**
- * gameStore.sessionBrick.test.js — REAL store → brick engine, end to end (ADR-076).
+ * gameStore.sessionBrick.test.js — REAL store → brick engine, end to end (ADR-077).
  *
  * `engine/sessionBrick.test.js` proves the engine reads a hand-built queue correctly; this file proves
  * `completeFocusSession` actually produces what the engine needs (`newlyBuiltIds`, `autoQueuedId`,
@@ -87,7 +87,7 @@ test('a REAL session that does not finish ⇒ the card counts the queue\'s own r
   assert.match(card.sub, /Còn 2 phiên/);
 });
 
-test('EMPTY queue ⇒ the store queues the next project itself before advancing, and tells the card (ADR-076)', () => {
+test('EMPTY queue ⇒ the store queues the next project itself before advancing, and tells the card (ADR-077)', () => {
   resetWithQueue([]);
   const expected = listNextProjects({ activeBook: 1, buildings: [], craftingQueue: [] })[0];
   const before = pickSessionProject({ craftingQueue: [], activeBook: 1, buildings: [] });

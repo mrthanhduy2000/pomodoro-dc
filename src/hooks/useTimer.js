@@ -38,7 +38,7 @@ export const TIMER_STATES = {
 
 export { TIMER_END_REASONS, TIMER_MODES };
 
-/** ADR-076: one soft bell at the last minute — the only mid-session cue besides the final three ticks. */
+/** ADR-077: one soft bell at the last minute — the only mid-session cue besides the final three ticks. */
 const LAST_MINUTE_SECONDS = 60;
 
 function getInitialDisplaySeconds(mode, focusMinutes) {

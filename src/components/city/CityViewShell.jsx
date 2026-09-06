@@ -113,7 +113,7 @@ export default function CityViewShell({
   const era = viewing?.era;
   const label = viewing?.label ?? `Kỷ ${era}`;
   const isCurrent = !!viewing?.isCurrent;
-  // ADR-076: at zero buildings the empty state names the project the FIRST session will lay a brick for —
+  // ADR-077: at zero buildings the empty state names the project the FIRST session will lay a brick for —
 
   // the same auto-pick `completeFocusSession` makes, so the city and the Focus strip tell one story.
 

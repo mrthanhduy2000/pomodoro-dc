@@ -7,7 +7,7 @@
  *
  * ⚠️ VÌ SAO PHẢI CÓ FILE NÀY, VÀ VÌ SAO NÓ ĐO Ở TẦNG STORE CHỨ KHÔNG Ở TẦNG THUẦN:
  * `TECH_DEBT #87` cảnh báo đúng một điều — bản cũ gộp "đã mời" với "đã xem" vào MỘT trường, và
- * `dismissWeeklyReport` ghi trường ấy ở mọi lần đóng. (ADR-076: dialog folded into Stats; `markWeeklyReportSeen` replaces open/dismiss.) Đẩy thẳng sang toast 4 giây mà giữ nguyên
+ * `dismissWeeklyReport` ghi trường ấy ở mọi lần đóng. (ADR-077: dialog folded into Stats; `markWeeklyReportSeen` replaces open/dismiss.) Đẩy thẳng sang toast 4 giây mà giữ nguyên
  * cách ghi thì **lỡ một cái toast = mất báo cáo của cả tuần**. Cái mất ấy không nằm trong một hàm
  * thuần nào cả: nó nằm ở việc BỐN hành động (`checkWeeklyReport` · `openWeeklyReport` ·
  * `dismissWeeklyReportToast` · `dismissWeeklyReport`) ghi vào HAI trường theo đúng luật nào. Một
@@ -95,7 +95,7 @@ test('ĐỐI CHỨNG ĐỒNG HỒ: mốc dùng trong file này thật sự là t
   } finally { unfreeze(); }
 });
 
-test('Monday only INVITES — no dialog flag exists any more (ADR-076: the summary is the Stats screen)', () => {
+test('Monday only INVITES — no dialog flag exists any more (ADR-077: the summary is the Stats screen)', () => {
   freezeAt(MONDAY_ISO);
   try {
     reset();
@@ -165,6 +165,6 @@ test('NỐI HAI ĐẦU: cờ store bật ⇒ `buildRewardToasts` sinh thẻ đ�
     assert.ok(toasts.length >= 2, 'Chồng phải có ít nhất hai thẻ, nếu không phép so thứ tự là vô nghĩa.');
     assert.equal(toasts[0].source, 'weekly');
     assert.deepEqual(weekly.action, { weekly: true, tab: 'stats' },
-      'ADR-076: the toast must record seen through the store AND navigate to the Stats tab');
+      'ADR-077: the toast must record seen through the store AND navigate to the Stats tab');
   } finally { unfreeze(); }
 });

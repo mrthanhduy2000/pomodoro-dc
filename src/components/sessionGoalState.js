@@ -23,7 +23,7 @@
  * điều đáng khoá nhất chính là **`empty` và `partial` KHÔNG được cùng một tông** — đó là bản chất
  * của lỗi, còn chữ nghĩa thì chỉnh lúc nào cũng được.
  *
- * ⚠️ ADR-076 (round 37): the goal is OPTIONAL. The Start button never blocks on it any more — Đàm
+ * ⚠️ ADR-077 (round 37): the goal is OPTIONAL. The Start button never blocks on it any more — Đàm
  * said plainly he rarely types one, and a mandatory field that is skipped by its only user is a
  * gate with nobody behind it. `SESSION_GOAL_MIN_CHARS` survives as the "clear enough" threshold:
  * chips only suggest goals that long, and the tone below still tells a half-typed goal apart from
@@ -100,7 +100,7 @@ export const GOAL_SUGGESTION_LIMIT = 3;
  *
  * ⚠️ WHY IT EXISTS. Most work REPEATS: "Hoàn thành phần đang dở" today is the same as yesterday, and
  * a goal is scored (Đạt / Chưa đạt) and read by the AI Coach, so it is worth one tap but never worth
- * retyping. Since ADR-076 the goal is optional; these chips are the cheapest way to still have one.
+ * retyping. Since ADR-077 the goal is optional; these chips are the cheapest way to still have one.
  *
  * ⚠️ Bỏ trùng có PHÂN BIỆT HOA-THƯỜNG và khoảng trắng thừa: "Viết báo cáo" và "viết  báo cáo" là
  * một việc, hiện thành hai chip thì vừa tốn chỗ vừa trông như app không nhớ gì.
@@ -130,7 +130,7 @@ export function pickRecentGoals(history, limit = GOAL_SUGGESTION_LIMIT, { prefer
     const key = goal.toLowerCase().replace(/\s+/g, ' ');
     if (seen.has(key)) continue;
     seen.add(key);
-    // ADR-076 "smart default": goals used for the SAME task type come first, newest first inside
+    // ADR-077 "smart default": goals used for the SAME task type come first, newest first inside
     // each group — the chip Đàm most likely wants is the one he used for this kind of work.
     (preferCategoryId != null && (entry?.categoryId ?? null) === preferCategoryId ? preferred : rest).push(goal);
     if (preferred.length >= max) break;

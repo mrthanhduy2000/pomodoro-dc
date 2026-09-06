@@ -2570,3 +2570,239 @@ cấp `Math.min(3,…)` → `Math.min(9,…)` · cắt bớt danh sách cấp th
 > 5 cùng loại thì dừng xem xét tổng thể" — #15 chính là đợt thứ 5 đó.)*
 
 ---
+
+---
+
+## Additional closed entries found 2026-09-06 (night)
+
+> Their titles already said ĐÃ ĐÓNG / RESOLVED but they were still sitting in the active file.
+
+## #18 — ĐÃ ĐÓNG (2026-08-13) · Kỷ 12–14 không hề có bề mặt nào mang màu kỷ
+
+> ⚠️ **ĐÍNH CHÍNH (2026-08-13, cùng ngày, muộn hơn)**: dòng "0/105 ✅" trong bảng bên dưới **chỉ
+> đúng với phép đo lúc đó**, không phải một lời bảo đảm chung. Đo lại bằng `scripts/sweep-score.mjs`
+> (công cụ mới, có `--selftest` chứng minh bộ lọc mái thật sự chạy: bỏ lọc thì tụt về 51/105) ra
+> **2/105 cặp dưới ngưỡng**. Hai phép đo khác nhau ở cách chuẩn hoá khoảng cách và ở ranh giới dải,
+> nên **không cái nào "sai"** — nhưng con số 0/105 không được đọc như "đã xong vĩnh viễn". Việc mà
+> #18 tuyên bố là đã làm (kỷ mái bằng nay có bề mặt mang màu kỷ) thì vẫn đúng và vẫn đứng. Phần còn
+> lại chuyển sang **#19**. 👉 Bài học: **một con số nghiệm thu phải đi kèm CÔNG CỤ đã đo ra nó** —
+> ghi mỗi kết quả mà không ghi cách đo thì phiên sau không thể tái lập, và sẽ tưởng là đã đóng.
+
+- **Module**: `src/engine/city3d/buildingSpec.js` — nhánh `case 'flat'` của `roofParts`.
+- **Priority / Severity**: Medium / Low-Medium (thuần mỹ thuật) — **đã xử lý xong trong ngày**.
+- **Triệu chứng**: duyệt đủ 105 cặp kỷ trên ảnh thật, kỷ 12 ↔ 13 chỉ cách **6,4/255** (ngưỡng mắt
+  ~12), và ba trong bốn cặp yếu nhất đều dính kỷ 12 hoặc 13.
+- **Root Cause — KHÔNG phải màu, và đây là chỗ đáng học.** Nhánh `'flat'` đẩy ĐÚNG MỘT khối với
+  `role: 'trim'` — vai TRUNG TÍNH thuộc họ tường, chỉ ngấm 0,18 sắc kỷ. Ba kỷ 12/13/14 đều dùng
+  `roof: 'flat'`, nghĩa là **cả ba chưa bao giờ hiện lấy một milimét vuông vai `roof` nào**. Bảng
+  màu hoàn toàn đúng, ánh sáng hoàn toàn đúng, bài test "15 kỷ ra 15 màu mái" xanh suốt — vì nó đo
+  MÀU TRONG BẢNG chứ không hỏi màu ấy có được đem VẼ RA hay không.
+  ⇒ **Một bài test về BẢNG MÀU không bao giờ thay thế được một bài test về việc màu đó có xuất hiện
+  trong HÌNH HỌC hay không. Hai câu hỏi khác nhau, và khoảng trống giữa chúng đủ chỗ cho ba kỷ.**
+- **Giải pháp đã làm**: giữ nguyên gờ chắn mái trung tính ở vành ngoài (đó là bê tông/đá ốp thật),
+  thêm một **tấm phủ hẹp hơn (0,94) mang vai `roof`** nằm trong lòng nó — đúng cấu tạo mái bằng
+  ngoài đời: diềm parapet một vật liệu, sàn mái chống thấm một vật liệu khác. Nhìn từ góc camera
+  chúc xuống của thành phố này thì sàn mái là một mảng RẤT to.
+- **KẾT QUẢ ĐO LẠI** (105 cặp kỷ, dải thành phố, trung bình 6 chặng):
+
+  | | trước phiên này | sau `eraRoof` 0,55 | sau tấm phủ mái bằng |
+  |---|---|---|---|
+  | số cặp DƯỚI ngưỡng mắt | 5/105 | 4/105 | **0/105** ✅ |
+  | cặp gần nhau nhất | 6,0 | 6,0 | **12,6** |
+  | trung vị 105 cặp | 27,9 | 27,6 | **28,2** |
+
+  ⇒ **Cả 105 cặp kỷ nay đều phân biệt được**, cùng với cả 15 cặp chặng ngày (nhỏ nhất 29,5).
+- **Bài test khoá lại** (`buildingSpec.test.js`): mọi bản vẽ × mọi kỷ × cả 3 cấp đều phải có ít
+  nhất một phần mang vai `roof`, cộng một bài riêng cho các kỷ mái bằng. Đã thử ngược (gỡ tấm phủ)
+  và thấy **báo đỏ, gọi đích danh kỷ 12**.
+- **Status**: **CLOSED 2026-08-13.** 510/510 test xanh · lint sạch · build xanh.
+
+---
+
+## #17 — ĐÃ ĐÓNG (2026-08-13) · Bình minh và hoàng hôn là CÙNG MỘT BỨC ẢNH
+
+> ⚠️ **MỤC NÀY TỪNG CHẨN ĐOÁN SAI, VÀ CÁI SAI ĐÓ ĐÁNG GHI LẠI HƠN CẢ LỖI.** Bản đầu (viết cùng
+> ngày, sớm hơn vài giờ) đặt tên mục là *"Chặng CHIỀU là chặng xấu nhất trong ngày"*, kết luận
+> rằng có **hai hướng mỹ thuật khác hẳn nhau cần Đàm chọn**, rồi DỪNG LẠI chờ. Cả ba phần đều sai:
+> chặng chiều không phải chặng tệ nhất, không có hai hướng nào cả, và không có gì để chờ.
+>
+> **Vì sao sai: đo một trục rồi kết luận về cả bức tranh.** Bản đầu đo GÓC MÀU của dải trời, thấy
+> ba chặng ấm (bình minh 33° · chiều 43° · hoàng hôn 25°) nằm gọn trong 20°, và suy ra "một nửa số
+> chặng trong ngày là cùng một cảnh". Nhưng góc màu chỉ là MỘT trong ba thành phần của màu, và dải
+> trời chỉ là MỘT trong ba dải của khung hình. Đo lại bằng vector 9 chiều (trời + thành phố + đất,
+> mỗi dải 3 kênh, trung bình 15 kỷ) thì bức tranh lật ngược hẳn:
+>
+> | cặp chặng | khoảng cách cả cảnh (0–255) | kết luận |
+> |---|---|---|
+> | **bình minh ↔ hoàng hôn** | **5,9** | dưới ngưỡng mắt (~12) ⇒ **ĐÚNG LÀ MỘT BỨC ẢNH** |
+> | chiều ↔ hoàng hôn | 37,6 | cách nhau rõ |
+> | chiều ↔ bình minh | 42,1 | cách nhau rõ |
+>
+> Tức chặng chiều chưa bao giờ là vấn đề "trùng lặp" — nó chỉ ĐỤC (độ tươi 0,25, ra kaki chứ không
+> ra vàng), là một lỗi nhỏ và có một cách sửa đúng duy nhất. Còn cặp thật sự trùng nhau thì bản đầu
+> **không hề nhắc tới**, vì hai chặng đó góc màu 33° và 25° — trông đã "khác nhau 8°" trên bảng.
+>
+> ⇒ **Bài học, và nó tổng quát hơn mỹ thuật:** khi kết luận là *"hai thứ này giống nhau"*, phép đo
+> phải phủ HẾT những gì mắt nhìn thấy. Đo một trục thì sẽ vừa **báo nhầm** (chiều bị kết tội oan)
+> vừa **bỏ sót** (bình minh ↔ hoàng hôn thoát). Và cái sau nguy hiểm hơn nhiều, vì nó im lặng.
+>
+> **Và vì sao việc "chờ Đàm chọn" là sai:** dự án đã có sẵn luật cho đúng tình huống này
+> (`CLAUDE.md`, bài học Phase 3X) — *"một trade-off chỉ có thật khi CẢ HAI vế đều đã đạt và buộc
+> phải hy sinh một vế"*. Ở đây không vế nào đạt: chú thích hứa "chiều vàng" mà ra kaki, tức là một
+> **lỗi**, và sửa lỗi thì không cần xin phép. Đưa cho Đàm một lựa chọn giả rồi dừng lại chỉ làm mất
+> thời gian của anh và để nguyên bức tranh hỏng trên máy anh thêm một vòng nữa.
+
+- **Module**: `src/engine/city3d/daylight.js` (`DAYLIGHT_PROFILES`), `daylight.test.js`,
+  `src/components/city/render3d/sceneGraph.js` (sương mù).
+- **Priority / Severity**: Medium / Medium (thuần mỹ thuật) — **đã xử lý xong**.
+- **Root Cause**: hồ sơ `dawn` và `dusk` không được THIẾT KẾ riêng, chúng được chép ra từ nhau rồi
+  chỉnh vài phần trăm ở mỗi tham số (cao độ 0,22 vs 0,18 · ấm 0,85 vs 1,00 · chân trời 18° vs 10° ·
+  lực kéo 0,70 vs 0,78 · tươi 1,15 vs 1,25). Không ai chọn cho chúng giống nhau.
+- **Vì sao không bài test nào bắt được**: bài *"hai chặng liền nhau không được giống nhau"* duyệt
+  danh sách `DAY_PHASES` **theo thứ tự**, tức chỉ các cặp KỀ NHAU. `dawn` ở đầu và `dusk` ở cuối
+  nên không bao giờ được đem so với nhau. **Đây là lần thứ HAI cùng một hình dạng sai xuất hiện
+  trong chính file test đó** (lần trước: bài "hành trình màu" tính cả `night` nên bộ số hỏng vẫn
+  qua). Luật rút ra, nay đã thành mã: **bất biến kiểu "các thứ này phải khác nhau" phải duyệt TỔ
+  HỢP ĐÔI, không được duyệt danh sách theo thứ tự** — duyệt theo thứ tự là cái phễu, không phải
+  hàng rào.
+- **Giải pháp đã làm** — tách hai chặng ở NĂM trục cùng lúc, neo vào một sự thật khí quyển duy
+  nhất (*qua đêm thì bụi lắng xuống, hơi nước đọng lại*):
+  - **Sương theo giờ** (`haze`, trường mới + hàm thuần `fogRangeFor`). Trước đây sương là hằng số.
+    Đây là thứ đóng góp gần như toàn bộ kết quả — tắt riêng nó ra rồi bật lại (giữ nguyên mọi tham
+    số khác): **17,2 → 75,1**. Lý do nó hiệu quả: sương lấy MÀU CHÂN TRỜI, nên nó sơn lại cả mảng
+    nền phía sau và quanh thành phố bằng sắc của buổi đó.
+    ⚠️ **ĐO CHÍNH XÁC NÓ LÀM GÌ, VÀ KHÔNG LÀM GÌ** — nền/chân trời **12,9 → 74,6**; dải THÀNH PHỐ
+    **8,4 → 3,3** (GIẢM, không tăng); mặt đất 7,2 → 7,2 (không đổi). Toàn bộ khoảng cách đến từ
+    phần NỀN, không từ các công trình — đúng như thiết kế, vì sương cố ý bắt đầu SAU rìa thành phố.
+    Và việc nhà cửa ở gần trông na ná nhau ở hai đầu ngày là **đúng vật lý** (cùng một mặt trời
+    thấp, cùng một thứ ánh sáng ấm), không phải thiếu sót: ngoài đời cũng vậy, thứ cho ta biết đang
+    là sáng hay chiều là bầu trời và sương, không phải màu bức tường trước mặt.
+    ⚠️ Bản chú thích đầu tiên viết ngược điều này ("sương quét sắc lên chính những công trình ở xa
+    nên cuối cùng chạm được vào dải THÀNH PHỐ") — nghe rất xuôi tai, và SAI. Đã đo lại và sửa.
+  - Đỉnh trời tách 202° (lam sạch) vs 252° (tím chàm — "đai sao Kim").
+  - Chân trời: bình minh vàng nhạt 34°/0,62/1,00 · hoàng hôn cam đỏ đậm 8°/0,88/1,46.
+  - Nắng: 0,50 vs 1,06 · đèn sân: 0,16 vs 0,78.
+  - **Chặng chiều** (lỗi thật của nó — đục chứ không trùng): độ tươi 1,05 → 1,30, sắc 34° → 44°.
+- **Hai nước đi đã thử và ĐÃ BỊ TEST BẮT** (giữ lại để đừng ai thử lại):
+  1. Hạ `dawn.sunWarmth` xuống 0,22 cho nắng sớm LẠNH → bài *"nắng ẤM lúc bình minh/hoàng hôn"* đỏ,
+     và nó đúng: mặt trời thấp thì ánh sáng xuyên quãng khí quyển dài — ở CẢ HAI đầu ngày. Cái
+     "mát" của buổi sớm nằm ở BẦU TRỜI và SƯƠNG, không ở đĩa mặt trời.
+  2. Đẩy chân trời bình minh sang hồng sen 312° → bài *"bầu trời KHÔNG BAO GIỜ ngả tím sen"*
+     (`palette3d.test.js`) đỏ với `#d189a5` (28 điểm, lưới cấm ở 10). Quét cả vòng màu: cửa an
+     toàn chỉ mở từ **16°**, và thứ chạm trần trước tiên là **MẶT NƯỚC** chứ không phải bầu trời.
+     Không nới lưới đó — nó sinh ra từ hai màu hỏng có thật. Và hoá ra không cần: sương mới là
+     nguồn khoảng cách chính.
+- **KẾT QUẢ ĐO LẠI** (cùng phép đo, cùng bản quét 15 kỷ × 6 chặng):
+
+  | cặp | trước | sau |
+  |---|---|---|
+  | **bình minh ↔ hoàng hôn** | **5,9** ❌ | **75,1** ✅ |
+  | cặp GẦN NHAU NHẤT trong cả ngày | 5,9 ❌ | **29,8** (8h ↔ 12h) ✅ |
+  | chiều ↔ hoàng hôn | 37,6 | 44,0 |
+  | chiều ↔ bình minh | 42,1 | 46,6 |
+
+  Ngưỡng mắt phân biệt được là ~12 ⇒ **cả 15 cặp nay đều trên ngưỡng, cặp yếu nhất gấp 2,5 lần.**
+- **Còn lại một quan sát, KHÔNG phải nợ**: ba chặng ấm vẫn chung họ màu (bình minh 38° · chiều 46° ·
+  hoàng hôn 20°, trải 26°). Bản đầu coi đó là bằng chứng "ba chặng là một cảnh" — sai, vì chúng
+  khác nhau ở ĐỘ SÁNG và SƯƠNG chứ không ở góc màu: độ sáng trời 0,65 · 0,48 · 0,38, và bình minh
+  có sương dày còn hoàng hôn thì trong. Đo cả cảnh thì cặp gần nhất trong bộ ba là 44,0 — gấp 3,7
+  lần ngưỡng mắt. **Cùng họ màu ≠ cùng một cảnh.**
+- **Bài test mới khoá lại** (`daylight.test.js`): duyệt ĐỦ 15 cặp trên khoảng cách hồ sơ đa-trục
+  (ngưỡng 0,40, hiệu chuẩn với phép đo pixel — Spearman 0,854), **cộng một bài đối chứng nhốt sẵn
+  bộ số hỏng cũ** và bắt buộc phép đo phải còn bắt được nó. Nhờ vậy nếu về sau ai nới ngưỡng hoặc
+  bỏ bớt trục cho tiện thì đỏ ngay — cái phễu không thể lặng lẽ quay lại lần thứ ba.
+- **Status**: **CLOSED 2026-08-13.** 509/509 test xanh · lint sạch · build xanh.
+
+---
+
+## #86 — ⚠️ **NỬA GỐC ĐÃ XỬ LÝ (2026-09-02)** — 137 nút tự vẽ trên 28 file KHÔNG đọc token skin, và `ActionButton` không nhận nổi chúng
+
+- **Tên**: nút hành động của app tồn tại hai thế giới — `ActionButton` (nay đọc token, đúng ở cả 10
+  tổ hợp skin × chế độ) và 137 thẻ `<button>`/`<motion.button>` tự vẽ bằng lớp Tailwind chốt cứng.
+- **Module**: 28 file dưới `src/components/` (đậm nhất: `StatsDashboard.jsx` 38 · `PomodoroEngine.jsx`
+  35 · `Settings.jsx` 15 · `NotificationCenter.jsx` 8 · `SkillTree.jsx` 11)
+- **Priority**: Medium · **Severity**: Low
+- **Impact**: Những nút ấy chốt cứng bảng màu **editorial** — `rgba(201,100,66,…)` (terracotta),
+  `border-emerald-200`, `bg-[rgba(244,242,236,0.82)]` — và rẽ nhánh theo `lightTheme`, tức chúng chỉ
+  đúng ở **2 trong 10** tổ hợp skin × chế độ. Đây ĐÚNG cái bệnh vừa chữa cho `ActionButton`
+  (2026-08-27), chỉ là ở 137 chỗ khác. Chưa ai kêu vì cả 5 skin đều dùng chung một họ màu ấm.
+- **Root Cause**: `ActionButton` có `sizeMap` là một bộ **ĐÓNG gồm 3 cỡ**, cả ba đều `text-lg px-7`
+  và `rounded-2xl` — chúng được đo riêng cho HÀNG NÚT LỚN của đồng hồ. Mọi ứng viên khác đều lệch ít
+  nhất một chiều, nên chuyển sang là ĐỔI HÌNH DẠNG chứ không phải hợp nhất. Đã soi từng cái:
+  | Chỗ | Vì sao KHÔNG chuyển được |
+  |---|---|
+  | `PomodoroEngine.jsx:1772` "Thu nhỏ" | `position: fixed` + `style` safe-area riêng, chữ 11px, `rounded-full` |
+  | `PomodoroEngine.jsx:2023` chọn chế độ | có TRẠNG THÁI ĐƯỢC CHỌN + con trỏ trượt `layoutId`; `ActionButton` không có khái niệm "đang chọn" |
+  | `PomodoroEngine.jsx:2241` chip phân loại | màu lấy từ dữ liệu người dùng qua `style` inline |
+  | `PomodoroEngine.jsx:2292 · 2307` đạt/không đạt | cặp hai lựa chọn có trạng thái chọn, `flex-1 rounded-full` |
+  | `PomodoroEngine.jsx:2395 · 2406` Quay lại / Hủy phiên | `rounded-full px-4 py-2.5 text-sm` — chuyển thì thành `rounded-2xl px-7 py-3.5 text-lg` |
+  | `PomodoroEngine.jsx:2524` "Thêm" | `px-4 py-2 text-sm`, nằm cùng hàng với một ô nhập — cỡ `default` sẽ phá hàng |
+  | `AppErrorBoundary.jsx:115 · 128` | màn hình lỗi CỐ Ý không phụ thuộc component nào khác (nó chạy khi cây React đã hỏng) |
+  | `CoachChat` · `CoachOffline` · `Achievements` · `RichText` · `SkillTree` · `StatsDashboard` | `ActionButton` KHÔNG được export — nằm trong `PomodoroEngine.jsx` (2.598 dòng); dùng xuyên file phải export hoặc tách ra file riêng |
+- **Current Risk**: Thấp — 5 skin hiện tại cùng họ màu ấm nên mã cứng terracotta chưa chọi rõ với
+  skin nào. Rủi ro nhảy lên NGAY khi có một skin lệch tông (xanh/lam/tím).
+- **Future Risk**: Medium. Mỗi phase thêm nút mới lại nhân thêm một chỗ phải sửa tay.
+- **Recommended Solution**: theo THỨ TỰ, đừng làm ngược: **(1)** tách `ActionButton` ra
+  `src/components/ActionButton.jsx` và export (thuần trình bày, không đọc store nữa từ 2026-08-27 nên
+  tách là an toàn); **(2)** thêm các mục `sizeMap` còn thiếu (`dialog` = `px-4 py-2.5 text-sm`,
+  `inline` = `px-4 py-2 text-sm`) — đúng lối mà chú thích `sizeMap` đã chỉ, KHÔNG chồng lớp qua
+  `className`; **(3)** thêm `shape` (`pill` | `card`) vì `rounded-2xl` đang chốt cứng trong khuôn;
+  **(4)** thêm khái niệm "đang chọn" HOẶC tách hẳn một `ToggleButton` riêng cho nhóm có trạng thái —
+  đây là nhóm đông nhất và KHÔNG nên nhồi vào `ActionButton`.
+- **Estimated Complexity**: Medium–High (đụng 28 file; phải chụp ảnh đối chiếu từng màn hình).
+- **Blocking Conditions**: không có blocker kỹ thuật; chỉ cần một phiên riêng đủ dài, vì rủi ro thật
+  nằm ở việc ĐỔI BỐ CỤC 137 chỗ chứ không ở việc viết mã.
+- **Review Trigger**: khi thêm một skin **lệch tông** với họ ấm hiện tại, hoặc khi ai đó báo "nút chỗ
+  này không đổi màu theo skin".
+- **Owner**: chưa ai · **Status**: MỞ (mở 2026-08-27, cùng phiên viết lại `ActionButton`)
+- **Update 2026-09-06 (ADR-077)**: the ROOT CAUSE is fixed — `ActionButton` is now `src/components/shared/ActionButton.jsx` (exported, token colours only, `sizeMap` opened with `sm`/`md`; guarded by `actionButtonPress.test.js` + `actionButtonSizing.test.js`). Remaining: the hand-drawn buttons in `Settings.jsx` (15, `lightTheme`-branched), `StatsJournal.jsx` (14), `NotificationCenter.jsx` (8), `CoachChat.jsx` (6) … still draw themselves; migrate them through the door, file by file, and count with `grep -c '<button' src/components/*.jsx`.
+
+## #103 — ✅ **RESOLVED (2026-09-06 night, ADR-075)** — Reference archive so large that one `cat` blew the context window, with no guard
+
+> ✅ **RESOLVED 2026-09-06 (night, ADR-075)**, all three recommended actions done:
+> (a) the warning thresholds are in `scripts/doc-budget.mjs` **and** a hard ceiling gate now fails
+> `npm test` if any reference doc exceeds one context window; (b) closed knowledge frozen —
+> 40 closed debt entries and 50 oldest ADRs moved verbatim to `docs/archive/`, plus the accumulated
+> threshold snapshots out of this file's header (28,849 → 1,858 chars); (c) each archive carries an
+> index in the active file, and `node scripts/doc-budget.mjs --map <file>` gives a table of contents
+> without reading anything. Result: `TECH_DEBT.md` 126% → 72% of a 200k window,
+> `ARCHITECTURE_DECISIONS.md` 114% → 46%, largest file in the repo 486,294 → 266,956 chars.
+> ⚠️ Still open as a habit, not a defect: `CHANGELOG.md` (78%) and `docs/LESSONS_3D.md` (76%) are the
+> next to cross 50%; the warning in `doc-budget` fires for them already.
+
+- **Tên**: `TECH_DEBT.md` · `ARCHITECTURE_DECISIONS.md` · `CHANGELOG.md` · `BAN_GIAO.md` phình
+  không giới hạn; luật "cấm `cat`" (ADR-073) là VĂN BẢN, không phải cổng thi hành được
+- **Module**: tài liệu gốc repo + `docs/`
+- **Priority**: Medium · **Severity**: Medium
+- **Impact**: `cat TECH_DEBT.md` = 430.761 ký tự ≈ **250.000 token = 125% cửa sổ 200k trong MỘT
+  lệnh** — phiên chết ngay tại đó. `ARCHITECTURE_DECISIONS.md` 223k · `CHANGELOG.md` 154k ·
+  `BAN_GIAO.md` 134k. Chính hình dạng này đã đẩy `Messages` lên 62,5% cửa sổ 1M trong phiên
+  2026-09-06 khiến Đàm phải yêu cầu tối ưu.
+- **Root Cause**: cả bốn file đều là sổ **CHỈ GHI THÊM** (append-only) theo thiết kế — mỗi phase
+  cộng thêm mục mới, không bao giờ có nhịp đóng băng. `BAN_GIAO.md` từng được cắt (còn
+  `docs/archive/BAN_GIAO_ARCHIVE_2026-08-24.md` = 486.294 ký tự ≈ 282k token) nhưng đã phình lại
+  230.649 ký tự chỉ trong 13 ngày ⇒ **tốc độ phình ~17.700 ký tự/ngày**, tức chạm lại mốc cũ sau
+  ~2 tuần nữa. Không có cơ chế tự động nào cắt hay cảnh báo.
+- **Current Risk**: Trung bình — ADR-073 đã đặt luật "cấm `cat`" ở ĐẦU `CLAUDE.md` (nơi AI chắc
+  chắn đọc) và `node scripts/doc-budget.mjs` in ra %cửa sổ của từng file, nên khả năng một phiên
+  vô tình `cat` đã giảm mạnh. Nhưng đó vẫn là kỷ luật, không phải cơ chế.
+- **Future Risk**: Trung bình–Cao — mỗi phase cộng thêm ~10–50k ký tự vào bốn file này. Khi
+  `TECH_DEBT.md` vượt ~340.000 ký tự thì ngay cả `grep` với nhiều dòng ngữ cảnh cũng bắt đầu đắt,
+  và `docs/archive/BAN_GIAO_ARCHIVE_2026-08-24.md` (282k token) hiện đã lớn hơn cả cửa sổ 200k.
+- **Recommended Solution**: (a) cho `scripts/doc-budget.mjs` một **ngưỡng CẢNH BÁO** cho kho tra
+  cứu (vd. in ⚠️ khi một file vượt 50% cửa sổ 200k) — cảnh báo, KHÔNG chặn, vì chúng được phép lớn;
+  (b) đặt nhịp đóng băng định kỳ: `TECH_DEBT.md` chuyển mục ✅ đã đóng >60 ngày sang
+  `docs/archive/TECH_DEBT_CLOSED_*.md`, `ARCHITECTURE_DECISIONS.md` chuyển ADR cũ hơn 50 số sang
+  `docs/archive/`, `CHANGELOG.md` cắt theo quý; (c) mỗi file lớn có **mục lục ở đầu** (như
+  `docs/LESSONS_3D.md` đã có 89 dòng) để `head -80` là đủ định vị, khỏi `grep` mò.
+- **Estimated Complexity**: Thấp–Trung bình (thao tác cắt + sửa con trỏ; rủi ro chính là làm đứt
+  các lời trỏ chéo giữa các file — xem #101)
+- **Blocking Conditions**: Không có. Làm được ngay, nhưng nên làm SAU khi #101 (47 lời trỏ
+  "xem `CLAUDE.md`" trong 38 file mã) được xử lý, để không phải sửa con trỏ hai lần.
+- **Review Trigger**: khi `node scripts/doc-budget.mjs` cho thấy `TECH_DEBT.md` vượt 340.000 ký tự
+  (~200k token = 100% cửa sổ 200k), hoặc khi `BAN_GIAO.md` vượt 250.000 ký tự.
+- **Owner**: chưa phân công · **Status**: 🔵 Còn mở (ghi 2026-09-06 chiều, ADR-073)
+
+---
+
+

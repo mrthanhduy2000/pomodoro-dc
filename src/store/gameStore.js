@@ -3315,7 +3315,7 @@ const useGameStore = create(
         const refreshedChain = refreshWeeklyChain(state.weeklyChain);
         const chain = WEEKLY_CHAINS[refreshedChain.chainIndex];
         // The finished session in history-entry shape — feeds BOTH the week snapshot and the daily
-        // mission tick (ADR-076), so the two can never see a different session.
+        // mission tick (ADR-077), so the two can never see a different session.
         const sessionEntryDraft = {
           timestamp: resolvedFinishedAt, minutes: minutesFocused, categoryId: categoryId ?? null,
           note: trimmedNote || null, completed: true, breakCompletedOnTime: false, breakCompletedAt: null,
@@ -3330,7 +3330,7 @@ const useGameStore = create(
         // ADR-071 (đóng #99): RP · tinh luyện · tài nguyên KHÔNG còn được cộng — đồng tiền duy nhất là phiên.
 
         // ── Crafting queue: mỗi phiên tiến 1 bước, đặc quyền có thể đẩy nhanh thêm ─
-        // ADR-076: a session always lays a brick somewhere. If nothing in this era is queued, the game
+        // ADR-077: a session always lays a brick somewhere. If nothing in this era is queued, the game
         // queues the next project itself — the same pick the Focus strip showed before Start.
         const craftingAccelerationMode = getCraftingAccelerationMode(state.buildings, minutesFocused);
         const { craftingQueue: queueBeforeAdvance, autoQueuedId } = autoQueueSessionProject({
@@ -3382,7 +3382,7 @@ const useGameStore = create(
             ? [...catsToday, categoryId] : catsToday;
           const newSessionsCompletedToday = (freshDt.sessionsCompleted ?? 0) + 1;
 
-          // Mission tick — ADR-070 reconciliation, ADR-076 single formula: rebuild from history WITH
+          // Mission tick — ADR-070 reconciliation, ADR-077 single formula: rebuild from history WITH
           // the session that just ended, i.e. the very snapshot the reload path uses. The hand-written
           // second copy of the progress rules that used to live here is gone (engine/missions.js).
           const {
@@ -4483,7 +4483,7 @@ const useGameStore = create(
       // 4 giây mà giữ nguyên cách ghi thì lỡ một cái toast = mất báo cáo của cả tuần — đổi một
       // phiền toái nhỏ lấy một mất mát thật. Nay:
       //   · hết giờ toast  → chỉ tắt lời mời, KHÔNG ghi gì (`dismissWeeklyReportToast`)
-      //   · Đàm mở Thống kê → mới ghi "đã xem" (`markWeeklyReportSeen`, ADR-076)
+      //   · Đàm mở Thống kê → mới ghi "đã xem" (`markWeeklyReportSeen`, ADR-077)
       // ⇒ lỡ toast thì chấm ở tab Thống kê vẫn sáng.
       checkWeeklyReport: () => {
         const state = get();
@@ -4502,7 +4502,7 @@ const useGameStore = create(
       },
 
       /**
-       * ADR-076: there is no weekly-report dialog any more — the Stats screen already answers "am I
+       * ADR-077: there is no weekly-report dialog any more — the Stats screen already answers "am I
        * improving this week vs last". Seeing the summary = opening Stats; this only records "seen"
        * for the week (the dot on the Thống kê tab goes out) and clears the Monday invitation.
        */

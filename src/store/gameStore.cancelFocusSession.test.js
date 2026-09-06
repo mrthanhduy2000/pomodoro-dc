@@ -2,7 +2,7 @@
  * gameStore.cancelFocusSession.test.js — CHARACTERIZATION TESTS
  * ─────────────────────────────────────────────────────────────────────────────
  * KHÓA hành vi thật của cancelFocusSession(). ADR-071 (đóng #99, 2026-09-06): huỷ phiên KHÔNG còn
- * trừ tài nguyên, KHÔNG còn khoá `forgiveness` trong save (ADR-076), KHÔNG còn ghi chi tiết phạt —
+ * trừ tài nguyên, KHÔNG còn khoá `forgiveness` trong save (ADR-077), KHÔNG còn ghi chi tiết phạt —
  * ba đồng tiền ngủ đã rời khỏi trò chơi (ADR-069). Còn lại: ghi phiên huỷ vào lịch sử, mất EP giam
  * khi overclock, reset cờ huỷ. `withRandom` giữ lại để chứng minh kết quả KHÔNG còn phụ thuộc RNG.
  */
@@ -52,7 +52,7 @@ const OPTS = { elapsedMinutes: 12, elapsedSeconds: 720, targetMinutes: 25 };
 // ═════════════════════════════════════════════════
 // 1) Huỷ phiên: KHÔNG trừ tài nguyên, KHÔNG chi tiết phạt, KHÔNG tiêu lượt tha thứ — vẫn ghi phiên huỷ
 // ═════════════════════════════════════════════════
-test('cancelFocusSession: no resource deduction, cancelPenalty = null, no forgiveness key at all (ADR-076), cancelled entry recorded', () => {
+test('cancelFocusSession: no resource deduction, cancelPenalty = null, no forgiveness key at all (ADR-077), cancelled entry recorded', () => {
   setupCancellable();
   const before = { ...useGameStore.getState().resources.book1 };
   withRandom(0.5, () => useGameStore.getState().cancelFocusSession(0.5, { ...OPTS }));

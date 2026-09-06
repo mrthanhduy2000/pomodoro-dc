@@ -76,7 +76,7 @@ test('hết giờ nghỉ có CẢ tiếng lẫn thông báo, và cả hai nằm 
 
   assert.match(
     truocSet, /soundEngine\.playBreakOver\(\)/,
-    'hết giờ nghỉ lại im lặng — mà nghỉ giải lao theo định nghĩa là lúc KHÔNG nhìn màn hình (ADR-076: its OWN cue, not the session fanfare)',
+    'hết giờ nghỉ lại im lặng — mà nghỉ giải lao theo định nghĩa là lúc KHÔNG nhìn màn hình (ADR-077: its OWN cue, not the session fanfare)',
   );
   assert.match(
     truocSet, /notificationManager\.notifyBreakOver\(\)/,

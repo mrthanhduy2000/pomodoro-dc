@@ -1,7 +1,7 @@
-> Last update: **2026-09-06 (late night)** — **ROUND 37: A SESSION ALWAYS LAYS A BRICK (ADR-076).**
+> Last update: **2026-09-06 (late night)** — **ROUND 37: A SESSION ALWAYS LAYS A BRICK (ADR-077).**
 > Order (verbatim essentials): *"Build lớn. Simplify mạnh. Làm game vui hơn. Tập trung nhiều hơn vào
 > UX/UI. TOÀN QUYỀN … thà xong bốn mạch trọn vẹn còn hơn bảy mạch dở dang."* Seven streams; all seven
-> reached `main` in three milestone commits + one gate commit.
+> reached `main` in three milestone commits + one gate commit + one merge commit (see «Foreign commits»).
 >
 > ### Done
 > 1. **Việc 1 — Stats always answers.** `buildFocusProfile` gained `started`/`whole` counters; the three
@@ -15,7 +15,7 @@
 >    ending's project card lands the brick; `CityGrowthMoment` / `FocusCityTease` / `cityMoment.js` deleted.
 > 3. **Việc 3 — sound & motion.** `playLastMinute` · `playBrickLaid` · `playBreakOver` added; `playTick`,
 >    `tickSoundEnabled`, `playExtensionReady` deleted; countdown ticks last 3 s only; XP card silent;
->    haptics: none (iOS Safari has no Vibration API — decision recorded in ADR-076).
+>    haptics: none (iOS Safari has no Vibration API — decision recorded in ADR-077).
 > 4. **Việc 4 — `PomodoroEngine.jsx` 2,958 → 1,922.** `shared/ActionButton.jsx` (the #86 door, +`sm`/`md`),
 >    `components/focus/{ModeSwitch,QuickPresets,StrictModeToggle,CategoryChip,CategoryManager,
 >    SessionReviewCard,CancelConfirmDialog}.jsx`, `engine/timerSession.js` (`clampFocusMinutes` ·
@@ -51,9 +51,71 @@
 > - **`$SP` does not survive between Bash calls** — three files landed in `/` before this was noticed.
 >
 > ### Foreign commits carried to `main`
-> `feb13e0`…`bc5ac7e` (ADR-072 → ADR-075, another session: Mac menu-bar fix + docs retrieval
-> architecture) were already on `origin/main` before this round's merge; nothing of theirs was
-> altered.
+> Two batches from another session were already on `origin/main` and are merged into this branch
+> unaltered: `feb13e0`…`bc5ac7e` (ADR-072 → ADR-075: Mac menu-bar fix + docs retrieval architecture)
+> and `44a362d`…`92b9cf5` (ADR-075 → ADR-076: TECH_DEBT split by subsystem, owner-based knowledge
+> gate, ARCHITECTURE.md subsections, governance by discovery). Because that session took **ADR-076**
+> first, this round's ADR is numbered **ADR-077** everywhere. Merge conflicts were docs-only
+> (six files); resolved by keeping both sides in date order, and the 52 frozen-3D debts stayed in
+> `docs/TECH_DEBT_3D.md` where they moved them. `#86`'s full entry now lives in the closed archive,
+> so this round's update to it went there.
+---
+
+> Last update: **2026-09-06 (night, fifth pass)** — **GOVERNANCE NOW RUNS ON DISCOVERY (ADR-076).**
+>
+> Đàm asked the right question: *what about the files later work creates — will it just grow back?*
+> It would have. Every guard from ADR-075 read a **hand-written list**, so a document nobody
+> registered was invisible to all of them. Proof arrived immediately: **three archives created that
+> same day** (183,626 · 223,614 · 246,133 chars) were already outside the list.
+>
+> Fixed at the root: `discoverDocs()` walks the tree and `classify()` assigns a class from the PATH —
+> `docs/archive/**` = archive · the four auto-loaded files = autoloaded · append-only logs = journal ·
+> **everything else = active**. A file that does not exist yet already lands in "active", so it is
+> governed the moment it is created. Nothing to register, nothing to remember.
+> Rotation also grew from 2 files to 4: `TECH_DEBT.md` (120,000) and `ARCHITECTURE_DECISIONS.md`
+> (250,000) are append-only too — new debts and new ADRs arrive every session.
+>
+> **Break-tested**: a brand-new `docs/FUTURE_THING.md` of 900,000 chars turns the ceiling gate red by
+> name although no list mentions it; padding `TECH_DEBT.md` past its limit turns rotation red.
+
+---
+
+> Last update: **2026-09-06 (night, fourth pass)** — **STARTUP CONTEXT DOWN TO 8,606 TOKENS.**
+>
+> `START_HERE.md` 11,030 → 9,764 chars: rounds 34 and 35 compressed to the two lessons that outlive
+> them (*a valid reward table with green tests can still grant something nobody can see* · *removing
+> a button means hunting everything it did besides granting the reward*), full text in
+> `docs/archive/START_HERE_LOG_2026-09-06.md`.
+> `PHASE_RULES.md` 7,106 → 6,599 chars: its measuring-tool table duplicated `PROJECT_STRUCTURE.md`
+> (which documents each tool 4–9× more thoroughly), and its §10 failure shapes are 3D lessons that
+> belong in `docs/LESSONS_3D.md`. Both replaced by the rule plus a pointer.
+> `CLAUDE.md` 15,780 → 15,183: sync/tray implementation detail moved behind an imperative pointer,
+> which only became possible after the knowledge gate was made owner-based.
+>
+> ⚠️ **The guard was inflating what it protected.** The anti-knowledge-loss gate demanded every core
+> law appear in `CLAUDE.md`, so the always-loaded file was forced to keep implementation detail.
+> `CORE_LAWS` is now (owner, phrase, why): startup-critical laws owned by `CLAUDE.md`, subsystem
+> detail owned by the topic file a session opens before touching that subsystem. Break-tested.
+>
+> **Startup context across the day: 38,258 → 8,606 tokens/session (−77%).**
+
+---
+
+> Last update: **2026-09-06 (night, third pass)** — **TECH_DEBT SPLIT BY SUBSYSTEM (ADR-075).**
+>
+> Classifying the 63 "open" debts showed only **7 are actionable**. **52 belong to the frozen 3D city**
+> — a black box Đàm forbids touching — and were **87% of the file**; 3 more said ĐÃ ĐÓNG in their own
+> titles yet had never been archived. The 52 moved to `docs/TECH_DEBT_3D.md`, **still open, split by
+> SUBSYSTEM not by status**, so a `grep` for live work no longer wades through frozen work.
+> `TECH_DEBT.md` **250,190 → 43,559 chars (−83%)**; total still 103 entries, nothing lost.
+> ⚠️ **Judge the Maintenance Sprint threshold on the 7 actionable entries, not the total** — counting
+> a frozen subsystem made that threshold meaningless (the one Priority High, #53, is a 3D debt).
+>
+> Also: `START_HERE.md` UI invariants → `docs/UI_INVARIANTS.md` behind an imperative pointer
+> (every session was loading them before knowing if the task touched the UI); startup context
+> **10,020 → 9,145 tokens**. Stale routing fixed in `AI_ONBOARDING.md`, `AI_HANDOFF_KNOWLEDGE.md`,
+> `ARCHITECTURE.md` — all three still told a new session to read `BAN_GIAO.md` in full first, and one
+> promised "208 tests" when there are 1,610.
 
 ---
 

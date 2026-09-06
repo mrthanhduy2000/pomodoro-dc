@@ -211,7 +211,7 @@ export default function StatsDashboard({ onNavigate }) {
         </AnswerCard>
       )}
 
-      {/* (2) Khi nào tôi mạnh nhất? — whole-session basis (ADR-076): the card never asks for homework.
+      {/* (2) Khi nào tôi mạnh nhất? — whole-session basis (ADR-077): the card never asks for homework.
           A line with nothing to rank (no session carries a category yet) is DROPPED, not captioned. */}
       {hasSessions && (
         <AnswerCard index={1} question="Khi nào tôi mạnh nhất?">

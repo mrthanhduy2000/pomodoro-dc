@@ -68,7 +68,7 @@ export function pickFocusMoment({
   // (3) LỜI MỜI ĐI CHỖ KHÁC — chỉ nói khi không còn lý do nào để bấm Bắt đầu.
   // ⚠️ Im trong lúc đang tập trung: giữa màn hình tập trung mà mời đi xem chỗ khác là mời Đàm rời
   //    khỏi đúng việc anh vừa bấm nút để làm.
-  // ⚠️ Tổng kết tuần KHÔNG bị mất khi nhường chỗ: chấm đỏ ở tab Thống kê (ADR-076 — the report is
+  // ⚠️ Tổng kết tuần KHÔNG bị mất khi nhường chỗ: chấm đỏ ở tab Thống kê (ADR-077 — the report is
   //    the Stats screen now) là lưới an toàn thứ hai — xem ADR-061.
   if (weeklyUnseen && !sessionInProgress && typeof onOpenWeekly === 'function') {
     return { icon: '🏆', text: 'Tuần mới — Thống kê đã so tuần trước, xem thử', strong: true, onClick: onOpenWeekly };

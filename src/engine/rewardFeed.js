@@ -68,7 +68,7 @@ function sourceRank(source) {
  * trạng thái còn sót từ phiên trước. Xếp nó xuống cuối là mở đường cho nó rơi khỏi ba thẻ đầu
  * rồi biến mất — mà nó là thẻ DUY NHẤT trong chồng này không thể tự đến lần thứ hai.
  *
- * ⚠️ `action.weekly` + `action.tab: 'stats'` (ADR-076): the summary IS the Stats screen. The host
+ * ⚠️ `action.weekly` + `action.tab: 'stats'` (ADR-077): the summary IS the Stats screen. The host
  * records "seen" through the store (`markWeeklyReportSeen`) and then navigates — the toast timeout
  * alone must never record "seen".
  */

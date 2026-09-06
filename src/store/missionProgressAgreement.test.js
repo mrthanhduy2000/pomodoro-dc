@@ -11,7 +11,7 @@ const ENGINE = stripComments(readFileSync(new URL('../engine/missions.js', impor
  * `gameStore.js`: the LIVE path right after a session and the REBUILD path on reload. They disagreed
  * on `singleSession` (all-or-nothing vs. continuous): a 22-minute session printed 0/30, then 22/30
  * after a reload. Build green, lint clean, tests green — the only symptom was a number that changed
- * by itself. Round 37 (ADR-076) removed the second copy instead of keeping it in sync: the live path
+ * by itself. Round 37 (ADR-077) removed the second copy instead of keeping it in sync: the live path
  * now calls `tickDailyMissions`, which rebuilds from history WITH the finished session. These tests
  * guard that structure so nobody re-inlines a hand-written tick "just for this one field".
  */

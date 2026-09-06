@@ -163,7 +163,7 @@ export default function SessionRewardStory({ onDone }) {
   const cardId = card?.id ?? null;
   useEffect(() => {
     if (!cardId) return undefined;
-    // ADR-076: the XP card is silent — the session-finish fanfare played one second earlier. Only a
+    // ADR-077: the XP card is silent — the session-finish fanfare played one second earlier. Only a
     // jackpot (rare) gets its own sound here. The brick landing is the ending's signature sound.
     if (cardId === 'xp' && card.jackpot) {
       const t = window.setTimeout(() => soundEngine.playJackpot(), 300);

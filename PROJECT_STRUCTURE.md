@@ -19,9 +19,9 @@
 │   │   │                         #   store, không biết luật chơi ⇒ dùng được cả trong hộp thoại
 │   │   │                         #   lẫn trong toast. Độ hiếm lấy từ `engine/rewardTiers.js` và
 │   │   │                         #   phải đọc được KHI KHÔNG NHÌN MÀU (nhãn chữ + dải chấm)
-│   │   │   └── ActionButton.jsx   # THE button (ADR-076, TECH_DEBT #86 door): token colours only, one `sizeMap`
+│   │   │   └── ActionButton.jsx   # THE button (ADR-077, TECH_DEBT #86 door): token colours only, one `sizeMap`
 │   │   │                         #   (`default`·`compactMobile`·`compactPrimary`·`sm`·`md`), press depth = shadow depth.
-│   │   ├── focus/            # Leaf controls of the Focus screen, extracted from PomodoroEngine.jsx (ADR-076)
+│   │   ├── focus/            # Leaf controls of the Focus screen, extracted from PomodoroEngine.jsx (ADR-077)
 │   │   │   ├── SessionBrickStrip.jsx # "This session's brick" above the ring — reads craftingQueue/buildings, engine/sessionBrick.js
 │   │   │   ├── BrickRow.jsx          # Brick cells (laid · laying · new · empty), shared with the ending's project card
 │   │   │   ├── QuickPresets.jsx      # 25/5 · 50/10 … presets (+ `CHU_KY_NGHI_CO_KHAC_NHAU`)
@@ -126,7 +126,7 @@
 │   │   ├── StatsNotes.jsx     # Sổ tra cứu 2: ghi chú đã lưu. Cùng lý do tách.
 │   │   ├── statsTheme.js      # Biến màu/chữ dùng chung ba file Thống kê (CSS var có mặc định).
 │   │   │                     #   Hàm định dạng thuần của sổ tra cứu ở statsFormatters.js cạnh nó.
-│   │   ├── PomodoroEngine.jsx # ~1,900 dòng (ADR-076) — khung đồng hồ Pomodoro/Stopwatch (UI, logic timer
+│   │   ├── PomodoroEngine.jsx # ~1,900 dòng (ADR-077) — khung đồng hồ Pomodoro/Stopwatch (UI, logic timer
 │   │   │                     #   thật nằm ở src/hooks/useTimer.js)
 │   │   ├── BuildScreen.jsx    # Màn CÔNG TRÌNH một nút (ADR-069): Đang xây · Xây tiếp (≤3 lựa chọn,
 │   │   │                     #   "Khởi công") · Đã xây · Trùng tu. Luật ở engine/buildChoices.js; gọi
@@ -165,8 +165,8 @@
 │   │   │                     #   ⚠️ Không chế công thức mới ở đây (một luật hai công thức). Bộ
 │   │   │                     #   getter giờ VN: time.vietnamHistoryTimeOpts (dùng chung với Coach).
 │   │   │                     #   ⚠️ statsPeriod.js · statsFocus.js ĐÃ XOÁ 2026-09-06 cùng 3 tab cũ.
-│   │   ├── sessionBrick.js    # "This session's brick" (ADR-076): pickSessionProject · autoQueueSessionProject · describeSessionBrick
-│   │   ├── missions.js        # Daily missions, PURE (ADR-076): roll · normalize · snapshot progress · tickDailyMissions (live = reload)
+│   │   ├── sessionBrick.js    # "This session's brick" (ADR-077): pickSessionProject · autoQueueSessionProject · describeSessionBrick
+│   │   ├── missions.js        # Daily missions, PURE (ADR-077): roll · normalize · snapshot progress · tickDailyMissions (live = reload)
 │   │   ├── weeklyChain.js     # Weekly step chain, PURE (`now` param): refreshWeeklyChain · autoClaimWeeklySteps · rebuild
 │   │   ├── seededRng.js       # String-seeded PRNG shared by missions.js + weeklyChain.js
 │   │   ├── statsInsights.js   # "Điều đáng chú ý" — dải insight dưới ba thẻ trả lời của màn Thống kê.
@@ -765,7 +765,7 @@
 │   │   ├── timerSession.js / breaks.js / challengeEngine.js / notifications.js # engine chuyên biệt khác
 │   ├── hooks/                 # React hook — cầu nối giữa store và engine/component
 │   │   ├── useTimer.js         # LỚN — toàn bộ state machine đồng hồ Pomodoro/Stopwatch
-│   │   ├── useMinWidth.js      # `matchMedia(min-width)` as a hook (from PomodoroEngine.jsx, ADR-076)
+│   │   ├── useMinWidth.js      # `matchMedia(min-width)` as a hook (from PomodoroEngine.jsx, ADR-077)
 │   │   ├── useCoachContext.js  # build bảng số liệu cho AI Coach (gọi engine/coach/coachContext.js)
 │   │   ├── useInventoryAttention.js # Chấm "có việc cần xem" trên tab Hành trang. Đọc engine/
 │   │   │                     #   opportunities.js (dùng CHUNG với chuông thông báo) + dấu "đã xem"
@@ -782,7 +782,7 @@
 │   │   └── useGameLoop.js
 │   ├── lib/                   # Hạ tầng dùng chung, KHÔNG phải logic game thuần: tích hợp dịch vụ
 │   │                          #   ngoài, và từ 2026-08-27 thêm từ vựng chuyển động của giao diện
-│   │   ├── keyboard.js         # `isEditableShortcutTarget` · `isSpaceKeyEvent` for the Space shortcut (ADR-076)
+│   │   ├── keyboard.js         # `isEditableShortcutTarget` · `isSpaceKeyEvent` for the Space shortcut (ADR-077)
 │   │   ├── motionPresets.js    # BA NHỊP CHUYỂN ĐỘNG DUY NHẤT của app (`enter`/`press`/`reward`).
 │   │   │                       #   ⚠️ ĐÚNG BA, KHÔNG HƠN — nhịp thứ tư là bước đầu quay lại tình
 │   │   │                       #   trạng cũ (hơn 30 file mỗi chỗ một thời lượng). Cả ba TỰ trả về
@@ -799,7 +799,7 @@
 │   │   ├── pushService.js      # Web Push phía trình duyệt (đăng ký, huỷ, lên lịch)
 │   │   └── appIdentity.js      # Hằng số key localStorage, tên app (đổi tên app thì sửa ở đây)
 │   ├── store/                  # State toàn app (Zustand)
-│   │   ├── gameStore.js         # RẤT LỚN (~4,700 dòng sau ADR-076) — mọi state + action của game. Điểm nóng:
+│   │   ├── gameStore.js         # RẤT LỚN (~4,700 dòng sau ADR-077) — mọi state + action của game. Điểm nóng:
 │   │   │                       #   completeFocusSession (~760 dòng). Sửa công thức → gameMath.js,
 │   │   │                       #   ĐỪNG nhồi thêm vào đây.
 │   │   └── settingsStore.js     # Cài đặt UI riêng (theme, âm thanh...) — KHÔNG lẫn với gameStore
@@ -1068,6 +1068,8 @@ tới **190.700 token = 95% cửa sổ 200k**. Cách chữa **duy nhất** là t
 |---|---|---|
 | `docs/LESSONS_3D.md` | 89 bài học cấp 1 + 96 mục "KÈM THEO" về mỹ thuật thành phố 3D (261.236 ký tự ≈ 152k token) | **`grep`, KHÔNG đọc trọn**; có mục lục 89 dòng ở đầu |
 | `docs/AI_COACH.md` | Chi tiết Gemini · chuỗi model · `tier:'deep'` · lưới chống-bịa · CoachChat/Offline/Nudge · `coach-digest` | `grep` khi sửa AI Coach |
+| **`docs/TECH_DEBT_3D.md`** | *(ADR-075)* 52 nợ kỹ thuật của Thành phố 3D — VẪN MỞ, tách theo HỆ THỐNG con chứ không theo trạng thái; 3D là hộp đen Đàm cấm đụng nên chúng không phải việc làm được hôm nay | khi 3D được mở khoá |
+| **`docs/UI_INVARIANTS.md`** | *(ADR-075)* Bất biến giao diện có test canh | trước MỌI thay đổi `src/components/` |
 | **`docs/GOVERNANCE.md`** | *(ADR-073; tiếng Anh từ ADR-074)* Nguyên văn PROJECT GOVERNANCE PROTOCOL + AI ENGINEERING PLAYBOOK: bảng "loại thay đổi → tài liệu phải sửa" · Definition of Done · quy trình 7 giai đoạn · **mẫu TECHNICAL ADVISOR REPORT 11 mục** | mở khi làm task đáng kể / cần mẫu báo cáo |
 | **`docs/OPERATIONS.md`** | *(ADR-073; tiếng Anh từ ADR-074)* Nguyên văn hạ tầng: Vercel 12 Serverless Functions · sync CAS/`version` + bản vá C1 · Web Push iPhone · 4 cái bẫy Electron tray · quy trình deploy · MCP giữ cái nào | mở khi đụng sync/deploy/`api/`/push/tray |
 | `docs/archive/` | *(expanded 2026-09-06, ADR-075)* Frozen history — **`CHANGELOG_upto_2026-08.md`** · **`BAN_GIAO_2026-09.md`** · `BAN_GIAO_ARCHIVE_2026-08-24.md` **+ `_part2.md`** (split: the single file was 141% of a 200k window) · `START_HERE_LOG_2026-09-06.md` (rounds 20–33 + 3D city detail) · **`TECH_DEBT_CLOSED_2026-09-06.md`** (40 closed entries, verbatim) · **`ADR_ARCHIVE_001-050.md`** (50 oldest ADRs, verbatim) | history lookup only — `grep` / `--map`, never `cat` |
@@ -1086,7 +1088,12 @@ Reopening something means moving it back out of the archive — never duplicatin
    `AGENTS.md` · `docs/GOVERNANCE.md` · `docs/OPERATIONS.md` viết **TIẾNG ANH** (tiếng Việt tốn
    ~2,3 lần token cho cùng một ý). Kho tra cứu: phần cũ giữ tiếng Việt, phần **MỚI viết tiếng Anh**.
    **Báo cáo cho Đàm: tiếng Việt.** Bảng ranh giới đầy đủ ở `CLAUDE.md` §LANGUAGE RULE.
-6. **SÁU CỔNG CANH THẬT** (`scripts/docBudget.test.js`, chạy trong `npm test`; mỗi cổng đều đã qua
+6. ⚠️ **CÁC CỔNG CHẠY BẰNG TỰ PHÁT HIỆN, KHÔNG BẰNG DANH SÁCH** *(ADR-076)*: `discoverDocs()` quét
+   cả cây, `classify()` gán lớp theo ĐƯỜNG DẪN — `docs/archive/**` = archive · 4 file tự-nạp =
+   autoloaded · log chỉ-ghi-thêm = journal · **còn lại = active**. Nhờ vậy **một file do phiên sau
+   tạo ra đã bị quản trước cả khi nó tồn tại**, không cần ai nhớ khai báo. (Bằng chứng cần cơ chế
+   này: ba archive tạo ngay trong ngày 2026-09-06 đã lọt ra ngoài danh sách viết tay.)
+7. **SÁU CỔNG CANH THẬT** (`scripts/docBudget.test.js`, chạy trong `npm test`; mỗi cổng đều đã qua
    phép phá — không cổng nào là lời hứa):
    · **Trần ký tự** file tự-nạp: `CLAUDE.md` ≤ 16.000 · `START_HERE.md` ≤ 16.000 ·
      `PHASE_RULES.md` ≤ 8.000 · `AGENTS.md` ≤ 3.500.
@@ -1098,12 +1105,13 @@ Reopening something means moving it back out of the archive — never duplicatin
      ở thư mục memory trên máy Đàm, đã khai trong `EXTERNAL_DOCS`).
    · **Trần cửa sổ ngữ cảnh** *(ADR-075)*: không file tra cứu nào được vượt 200.000 token ước tính.
      Vượt = phải TÁCH, không được nới trần.
-   · **Xoay vòng nhật ký** *(ADR-075)*: `BAN_GIAO.md` · `CHANGELOG.md` ≤ 120.000 ký tự. Vượt = phải
+   · **Xoay vòng log chỉ-ghi-thêm** *(ADR-075, mở rộng ở ADR-076)*: `BAN_GIAO.md` · `CHANGELOG.md` ·
+     `TECH_DEBT.md` ≤ 120.000 ký tự · `ARCHITECTURE_DECISIONS.md` ≤ 250.000. Vượt = phải
      chuyển mục cũ nhất sang `docs/archive/` (đúng `PHASE_RULES.md` §5), không được nới trần.
    Kiểm: **`node scripts/doc-budget.mjs`**. ⚠️ Đo bằng **ký tự Unicode (JS `String.length`)**, KHÔNG
    bằng `wc -c` (thổi phồng ~21%) và không bằng `len()` của Python (emoji ngoài BMP lệch). Hệ số:
    VI **1,723** ký tự/token (đo được) · EN **4,0** (ước lượng, chưa đo).
-7. ❌ **CẤM `cat` kho tra cứu**: `TECH_DEBT.md` (250k token = 125% cửa sổ 200k) ·
+8. ❌ **CẤM `cat` kho tra cứu**: `TECH_DEBT.md` (250k token = 125% cửa sổ 200k) ·
    `ARCHITECTURE_DECISIONS.md` (223k) · `CHANGELOG.md` (154k) · `docs/LESSONS_3D.md` (152k) ·
    `BAN_GIAO.md` (134k, chỉ `head -60`) · `PERFORMANCE.md` (98k). Dùng `grep -n`, `sed -n 'A,Bp'`,
    hoặc `node scripts/doc-budget.mjs --map <file>` để lấy mục lục + khoảng dòng.

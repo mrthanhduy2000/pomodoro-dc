@@ -41,16 +41,11 @@ the whole context.
 for Vietnamese docs here is **1.72 chars/token**; English is roughly **4**. Full reasoning:
 header comment of `scripts/doc-budget.mjs`.
 
-**❌ NEVER `cat` these** — each is 46–78% of a 200k window, and several were over 100% before the
-2026-09-06 split (ADR-075):
-`CHANGELOG.md` · `BAN_GIAO.md` (**`head -60` only**) · `TECH_DEBT.md` · `docs/LESSONS_3D.md` ·
-`PERFORMANCE.md` · `ARCHITECTURE_DECISIONS.md` · `PROJECT_STRUCTURE.md` ·
-`AI_HANDOFF_KNOWLEDGE.md` · `ARCHITECTURE.md` · `docs/archive/*` (frozen history).
-Closed debt entries live in `docs/archive/TECH_DEBT_CLOSED_2026-09-06.md`; ADR-001…050 in
-`docs/archive/ADR_ARCHIVE_001-050.md`.
-
-Exact sizes drift, so they are **not copied here** — `node scripts/doc-budget.mjs` prints them fresh.
-**No file may exceed one context window**: a guarded ceiling, and crossing it means SPLIT, not raise.
+**❌ NEVER `cat` a reference file** — every one is 30–78% of a 200k window, and several were over
+100% before the 2026-09-06 split. Which file is which, and how to open it, is the DOC MAP below —
+the single place that list is maintained. Exact sizes drift, so they are not copied into any doc:
+`node scripts/doc-budget.mjs` prints them fresh. **No file may exceed one context window**: a guarded
+ceiling, and crossing it means SPLIT, not raise.
 
 **Three obligations, not suggestions:**
 1. **Before opening any `.md` other than `CLAUDE.md` / `START_HERE.md` / `PHASE_RULES.md`:
@@ -58,11 +53,14 @@ Exact sizes drift, so they are **not copied here** — `node scripts/doc-budget.
    → `node scripts/doc-budget.mjs --map <file>` (prints headings + line ranges, costs almost nothing).
 2. **Same for code** — `completeFocusSession` is ~760 lines; do not `cat` all of `gameStore.js`.
 3. **Six guards run inside `npm test`** (`scripts/docBudget.test.js`) — each adversarially
-   break-tested, none is a promise: **char limit** per auto-loaded file (DOC MAP below) ·
+   break-tested, none is a promise. They run off **discovery, not a list**: every `.md` is found and
+   classified by path (`docs/archive/**` = archive · the four above = auto-loaded ·
+   append-only logs = journal · everything else = active), so **a document created by a later session
+   is governed before it exists** (ADR-076). The gates: **char limit** per auto-loaded file (DOC MAP below) ·
    **language** (a Vietnamese passage in an English doc) · **canonical rule** (no auto-loaded file
    may restate a rule another owns — this file once had the merge rule backwards in two places) ·
    **pointer** (every `.md` reference must resolve) · **context-window ceiling** (no reference doc
-   above one window) · **rotation** (`BAN_GIAO.md` / `CHANGELOG.md` must archive old entries). Any breach = **RED TEST**. Check: `node scripts/doc-budget.mjs`.
+   above one window) · **rotation** (every append-only log — `BAN_GIAO.md` · `CHANGELOG.md` · `TECH_DEBT.md` · `ARCHITECTURE_DECISIONS.md` — must shed old entries into `docs/archive/`). Any breach = **RED TEST**. Check: `node scripts/doc-budget.mjs`.
    When one goes red the fix is **SPLIT and leave a pointer** — never raise a limit, never delete
    knowledge. *(Why guards: the old 40,000 limit was only a sentence, and `START_HERE.md` had
    silently blown its own limit with nobody noticing. **A threshold with no guard is a funnel.**)*
@@ -138,17 +136,11 @@ any of them before reading it**:
 3. ⚠️ **Vercel Hobby: max 12 Serverless Functions.** Every `.js` directly under `api/` (recursive)
    counts as one, **except** names starting with `_`. **API tests always go in `api/_tests/`.**
    Currently **10 real functions** — recount: `find api -type f -name "*.js" ! -path "api/_*"`.
-4. ⚠️ **Sync stopped → check the Supabase project FIRST, not the code** (Free tier auto-pauses on
-   0.5 GB or ~7 days idle; a log-cleanup cron + `api/keepalive.js` guard both).
-5. ⚠️ **Cloud writes are compare-and-swap on a `version` column bumped by a SERVER trigger**
-   ("first action wins"). A rejected write means that machine LOST — it must `pullFromCloud()` and
-   **never force-overwrite**. Deploying new code requires running `supabase/game_state_version.sql`
-   first.
-6. ⚠️ **Four safety nets around CAS (patch C1)** — flush on app hide · `hasMeaningfulState()` ·
-   the `known < 0` branch reads cloud first · error `42703` handling. **Do not remove any without
-   reading `docs/OPERATIONS.md`.**
-7. ⚠️ **Electron tray has 4 traps** (legacy AppleScript applet · launchd cannot run paths with
-   Vietnamese characters · no single-instance lock → 2 icons · "transparent image" ≠ "no image").
+4. ⚠️ **Touching Supabase sync, or the Electron tray, means reading `docs/OPERATIONS.md` FIRST.**
+   It owns four data-safety laws that are easy to undo by accident: Free-tier auto-pause · writes are
+   **compare-and-swap** on a server-bumped `version` ("first action wins" — a rejected write means
+   that machine LOST and must re-pull, never force-overwrite) · the four safety nets of patch C1 ·
+   the four Electron tray traps. Removing one of these has already cost real user data once.
 8. ⚠️ **No `GEMINI_API_KEY` in Vercel env ⇒ AI Coach does not run** (the on-device engine is gone).
 
 ## 🗺️ DOC MAP — what auto-loads, what you must open
@@ -165,9 +157,11 @@ files**. Done in three passes on 2026-09-06: 190,700 → 21,600 tokens (split `L
 | `AGENTS.md` | pointer for Codex — limit **3,500** | Codex session start |
 | **`docs/GOVERNANCE.md`** | on demand | substantial task · need the 11-point template |
 | **`docs/OPERATIONS.md`** | on demand | sync · deploy · `api/` · push · tray |
-| `docs/UI_INVARIANTS.md` | **read before any UI change** | `src/components/` · `uiSkins.js` |
 | `docs/LESSONS_3D.md` · `docs/AI_COACH.md` | **`grep`, NEVER whole** | 3D art · AI Coach |
-| `TECH_DEBT.md` · `ARCHITECTURE_DECISIONS.md` · `PERFORMANCE.md` · `BAN_GIAO.md` · `CHANGELOG.md` | **`grep`/`head`, never whole** | lookup |
+| `TECH_DEBT.md` | 7 **actionable** debts only | before adding debt |
+| `docs/TECH_DEBT_3D.md` | 52 frozen-3D debts (still open) · `docs/UI_INVARIANTS.md` before UI work | 3D unfrozen · UI change |
+| `ARCHITECTURE_DECISIONS.md` (ADR-051+) · `PERFORMANCE.md` · `BAN_GIAO.md` (**`head -60`**) · `CHANGELOG.md` | **`grep`/`head`, never whole** | lookup |
+| `docs/archive/*` | closed debts · ADR-001…050 · old journals/changelog | history only |
 
 ⚠️ **New lessons go into the topic file** (`docs/LESSONS_3D.md` for 3D, `docs/OPERATIONS.md` for
 infra, `docs/GOVERNANCE.md` for process) — then, **only if it changes a RULE**, add ONE pointer line

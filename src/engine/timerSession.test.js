@@ -198,7 +198,7 @@ test('legacy stopwatch restore can be inferred as continued Pomodoro from config
 });
 
 test('session rhythm: the celebration delay covers the ending\'s first beat, and the quick delay stays quick', () => {
-  // ADR-076: the separate 3.2-second city overlay is gone; the ending is the reward story, whose first
+  // ADR-077: the separate 3.2-second city overlay is gone; the ending is the reward story, whose first
   // card lands within a couple of seconds. The break clock must not start counting under it.
   assert.ok(BREAK_START_DELAY_MS >= 2000, `${BREAK_START_DELAY_MS} ms is too short to let the first card land before the break counts`);
   assert.ok(BREAK_START_DELAY_MS <= 3500, `${BREAK_START_DELAY_MS} ms reads as a frozen screen`);

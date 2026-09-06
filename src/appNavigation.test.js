@@ -126,7 +126,7 @@ test('chấm "có việc cần xem" được nối ở CẢ hai thanh điều h�
     /attentionTabIds\.has\(tab\.id\)/.test(APP_SOURCE),
     'Thanh dưới iPhone không hỏi `attentionTabIds` — chấm chú ý tắt câm trên điện thoại.',
   );
-  // ADR-076: the set now also carries the unseen-week dot for the Thống kê tab — both signals must stay.
+  // ADR-077: the set now also carries the unseen-week dot for the Thống kê tab — both signals must stay.
   assert.ok(
     /inventoryNeedsAttention \? \['inventory'\] : \[\]/.test(APP_SOURCE),
     'Tập tab có chấm không còn suy từ `inventoryNeedsAttention` — cái chấm mất nguồn tín hiệu.',

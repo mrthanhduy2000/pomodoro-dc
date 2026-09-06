@@ -651,7 +651,7 @@ export default function App() {
   // `weeklyReportUnseen` (suy từ `lastWeeklyReportSeenDate`) chứ không đọc một id tab. Nhét nó vào
   // đây thì phải đặt cho nó một id giả `'weeklyReport'` — một khoá trông như tab mà không có tab
   // nào tên thế, và `selectTab` sẽ nuốt im lặng nếu có ai lỡ truyền nó đi.
-  // ADR-076: the Monday "week summary unseen" dot now sits on the Thống kê tab (the report was folded into Stats).
+  // ADR-077: the Monday "week summary unseen" dot now sits on the Thống kê tab (the report was folded into Stats).
   const attentionTabIds = useMemo(
     () => new Set([...(inventoryNeedsAttention ? ['inventory'] : []), ...(weeklyReportUnseen ? ['stats'] : [])]),
     [inventoryNeedsAttention, weeklyReportUnseen],
@@ -691,7 +691,7 @@ export default function App() {
       setFocusFullscreen(false);
     }
   };
-  // ADR-076: the weekly report IS the Stats screen. "Seeing it" = opening Thống kê + recording seen.
+  // ADR-077: the weekly report IS the Stats screen. "Seeing it" = opening Thống kê + recording seen.
   const openWeeklySummary = () => {
     markWeeklyReportSeen();
     selectTab('stats');
@@ -919,7 +919,7 @@ export default function App() {
                           mondayKey={mondayKey}
                         />
                         {/*
-                          ADR-076: the one-line city tease that lived here moved INTO the timer card as the
+                          ADR-077: the one-line city tease that lived here moved INTO the timer card as the
                           brick strip (`focus/SessionBrickStrip.jsx`), where it also animates while the
                           session runs. Nothing else may take this slot — the Start button sits on the fold.
                         */}
@@ -1384,7 +1384,7 @@ function OverlayStack({
     KIỆN DỰNG ở đây. Engine vẫn tính đủ ba loại; ngày nào muốn cho `scaffold` một thẻ toast thì
     dữ liệu vẫn còn nguyên.
   */
-  // ADR-076: the 3.2-second «city moment» overlay is gone — the finished building is the ending's
+  // ADR-077: the 3.2-second «city moment» overlay is gone — the finished building is the ending's
   // project card (`BrickRow`, all bricks laid). One ending, no overlay before it.
 
   /*
@@ -1426,7 +1426,7 @@ function OverlayStack({
   // không phải một việc phải làm: lễ mừng thành phố · chuỗi thẻ thưởng. Thăng hoa do Đàm bấm ở Cài
   // đặt, còn `detail === 'level'` là do Đàm bấm vào thẻ — một hộp thoại Đàm tự mở thì không phải
   // "làm phiền".
-  // ⚠️ HẾT NGOẠI LỆ (2026-08-27, đóng `TECH_DEBT #87`). The weekly-report dialog (deleted in ADR-076) từng TỰ bật sáng
+  // ⚠️ HẾT NGOẠI LỆ (2026-08-27, đóng `TECH_DEBT #87`). The weekly-report dialog (deleted in ADR-077) từng TỰ bật sáng
   // thứ Hai, tức nó chặn màn hình mà không nằm trong bốn việc được phép. Nay `checkWeeklyReport`
   // chỉ bật một lời MỜI (`weeklyReportPending` → một thẻ toast); cờ này chỉ lên khi Đàm bấm —
   // nút ở thanh bên hoặc chính cái thẻ ấy — nên nó rơi vào đúng câu đã ghi ở trên: "một hộp

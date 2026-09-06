@@ -21,7 +21,7 @@ import { stripComments } from '../utils/sourceScan.js';
 const HERE = dirname(fileURLToPath(import.meta.url));
 const NGUON = stripComments(readFileSync(join(HERE, 'PomodoroEngine.jsx'), 'utf8'));
 
-test('ADR-076: the idle row is ONE primary Start button — no goal gate, no detour button', () => {
+test('ADR-077: the idle row is ONE primary Start button — no goal gate, no detour button', () => {
   assert.match(NGUON, /onClick=\{handleStartSession\}/, 'the Start button is gone');
   assert.doesNotMatch(NGUON, /\{!isSessionGoalValid \?/, 'the goal gate is back on the Start row');
   assert.doesNotMatch(NGUON, /jumpToSessionGoal/, 'the scroll-to-goal detour is back');
@@ -42,7 +42,7 @@ test('recent-goal chips: ONE row, inside the goal card, tap to fill, never auto-
   const iCard = NGUON.indexOf('Mục tiêu phiên');
   const iStart = NGUON.indexOf('onClick={handleStartSession}');
   assert.ok(iStart < iCard && iCard < i, 'chips must live in the goal card below the timer, not on the fold');
-  // Same task type first — the "smart default" of ADR-076.
+  // Same task type first — the "smart default" of ADR-077.
   assert.match(NGUON, /pickRecentGoals\(sessionHistory, GOAL_SUGGESTION_LIMIT, \{ preferCategoryId: pendingCategoryId \}\)/);
 });
 

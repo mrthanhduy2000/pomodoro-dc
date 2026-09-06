@@ -1,4 +1,4 @@
-/** `matchMedia(min-width)` as a hook (moved from PomodoroEngine.jsx, ADR-076). */
+/** `matchMedia(min-width)` as a hook (moved from PomodoroEngine.jsx, ADR-077). */
 import { useEffect, useState } from 'react';
 
 export default function useMinWidth(minWidth) {

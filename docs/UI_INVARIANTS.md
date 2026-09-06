@@ -14,7 +14,7 @@
 - **Interruption law has no exceptions** (ADR-060/061): full-screen blocking is reserved for era-up ·
   ascension · era crisis · disaster. It works because one field became two:
   `lastWeeklyReportDate` = *invited*, `lastWeeklyReportSeenDate` = *seen*. Law: **opening = seen,
-  an expired toast writes nothing**. Since ADR-076 the weekly report dialog is gone — the Stats
+  an expired toast writes nothing**. Since ADR-077 the weekly report dialog is gone — the Stats
   screen answers "this week vs last" — so *opening* means `markWeeklyReportSeen()` + the Stats
   tab, and the never-expiring safety-net dot sits on the **Thống kê tab** (`attentionTabIds`), which
   exists on both platforms by construction.

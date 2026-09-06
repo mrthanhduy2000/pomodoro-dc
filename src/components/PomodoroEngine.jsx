@@ -347,7 +347,7 @@ export default function PomodoroEngine({
   // ⚠️ KHÔNG bọc `useMemo`: React Compiler từ chối tối ưu cả component khi thấy memo hoá thủ công
   // mà nó không bảo toàn được ("Existing memoization could not be preserved") — đổi lấy một phép
   // tính vốn đã rẻ (duyệt lịch sử và DỪNG sau 3 kết quả) là một cái giá tệ. Để compiler tự lo.
-  // ADR-076: one-tap goals, same task type first. Shown in the goal card only while the box is empty.
+  // ADR-077: one-tap goals, same task type first. Shown in the goal card only while the box is empty.
   const recentGoals = sessionGoalText.trim() ? [] : pickRecentGoals(sessionHistory, GOAL_SUGGESTION_LIMIT, { preferCategoryId: pendingCategoryId });
 
   const goalHintClass = goalState.tone === 'warn'
@@ -1022,7 +1022,7 @@ export default function PomodoroEngine({
   const timerStageVisual = (
     <>
       {/*
-        ADR-076 — "this session's brick" sits where the milestone toast and the combo/multiplier
+        ADR-077 — "this session's brick" sits where the milestone toast and the combo/multiplier
         badges used to: same height budget, one story instead of two numbers. Hidden on the break
         stage and in full screen (that mode is empty by design).
       */}
@@ -1291,7 +1291,7 @@ export default function PomodoroEngine({
                   Kiểm bằng: `node scripts/shot.mjs --phone --fit`
                   và `node scripts/shot.mjs --phone --fit --el "Cần điền mục tiêu"`. */}
               {/*
-                ADR-076: the goal is optional, so the idle row is ONE full-width primary button — no
+                ADR-077: the goal is optional, so the idle row is ONE full-width primary button — no
                 "Điền mục tiêu →" detour, no chip row stealing the 3px above the tab bar. Recent goals
                 are one tap away in the goal card just below the fold.
               */}
@@ -1549,7 +1549,7 @@ export default function PomodoroEngine({
                          focus:bg-white/[0.07] focus:border-amber-400/30"
               style={{ ...paperInputStyle, scrollbarWidth: 'none' }}
             />
-            {/* ADR-076: one-tap goals — same task type first (`pickRecentGoals`), tap to fill, never auto-filled. */}
+            {/* ADR-077: one-tap goals — same task type first (`pickRecentGoals`), tap to fill, never auto-filled. */}
             {recentGoals.length > 0 && (
               <div className="mt-2 flex flex-wrap gap-1.5">
                 {recentGoals.map((goal) => (

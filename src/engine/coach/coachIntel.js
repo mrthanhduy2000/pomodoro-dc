@@ -96,7 +96,7 @@ export function buildFocusProfile(history = [], opts = {}) {
   for (const e of all) {
     const cancelledEntry = isCancelledHistoryEntry(e);
     if (!cancelledEntry && !isCompletedSession(e)) continue;
-    // "Whole session" (ADR-076): started, not cancelled, not self-rated as missed. Every bucket keeps
+    // "Whole session" (ADR-077): started, not cancelled, not self-rated as missed. Every bucket keeps
     // `started`/`whole` next to the goal counters so a screen can rank WITHOUT goal reviews — a goal
     // review only sharpens the same number (a "Chưa đạt" tap lowers `whole`), it never gates it.
     const whole = !cancelledEntry && e.goalAchieved !== false ? 1 : 0;

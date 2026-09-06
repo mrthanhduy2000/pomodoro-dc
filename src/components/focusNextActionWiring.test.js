@@ -67,7 +67,7 @@ test('nó nằm ở CỘT GIỮA (iPhone thấy được), không nằm trong c�
     !/FocusMoment/.test(RAIL),
     '`FocusMoment` lọt vào `FocusRail` — cột đó là `hidden … lg:flex`, iPhone không bao giờ thấy',
   );
-  // Anchor on something that is CERTAINLY in the centre column: `FocusIntro`, the greeting (ADR-076
+  // Anchor on something that is CERTAINLY in the centre column: `FocusIntro`, the greeting (ADR-077
   // moved the city tease into the timer card as the brick strip). "Is it next to it" is a sturdier
   // question than counting indentation.
   const giua = APP_CODE.indexOf('<FocusIntro');

@@ -1,5 +1,5 @@
 /**
- * CategoryChip.jsx — extracted from PomodoroEngine.jsx (ADR-076, round 37): the Focus screen keeps only what answers
+ * CategoryChip.jsx — extracted from PomodoroEngine.jsx (ADR-077, round 37): the Focus screen keeps only what answers
  * "what session, how long, how long left"; leaf controls live here so the main file can be read.
  */
 import useSettingsStore from '../../store/settingsStore';

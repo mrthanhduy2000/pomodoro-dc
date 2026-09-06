@@ -145,7 +145,7 @@ class SoundEngine {
     this._arpeggio({ type: p.type, freqs: p.freqs, step: p.step, duration: p.dur, gainStart: p.gain, t });
   }
 
-  /** Countdown tick — the last three seconds only (ADR-076: 10 was an alarm, not a cue) */
+  /** Countdown tick — the last three seconds only (ADR-077: 10 was an alarm, not a cue) */
   playUrgentTick() {
     if (!this.enabled) return;
     const p   = this._p('urgentTick');
@@ -247,7 +247,7 @@ class SoundEngine {
   }
 
   /**
-   * One low "clack" when the session's brick lands on the ending card (ADR-076) — the sound of the
+   * One low "clack" when the session's brick lands on the ending card (ADR-077) — the sound of the
    * city, distinct from the XP chime: two low notes plus a short thump (skipped on `minimal`).
    */
   playBrickLaid() {

@@ -159,7 +159,7 @@ function buildQuestsCard({ missions, completedMissionIds, missionXp, bonusXP, bo
 }
 
 /**
- * Thẻ CÔNG TRÌNH (ADR-076): đầu vào là kết quả `describeSessionBrick(… phase: 'landed')` — viên gạch
+ * Thẻ CÔNG TRÌNH (ADR-077): đầu vào là kết quả `describeSessionBrick(… phase: 'landed')` — viên gạch
  * phiên này vừa đặt (`bricks` có ô 'new'), hoặc công trình vừa HOÀN THÀNH (`status: 'built'`). Kỷ đã
  * xây trọn (`era-complete`) thì không có gì để kể ⇒ không có thẻ. Không còn thẻ "hàng chờ trống":
  * store tự xếp hàng công trình kế tiếp trước khi tiến hàng chờ, nên phiên nào cũng có viên gạch.

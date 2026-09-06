@@ -58,7 +58,7 @@ test('hết lý do bấm Bắt đầu thì tổng kết tuần lên tiếng', ()
   const out = pickFocusMoment({
     stage: null, streak: null, weeklyUnseen: true, onOpenWeekly, sessionInProgress: false,
   });
-  assert.match(out.text, /Tuần mới/); // ADR-076: the summary is the Stats screen
+  assert.match(out.text, /Tuần mới/); // ADR-077: the summary is the Stats screen
   assert.equal(out.onClick, onOpenWeekly);
 });
 
@@ -162,6 +162,6 @@ test('nhánh tổng kết tuần được nối đủ hai thứ nó cần', () =
   const i = APP.indexOf('<FocusMoment');
   const tag = APP.slice(i, APP.indexOf('/>', i));
   assert.match(tag, /weeklyUnseen=\{weeklyReportUnseen\}/);
-  assert.match(tag, /onOpenWeekly=\{openWeeklySummary\}/); // ADR-076: the summary is the Stats screen
+  assert.match(tag, /onOpenWeekly=\{openWeeklySummary\}/); // ADR-077: the summary is the Stats screen
   assert.match(tag, /sessionInProgress=\{hasFocusSessionInProgress\}/);
 });

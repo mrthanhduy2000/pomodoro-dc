@@ -1,5 +1,5 @@
 /**
- * ActionButton.jsx — THE button (TECH_DEBT #86, ADR-076). Extracted from `PomodoroEngine.jsx` on
+ * ActionButton.jsx — THE button (TECH_DEBT #86, ADR-077). Extracted from `PomodoroEngine.jsx` on
  * 2026-09-06 so that every screen draws its buttons through ONE door: token colours (skin + dark
  * mode follow automatically), one `sizeMap`, press depth = shadow depth. Never branch on
  * `lightTheme` here and never pass size classes through `className` — see the two guard tests
@@ -45,7 +45,7 @@ export default function ActionButton({ children, className = '', disabled = fals
     // không cần thiết cho nút QUAN TRỌNG NHẤT màn hình. 13px vẫn vừa (đo lại sau khi đổi), lại
     // trên ngưỡng cỡ chữ dễ đọc trên điện thoại.
     compactPrimary: 'min-w-0 w-full px-3 py-3 text-[13px] font-semibold leading-tight tracking-[-0.01em] whitespace-normal sm:w-auto sm:px-7 sm:py-3.5 sm:text-lg sm:font-bold sm:leading-none sm:tracking-normal sm:whitespace-nowrap',
-    // ADR-076 / TECH_DEBT #86 — the two sizes every OTHER screen needs, so nobody hand-draws a
+    // ADR-077 / TECH_DEBT #86 — the two sizes every OTHER screen needs, so nobody hand-draws a
     // button with an editorial rgba() again: a small pill and a medium control.
     sm: 'px-3 py-1.5 text-[12px] font-semibold leading-tight whitespace-nowrap',
     md: 'px-4 py-2.5 text-[13px] font-semibold leading-tight whitespace-nowrap',

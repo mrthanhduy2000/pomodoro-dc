@@ -73,7 +73,7 @@ roughly 44%. Titles below are the lookup key; read one with
 
 ---
 
-## ADR-076 — Round 37: a session always lays a brick; Stats answers on whole sessions; the goal is optional; missions and the weekly chain leave the store; the weekly report folds into Stats
+## ADR-077 — Round 37: a session always lays a brick; Stats answers on whole sessions; the goal is optional; missions and the weekly chain leave the store; the weekly report folds into Stats
 
 - **Date**: 2026-09-06 (late night). Branch `claude/game-development-engagement-xvqc2h`, merged into `main`.
 - **Context**: Rounds 33–36 removed tabs, currencies, "Claim" buttons, six Stats tabs and the sleeping
@@ -144,6 +144,42 @@ roughly 44%. Titles below are the lookup key; read one with
   in every bucket on the real save → add average length as the tiebreak (still one law); #86 is
   "door built, tenants not moved" — migrate the remaining hand-drawn buttons through `ActionButton`
   next.
+## ADR-076 — Document governance runs on DISCOVERY, not on a hand-written list
+
+- **Date**: 2026-09-06 (night, after ADR-075)
+- **Context**: ADR-075 left six guards protecting the documentation budget, but every one of them
+  read a hardcoded array (`REFERENCE_DOCS`) or a two-entry limit table. Đàm asked the right question:
+  *what about the files that later work creates — is there a solution, or will it just grow back?*
+- **Root problem**: a guard driven by a list only governs what someone remembered to add. Proof was
+  immediate: three archives created **that same day** (183,626 · 223,614 · 246,133 chars) were
+  already outside the list and therefore outside every gate. That is exactly how this repository
+  reached 2.7M chars in the first place — nothing was watching the files nobody listed.
+- **Options considered**:
+  1. Keep the list and add a rule ("remember to register new docs").
+  2. A generated budget file (`doc-limits.json`) that every doc must appear in, regenerated on demand.
+  3. Discover every `.md` and classify it by PATH CONVENTION.
+- **Why the others were rejected**: (1) is the failure mode itself — a rule with no enforcement is
+  the "threshold with no guard is a funnel" lesson repeated. (2) works, but a per-file number is a
+  maintenance chore and a lazy session can regenerate it to make red go away, which defeats the
+  ratchet.
+- **Chosen solution**: option (3). `discoverDocs()` walks the tree (skipping `node_modules`, `.git`,
+  `dist`, `coverage`) and `classify()` assigns a class from the path alone:
+  `docs/archive/**` → archive (capped only by the context window) · the four auto-loaded files →
+  their explicit char limits · append-only logs → journal (rotation limit) · **everything else →
+  active** (context-window ceiling, warning at half a window). A file that does not exist yet already
+  falls into "active", so it is governed the moment it is created — nothing to register, nothing to
+  remember.
+- **Also**: the rotation class grew from 2 files to 4. `TECH_DEBT.md` and `ARCHITECTURE_DECISIONS.md`
+  are append-only too — new debts and new ADRs arrive with every session — so they now carry rotation
+  limits (120,000 and 250,000 chars) that force shedding old entries into `docs/archive/`.
+- **Break-tested**: creating `docs/FUTURE_THING.md` at 900,000 chars turns the ceiling gate red
+  naming that file, though no list mentions it; padding `TECH_DEBT.md` past 120,000 chars turns the
+  rotation gate red.
+- **Trade-off**: discovery costs a directory walk per test run (negligible) and the classes are
+  coarse — a genuinely special document cannot get a bespoke limit without adding it to a table. That
+  is deliberate: coarse rules that need no maintenance beat precise rules nobody maintains.
+- **Review conditions**: if a legitimate document must exceed one context window, do not raise the
+  ceiling — split it, and if splitting is genuinely impossible, that is the signal to revisit this ADR.
 
 ## ADR-075 — Retrieval architecture: freeze closed knowledge, cap every file at one context window, guard it
 
@@ -204,6 +240,18 @@ roughly 44%. Titles below are the lookup key; read one with
   simply enforcing `PHASE_RULES.md` §5, a rule that had existed unenforced while the file tripled.
   A sixth guard (**rotation**) now fails `npm test` if either grows past 120,000 chars, so the rule
   no longer depends on someone remembering it.
+- **Third pass — split by SUBSYSTEM, not by status.** `TECH_DEBT.md` still held 63 "open" entries, but
+  classifying them showed only **7 were actionable**: **52 belong to the 3D city**, a finished black
+  box Đàm forbids touching, and were **87% of the file** (218,861 of 250,190 chars). Three more had
+  titles saying ĐÃ ĐÓNG yet were never archived. The 52 moved to `docs/TECH_DEBT_3D.md` — **still
+  open, relocated by subsystem** so a `grep` for live work stops wading through frozen work — and the
+  file went **250,190 → 43,559 chars (−83%)**. ⚠️ The Maintenance Sprint threshold must now be judged
+  on the actionable list, not the total: a frozen subsystem cannot be worked on, and counting it was
+  making the threshold meaningless.
+- **Also**: `START_HERE.md`'s UI invariants (~4,000 chars) moved to `docs/UI_INVARIANTS.md` behind an
+  imperative pointer — every session was loading them before knowing whether the task touched the UI.
+  Stale routing repointed in `AI_ONBOARDING.md`, `AI_HANDOFF_KNOWLEDGE.md` and `ARCHITECTURE.md`,
+  which all still told a new session to read `BAN_GIAO.md` in full first.
 - **Impact**: largest single file 486,294 → 266,956 chars. No file exceeds a context window.
   Always-loaded: 10,171 → 9,942 tokens/session. `npm test` 1,605 → 1,609 tests.
 - **Review conditions**: when an active reference doc passes ~50% of a window again (the warning

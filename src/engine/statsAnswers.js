@@ -5,7 +5,7 @@
  * thật sự hỏi được trả lời ở nếp gấp đầu. File này chỉ GHÉP những phép phân tích ĐÃ CÓ, ĐÃ TEST, ĐÃ
  * GÁC CỠ MẪU (`coach/coachIntel.js` · `gameMath.js`) thành ba câu trả lời:
  *   (1) Tôi có đang khá lên không?  — tuần này so với CÙNG QUÃNG của tuần trước, kèm 7 cặp cột;
- *       đầu tuần chưa có gì để so thì lùi một tuần: trọn tuần trước so với tuần trước nữa (ADR-076).
+ *       đầu tuần chưa có gì để so thì lùi một tuần: trọn tuần trước so với tuần trước nữa (ADR-077).
  *   (2) Khi nào tôi mạnh nhất?      — giờ · độ dài · loại việc trên PHIÊN TRỌN VẸN, mỗi thứ kèm cỡ mẫu.
  *   (3) Làm gì tiếp?                — ĐÚNG MỘT gợi ý (phút + loại việc), đủ để bấm là chạy.
  *
@@ -103,7 +103,7 @@ export function buildWeekComparison(history = [], { now = new Date() } = {}) {
   const cur = sumWindow(entries, thisStart, nowTs);
   const prev = sumWindow(entries, prevStart, nowTs - WEEK_MS);
   if (cur.n > 0 || prev.n > 0) return compareWindows(cur, prev, WEEK_SCOPE.sameSpan, elapsedDays);
-  // ADR-076 (settles the round-36 §9 question): early in a week BOTH same-span windows can be empty
+  // ADR-077 (settles the round-36 §9 question): early in a week BOTH same-span windows can be empty
   // (Monday 04:00: this week has nothing yet, and neither did last Monday by 04:00). "No sessions in
   // two weeks" would be false. The one law stays "compare equal windows"; only the window moves back
   // one full week: last week against the week before it.
@@ -118,7 +118,7 @@ export function buildWeekComparison(history = [], { now = new Date() } = {}) {
 }
 
 /**
- * (2) When am I strongest — hour · length · task type, ranked on the WHOLE-SESSION rate (ADR-076).
+ * (2) When am I strongest — hour · length · task type, ranked on the WHOLE-SESSION rate (ADR-077).
  *
  * A whole session = started, not cancelled, not self-rated "Chưa đạt". Round 36 ranked these three
  * lines on goal reviews only, so the heart of the screen stayed empty for the one player who rarely

@@ -1,5 +1,5 @@
 /**
- * sessionBrick.js — "this session's brick" (ADR-076, round 37). PURE: no store, no DOM, no clock.
+ * sessionBrick.js — "this session's brick" (ADR-077, round 37). PURE: no store, no DOM, no clock.
  *
  * ONE question, answered in ONE shape for three screens — the idle Focus screen, the running timer
  * and the ending card: *which building does THIS session push, how many bricks are laid, which one

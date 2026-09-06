@@ -22,7 +22,7 @@ import {
 
 // ⚠️ HAI BẢN CHÉP TAY ĐÃ GỠ (2026-09-05) — `getStreakBonusCapDays` và hệ số thưởng nhiệm vụ.
 // Cả hai từng hỏi thẳng TÊN đặc quyền kỳ quan mà KHÔNG kiểm `type`; xem `engine/wonderEffects.js`.
-// `scaleMissionXP` / `dailyAllBonusXP` live in `engine/missions.js` (ADR-076) — the store GRANTS and this
+// `scaleMissionXP` / `dailyAllBonusXP` live in `engine/missions.js` (ADR-077) — the store GRANTS and this
 // screen SHOWS with the same function; two copies were two numbers that drifted apart.
 //
 // ⚠️ KHÔNG CÒN NÚT "NHẬN" / "CHỐT BƯỚC" (2026-09-06, ADR-070, đóng `TECH_DEBT #100`). Thưởng trọn

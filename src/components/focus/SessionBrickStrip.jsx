@@ -1,5 +1,5 @@
 /**
- * SessionBrickStrip.jsx — "this session's brick", above the ring on the Focus screen (ADR-076).
+ * SessionBrickStrip.jsx — "this session's brick", above the ring on the Focus screen (ADR-077).
  *
  * Replaces two things that used to share this column: the one-line city tease (often silent) and the
  * combo/multiplier badge row (numbers, not a story). Same height budget, one story: which building this

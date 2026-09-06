@@ -171,7 +171,7 @@ export default function RewardToastHost({ paused = false, onNavigate, onOpenDeta
   const dismiss = (toast) => {
     switch (toast.source) {
       // ⚠️ Hết 4 giây thì CHỈ tắt lời mời — không ghi "đã xem". Lỡ thẻ này thì chấm ở tab
-      // Thống kê vẫn sáng (ADR-076), đó là cả lý do `TECH_DEBT #87` bắt tách hai trạng thái.
+      // Thống kê vẫn sáng (ADR-077), đó là cả lý do `TECH_DEBT #87` bắt tách hai trạng thái.
       case 'weekly':      return dismissWeeklyReportToast();
       case 'loot':        return closeLootModal();
       case 'relic':       return dismissRelicNotification();
@@ -188,7 +188,7 @@ export default function RewardToastHost({ paused = false, onNavigate, onOpenDeta
   // ⚠️ Kiểu `detail` KHÔNG gọi `dismiss`: hộp thoại đọc chính trường store mà
   // `dismiss` sẽ xoá, nên xoá trước là mở ra một hộp thoại rỗng.
   const open = (toast) => {
-    // ADR-076: the weekly summary lives on the Stats screen. Record "seen" (the store law that the
+    // ADR-077: the weekly summary lives on the Stats screen. Record "seen" (the store law that the
     // toast timeout must NOT record), then fall through to the tab navigation the action carries.
     if (toast.action?.weekly) markWeeklyReportSeen();
     if (toast.action?.detail) {

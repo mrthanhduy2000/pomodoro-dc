@@ -1,5 +1,5 @@
 /**
- * seededRng.js — deterministic pseudo-random generator keyed by a string (ADR-076).
+ * seededRng.js — deterministic pseudo-random generator keyed by a string (ADR-077).
  *
  * Moved out of `store/gameStore.js` on 2026-09-06 so the pure mission and weekly-chain modules can
  * share it without importing the store. Same algorithm as before (xmur3-style seed mix + mulberry32),

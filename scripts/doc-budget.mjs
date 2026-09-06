@@ -25,9 +25,9 @@
  *   node scripts/doc-budget.mjs            → full table, exit 1 if anything is over
  *   node scripts/doc-budget.mjs --map F    → headings + line ranges of F (read lines, don't cat)
  */
-import { readFileSync, existsSync } from 'node:fs'
+import { readFileSync, existsSync, readdirSync } from 'node:fs'
 import { fileURLToPath } from 'node:url'
-import { dirname, resolve } from 'node:path'
+import { dirname, resolve, relative } from 'node:path'
 
 const ROOT = resolve(dirname(fileURLToPath(import.meta.url)), '..')
 
@@ -78,14 +78,16 @@ export const MIN_PASSAGE_CHARS = 200
  * the 2026-09-06 rotation): crossing one means ROTATE the oldest entries into `docs/archive/`,
  * never raise the limit.
  */
-export const ACTIVE_DOC_LIMITS = {
+export const ROTATION_LIMITS = {
   'BAN_GIAO.md': 120000,
   'CHANGELOG.md': 120000,
+  'TECH_DEBT.md': 120000,
+  'ARCHITECTURE_DECISIONS.md': 250000,
 }
 
 /** Active journals that have grown past their rotation limit. Empty = gate green. */
 export function needsRotation() {
-  return Object.entries(ACTIVE_DOC_LIMITS)
+  return Object.entries(ROTATION_LIMITS)
     .map(([file, limit]) => ({ file, limit, size: chars(file) }))
     .filter((r) => r.size !== null && r.size > r.limit)
 }
@@ -102,35 +104,45 @@ export const REFERENCE_CEILING_TOKENS = 200000
 
 /** Reference docs whose estimated size exceeds one context window. Empty = gate green. */
 export function oversizedReferences() {
-  return REFERENCE_DOCS
+  return discoverDocs()
     .map((file) => ({ file, tok: tokens(file) }))
     .filter((r) => r.tok !== null && r.tok > REFERENCE_CEILING_TOKENS)
 }
 
-/** Reference docs: no per-file limit below the ceiling, but printed so their cost is never invisible. */
-export const REFERENCE_DOCS = [
-  'TECH_DEBT.md',
-  'ARCHITECTURE_DECISIONS.md',
-  'CHANGELOG.md',
-  'docs/LESSONS_3D.md',
-  'BAN_GIAO.md',
-  'PERFORMANCE.md',
-  'PROJECT_STRUCTURE.md',
-  'AI_HANDOFF_KNOWLEDGE.md',
-  'ARCHITECTURE.md',
-  'docs/GOVERNANCE.md',
-  'docs/OPERATIONS.md',
-  'docs/AI_COACH.md',
-  'MIGRATION.md',
-  'AI_ONBOARDING.md',
-  'README.md',
-  // Frozen archives. Listed so their cost is visible: the 2026-08-24 one alone is ~282k tokens,
-  // larger than an entire 200k context window, and nothing else would ever warn about it.
-  'docs/archive/BAN_GIAO_ARCHIVE_2026-08-24.md',
-  'docs/archive/START_HERE_LOG_2026-09-06.md',
-  'docs/archive/TECH_DEBT_CLOSED_2026-09-06.md',
-  'docs/archive/ADR_ARCHIVE_001-050.md',
-]
+/**
+ * DISCOVERY (ADR-076). Every gate used to run off a hand-written list, so a document created by a
+ * later session was invisible to all of them — the exact way this repository grew to 2.7M chars in
+ * the first place. Documents are now DISCOVERED and classified by PATH CONVENTION, so a file that
+ * does not exist yet is already governed:
+ *
+ *   docs/archive/**            → archive   : frozen history; capped only by the context window
+ *   CLAUDE/START_HERE/PHASE_RULES/AGENTS → autoloaded : explicit small limits (BUDGETS)
+ *   append-only journals       → journal   : rotation limit, must shed old entries into docs/archive/
+ *   everything else *.md       → active    : capped by the context window, warned at half of it
+ *
+ * Nothing to remember, nothing to add when a new document appears.
+ */
+const SKIP_DIRS = new Set(['node_modules', '.git', 'dist', 'coverage', '.vercel'])
+
+export function discoverDocs(dir = ROOT, out = []) {
+  for (const e of readdirSync(dir, { withFileTypes: true })) {
+    if (e.name.startsWith('.') && e.name !== '.github') continue
+    const full = resolve(dir, e.name)
+    if (e.isDirectory()) {
+      if (!SKIP_DIRS.has(e.name)) discoverDocs(full, out)
+    } else if (e.name.endsWith('.md')) {
+      out.push(relative(ROOT, full))
+    }
+  }
+  return out.sort()
+}
+
+export function classify(file) {
+  if (file.startsWith('docs/archive/')) return 'archive'
+  if (file in BUDGETS) return 'autoloaded'
+  if (file in ROTATION_LIMITS) return 'journal'
+  return 'active'
+}
 
 const read = (file) => {
   const p = resolve(ROOT, file)
@@ -293,22 +305,23 @@ function report() {
   console.log('\n  → each session carries ' + fmt(perSession) + ' chars ≈ ' + fmt(perSessionTok) +
     ' tokens = ' + ((perSessionTok / 200000) * 100).toFixed(1) + '% of a 200k window')
 
-  console.log('\nREFERENCE — no limit, but ❌ NEVER `cat`; use `grep -n` / `sed -n` / `head`\n')
-  console.log('  file'.padEnd(36) + 'chars'.padStart(10) + '~tok'.padStart(9) + '  % of 200k')
+  const discovered = discoverDocs().filter((f) => classify(f) !== 'autoloaded')
+  console.log('\nDISCOVERED DOCS — classified by path, so a file created later is governed too\n')
+  console.log('  file'.padEnd(48) + 'chars'.padStart(9) + '~tok'.padStart(9) + '  % of 200k  class')
   let total = perSession
   let totalTok = perSessionTok
-  const rows = REFERENCE_DOCS.map((f) => [f, chars(f)]).filter(([, n]) => n !== null).sort((a, b) => b[1] - a[1])
-  for (const [file, n] of rows) {
+  for (const [file, n] of discovered.map((f) => [f, chars(f)]).sort((a, b) => b[1] - a[1])) {
     total += n
     totalTok += tokens(file)
+    const cls = classify(file)
     const pct = (tokens(file) / 200000) * 100
-    // Warning thresholds (TECH_DEBT #103) — reference docs may be large, so this warns, never blocks.
-    const isArchive = file.startsWith('docs/archive/')
+    const lim = ROTATION_LIMITS[file]
     const warn = pct >= 100 ? '  ❌ LARGER THAN A CONTEXT WINDOW — split it'
-      : isArchive ? '  📚 archive — grep / --map only'
+      : cls === 'journal' ? `  rotate at ${fmt(lim)} chars (${Math.round((n / lim) * 100)}% used)`
+      : cls === 'archive' ? '  📚 grep / --map only'
       : pct >= 50 ? '  ⚠️ approaching: freeze older parts into docs/archive/' : ''
-    console.log('  ' + file.padEnd(34) + fmt(n).padStart(10) + fmt(tokens(file)).padStart(9) +
-      '  ' + pct.toFixed(1).padStart(6) + '%' + warn)
+    console.log('  ' + file.padEnd(46) + fmt(n).padStart(9) + fmt(tokens(file)).padStart(9) +
+      '  ' + pct.toFixed(1).padStart(7) + '%  ' + cls.padEnd(7) + warn)
   }
   console.log('\n  → TOTAL docs: ' + fmt(total) + ' chars ≈ ' + fmt(totalTok) + ' tokens = ' +
     ((totalTok / 200000) * 100).toFixed(0) + '% of a 200k window\n')

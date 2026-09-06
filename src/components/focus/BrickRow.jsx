@@ -1,5 +1,5 @@
 /**
- * BrickRow.jsx — the brick strip shared by the Focus screen and the ending card (ADR-076).
+ * BrickRow.jsx — the brick strip shared by the Focus screen and the ending card (ADR-077).
  *
  * One cell per session the building needs. States come from `engine/sessionBrick.js`:
  *   laid   — a session already spent on it

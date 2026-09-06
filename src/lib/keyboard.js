@@ -1,5 +1,5 @@
 /**
- * keyboard.js — DOM helpers for the global Space shortcut (moved from PomodoroEngine.jsx, ADR-076).
+ * keyboard.js — DOM helpers for the global Space shortcut (moved from PomodoroEngine.jsx, ADR-077).
  */
 export function isEditableShortcutTarget(target) {
   if (!(target instanceof HTMLElement)) return false;

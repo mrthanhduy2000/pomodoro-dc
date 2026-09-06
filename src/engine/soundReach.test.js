@@ -34,7 +34,7 @@ function moiFileNguon(thuMuc, ra = []) {
 // chỗ quên. Thêm một tiếng vào đây thì phải viết được lý do; bỏ một tiếng ra thì bài này đỏ và
 // nhắc người ta cập nhật.
 const CO_Y_DE_CAM = [
-  // ADR-076: `playTick` (never wired, dead setting) and `playExtensionReady` (a copy of the milestone
+  // ADR-077: `playTick` (never wired, dead setting) and `playExtensionReady` (a copy of the milestone
   // chime) were deleted instead of exempted. Every sound left has a real moment.
 ];
 

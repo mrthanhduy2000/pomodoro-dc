@@ -91,7 +91,7 @@ const SEED = Number(arg('--seed', 20260813));
 
 /** Bộ sinh số giả ngẫu nhiên tất định (mulberry32) — thay cho `Math.random` bị cấm. */
 /**
- * ADR-076: 60% of sessions carry a goal and, when they do, a review (Đạt 3 of 4) — so the Stats
+ * ADR-077: 60% of sessions carry a goal and, when they do, a review (Đạt 3 of 4) — so the Stats
  * screen, the journal and the coach show a FULL state in screenshots, not the hollow one that hid
  * an empty card for a whole round.
  */

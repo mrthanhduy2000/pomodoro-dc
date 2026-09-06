@@ -229,7 +229,7 @@ test('thẻ di vật lên bậc: chỉ khi store vừa nâng bậc; dịch buff 
   assert.equal(max.relics[0].nextAt, null);
 });
 
-test('project card (ADR-076): carries the brick row from the engine, clamps done ≤ total, built ⇒ status built', () => {
+test('project card (ADR-077): carries the brick row from the engine, clamps done ≤ total, built ⇒ status built', () => {
   const brick = { status: 'building', label: 'Hải Đăng', icon: '🗼', total: 6, done: 3, bricks: ['laid', 'laid', 'new', 'empty', 'empty', 'empty'], headline: 'Viên gạch 3/6 đã đặt', sub: 'Còn 3 phiên nữa Hải Đăng mọc lên.', auto: false };
   const [, p] = buildRewardStoryCards({ reward: REWARD, project: brick });
   assert.equal(p.id, 'project');

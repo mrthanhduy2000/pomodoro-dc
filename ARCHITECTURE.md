@@ -144,7 +144,7 @@ nếu muốn làm tiếp, kèm điều kiện cần có trước khi làm an to�
    "Phiên này đặt viên gạch 3/4 cho X"           "Viên gạch 3/4 đã đặt" / "X hoàn thành!"
 ```
 
-(ADR-076) Both ends read the SAME `pickSessionProject` (queue head → auto-pick → none), so a session's
+(ADR-077) Both ends read the SAME `pickSessionProject` (queue head → auto-pick → none), so a session's
 strip and its ending card always name the same building — `gameStore.sessionBrick.test.js` runs a
 real `completeFocusSession` to prove it. There is no empty state: with an empty queue the store queues
 the next project itself right before the queue advances (`autoQueueSessionProject`), and a finished
@@ -162,7 +162,7 @@ useTimer.commitCompletedSession()
         ▼
 gameStore.completeFocusSession()  ── đặt ui.lootModalOpen = true NGAY LẬP TỨC  ("chuỗi thẻ đang chờ")
         │   ADR-070: MỌI phần thưởng đã đạt TỰ VÀO ở đây, không còn nút nào ở tầng giao diện —
-        │     · autoQueueSessionProject ⇒ empty queue gets the next project (ADR-076) ⇒ queue advances one brick
+        │     · autoQueueSessionProject ⇒ empty queue gets the next project (ADR-077) ⇒ queue advances one brick
         │     · tickDailyMissions (engine/missions.js) ⇒ rebuild from history WITH this session ⇒ +dailyBonusXP (trọn ngày)
         │     · autoClaimWeeklySteps       ⇒ mọi bước tuần đã đủ ⇒ +XP bước, +SP chuỗi ⇒ pendingReward.weeklySteps
         │     · evaluateRelicEvolutions    ⇒ đủ 20/50 phiên ≥25′ kể từ earnedAt ⇒ relicEvolutions+1 ⇒ pendingReward.relicsEvolved
@@ -171,7 +171,7 @@ gameStore.completeFocusSession()  ── đặt ui.lootModalOpen = true NGAY L�
 App.jsx <OverlayStack>
         │
         └─ <SessionRewardStory> — CHUỖI THẺ THƯỞNG sau MỌI phiên, và là CÁI KẾT DUY NHẤT
-           (ADR-076: the 3.2-second «city moment» overlay that used to stand before it is gone —
+           (ADR-077: the 3.2-second «city moment» overlay that used to stand before it is gone —
             a finished building is the project card with every brick laid):
                  xp (+chip «+N EP») → THÀNH PHỐ (công trình nhích / "hàng chờ trống — chọn ngay")
                     → chuỗi (dải bảy ngày) → nhịp hôm nay → nhiệm vụ («Trọn ngày +N XP — đã cộng»)
@@ -281,7 +281,7 @@ markWeeklyReportSeen() ── ghi lastWeeklyReportSeenDate = thứHai (đã XEM)
         │  + onNavigate({ tab: 'stats' })                                    ▼
         ▼                                                    lastWeeklyReportSeenDate KHÔNG đổi
   màn THỐNG KÊ — thẻ «Tôi có đang khá lên không?»              ⇒ weeklyReportUnseen vẫn TRUE
-  (ADR-076: WeeklyReportModal đã xoá; Stats trả lời câu ấy)  ⇒ CHẤM trên tab Thống kê, KHÔNG hết hạn
+  (ADR-077: WeeklyReportModal đã xoá; Stats trả lời câu ấy)  ⇒ CHẤM trên tab Thống kê, KHÔNG hết hạn
                                                                (`attentionTabIds` — cả desktop lẫn iPhone)
 ```
 
@@ -299,6 +299,8 @@ của store, nên nó không lên Supabase — không thêm một byte nào vào
 
 ## 7. Tầng lưu trữ (storage flow), database schema flow, và hướng phụ thuộc (dependency)
 
+### 7.1 Storage — three independent layers
+
 **Storage — 3 tầng độc lập, mỗi tầng một mục đích**: `localStorage` (bản sao tức thời, luôn có sẵn
 kể cả offline) + Supabase `game_state` (bản đồng bộ đám mây, nguồn thật khi xung đột đa thiết bị)
 + file JSON export/import thủ công (bản sao lưu tay). Cả 3 đường ghi vào state sống đều PHẢI đi
@@ -312,6 +314,8 @@ liệu hỏng/cũ/thiếu trường phá vỡ app. Xem `MIGRATION.md` cho lịch
 chúng khớp nhau, nên thêm một trường state mới mà chỉ sửa 1-2 chỗ sẽ tạo ra lỗi âm thầm kiểu "dữ
 liệu có trên máy này nhưng không bao giờ sang máy kia". Xem `MIGRATION.md` mục schema 3→4 (thêm
 `cityArchive`) làm ví dụ, và test tự động đối chiếu cả 3 nơi ở `gameStore.cityArchive.test.js`.
+
+### 7.2 City archive and the "complete era" collection
 
 **Bảo tàng Thành Phố (`cityArchive`) — tách "hiệu lực chơi" khỏi "dấu vết lịch sử"**: khi lên kỷ
 mới, `pruneEraScopedBlueprintState` CẮT toàn bộ công trình kỷ cũ khỏi state đang chơi (luật cân
@@ -351,6 +355,8 @@ một phần thưởng thuần lịch sử lại thành cái bẫy; (c) `withEra
 **MỌI kỷ**, không riêng kỷ hiện tại — chặn lại thì bảng sưu tập ghi "chưa xây" ngay bên dưới cái
 giàn giáo mà cảnh 3D đang dựng.
 
+### 7.3 Crafting progress — one formula
+
 **Tiến độ chế tạo có ĐÚNG MỘT công thức (2026-08-13)**: `describeCraftProgress`
 (`src/engine/craftProgress.js`, thuần) là nơi DUY NHẤT quy `{ bpId, sessionsRemaining }` ra
 `{ total, remaining, done, ratio, pct }`. `cityLayout.js` (để dựng giàn giáo cao dần) và
@@ -360,6 +366,8 @@ chia lại, **lại tra hai bảng khác nhau** (`BUILDING_EFFECTS.sessionsToCom
 hiện khớp nhau 75/75 và có bài test canh cho khỏi lệch, nhưng "hiện đang khớp" không phải là một
 bảo đảm — nên nơi đọc chỉ được có một. Bản vẽ lạ (`total === null`) thì **đừng in mẫu số**: "còn 3
 phiên" vẫn là câu dùng được, "3/ phiên" thì không.
+
+### 7.4 City rendering — abstract layout vs painter
 
 **Luồng vẽ Thành Phố — bố cục TRỪU TƯỢNG tách khỏi cách vẽ (2026-08-12)**: một chiều, 3 chặng.
 (1) `CityView.jsx` chọn NGUỒN dữ liệu — kỷ hiện tại lấy state sống, kỷ đã niêm phong lấy ảnh chụp
@@ -389,6 +397,8 @@ mật độ tăng dần theo kỷ (17 căn kỷ 1 → 30 căn kỷ 15). ⚠️ N
 đi qua **đúng** `buildBuildingSpec` như công trình thật, chỉ khác cờ `plain` (tắt chữ ký kiến trúc +
 mô-típ) và mái `vernacularRoof` — nhờ vậy chúng thừa hưởng mái/vật liệu/tỉ lệ của kỷ mà không tranh
 mất hình bóng của 5 kỳ quan.
+### 7.5 Road network — three identity layers
+
 **Mạng đường — BA tầng bản sắc, và một luật đối xứng giữ chúng không gãy (ADR-025 + ADR-058 + ADR-059)**:
 `roadPlan.js` trả lời câu **Ô NÀO LÀ ĐƯỜNG** (hình dạng của cả mạng), `streetStyle.js` trả lời câu về
 **MẶT CẮT NGANG** (rộng bao nhiêu, lát bằng gì, có bó vỉa/vỉa hè/vạch kẻ không), còn `networkStyle.js`
@@ -438,6 +448,8 @@ số ô — đúng luật Phase 7D (*một lời hứa nói về QUAN HỆ phả
 vạch kẻ** — đó là sự thật đô thị (đường ĐI QUA chứ không phải đường ĐI DẠO), và cũng chính là thứ
 cho nó một dáng riêng độc lập với bề rộng.
 
+### 7.6 Props, ground covers, outskirts
+
 **`props` (cảnh vật) — thảm thực vật có ngữ pháp riêng (Phase 8D, ADR-020/021)**: cùng khuôn ba
 lớp với nhà cửa, chỉ khác trục. `city3d/floraStyle.js` là BẢNG (15 kỷ → loài + cỡ + mật độ + tầng
 cây bụi + màu lá, mỗi dòng buộc vào `country` mà `eraStyle.js` đã khai); `city3d/flora.js` là THƯ
@@ -476,6 +488,8 @@ chỉ biết CÔNG TRÌNH chứ không biết ĐỊA HÌNH, nên chặn cây mà
 sự an toàn GIẢ — xem `TECH_DEBT #54`. Việc loại trừ ấy dùng một **nhãn tường minh** (`vungQue`) chứ
 không dùng vị trí trong mảng, và có một bài test dựng cảnh THẬT rồi đòi mọi vật cản phải nằm trong
 lưới (bản đầu không có bài này, và gỡ cái gác đi thì cả 891 bài vẫn xanh).
+### 7.7 Setting, water, and worldYaw
+
 **`settingStyle` (địa thế) — khuôn ba lớp lần thứ BẢY, và nó là bảng đầu tiên viết ra TRƯỚC khi có
 hình (VIỆC 2 Bước A, 2026-08-19, ADR-039)**: `city3d/settingStyle.js` trả lời *"thành phố tiêu biểu
 của nước ấy, thời ấy, nằm ở đâu và vì sao nằm ở đó?"* — `water` (không / sông / **khúc uốn** / kênh
@@ -593,6 +607,8 @@ ba họ có mặt ở 15/15 kỷ, `wall` rơi về `wallMaterial` của chính k
 kỷ**, nên `MOC_LENH_VE` không đổi một đơn vị. `water` bị **cấm** vì chỉ 7/15 kỷ có họ ấy — một cái
 ao nghe rất hợp nhưng nó là một lệnh vẽ phải trả bằng một mục nợ, không phải thứ lén thêm.
 
+### 7.8 Blocks and the city skeleton (BSP)
+
 **`blockStyle` + `block` (HÌNH THÁI KHU PHỐ) — khuôn ba lớp lần thứ CHÍN, và nó trả lời một câu hỏi
 mà TÁM tầng trước KHÔNG trả lời được (Phase 14 §1(3), 2026-08-21, ADR-052)**: `city3d/blockStyle.js`
 trả lời *"nhà THƯỜNG ở nước ấy, kỷ ấy, dính vào nhau kiểu gì?"* — số cột × số hàng của khu phố ·
@@ -682,6 +698,8 @@ xương cũ — bốn khu 3×3 ở bốn góc, đối xứng HOÀN HẢO theo đ
 mức trùng hợp ngẫu nhiên (`p² + (1−p)²`) chứ không phải 0 tuyệt đối — và nó **tự nghiệm thu**: thứ
 vốn đối xứng hoàn hảo đo ra đúng 100,0%.
 
+### 7.9 Hinterland
+
 **`hinterlandStyle` + `hinterland` (VÙNG PHỤ CẬN) — khuôn ba lớp lần thứ TÁM, và là tầng đầu tiên
 đặt DẤU VẾT CON NGƯỜI ra ngoài lưới 12×12 (Phase 13 VIỆC B, 2026-08-21, ADR-049)**:
 `city3d/hinterlandStyle.js` trả lời *"quanh đô thị ấy, ở nước ấy, kỷ ấy, con người đã làm gì với
@@ -720,6 +738,8 @@ duy nhất được phép `import 'three'`** — luật này giữ cho `src/engi
 `node --test` (không DOM, không WebGL), và có test đọc mã nguồn canh nó
 (`components/city/cityRenderers.test.js`).
 
+### 7.10 Camera, focus and fly-to
+
 **Chạm vào công trình (2026-08-12)** đi ngược lại đúng ba chặng đó và **không phá vỡ chặng nào**:
 cả thành phố vẫn gộp vào MỘT khối hình học (một lệnh vẽ), nên không thể ném tia vào mesh để biết
 trúng căn nào — muốn vậy phải tách 75 mesh riêng, tức vứt bỏ chính tối ưu lớn nhất của bộ vẽ. Thay
@@ -754,6 +774,8 @@ liên tục là độ-chính-xác-giả, vì bản thân vật cản chỉ là h
 Bộ vẽ 2D **không phải bản nháp sẽ xoá**: nó là đường lui
 thường trực khi máy không có WebGL, khi trình duyệt mất context, hoặc khi Đàm tự chọn tắt 3D.
 Xem ADR-008.
+
+### 7.11 Renderer choice, lighting, shadows
 
 **Ai chọn bộ vẽ, và ba cửa lùi (2026-08-12)**: `city/CityStage.jsx` gom toàn bộ tri thức "khi nào
 3D, khi nào 2D". Luật quyết định là hàm THUẦN `decideRenderMode` (`engine/city3d/renderMode.js`),
@@ -791,6 +813,8 @@ dựng của `scripts/city-preview.mjs` đều đi qua đúng đó. ⚠️ Trư�
 cứng ở ba nơi với ba giá trị (app 1024 · xem thử một-kỷ 1024 · **bản quét 15 kỷ 512**), nghĩa là
 công cụ duyệt mỹ thuật chính thức đang đánh giá một thế giới khác với thứ Đàm nhìn thấy. Có test
 đọc-mã-nguồn chặn cả hai nơi gọi tự khai lại (`sceneGraphWiring.test.js`).
+
+### 7.12 Geometry vocabulary and roof grammar
 
 **Ngôn ngữ hình khối 3 trục — vì sao mô tả hình học lại là ENGINE THUẦN (2026-08-12)**: hình dáng
 một công trình là hàm của **(kỷ × loại × độ hiếm × cấp)**, cả ba trục đều đã có sẵn trong dữ liệu
@@ -895,6 +919,8 @@ Bốn ràng buộc ở tầng kiến trúc, mỗi cái đều đã trả giá m�
 Đo bằng `scripts/depth-score.mjs` (đếm số lần ĐỔI CHIỀU độ sáng ở dải trên — một dốc màu mượt có
 biên độ lớn mà 0 lớp, nên biên độ một mình không nói được gì): **0 → 55 lớp không gian**.
 
+### 7.13 Terrain — the ground is not flat
+
 ---
 
 **MẶT ĐẤT KHÔNG CÒN PHẲNG (2026-08-14, Phase 7B)** — `engine/city3d/terrain.js`, thuần như mọi thứ
@@ -996,6 +1022,8 @@ Bốn điểm về LUỒNG DỮ LIỆU đáng nhớ ở tầng kiến trúc:
      × `APRON_SPREAD`), hạ `APRON_DROP` 0,62 → 0,18, và **xoá hẳn** phép `settle`-về-phẳng
      (`APRON_EDGE` đổi tên → `PLATE_PAD_CELLS`, giá trị giữ 3,4 nên `terrainSurfaceReach` KHÔNG
      đổi). `TECH_DEBT #53` vì vậy cũng phải đọc kèm khối đính chính ở đầu mục ấy.
+
+### 7.14 Light and colour as one system
 
 **Ánh sáng và màu là một hệ THỐNG NHẤT, không phải các nút chỉnh rời (2026-08-12, Phase 3C)**:
 bốn thứ dưới đây khoá lẫn nhau, đổi một cái phải soi lại ba cái còn lại.
@@ -1103,6 +1131,8 @@ mẫu cũ đã để lọt lỗi mái tím ở 6/15 kỷ), soi cả **mặt nư�
 chỉ bù 1,45×. Nguyên tắc rút ra: **cường độ đèn phải bù cho cả độ đậm của MÀU đèn**, hai thứ đó
 nhân nhau chứ không thay thế nhau.
 
+### 7.15 The city on the home screen — one painter, two roles
+
 **Thành phố ra TRANG CHỦ — một bộ vẽ, hai vai trò (2026-08-12, Phase 3F)**: `city/CityBackdrop.jsx`
 đặt chính cảnh 3D đó làm lớp nền mờ phía sau đồng hồ ở trang Tập Trung. Nó KHÔNG dựng cảnh riêng —
 vẫn thuê `CityStage`, chỉ bật bốn công tắc (`chrome`/`still`/`fill`/`interactive`). Đây là chỗ dễ
@@ -1129,6 +1159,8 @@ dùng chung lập tức thành lỗi: cái ao biến thành một tấm vàng r�
 Viền tối góc làm bằng **lớp gradient CSS**, KHÔNG phải post-processing: post-processing đòi thêm
 thư viện + khung đệm toàn màn hình + vẽ lại mọi điểm ảnh mỗi khung hình, tức là khoản đắt nhất có
 thể thêm vào — đúng thứ luật pin cấm. Lớp CSS đứng yên cho hiệu quả gần như y hệt với giá bằng 0.
+
+### 7.16 Residents — motion, skeleton and gait
 
 **Cư dân — chuyển động là hàm của THỜI GIAN (2026-08-12)**: `engine/city3d/residents.js` thuần.
 Dân số **suy ra** từ (số công trình, số phiên, độ dài chuỗi), không lưu vào state — cùng nguyên tắc
@@ -1248,11 +1280,15 @@ cứ đo được (dư 3,2 lần trên máy thật · 80% chi phí đi theo ĐI�
 vẽ chỉ +1). ⚠️ **ms mỗi khung CHƯA đo lại** (hộp cát chỉ có SwiftShader) — đây là một trần theo TỈ
 LỆ HÌNH HỌC, không phải một lời hứa về tốc độ; muốn xác nhận thì `bash scripts/bench-macbook.sh`.
 
+### 7.17 Database schema — no automatic migration
+
 **Database schema — KHÔNG có migration tự động**: mọi thay đổi cấu trúc bảng Supabase (`game_state`,
 `timer_live`, `push_jobs`, `push_subscriptions`...) đòi hỏi chạy TAY một file `.sql` trong
 `supabase/` TRƯỚC KHI deploy code phụ thuộc vào nó — không dùng Prisma/Drizzle/ORM migration nào.
 Thiếu bước này khiến production lỗi ngay khi ghi vào cột chưa tồn tại (đã xảy ra thật — xem
 `MIGRATION.md` mục "First Action Wins"). Mọi thay đổi schema PHẢI được ghi vào `MIGRATION.md`.
+
+### 7.18 Dependency direction — one way only
 
 **Hướng phụ thuộc (dependency direction) — một chiều, không được đảo ngược**:
 `src/engine/` (thuần, 0 phụ thuộc React/Zustand/Date trực tiếp) ← `src/store/` (Zustand, phụ thuộc

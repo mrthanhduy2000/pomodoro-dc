@@ -27,22 +27,13 @@ spent.**
 
 ## 3. Do NOT write new measuring tools
 `scripts/` once held 18 measuring tools, most written to prove **one number once**, and home-made
-tools have lied more than 20 times in this project's history. Four are still alive:
+tools have lied more than 20 times in this project's history. Four are still alive — `city-preview`,
+`sweep-score`, `png-probe`, `shot` — plus seven kept because a test uses or imports them; ten
+single-use tools moved to `scripts/archive/` (still in git, runnable by full path).
+**What each tool answers, and its traps, is documented once in `PROJECT_STRUCTURE.md` §"Bộ công cụ
+soi bằng MẮT và chấm bằng SỐ"** — not repeated here.
 
-| Tool | Use when |
-|---|---|
-| `city-preview.mjs` | render one era (`--era N --hour H --width 1500`) or a sweep (`--sweep`) |
-| `sweep-score.mjs` | are the 15 eras still distinguishable (anti-drift gate) |
-| `png-probe.mjs` | real colour on a rendered image |
-| `shot.mjs` | 2D UI screenshots (run `npm run build` first) |
-
-Need a fifth → **ask first**, do not write one.
-
-`sweepMetric.mjs` · `mask-count.mjs` · `plan-coverage.mjs` · `water-view.mjs` · `water-score.mjs` ·
-`scene-tri.mjs` · `plinth-tri.mjs` stay in `scripts/` because a test uses or imports them.
-Ten single-use tools moved to **`scripts/archive/`** (still in git, runnable by full path):
-`depth-score` · `frame-fit` · `frame-score` · `plateau-score` · `road-bend` · `road-score` ·
-`scene-count` · `shadow-score` · `sweep-diff` · `terrain-score`.
+Need a fifth tool → **ask first**, do not write one.
 
 ## 4. Tests: keep only what protects real data
 Per-session gates: `npm test` **adds no new red** · `npm run lint` clean · `npm run build` green.
@@ -112,12 +103,12 @@ việc gì phải tự deploy cả"* ⇒ **merge into `main` and push yourself, 
 what reached production beyond your own work (`CLAUDE.md` §Infrastructure law 1).
 
 ## 10. Three shapes of failure already paid for — blocked by screenshots, not by good intentions
-1. **`TECH_DEBT #41`** — Phase 11 roof detail: built, beautiful, and **90/90 tiles below the eye
-   threshold**. ⇒ Before spending budget on small detail, ask: *at Đàm's viewing distance, how many
-   pixels does this occupy?* Under ~12px nobody sees it.
-2. **Phase 8D shrubbery** — the mechanism ran, the screenshot convinced, measurement showed it had
-   **never done anything**. ⇒ Human eyes are excellent at finding clusters in noise. Toggle it off
-   and compare images.
-3. **A gate passed by building something that should not exist** — houses on a skyline ridge, square
-   paddies in the neolithic era. ⇒ Every 15-era identity number must be tied to the `country` declared
-   in `eraStyle.js`, and must answer *"what real place looks like this?"*
+1. **Detail below the eye threshold** (`TECH_DEBT #41`): before spending budget on small detail, ask
+   *at Đàm's viewing distance, how many pixels does this occupy?* Under ~12px nobody sees it.
+2. **A mechanism that runs and does nothing** (Phase 8D shrubbery): eyes find clusters in noise —
+   toggle it off and compare images.
+3. **A gate passed by building something that should not exist** (houses on a skyline ridge, square
+   paddies in the neolithic era): every 15-era identity number must tie to the `country` declared in
+   `eraStyle.js` and answer *"what real place looks like this?"*
+
+Full write-ups: `grep -n 'PHASE_RULES §10' docs/LESSONS_3D.md`.

@@ -127,7 +127,7 @@ test('giữ đúng thứ tự mới-nhất-trước và tôn trọng giới hạ
   assert.deepEqual(pickRecentGoals(null), [], 'lịch sử rỗng/rác ⇒ không gợi ý gì');
 });
 
-test('ADR-076: goals used for the SAME task type come first, newest first inside each group', () => {
+test('ADR-077: goals used for the SAME task type come first, newest first inside each group', () => {
   const lichSu = [
     { goal: 'Viết báo cáo tuần', categoryId: 'work' },
     { goal: 'Ôn chương ba xác suất', categoryId: 'study' },

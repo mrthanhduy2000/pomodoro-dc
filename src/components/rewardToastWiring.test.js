@@ -58,11 +58,11 @@ test('ADR-070: KHÔNG còn hộp thoại chi tiết — chuỗi thẻ là cái k
  * 25 phút làm việc thật kết thúc bằng thứ dễ bỏ lỡ nhất app. Chuỗi thẻ là cái KẾT — ngắn, mỗi thẻ
  * một con số, bỏ qua được bằng một chạm.
  */
-test('chuỗi thẻ thưởng bám `lootModalOpen` (mọi phiên), là cái kết DUY NHẤT (ADR-076), tính vào `blocking`, và ĐÓNG phần thưởng không điều kiện', () => {
+test('chuỗi thẻ thưởng bám `lootModalOpen` (mọi phiên), là cái kết DUY NHẤT (ADR-077), tính vào `blocking`, và ĐÓNG phần thưởng không điều kiện', () => {
   const gate = /const\s+showStory\s*=\s*([^;]+);/.exec(APP_CODE);
   assert.ok(gate, 'không đọc được `showStory` — chuỗi thẻ thưởng đã đi đâu?');
   assert.match(gate[1], /lootModalOpen/, 'chuỗi thẻ phải bám `lootModalOpen` — chạy sau MỌI phiên, không chỉ khi lên kỷ');
-  assert.doesNotMatch(gate[1], /showMoment/, 'ADR-076: nothing stands before the story any more — no second gate');
+  assert.doesNotMatch(gate[1], /showMoment/, 'ADR-077: nothing stands before the story any more — no second gate');
   assert.match(gate[1], /!storyDone/, 'thiếu cờ "đã xem xong" ⇒ chuỗi thẻ dựng lại ngay sau khi đóng');
   assert.match(APP_CODE, /\{\s*showStory\s*&&\s*<SessionRewardStory/, 'chuỗi thẻ không được dựng');
 
@@ -158,10 +158,10 @@ test('những việc buộc phải quyết định VẪN chặn màn hình', () 
 });
 
 /**
- * ADR-076: the 3.2-second «city moment» overlay is gone — a finished building is told by the ending's
+ * ADR-077: the 3.2-second «city moment» overlay is gone — a finished building is told by the ending's
  * project card (all bricks laid). The test that used to pin the overlay now pins its absence.
  */
-test('no city-moment overlay stands before the reward story any more (ADR-076)', () => {
+test('no city-moment overlay stands before the reward story any more (ADR-077)', () => {
   assert.doesNotMatch(APP_CODE, /<CityGrowthMoment/, 'the growth overlay is back — the project card already tells this');
   assert.doesNotMatch(APP_CODE, /showMoment/, 'a second ending gate reappeared');
   const blocking = /const\s+blocking\s*=\s*([\s\S]*?);/.exec(APP_CODE);
@@ -170,7 +170,7 @@ test('no city-moment overlay stands before the reward story any more (ADR-076)',
 });
 
 /**
- * ADR-076: the weekly report dialog is gone — the Stats screen answers "this week vs last". What must
+ * ADR-077: the weekly report dialog is gone — the Stats screen answers "this week vs last". What must
  * survive from ADR-061/#87 is the SAFETY NET: a missed Monday toast still leaves a persistent dot,
  * now on the Thống kê tab, until Đàm opens the summary (which is now just opening Stats).
  */

@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState, Suspense } from 'react';
-import { AnimatePresence, motion as Motion, useReducedMotion } from 'framer-motion';
+import { AnimatePresence, motion as Motion } from 'framer-motion';
 import { useEnterMotion, usePressMotion, useSnapMotion } from './lib/motionPresets';
 import { initSync } from './lib/syncService';
 import { clearTimerLive, updateTimerLive } from './lib/timerLiveService';
@@ -18,7 +18,6 @@ import FocusCoachMobile from './components/FocusCoachMobile';
 import NotificationCenter from './components/NotificationCenter';
 import { RichTextView } from './components/RichText';
 import { useGameLoop } from './hooks/useGameLoop';
-import { useCityGrowthMoment } from './hooks/useCityMoment';
 import useGameStore from './store/gameStore';
 import useNextAction from './hooks/useNextAction';
 import useInventoryAttention from './hooks/useInventoryAttention';
@@ -45,8 +44,6 @@ const CityView = createRecoverableLazy(() => import('./components/CityView.jsx')
 // phần trăm giây cũng không sao, mà bấm được nút Bắt đầu ngay thì có sao.
 const CityBackdrop = createRecoverableLazy(() => import('./components/city/CityBackdrop.jsx'), 'city-backdrop');
 const Settings = createRecoverableLazy(() => import('./components/Settings.jsx'), 'settings');
-const CityGrowthMoment = createRecoverableLazy(() => import('./components/city/CityGrowthMoment.jsx'), 'city-growth-moment');
-const FocusCityTease = createRecoverableLazy(() => import('./components/city/FocusCityTease.jsx'), 'focus-city-tease');
 const PrestigeModal = createRecoverableLazy(() => import('./components/PrestigeModal.jsx'), 'prestige-modal');
 const LevelUpModal = createRecoverableLazy(() => import('./components/LevelUpModal.jsx'), 'level-up-modal');
 const WeeklyReportModal = createRecoverableLazy(() => import('./components/WeeklyReportModal.jsx'), 'weekly-report-modal');
@@ -921,18 +918,10 @@ export default function App() {
                           mondayKey={mondayKey}
                         />
                         {/*
-                          Một dòng: phiên này đang đẩy công trình nào tới đâu.
-                          ⚠️ ĐẶT NGAY DƯỚI LỜI CHÀO, TRƯỚC đồng hồ — không phải sau. Thẻ đồng hồ
-                          cao gần hết màn iPhone, nên bất cứ thứ gì đặt sau nó đều nằm DƯỚI nếp gấp
-                          và Đàm sẽ không thấy đúng vào lúc cần thấy. Ảnh chụp khung 390px cho thấy
-                          rõ điều đó. Ở đây nó đứng cạnh câu "còn N phiên nữa là đủ nhịp hôm nay" —
-                          hai câu cùng trả lời một câu hỏi: bấm Bắt đầu bây giờ thì được gì.
-                          ⚠️ Cột GIỮA chứ không phải `FocusRail`: cột phải là `hidden … lg:flex`,
-                          tức trên iPhone không bao giờ hiện.
+                          ADR-076: the one-line city tease that lived here moved INTO the timer card as the
+                          brick strip (`focus/SessionBrickStrip.jsx`), where it also animates while the
+                          session runs. Nothing else may take this slot — the Start button sits on the fold.
                         */}
-                        <Suspense fallback={null}>
-                          <FocusCityTease />
-                        </Suspense>
                         {/*
                           ⚠️ MỘT DÒNG DUY NHẤT CHO NĂM NGUỒN — và đây là dòng thứ HAI, cũng là dòng
                           CUỐI, của cột giữa. Vòng 20 (2026-08-30) nhập nốt `FocusNextAction` vào
@@ -1382,15 +1371,12 @@ function OverlayStack({
   onNavigate,
 }) {
   const [detail, setDetail] = useState(null);
-  const [momentSeen, setMomentSeen] = useState(false);
-  // "Chuỗi thẻ thưởng đã xem xong chưa" — tự sạch nhờ `key` ở `GlobalOverlays`, như `momentSeen`.
+  // "Chuỗi thẻ thưởng đã xem xong chưa" — tự sạch nhờ `key` ở `GlobalOverlays`.
   const [storyDone, setStoryDone] = useState(false);
   const closeLootModal = useGameStore((s) => s.closeLootModal);
   const dismissMissionNotification = useGameStore((s) => s.dismissMissionNotification);
   const dismissLevelUp = useGameStore((s) => s.dismissLevelUp);
   const dismissRelicNotification = useGameStore((s) => s.dismissRelicNotification);
-  const reduceMotion = useReducedMotion();
-  const growth = useCityGrowthMoment(lootModalOpen);
 
   const hasLevelUp = levelUpQueueLength > 0;
 
@@ -1429,7 +1415,8 @@ function OverlayStack({
     KIỆN DỰNG ở đây. Engine vẫn tính đủ ba loại; ngày nào muốn cho `scaffold` một thẻ toast thì
     dữ liệu vẫn còn nguyên.
   */
-  const showMoment = lootModalOpen && growth?.moment?.kind === 'built' && !momentSeen && !reduceMotion;
+  // ADR-076: the 3.2-second «city moment» overlay is gone — the finished building is the ending's
+  // project card (`BrickRow`, all bricks laid). One ending, no overlay before it.
 
   /*
     ⚠️ CHUỖI THẺ THƯỞNG CHẠY SAU MỌI PHIÊN (2026-09-05, ADR-068) — và đây là chỗ ADR-060 được SỬA
@@ -1444,7 +1431,7 @@ function OverlayStack({
     Thứ tự: lễ mừng thành phố (nếu có) → chuỗi thẻ. Hết. (ADR-070: không còn hộp thoại chi tiết
     đứng sau — kể cả khi lên kỷ, thẻ cuối «Kỷ nguyên mới» là cái kết, có nút xem thành phố.)
   */
-  const showStory = lootModalOpen && !showMoment && !storyDone;
+  const showStory = lootModalOpen && !storyDone;
 
   const showLevelModal = hasLevelUp && detail === 'level';
 
@@ -1475,7 +1462,7 @@ function OverlayStack({
   // chỉ bật một lời MỜI (`weeklyReportPending` → một thẻ toast); cờ này chỉ lên khi Đàm bấm —
   // nút ở thanh bên hoặc chính cái thẻ ấy — nên nó rơi vào đúng câu đã ghi ở trên: "một hộp
   // thoại Đàm tự mở thì không phải làm phiền".
-  const blocking = showMoment || showStory
+  const blocking = showStory
     || prestigeModalOpen || weeklyReportOpen || showLevelModal;
 
   const hasToast = (
@@ -1491,9 +1478,6 @@ function OverlayStack({
 
   return (
     <Suspense fallback={null}>
-      {showMoment && (
-        <CityGrowthMoment moment={growth.moment} era={growth.era} onDone={() => setMomentSeen(true)} />
-      )}
       {showStory && <SessionRewardStory onDone={finishStory} />}
       {prestigeModalOpen && <PrestigeModal />}
       {showLevelModal && <LevelUpModal autoDismissMs={0} />}

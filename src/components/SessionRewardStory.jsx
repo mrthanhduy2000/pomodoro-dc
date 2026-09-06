@@ -21,7 +21,8 @@ import soundEngine from '../engine/soundEngine';
 import notificationManager from '../engine/notifications';
 import { countSessionsOnDay, getDailyGoalProgress, getEffectiveSkillCost } from '../engine/gameMath';
 import { listAvailableSkills, nextReachableSkill } from '../engine/opportunities';
-import { describeQueue, eraBuildProgress, listNextProjects } from '../engine/buildChoices';
+import { describeSessionBrick } from '../engine/sessionBrick';
+import BrickRow from './focus/BrickRow';
 import { describeCrisisQuest } from '../engine/rankLadder';
 import { getGlyph, hasGlyphIcon } from '../utils/labelMark';
 import { SkillGlyph } from './icons/Glyph';
@@ -162,13 +163,13 @@ export default function SessionRewardStory({ onDone }) {
   const cardId = card?.id ?? null;
   useEffect(() => {
     if (!cardId) return undefined;
-    if (cardId === 'xp') {
-      soundEngine.playChestOpen();
-      if (card.jackpot) {
-        const t = window.setTimeout(() => soundEngine.playJackpot(), 500);
-        return () => window.clearTimeout(t);
-      }
+    // ADR-076: the XP card is silent — the session-finish fanfare played one second earlier. Only a
+    // jackpot (rare) gets its own sound here. The brick landing is the ending's signature sound.
+    if (cardId === 'xp' && card.jackpot) {
+      const t = window.setTimeout(() => soundEngine.playJackpot(), 300);
+      return () => window.clearTimeout(t);
     }
+    if (cardId === 'project') soundEngine.playBrickLaid();
     if (cardId === 'streak' && card.justHit) soundEngine.playMilestone();
     if (cardId === 'rank' || cardId === 'chain') soundEngine.playMilestone();
     if (cardId === 'relic' || cardId === 'evolve') soundEngine.playChestOpen();
@@ -549,14 +550,12 @@ function QuestsCard({ card }) {
  * nhận dữ liệu đã dựng sẵn, đúng như mọi thẻ khác.
  */
 function describeProjectAfterSession({ reward, craftingQueue, buildings, activeBook }) {
-  const queue = describeQueue({ craftingQueue: craftingQueue ?? [], activeBook }).filter((q) => !q.restoration);
-  const first = queue[0] ?? null;
-  if (first) {
-    const accelerated = Array.isArray(reward?.acceleratedCraftingIds) && reward.acceleratedCraftingIds.includes(first.bpId);
-    return { label: first.label, icon: first.icon, total: first.total ?? first.remaining, done: first.done, stepped: accelerated ? 2 : 1 };
-  }
-  const choices = listNextProjects({ activeBook, buildings, craftingQueue: craftingQueue ?? [] });
-  return { empty: true, choices: choices.map((p) => p.label), eraComplete: eraBuildProgress({ activeBook, buildings }).complete };
+  return describeSessionBrick({
+    craftingQueue: craftingQueue ?? [], buildings: buildings ?? [], activeBook, phase: 'landed',
+    newlyBuiltIds: Array.isArray(reward?.newlyBuiltIds) ? reward.newlyBuiltIds : [],
+    acceleratedIds: Array.isArray(reward?.acceleratedCraftingIds) ? reward.acceleratedCraftingIds : [],
+    autoQueuedId: reward?.autoQueuedId ?? null,
+  });
 }
 
 /** Tối đa 3 kỹ năng mở được ngay, rẻ trước, ưu tiên mỗi nhánh một cái để có LỰA CHỌN thật. */
@@ -593,62 +592,32 @@ function ProjectCard({ card, onChoose }) {
   const rewardMotion = useRewardMotion();
   const enterMotion = useEnterMotion();
   const pressMotion = usePressMotion();
-  // NGOẠI LỆ (mang bố cục) — bề dài thanh CHÍNH LÀ tiến độ xây; chạy từ mức TRƯỚC phiên tới SAU.
-  const barMotion = useSnapMotion({
-    initial: { width: `${card.pctBefore ?? 0}%` },
-    animate: { width: `${card.pct ?? 0}%` },
-    transition: { duration: 0.6, ease: EASE, delay: 0.25 },
-  });
-  if (card.empty) {
-    return (
-      <div>
-        <p className={eyebrowClass} style={{ color: 'var(--muted)' }}>Thành phố</p>
-        <motion.div {...rewardMotion} className="mt-3 text-[56px] leading-none" aria-hidden="true">🏗</motion.div>
-        <p className="mt-4 text-[20px] font-semibold leading-tight" style={{ color: 'var(--ink)', fontFamily: DISPLAY_FONT }}>
-          Hàng chờ xây đang trống
-        </p>
-        <p className="mt-2 text-[13px] leading-snug" style={{ color: 'var(--muted)' }}>
-          Phiên sau chỉ xây được thứ đã chọn. Chọn: {card.choices.join(' · ')}{card.extra > 0 ? ` · +${card.extra}` : ''}
-        </p>
-        <motion.button
-          type="button"
-          {...withDelay(rewardMotion, 0.4)}
-          {...pressMotion}
-          onClick={(e) => { stop(e); onChoose?.(); }}
-          className="mt-5 w-full max-w-[400px] py-3.5 text-[15px] font-semibold"
-          style={{
-            borderRadius: 'var(--skin-radius-control,14px)',
-            background: 'var(--accent)',
-            color: '#fff',
-            boxShadow: 'var(--skin-card-shadow)',
-          }}
-        >
-          Chọn công trình ngay
-        </motion.button>
-      </div>
-    );
-  }
+  const built = card.status === 'built';
   return (
     <div>
-      <p className={eyebrowClass} style={{ color: 'var(--muted)' }}>Thành phố</p>
-      <motion.div {...rewardMotion} className={`mt-3 leading-none ${hasGlyphIcon(card.icon) ? 'text-[56px]' : 'mono text-[22px] uppercase tracking-[0.2em]'}`} aria-hidden="true">
+      <p className={eyebrowClass} style={{ color: 'var(--muted)' }}>{built ? 'Thành phố · công trình mới' : 'Viên gạch của phiên này'}</p>
+      <motion.div {...rewardMotion} className={`mt-3 leading-none ${hasGlyphIcon(card.icon) ? (built ? 'text-[72px]' : 'text-[56px]') : 'mono text-[22px] uppercase tracking-[0.2em]'}`} aria-hidden="true">
         {getGlyph(card.icon, card.label, 'BP')}
       </motion.div>
       <p className="mt-3 text-[22px] font-semibold leading-tight" style={{ color: 'var(--ink)', fontFamily: DISPLAY_FONT }}>
-        {card.label}
+        {card.headline}
       </p>
-      <p className="mt-3 flex items-baseline justify-center gap-1.5">
-        <span className="text-[44px] font-semibold leading-none tabular-nums tracking-[-0.04em]" style={{ color: 'var(--accent2)', fontFamily: DISPLAY_FONT }}>
-          {card.done}
-        </span>
-        <span className="text-[18px] font-medium tabular-nums" style={{ color: 'var(--muted)' }}>/{card.total} phiên</span>
-      </p>
-      <div className="mx-auto mt-4 h-3 max-w-[340px] overflow-hidden rounded-full" style={{ background: 'var(--timer-track)' }}>
-        <motion.div {...barMotion} className="h-full rounded-full" style={{ background: 'var(--accent)' }} />
-      </div>
-      <motion.p {...withDelay(enterMotion, 0.6)} className="mt-4 text-[15px] font-semibold" style={{ color: 'var(--ink-2)' }}>
-        {card.remaining > 0 ? `Còn ${card.remaining} phiên nữa là mọc lên` : 'Phiên sau nó mọc lên!'}
+      <BrickRow className="mt-4" bricks={card.bricks} size={built ? 30 : 26} label={`${card.done}/${card.total} viên gạch · ${card.label}`} />
+      <motion.p {...withDelay(enterMotion, 0.5)} className="mt-4 text-[15px] font-semibold" style={{ color: built ? 'var(--accent2)' : 'var(--ink-2)' }}>
+        {card.sub}
       </motion.p>
+      {card.auto && !built && (
+        <motion.button
+          type="button"
+          {...withDelay(enterMotion, 0.7)}
+          {...pressMotion}
+          onClick={(e) => { stop(e); onChoose?.(); }}
+          className="mt-3 text-[13px] font-semibold underline-offset-4 hover:underline"
+          style={{ color: 'var(--muted)' }}
+        >
+          Chọn công trình khác
+        </motion.button>
+      )}
     </div>
   );
 }

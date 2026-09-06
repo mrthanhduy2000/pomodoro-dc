@@ -38,8 +38,8 @@ export const TIMER_STATES = {
 
 export { TIMER_END_REASONS, TIMER_MODES };
 
-const MILESTONE_PCTS = [25, 50, 75];
-const EXTENSION_READY_SECONDS = 5 * 60;
+/** ADR-076: one soft bell at the last minute — the only mid-session cue besides the final three ticks. */
+const LAST_MINUTE_SECONDS = 60;
 
 function getInitialDisplaySeconds(mode, focusMinutes) {
   return mode === TIMER_MODES.STOPWATCH ? 0 : focusMinutes * 60;
@@ -79,7 +79,6 @@ export function useTimer({ focusMinutes, mode = TIMER_MODES.POMODORO }) {
   const [displaySeconds, setDisplaySeconds] = useState(() => getInitialDisplaySeconds(mode, focusMinutes));
   const [activeMode, setActiveMode] = useState(mode);
   const [timerState, setTimerState] = useState(TIMER_STATES.IDLE);
-  const [milestone, setMilestone] = useState(null);
   const [lastCompletedSessionId, setLastCompletedSessionId] = useState(null);
   const [sessionStartedAt, setSessionStartedAt] = useState(null);
   const [continuedPomodoroConfirmationPending, setContinuedPomodoroConfirmationPending] = useState(false);
@@ -99,10 +98,9 @@ export function useTimer({ focusMinutes, mode = TIMER_MODES.POMODORO }) {
   const sessionNoteRef = useRef('');
   const sessionGoalRef = useRef('');
   const sessionNextNoteRef = useRef('');
-  const milestoneRef = useRef(new Set());
   const handleFinishRef = useRef(null);
   const pendingBreakTimeoutRef = useRef(null);
-  const extensionReadyArmedRef = useRef(totalSeconds > EXTENSION_READY_SECONDS);
+  const lastMinuteArmedRef = useRef(totalSeconds > LAST_MINUTE_SECONDS);
   const continueTimingAfterPomodoroSettingRef = useRef(continueTimingAfterPomodoro);
   const sessionContinueAfterPomodoroRef = useRef(mode === TIMER_MODES.POMODORO && continueTimingAfterPomodoro);
   const continuedPomodoroConfirmUntilSecondsRef = useRef(null);
@@ -317,7 +315,7 @@ export function useTimer({ focusMinutes, mode = TIMER_MODES.POMODORO }) {
     modeRef.current = TIMER_MODES.STOPWATCH;
     setActiveMode(TIMER_MODES.STOPWATCH);
     secondsRef.current = elapsedSeconds;
-    extensionReadyArmedRef.current = false;
+    lastMinuteArmedRef.current = false;
     const confirmUntilSeconds = getContinuedPomodoroConfirmUntilSeconds(
       { continuedPomodoroConfirmedUntilSeconds: continuedPomodoroConfirmUntilSecondsRef.current },
       totalSecondsRef.current,
@@ -418,27 +416,16 @@ export function useTimer({ focusMinutes, mode = TIMER_MODES.POMODORO }) {
     setDisplaySeconds(nextDisplaySeconds);
 
     if (modeRef.current === TIMER_MODES.POMODORO) {
-      if (nextDisplaySeconds > EXTENSION_READY_SECONDS) {
-        extensionReadyArmedRef.current = true;
-      } else if (nextDisplaySeconds > 0 && extensionReadyArmedRef.current) {
-        soundEngine.playExtensionReady();
-        extensionReadyArmedRef.current = false;
+      if (nextDisplaySeconds > LAST_MINUTE_SECONDS) {
+        lastMinuteArmedRef.current = true;
+      } else if (nextDisplaySeconds > 0 && lastMinuteArmedRef.current) {
+        soundEngine.playLastMinute();
+        lastMinuteArmedRef.current = false;
       }
     }
 
-    if (modeRef.current === TIMER_MODES.POMODORO && nextDisplaySeconds <= 10 && nextDisplaySeconds > 0) {
+    if (modeRef.current === TIMER_MODES.POMODORO && nextDisplaySeconds <= 3 && nextDisplaySeconds > 0) {
       soundEngine.playUrgentTick();
-    }
-
-    if (totalSecondsRef.current > 0) {
-      const nextProgressPct = computeProgressPct(nextDisplaySeconds);
-      for (const step of MILESTONE_PCTS) {
-        if (nextProgressPct >= step && !milestoneRef.current.has(step)) {
-          milestoneRef.current.add(step);
-          setMilestone(step);
-          break;
-        }
-      }
     }
 
     if (
@@ -463,7 +450,6 @@ export function useTimer({ focusMinutes, mode = TIMER_MODES.POMODORO }) {
     }
   }, [
     computeDisplayFromElapsed,
-    computeProgressPct,
     continuePomodoroAsStopwatch,
     getElapsedSeconds,
     holdContinuedPomodoroForConfirmation,
@@ -781,8 +767,8 @@ export function useTimer({ focusMinutes, mode = TIMER_MODES.POMODORO }) {
       ? getContinuedPomodoroConfirmUntilSeconds(timerSession, timerSession.totalSeconds ?? totalSecondsRef.current)
       : null;
     secondsRef.current = syncedDisplaySeconds;
-    extensionReadyArmedRef.current = syncedMode === TIMER_MODES.POMODORO
-      && syncedDisplaySeconds > EXTENSION_READY_SECONDS;
+    lastMinuteArmedRef.current = syncedMode === TIMER_MODES.POMODORO
+      && syncedDisplaySeconds > LAST_MINUTE_SECONDS;
     setDisplaySeconds(syncedDisplaySeconds);
 
     if (syncedMode === TIMER_MODES.STOPWATCH) {
@@ -897,16 +883,9 @@ export function useTimer({ focusMinutes, mode = TIMER_MODES.POMODORO }) {
     totalSecondsRef.current = savedTotalSeconds;
     pausedAtRef.current = restoredPausedAt;
     secondsRef.current = restoredDisplaySeconds;
-    extensionReadyArmedRef.current = runtimeMode === TIMER_MODES.POMODORO
-      && restoredDisplaySeconds > EXTENSION_READY_SECONDS;
+    lastMinuteArmedRef.current = runtimeMode === TIMER_MODES.POMODORO
+      && restoredDisplaySeconds > LAST_MINUTE_SECONDS;
     setDisplaySeconds(restoredDisplaySeconds);
-
-    const restoredProgressPct = runtimeMode === TIMER_MODES.STOPWATCH
-      ? Math.min((elapsedSeconds / savedTotalSeconds) * 100, 100)
-      : Math.max(0, Math.min(((savedTotalSeconds - restoredDisplaySeconds) / savedTotalSeconds) * 100, 100));
-    MILESTONE_PCTS.forEach((step) => {
-      if (restoredProgressPct >= step) milestoneRef.current.add(step);
-    });
 
     if (runtimeMode === TIMER_MODES.STOPWATCH) {
       void cancelFocusCompletePush('stopwatch');
@@ -975,7 +954,7 @@ export function useTimer({ focusMinutes, mode = TIMER_MODES.POMODORO }) {
       setActiveMode(TIMER_MODES.STOPWATCH);
       secondsRef.current = nextStopwatchDisplaySeconds;
       pausedAtRef.current = nextPausedAt;
-      extensionReadyArmedRef.current = false;
+      lastMinuteArmedRef.current = false;
       continuedPomodoroConfirmUntilSecondsRef.current = confirmUntilSeconds;
       setContinuedPomodoroConfirmationPendingState(shouldHoldStopwatchForConfirmation);
       setDisplaySeconds(nextStopwatchDisplaySeconds);
@@ -1126,11 +1105,9 @@ export function useTimer({ focusMinutes, mode = TIMER_MODES.POMODORO }) {
     sessionNoteRef.current = pendingNote ?? '';
     sessionGoalRef.current = pendingSessionGoal ?? '';
     sessionNextNoteRef.current = pendingNextSessionNote ?? '';
-    milestoneRef.current = new Set();
-    extensionReadyArmedRef.current = mode === TIMER_MODES.POMODORO
-      && initialSeconds > EXTENSION_READY_SECONDS;
+    lastMinuteArmedRef.current = mode === TIMER_MODES.POMODORO
+      && initialSeconds > LAST_MINUTE_SECONDS;
     setLastCompletedSessionId(null);
-    setMilestone(null);
     setDisplaySeconds(initialSeconds);
 
     persistCurrentTimerSession({
@@ -1318,7 +1295,7 @@ export function useTimer({ focusMinutes, mode = TIMER_MODES.POMODORO }) {
     const safeExtraSeconds = Math.max(1, Math.floor(extraSeconds));
     totalSecondsRef.current += safeExtraSeconds;
     secondsRef.current += safeExtraSeconds;
-    extensionReadyArmedRef.current = secondsRef.current > EXTENSION_READY_SECONDS;
+    lastMinuteArmedRef.current = secondsRef.current > LAST_MINUTE_SECONDS;
     setDisplaySeconds(secondsRef.current);
     persistCurrentTimerSession({ totalSeconds: totalSecondsRef.current });
     if (timerState === TIMER_STATES.RUNNING) {
@@ -1356,14 +1333,12 @@ export function useTimer({ focusMinutes, mode = TIMER_MODES.POMODORO }) {
     secondsRef.current = initialSeconds;
     startTimeRef.current = null;
     resetSessionTimeline();
-    milestoneRef.current = new Set();
-    extensionReadyArmedRef.current = mode === TIMER_MODES.POMODORO
-      && initialSeconds > EXTENSION_READY_SECONDS;
+    lastMinuteArmedRef.current = mode === TIMER_MODES.POMODORO
+      && initialSeconds > LAST_MINUTE_SECONDS;
     setLastCompletedSessionId(null);
     setDisplaySeconds(initialSeconds);
     setActiveMode(mode);
     setTimerState(TIMER_STATES.IDLE);
-    setMilestone(null);
     clearTimerSession();
     if (timerState !== TIMER_STATES.FINISHED) {
       clearFocusCompletePush('reset');
@@ -1384,7 +1359,6 @@ export function useTimer({ focusMinutes, mode = TIMER_MODES.POMODORO }) {
     totalSeconds: currentTotalSeconds,
     timerState,
     progressPct,
-    milestone,
     isContinuingAfterPomodoro,
     continuedPomodoroConfirmationPending,
     start,

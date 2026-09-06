@@ -56,7 +56,6 @@ const useSettingsStore = create(
       // ── Sound ──────────────────────────────────────────────────────────
       soundEnabled:     true,
       masterVolume:     0.6,   // 0–1
-      tickSoundEnabled: false, // per-second tick is off by default (can get annoying)
 
       // ── Ambient Sound ──────────────────────────────────────────────────
       // 'none' | 'rain' | 'wind' | 'forest' | 'coffee' | 'waves' | 'fireplace'
@@ -130,7 +129,6 @@ const useSettingsStore = create(
         set({ masterVolume: clamped });
       },
 
-      setTickSoundEnabled: (enabled) => set({ tickSoundEnabled: enabled }),
 
       setAmbientSound: (sound) => {
         const { ambientVolume } = get();

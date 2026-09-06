@@ -79,12 +79,3 @@ test('MỌI hộp thoại đều nằm TRÊN chuông — kể cả hộp thoại
   }
 });
 
-test('lễ mừng thành phố cũng phải trên chuông', () => {
-  // Lễ mừng không có đuôi `Modal.jsx` nên bài quét ở trên không thấy nó — mà nó lại là màn hình
-  // duy nhất chen vào ĐÚNG khoảnh khắc một phiên vừa xong.
-  const bell = Math.max(...readZLayers(codeOnly(readFileSync(join(HERE, 'NotificationCenter.jsx'), 'utf8'))));
-  const moment = Math.max(...readZLayers(codeOnly(
-    readFileSync(join(HERE, 'city', 'CityGrowthMoment.jsx'), 'utf8'),
-  )));
-  assert.ok(moment > bell, `lễ mừng ở z-${moment}, chuông ở z-${bell}`);
-});

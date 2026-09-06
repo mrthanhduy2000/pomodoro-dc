@@ -40,7 +40,7 @@ test('Di vật: không in "Khoá" ở từng hàng của danh sách VỐN toàn 
 
 // THỬ-CHO-ĐỎ: đổi `CHU_KY_NGHI_CO_KHAC_NHAU` thành `true` ⇒ đỏ.
 test('Tập trung: viên "×N" chỉ hiện khi trục ấy THẬT SỰ phân biệt được các preset', () => {
-  const ma = doc('./PomodoroEngine.jsx');
+  const ma = doc('./focus/QuickPresets.jsx'); // ADR-076: QuickPresets lives in its own file
   assert.match(
     ma, /CHU_KY_NGHI_CO_KHAC_NHAU = new Set\(QUICK_FOCUS_PRESETS\.map\(\(p\) => p\.longBreakAfterN\)\)\.size > 1/,
     'điều kiện hiện viên "×N" phải HỎI THẲNG BẢNG, không được viết cứng `!== 4`',

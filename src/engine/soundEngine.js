@@ -18,12 +18,14 @@ import { getOrCreateAudioContext } from './audioContext';
 const PACKS = {
   classic: {
     sessionStart: { type: 'triangle', freqs: [392, 523.25], step: 0.08, dur: 0.18, gain: 0.24 },
-    tick:         { type: 'sine',     freq: 880,  dur: 0.04, gain: 0.08 },
     urgentTick:   { type: 'square',   freq: 1200, dur: 0.06, gain: 0.18 },
     finish:       { type: 'triangle', freqs: [523.25, 659.25, 783.99], step: 0.12, dur: 0.5, gain: 0.5 },
     levelUp:      { type: 'triangle', freqs: [392, 494, 587, 698, 784], step: 0.09, dur: 0.35, gain: 0.45 },
     milestone:    { type: 'sine',     pairs: [[660, 880], [880, 1047]], gain: 0.3 },
     breakStart:   { type: 'sine',     pairs: [[440, 330], [550, 440]], gain: 0.3, offset: 0.1 },
+    brickLaid:    { type: 'triangle', freqs: [196, 261.63], step: 0.055, dur: 0.14, gain: 0.34, thump: true },
+    lastMinute:   { type: 'sine',     freq: 987.77, dur: 0.7, gain: 0.26 },
+    breakOver:    { type: 'triangle', freqs: [523.25, 659.25], step: 0.14, dur: 0.24, gain: 0.32 },
     skillUnlock:  { type: 'sine',     freqs: [1047, 1319, 1568], step: 0.06, dur: 0.25, gain: 0.35 },
     jackpot:      { type: 'triangle', freqs: [261, 329, 392, 523, 659, 784, 1047], step: 0.07, dur: 0.4, gain: 0.55 },
     eraChange:    { type: 'sine',     chord: [261.63, 329.63, 392.00, 523.25] },
@@ -31,12 +33,14 @@ const PACKS = {
   },
   nature: {
     sessionStart: { type: 'sine',     freqs: [329.63, 440], step: 0.10, dur: 0.20, gain: 0.18 },
-    tick:         { type: 'sine',     freq: 528,  dur: 0.10, gain: 0.05 },
     urgentTick:   { type: 'sine',     freq: 660,  dur: 0.10, gain: 0.09 },
     finish:       { type: 'sine',     freqs: [261.63, 392.00, 523.25], step: 0.15, dur: 0.7, gain: 0.35 },
     levelUp:      { type: 'sine',     freqs: [329, 415, 523, 659, 783], step: 0.12, dur: 0.5, gain: 0.30 },
     milestone:    { type: 'sine',     pairs: [[440, 523], [523, 659]], gain: 0.22 },
     breakStart:   { type: 'sine',     pairs: [[330, 220], [440, 330]], gain: 0.22, offset: 0.15 },
+    brickLaid:    { type: 'sine',     freqs: [164.81, 220], step: 0.07, dur: 0.18, gain: 0.26, thump: true },
+    lastMinute:   { type: 'sine',     freq: 783.99, dur: 0.9, gain: 0.2 },
+    breakOver:    { type: 'sine',     freqs: [392, 523.25], step: 0.16, dur: 0.3, gain: 0.24 },
     skillUnlock:  { type: 'sine',     freqs: [659, 784, 1047], step: 0.08, dur: 0.35, gain: 0.25 },
     jackpot:      { type: 'sine',     freqs: [261, 329, 392, 523, 659, 784, 1047], step: 0.10, dur: 0.5, gain: 0.35 },
     eraChange:    { type: 'sine',     chord: [130.81, 196.00, 261.63, 329.63] },
@@ -44,12 +48,14 @@ const PACKS = {
   },
   synthwave: {
     sessionStart: { type: 'sawtooth', freqs: [440, 659.25], step: 0.07, dur: 0.14, gain: 0.20 },
-    tick:         { type: 'square',   freq: 1760, dur: 0.025, gain: 0.05 },
     urgentTick:   { type: 'sawtooth', freq: 2200, dur: 0.04,  gain: 0.14 },
     finish:       { type: 'sawtooth', freqs: [440, 659.25, 880, 1047], step: 0.10, dur: 0.4, gain: 0.4 },
     levelUp:      { type: 'sawtooth', freqs: [220, 330, 440, 660, 880, 1047], step: 0.07, dur: 0.3, gain: 0.4 },
     milestone:    { type: 'square',   pairs: [[880, 1320], [1320, 1760]], gain: 0.22 },
     breakStart:   { type: 'sawtooth', pairs: [[880, 660], [660, 440]], gain: 0.18, offset: 0.08 },
+    brickLaid:    { type: 'square',   freqs: [220, 330], step: 0.045, dur: 0.1, gain: 0.26, thump: true },
+    lastMinute:   { type: 'square',   freq: 1318.5, dur: 0.45, gain: 0.16 },
+    breakOver:    { type: 'sawtooth', freqs: [659.25, 880], step: 0.1, dur: 0.18, gain: 0.26 },
     skillUnlock:  { type: 'square',   freqs: [1760, 2093, 2637], step: 0.05, dur: 0.20, gain: 0.28 },
     jackpot:      { type: 'sawtooth', freqs: [220, 330, 440, 660, 880, 1047, 1320], step: 0.055, dur: 0.35, gain: 0.5 },
     eraChange:    { type: 'sawtooth', chord: [220, 277.18, 329.63, 440] },
@@ -57,12 +63,14 @@ const PACKS = {
   },
   minimal: {
     sessionStart: { type: 'sine',     freqs: [392, 523.25], step: 0.10, dur: 0.14, gain: 0.14 },
-    tick:         { type: 'sine',     freq: 1047, dur: 0.02, gain: 0.03 },
     urgentTick:   { type: 'sine',     freq: 1047, dur: 0.03, gain: 0.06 },
     finish:       { type: 'sine',     freqs: [523.25, 783.99], step: 0.15, dur: 0.4, gain: 0.25 },
     levelUp:      { type: 'sine',     freqs: [523, 783], step: 0.15, dur: 0.3, gain: 0.25 },
     milestone:    { type: 'sine',     pairs: [[660, 880]], gain: 0.15 },
     breakStart:   { type: 'sine',     pairs: [[440, 330]], gain: 0.15, offset: 0 },
+    brickLaid:    { type: 'sine',     freqs: [261.63], step: 0.06, dur: 0.1, gain: 0.16, thump: false },
+    lastMinute:   { type: 'sine',     freq: 987.77, dur: 0.4, gain: 0.12 },
+    breakOver:    { type: 'sine',     freqs: [523.25, 659.25], step: 0.15, dur: 0.18, gain: 0.18 },
     skillUnlock:  { type: 'sine',     freqs: [1047, 1319], step: 0.08, dur: 0.2, gain: 0.2 },
     jackpot:      { type: 'sine',     freqs: [523, 659, 784, 1047], step: 0.10, dur: 0.35, gain: 0.3 },
     eraChange:    { type: 'sine',     chord: [261.63, 392.00, 523.25] },
@@ -137,17 +145,7 @@ class SoundEngine {
     this._arpeggio({ type: p.type, freqs: p.freqs, step: p.step, duration: p.dur, gainStart: p.gain, t });
   }
 
-  /** Soft tick — played each second while the timer is running */
-  playTick() {
-    if (!this.enabled) return;
-    const p   = this._p('tick');
-    const ctx = this._getCtx();
-    const t   = ctx.currentTime;
-    this._osc({ type: p.type, freq: p.freq, freqEnd: p.freq,
-                 startTime: t, duration: p.dur, gainStart: p.gain, gainEnd: 0 });
-  }
-
-  /** Loud urgent tick — last 10 seconds countdown */
+  /** Countdown tick — the last three seconds only (ADR-076: 10 was an alarm, not a cue) */
   playUrgentTick() {
     if (!this.enabled) return;
     const p   = this._p('urgentTick');
@@ -248,25 +246,39 @@ class SoundEngine {
     });
   }
 
-  /** Two-note "ting ting" chime when the final 5-minute window begins */
-  playExtensionReady() {
+  /**
+   * One low "clack" when the session's brick lands on the ending card (ADR-076) — the sound of the
+   * city, distinct from the XP chime: two low notes plus a short thump (skipped on `minimal`).
+   */
+  playBrickLaid() {
     if (!this.enabled) return;
-    const p   = this._p('milestone');
-    if (!p?.pairs?.length) return;
+    const p   = this._p('brickLaid');
+    if (!p?.freqs?.length) return;
     const ctx = this._getCtx();
     const t   = ctx.currentTime;
-    const [from, to] = p.pairs[p.pairs.length - 1];
-    [0, 1].forEach((_, i) => {
-      this._osc({
-        type: p.type,
-        freq: from,
-        freqEnd: to,
-        startTime: t + i * 0.18,
-        duration: 0.22,
-        gainStart: p.gain * (i === 0 ? 0.78 : 1.02),
-        gainEnd: 0,
-      });
-    });
+    this._arpeggio({ type: p.type, freqs: p.freqs, step: p.step, duration: p.dur, gainStart: p.gain, t });
+    if (p.thump) {
+      this._osc({ type: 'sine', freq: 120, freqEnd: 70, startTime: t, duration: 0.09, gainStart: 0.4, gainEnd: 0 });
+    }
+  }
+
+  /** One soft bell at 60 seconds left — the last minute has its own signature, nothing else sounds like it. */
+  playLastMinute() {
+    if (!this.enabled) return;
+    const p   = this._p('lastMinute');
+    const ctx = this._getCtx();
+    const t   = ctx.currentTime;
+    this._osc({ type: p.type, freq: p.freq, freqEnd: p.freq * 0.985, startTime: t, duration: p.dur, gainStart: p.gain, gainEnd: 0 });
+  }
+
+  /** Two rising notes when the break is over — "back to work", not the three-note session fanfare. */
+  playBreakOver() {
+    if (!this.enabled) return;
+    const p   = this._p('breakOver');
+    if (!p?.freqs?.length) return;
+    const ctx = this._getCtx();
+    const t   = ctx.currentTime;
+    this._arpeggio({ type: p.type, freqs: p.freqs, step: p.step, duration: p.dur, gainStart: p.gain, t });
   }
 
   /** Gentle descending two-note exhale for break start */

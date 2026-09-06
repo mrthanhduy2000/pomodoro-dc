@@ -15,7 +15,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { readFile } from 'node:fs/promises';
 
-const SOURCE = await readFile(new URL('./PomodoroEngine.jsx', import.meta.url), 'utf8');
+const SOURCE = await readFile(new URL('./shared/ActionButton.jsx', import.meta.url), 'utf8');
 
 /**
  * Bỏ chú thích để không bắt nhầm ví dụ nêu trong chính lời giải thích.
@@ -32,7 +32,7 @@ function codeOnly(source) {
 
 /** Cắt đúng thân hàm `ActionButton` — đừng soi nhầm 2.500 dòng còn lại của file. */
 function actionButtonBody(src) {
-  const at = src.indexOf('function ActionButton({ children');
+  const at = src.indexOf('export default function ActionButton({ children');
   assert.notEqual(at, -1, 'Không tìm thấy `function ActionButton` — đổi tên thì sửa bài test này.');
   return codeOnly(src.slice(at));
 }

@@ -171,7 +171,7 @@ test('thứ tự đầy đủ: xp → công trình → chuỗi → hôm nay → 
     streak: { currentStreak: 4 },
     todayGoal: todayGoal(2),
     missions: missions([{ id: 'm1', label: 'A', progress: 1, goal: 3, rewardXP: 10 }]),
-    project: { label: 'Hải Đăng', icon: '🗼', total: 6, done: 3 },
+    project: { status: 'building', label: 'Hải Đăng', icon: '🗼', total: 6, done: 3, bricks: ['laid', 'laid', 'new', 'empty', 'empty', 'empty'], headline: 'Viên gạch 3/6 đã đặt', sub: 'Còn 3 phiên nữa Hải Đăng mọc lên.' },
     crisisQuest: { name: 'Bão', icon: '🌊', sessionsDone: 1, sessionsRequired: 3, minMinutes: 45, windowHours: 48, passed: false, countedThisSession: true, relic: { label: 'La Bàn' } },
   });
   // `REWARD_ERA` (kế thừa ca đỉnh) mang sẵn một bước tuần vừa chốt và một di vật vừa lên bậc (ADR-070).
@@ -229,28 +229,24 @@ test('thẻ di vật lên bậc: chỉ khi store vừa nâng bậc; dịch buff 
   assert.equal(max.relics[0].nextAt, null);
 });
 
-test('thẻ công trình: chạy từ nấc TRƯỚC tới nấc SAU; tăng tốc thì nhảy hai nấc', () => {
-  const [, p] = buildRewardStoryCards({ reward: REWARD, project: { label: 'Hải Đăng', icon: '🗼', total: 6, done: 3 } });
+test('project card (ADR-076): carries the brick row from the engine, clamps done ≤ total, built ⇒ status built', () => {
+  const brick = { status: 'building', label: 'Hải Đăng', icon: '🗼', total: 6, done: 3, bricks: ['laid', 'laid', 'new', 'empty', 'empty', 'empty'], headline: 'Viên gạch 3/6 đã đặt', sub: 'Còn 3 phiên nữa Hải Đăng mọc lên.', auto: false };
+  const [, p] = buildRewardStoryCards({ reward: REWARD, project: brick });
   assert.equal(p.id, 'project');
   assert.equal(p.remaining, 3);
-  assert.equal(p.pctBefore, (2 / 6) * 100);
-  assert.equal(p.pct, 50);
-  const [, nhanh] = buildRewardStoryCards({ reward: REWARD, project: { label: 'X', total: 6, done: 4, stepped: 2 } });
-  assert.equal(nhanh.pctBefore, (2 / 6) * 100, 'đặc quyền tăng tốc: nấc trước cách nấc sau HAI bậc');
-  // Vượt tổng (dữ liệu lệch) thì kẹp, không âm, không quá 100.
-  const [, kep] = buildRewardStoryCards({ reward: REWARD, project: { label: 'X', total: 2, done: 9 } });
-  assert.equal(kep.pct, 100);
+  assert.deepEqual(p.bricks, brick.bricks);
+  assert.equal(p.headline, brick.headline);
+  const [, kep] = buildRewardStoryCards({ reward: REWARD, project: { ...brick, total: 2, done: 9 } });
+  assert.equal(kep.done, 2);
   assert.equal(kep.remaining, 0);
+  const [, built] = buildRewardStoryCards({ reward: REWARD, project: { ...brick, status: 'built', done: 6, headline: 'Hải Đăng hoàn thành!' } });
+  assert.equal(built.status, 'built');
+  const [, auto] = buildRewardStoryCards({ reward: REWARD, project: { ...brick, auto: true } });
+  assert.equal(auto.auto, true);
 });
 
-test('thẻ công trình khi hàng chờ TRỐNG: mời chọn (≤3 tên + phần dư); kỷ trọn hoặc không có gì thì im', () => {
-  const [, moi] = buildRewardStoryCards({ reward: REWARD, project: { empty: true, choices: ['A', 'B', 'C', 'D', 'E'] } });
-  assert.equal(moi.id, 'project');
-  assert.equal(moi.empty, true);
-  assert.deepEqual(moi.choices, ['A', 'B', 'C']);
-  assert.equal(moi.extra, 2);
-  assert.ok(!buildRewardStoryCards({ reward: REWARD, project: { empty: true, choices: [], eraComplete: true } }).some((c) => c.id === 'project'));
-  assert.ok(!buildRewardStoryCards({ reward: REWARD, project: { empty: true, choices: [] } }).some((c) => c.id === 'project'));
+test('project card: a finished era has nothing to tell ⇒ no card; null ⇒ no card', () => {
+  assert.ok(!buildRewardStoryCards({ reward: REWARD, project: { status: 'era-complete', bricks: [] } }).some((c) => c.id === 'project'));
   assert.ok(!buildRewardStoryCards({ reward: REWARD, project: null }).some((c) => c.id === 'project'));
 });
 

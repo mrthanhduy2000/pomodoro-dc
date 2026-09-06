@@ -29,6 +29,7 @@ import {
   wonderCrisisWindowBonusHours, wonderPassiveBuffs, wonderRelicEvolveFactor,
 } from '../engine/wonderEffects.js';
 import { applyRelicEvolutions, evaluateRelicEvolutions, withCanonicalRelicText } from '../engine/relicGrowth';
+import { autoQueueSessionProject } from '../engine/sessionBrick';
 import { persist } from 'zustand/middleware';
 import {
   GAME_STORE_STORAGE_KEY,
@@ -2691,7 +2692,7 @@ const useGameStore = create(
           && quaHanMs >= 0
           && quaHanMs <= BREAK_OVER_ANNOUNCE_MS
         ) {
-          soundEngine.playTimerFinish();
+          soundEngine.playBreakOver();
           notificationManager.notifyBreakOver();
         }
 
@@ -3331,12 +3332,17 @@ const useGameStore = create(
         // ADR-071 (đóng #99): RP · tinh luyện · tài nguyên KHÔNG còn được cộng — đồng tiền duy nhất là phiên.
 
         // ── Crafting queue: mỗi phiên tiến 1 bước, đặc quyền có thể đẩy nhanh thêm ─
+        // ADR-076: a session always lays a brick somewhere. If nothing in this era is queued, the game
+        // queues the next project itself — the same pick the Focus strip showed before Start.
         const craftingAccelerationMode = getCraftingAccelerationMode(state.buildings, minutesFocused);
+        const { craftingQueue: queueBeforeAdvance, autoQueuedId } = autoQueueSessionProject({
+          craftingQueue: state.craftingQueue ?? [], activeBook, buildings: state.buildings, now: now_ts,
+        });
         const {
           nextQueue,
           newlyBuilt,
           acceleratedIds: acceleratedCraftingIds,
-        } = advanceCraftingQueueWithPerks(state.craftingQueue ?? [], craftingAccelerationMode);
+        } = advanceCraftingQueueWithPerks(queueBeforeAdvance, craftingAccelerationMode);
         const newBuildings = [...state.buildings, ...newlyBuilt];
 
         // ─── Cập nhật category tracking ──────────────────────────────────
@@ -3759,6 +3765,7 @@ const useGameStore = create(
                 buildingPerkRewards: buildingPerkReward.rewards,
                 buildingPerkBonusXP: buildingPerkReward.xp,
                 acceleratedCraftingIds,
+                autoQueuedId,
                 // ⚠️ CHỈ để KHOẢNH KHẮC THÀNH PHỐ (`engine/cityMoment.js`) biết công trình nào vừa
                 // xong. `ui` KHÔNG nằm trong `partialize` nên trường này không lên Supabase, tức
                 // không thêm một byte nào vào JSONB đang tranh chấp CAS.

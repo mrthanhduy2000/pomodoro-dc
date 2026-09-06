@@ -118,7 +118,9 @@ test('CẢ HAI nút ở chỗ đồng hồ dùng `size` compact — đây là ch
   // trạng thái mặc định mỗi lần mở app — sẽ không có ai canh, và nó là nút DÀI CHỮ HƠN.
   // ⚠️ "Điền mục tiêu →" nay chỉ hiện khi KHÔNG có mục tiêu gần đây; ca thường gặp là "Tự viết →"
   // đứng cạnh chip. Kiểm cả ba nhãn thì không ca nào mất người canh.
-  const NHAN = ['Bắt đầu phiên', 'Điền mục tiêu →', 'Tự viết →'];
+  // ADR-076: the goal is optional, so the idle row has ONE button again — but the running/paused
+  // rows still carry the compact buttons this test was written for.
+  const NHAN = ['Bắt đầu phiên'];
   for (const nhan of NHAN) {
     const labelAt = code.indexOf(nhan);
     assert.notEqual(labelAt, -1, `Không tìm thấy nhãn "${nhan}" — nhãn đổi thì sửa bài test này.`);

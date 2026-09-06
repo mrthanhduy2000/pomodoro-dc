@@ -58,11 +58,11 @@ test('ADR-070: KHÔNG còn hộp thoại chi tiết — chuỗi thẻ là cái k
  * 25 phút làm việc thật kết thúc bằng thứ dễ bỏ lỡ nhất app. Chuỗi thẻ là cái KẾT — ngắn, mỗi thẻ
  * một con số, bỏ qua được bằng một chạm.
  */
-test('chuỗi thẻ thưởng bám `lootModalOpen` (mọi phiên), sau lễ mừng thành phố, tính vào `blocking`, và ĐÓNG phần thưởng không điều kiện', () => {
+test('chuỗi thẻ thưởng bám `lootModalOpen` (mọi phiên), là cái kết DUY NHẤT (ADR-076), tính vào `blocking`, và ĐÓNG phần thưởng không điều kiện', () => {
   const gate = /const\s+showStory\s*=\s*([^;]+);/.exec(APP_CODE);
   assert.ok(gate, 'không đọc được `showStory` — chuỗi thẻ thưởng đã đi đâu?');
   assert.match(gate[1], /lootModalOpen/, 'chuỗi thẻ phải bám `lootModalOpen` — chạy sau MỌI phiên, không chỉ khi lên kỷ');
-  assert.match(gate[1], /!showMoment/, 'lễ mừng thành phố phải xong trước rồi mới tới chuỗi thẻ');
+  assert.doesNotMatch(gate[1], /showMoment/, 'ADR-076: nothing stands before the story any more — no second gate');
   assert.match(gate[1], /!storyDone/, 'thiếu cờ "đã xem xong" ⇒ chuỗi thẻ dựng lại ngay sau khi đóng');
   assert.match(APP_CODE, /\{\s*showStory\s*&&\s*<SessionRewardStory/, 'chuỗi thẻ không được dựng');
 
@@ -158,31 +158,15 @@ test('những việc buộc phải quyết định VẪN chặn màn hình', () 
 });
 
 /**
- * ⚠️ BÀI NÀY CANH MỘT HỒI QUY ĐÃ THẬT SỰ XẢY RA TRONG CHÍNH PHIÊN VIẾT RA NÓ.
- * Lễ mừng thành phố xưa nay nằm TRONG `RewardSequence`, mà `RewardSequence` chỉ
- * dựng khi hộp thoại phần thưởng bật. Bản vá đầu tiên của luật "chỉ bốn việc được
- * chặn màn hình" siết đúng cái cổng ấy — và thế là lễ mừng "vừa xây xong một công
- * trình" biến mất ở MỌI phiên thường. Không có gì đỏ lên: build xanh, lint sạch,
- * mọi bài test khác xanh, chỉ có một tính năng lặng lẽ chết.
- * Lễ mừng là một đoạn chuyển cảnh TỰ KẾT THÚC, không đòi Đàm quyết định gì, nên
- * luật kia không áp cho nó — nó phải chạy theo `lootModalOpen`, không theo cổng
- * hộp thoại.
+ * ADR-076: the 3.2-second «city moment» overlay is gone — a finished building is told by the ending's
+ * project card (all bricks laid). The test that used to pin the overlay now pins its absence.
  */
-test('lễ mừng thành phố vẫn chạy sau MỌI phiên, không bị buộc vào hộp thoại', () => {
-  const gate = /const\s+showMoment\s*=\s*([^;]+);/.exec(APP_CODE);
-  assert.ok(gate, 'không đọc được `showMoment` — lễ mừng thành phố đã đi đâu?');
-  assert.match(gate[1], /lootModalOpen/, 'lễ mừng phải bám `lootModalOpen` (mọi phiên)');
-  assert.ok(
-    !/showLootModal/.test(gate[1]),
-    'lễ mừng đang bị buộc vào cổng hộp thoại — phiên thường sẽ mất lễ mừng trong im lặng',
-  );
-  assert.match(APP_CODE, /<CityGrowthMoment/, 'không còn chỗ nào dựng lễ mừng');
-
-  // Nó che màn hình lúc chạy ⇒ phải làm đồng hồ toast dừng, nếu không 4 giây của
-  // thẻ cháy hết sau lưng lễ mừng và Đàm không bao giờ thấy thẻ.
+test('no city-moment overlay stands before the reward story any more (ADR-076)', () => {
+  assert.doesNotMatch(APP_CODE, /<CityGrowthMoment/, 'the growth overlay is back — the project card already tells this');
+  assert.doesNotMatch(APP_CODE, /showMoment/, 'a second ending gate reappeared');
   const blocking = /const\s+blocking\s*=\s*([\s\S]*?);/.exec(APP_CODE);
   assert.ok(blocking, 'không đọc được `blocking`');
-  assert.match(blocking[1], /showMoment/, '`blocking` bỏ sót lễ mừng');
+  assert.match(blocking[1], /showStory/, '`blocking` must still hold the reward story');
 });
 
 /**
@@ -218,27 +202,4 @@ test('báo cáo tuần có đường vào trên ĐIỆN THOẠI, không chỉ �
     'mục báo cáo tuần trên điện thoại không có chấm "chưa xem"',
   );
   assert.match(APP_CODE, /attention=\{weeklyReportUnseen\}/, 'thanh bên desktop mất chấm "chưa xem"');
-});
-
-// ─────────────────────────────────────────────────────────────────────────────
-// LỄ MỪNG THÀNH PHỐ CHỈ ĐƯỢC CHẶN MÀN HÌNH KHI CÔNG TRÌNH THẬT SỰ VỪA XONG (2026-08-30)
-//
-// ⚠️ VÌ SAO. `buildGrowthMoment` trả ba loại: `built` (công trình hoàn thành) · `scaffold` (giàn
-// giáo nhích một nấc) · `tick` (thành phố nhúc nhích). Cả ba từng dựng một lớp phủ TOÀN MÀN HÌNH
-// 3,2 giây, mà Đàm gần như luôn có công trình trong hàng chờ ⇒ nó nổ sau ~100% số phiên:
-// 3,2 s × 579 phiên = 1.853 giây = **30,9 PHÚT** trong 180 ngày, để nói lại đúng câu đang in
-// THƯỜNG TRỰC trên chính màn Tập trung ("Đang xây … · còn N phiên") — hai chỗ đọc CÙNG một nguồn.
-//
-// Đây là bài test đọc mã nguồn vì điều kiện sống ở `App.jsx`, không ở một hàm thuần nào.
-test('lớp phủ lễ mừng chỉ dựng cho `kind === "built"`', () => {
-  const app = readFileSync(new URL('../App.jsx', import.meta.url), 'utf8')
-    .replace(/\/\*[\s\S]*?\*\//g, '')
-    .split('\n').filter((l) => !/^\s*(\/\/|\*)/.test(l)).join('\n');
-  const dong = app.split('\n').find((l) => /const showMoment\s*=/.test(l));
-  assert.ok(dong, 'không còn `showMoment` — bố cục đã đổi, đọc lại');
-  assert.match(
-    dong,
-    /kind\s*===\s*'built'/,
-    'lễ mừng 3,2 giây lại chặn màn hình sau MỌI phiên; nó chỉ được dành cho công trình vừa xong',
-  );
 });

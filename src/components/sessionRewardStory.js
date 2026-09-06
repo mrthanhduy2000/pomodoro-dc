@@ -159,34 +159,27 @@ function buildQuestsCard({ missions, completedMissionIds, missionXp, bonusXP, bo
 }
 
 /**
- * Thẻ CÔNG TRÌNH (ADR-069): phiên vừa xong đẩy công trình đang xây thêm một nấc — thứ nhìn thấy
- * được trong thành phố. Hàng chờ trống thì thẻ đổi thành lời mời chọn (kèm nút đi thẳng).
- * `project` do nơi gọi dựng từ `describeQueue`/`listNextProjects` SAU phiên:
- *   · `{ label, icon, total, remaining, done, stepped }` — mục đầu hàng chờ; `stepped` = phiên này
- *     tiến mấy nấc (1, hoặc 2 khi được đặc quyền tăng tốc)
- *   · `{ empty: true, choices: string[], eraComplete }` — hàng chờ trống
+ * Thẻ CÔNG TRÌNH (ADR-076): đầu vào là kết quả `describeSessionBrick(… phase: 'landed')` — viên gạch
+ * phiên này vừa đặt (`bricks` có ô 'new'), hoặc công trình vừa HOÀN THÀNH (`status: 'built'`). Kỷ đã
+ * xây trọn (`era-complete`) thì không có gì để kể ⇒ không có thẻ. Không còn thẻ "hàng chờ trống":
+ * store tự xếp hàng công trình kế tiếp trước khi tiến hàng chờ, nên phiên nào cũng có viên gạch.
  */
 function buildProjectCard(project) {
-  if (!project) return null;
-  if (project.empty) {
-    if (project.eraComplete) return null; // kỷ đã trọn: không có gì để mời
-    if (!Array.isArray(project.choices) || project.choices.length === 0) return null;
-    return { id: 'project', empty: true, choices: project.choices.slice(0, 3), extra: Math.max(0, project.choices.length - 3) };
-  }
+  if (!project || project.status === 'era-complete') return null;
   const total = Math.max(1, toNumber(project.total, 1));
   const done = Math.max(0, Math.min(total, toNumber(project.done)));
-  const stepped = Math.max(1, toNumber(project.stepped, 1));
-  const before = Math.max(0, done - stepped);
   return {
     id: 'project',
-    empty: false,
+    status: project.status === 'built' ? 'built' : 'building',
     label: project.label ?? 'Công trình',
     icon: project.icon ?? '',
     total,
     done,
     remaining: Math.max(0, total - done),
-    pct: Math.min(100, (done / total) * 100),
-    pctBefore: Math.min(100, (before / total) * 100),
+    bricks: Array.isArray(project.bricks) ? project.bricks : [],
+    headline: project.headline ?? '',
+    sub: project.sub ?? '',
+    auto: !!project.auto,
   };
 }
 
@@ -300,7 +293,7 @@ function buildQuestCard(reward, crisisQuest) {
  * @param {string[]} p.completedMissionIds  `ui.missionCompletedIds` — nhiệm vụ phiên này vừa xong
  * @param {(xp:number)=>number} p.missionXp   phép nhân XP nhiệm vụ (đã gồm hệ số công trình)
  * @param {number} p.bonusXP             "thưởng trọn ngày" CÒN CHỜ, đã tính sẵn bằng `dailyAllBonusXP` (đã vào thì đọc `reward.dailyBonusXP`)
- * @param {object|null} p.project        công trình đầu hàng chờ SAU phiên (xem `buildProjectCard`)
+ * @param {object|null} p.project        viên gạch phiên này SAU khi đặt — `describeSessionBrick` (xem `buildProjectCard`)
  * @param {object|null} p.skills         kỹ năng mở được ngay + đích kế (xem `buildLevelCard`)
  * @param {object|null} p.crisisQuest    thử thách kỷ nguyên SAU phiên (xem `buildQuestCard`)
  */

@@ -23,6 +23,7 @@ import {
 } from './coach/coachIntel';
 import { coachCompletedSessions, COACH_MIN_SAMPLE, WEEK_TREND_THRESHOLD_PCT } from './gameMath';
 import { startOfVietnamWeekTs, vietnamHistoryTimeOpts } from './time';
+import { clampFocusMinutes } from './timerSession';
 
 const DAY_MS = 86_400_000;
 const WEEK_MS = 7 * DAY_MS;
@@ -34,7 +35,7 @@ export const DEFAULT_FALLBACK_MINUTES = 25;
 const pct = (x) => Math.round((x ?? 0) * 100);
 const entryTs = (e) => new Date(e?.timestamp ?? 0).getTime();
 const capitalize = (s) => (s ? s.charAt(0).toUpperCase() + s.slice(1) : s);
-const clampMinutes = (n) => Math.min(180, Math.max(1, Math.round(Number(n) || DEFAULT_FALLBACK_MINUTES)));
+const clampMinutes = (n) => clampFocusMinutes(Math.round(Number(n) || DEFAULT_FALLBACK_MINUTES));
 
 /** "2 giờ 15 phút" · "45 phút" — chữ đầy đủ, để lưới chống-bịa của Coach đọc được cùng đơn vị. */
 export function formatMinutesVi(minutes) {

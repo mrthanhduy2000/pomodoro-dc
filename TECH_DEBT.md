@@ -13,10 +13,14 @@
 > mà không được refactor triệt để, phải CHỦ ĐỘNG đề xuất mở một "Maintenance Sprint" (nêu rõ mục
 > tiêu/phạm vi/lợi ích/rủi ro/tiêu chí hoàn thành) thay vì tiếp tục cộng thêm tính năng mới.
 >
-> **Trạng thái ngưỡng hiện tại (2026-09-06, sau ADR-070 "một cái kết duy nhất")**: đóng **#96 · #98 ·
-> #100**, cập nhật **#99** (phần nhìn thấy đã dọn, phần cộng vào store vẫn ngủ). **100 mục · 40 đã
-> đóng · 60 còn mở**. Vẫn **1 mục Priority High còn mở** (#53), **0 mục Critical** → xa ngưỡng
-> Maintenance Sprint.
+> **Trạng thái ngưỡng hiện tại (2026-09-06, sau ADR-071 "Thống kê trả lời · đóng #99")**: đóng **#99 · #6**,
+> **#93 hết đối tượng** (khối ấy đã xoá cùng tab Phân Loại), **#2** xử lý xong vế `StatsDashboard.jsx` (vế `gameStore.js`
+> còn mở). **100 mục · 43 đã đóng · 57 còn mở** theo cách đếm của mốc trước (40 + 3); đếm dấu ✅ trên tiêu đề
+> mục ra 39, vì bốn mục đóng cũ không mang dấu ✅. Vẫn **1 mục Priority High còn
+> mở** (#53), **0 mục Critical** → xa ngưỡng Maintenance Sprint.
+>
+> *(mốc trước)* **(2026-09-06, sau ADR-070 "một cái kết duy nhất")**: đóng **#96 · #98 · #100**, cập nhật **#99**.
+> **100 mục · 40 đã đóng · 60 còn mở**.
 >
 > *(mốc trước)* **Trạng thái ngưỡng (2026-08-27 tối, sau ADR-061 "tách đã-mời khỏi đã-xem")**:
 > **#87 ĐÃ ĐÓNG cùng ngày mở** — báo cáo tuần thôi tự bật, và luật mức độ làm phiền của ADR-060 nay
@@ -373,7 +377,7 @@
 
 ---
 
-## #2 — God File: `gameStore.js` (~6.000 dòng) và `StatsDashboard.jsx` (~4.885 dòng)
+## #2 — God File: `gameStore.js` (~5.400 dòng) — CÒN MỞ; nửa `StatsDashboard.jsx` đã xử lý 2026-09-06 (ADR-071: 3.792 → 294 dòng)
 
 - **Module**: `src/store/gameStore.js`, `src/components/StatsDashboard.jsx`
 - **Priority**: Low
@@ -395,6 +399,7 @@
 - **Status**: Open — hoãn có chủ đích.
 
 ---
+- **Cập nhật 2026-09-06 (ADR-071)**: `StatsDashboard.jsx` 3.792 → **294 dòng** (ba thẻ trả lời + sổ tra cứu gấp); phần tra cứu tách nguyên văn sang `StatsJournal.jsx` (881) · `StatsNotes.jsx` (275) · `statsTheme.js` (45); logic ba câu trả lời ở `engine/statsAnswers.js` (171, thuần). `gameStore.js` 5.744 → 5.413 nhờ đóng #99 (xoá kinh tế ngủ), `gameMath.js` 2.044 → 1.732. Vế `gameStore.js` VẪN MỞ — ứng viên tách kế tiếp: chuỗi tuần (`autoClaimWeeklySteps` + `refreshWeeklyChain`) và nhiệm vụ ngày sang engine thuần.
 
 ## #3 — ⚠️ **PHẦN LỚN ĐÃ XỬ LÝ (2026-09-02)** — mô tả kỹ năng prestige (Thăng Hoa) không khớp code thật
 
@@ -518,7 +523,7 @@
 
 ---
 
-## #6 — Hiệu năng: các tab nặng của `StatsDashboard.jsx` tính lại toàn bộ lịch sử mỗi lần render
+## #6 — ✅ **ĐÃ XỬ LÝ (2026-09-06, ADR-071)** — Hiệu năng: các tab nặng của `StatsDashboard.jsx` tính lại toàn bộ lịch sử mỗi lần render
 
 - **Module**: `src/components/StatsDashboard.jsx` (`FocusTab`, `CategoryTab`)
 - **Priority**: Low
@@ -538,6 +543,7 @@
 - **Status**: Open — không cấp bách.
 
 ---
+- **Đóng 2026-09-06 (ADR-071)**: `FocusTab` · `CategoryTab` · `OverviewTab` đã XOÁ cùng bộ chọn kỳ; màn Thống kê nay tính đúng MỘT lần qua `useMemo` (`buildStatsAnswers` + `buildStatsInsights`, O(n) trên lịch sử) và không có bộ lọc nào để đổi.
 
 ## #7 — ✅ **ĐÃ HẾT HIỆU LỰC (2026-09-02)** — Dependency: `npm install` cần flag `--legacy-peer-deps`
 
@@ -4775,7 +4781,7 @@ cấp `Math.min(3,…)` → `Math.min(9,…)` · cắt bớt danh sách cấp th
 - **Blocking Conditions**: cần một cách quan sát được khoảnh khắc sau-phiên trên dev.
 - **Owner**: Đàm quyết · **Status**: MỞ, chờ Đàm
 
-## #93 — 📌 **QUYẾT ĐỊNH, KHÔNG PHẢI NỢ (đánh dấu lại 2026-09-02)** — `buildCategoryAdvisor` (170 dòng) vẫn nằm trong file giao diện, và ĐÓ LÀ CÓ CHỦ ĐÍCH — đừng "dọn" nó xuống engine
+## #93 — ✅ **HẾT ĐỐI TƯỢNG (2026-09-06, ADR-071: tab Phân Loại đã xoá)** — 📌 từng là QUYẾT ĐỊNH, KHÔNG PHẢI NỢ (2026-09-02) — `buildCategoryAdvisor` (170 dòng) vẫn nằm trong file giao diện, và ĐÓ LÀ CÓ CHỦ ĐÍCH — đừng "dọn" nó xuống engine
 
 > Mở 2026-08-30, ngay sau khi chuyển thành công `summarizeFocusStats` xuống
 > `engine/statsFocus.js`. Ghi mục này để phiên sau **không mất công phân tích lại rồi đi tới cùng
@@ -4810,6 +4816,7 @@ cấp `Math.min(3,…)` → `Math.min(9,…)` · cắt bớt danh sách cấp th
 - **Review Trigger**: khi có ai định "dọn nốt cho đồng bộ với `statsFocus.js`", hoặc khi cái gác
   `totalSess < 4` sinh ra một lời khuyên sai mà Đàm để ý thấy.
 - **Owner**: chưa ai · **Status**: MỞ (có chủ đích)
+- **Cập nhật 2026-09-06 (ADR-071)**: `buildCategoryAdvisor` đã XOÁ cùng tab Phân Loại — màn Thống kê nay trả lời ba câu, dòng «loại việc mạnh nhất» đọc thẳng hồ sơ `buildFocusProfile` (cùng số với Coach, có test). Kết luận «không kéo view-model xuống engine» vẫn đúng và vẫn áp dụng cho `StatsJournal.jsx`.
 
 ## #92 — ✅ **ĐÃ XỬ LÝ (2026-09-02)** — `no-unused-vars` đang TẮT cho MỌI file `.jsx`, nên code chết ở cả tầng giao diện là vô hình với lint
 
@@ -5624,7 +5631,7 @@ trong chú thích thì đừng để `--selftest` của chính nó vẫn dùng �
   "có bấm Xem chi tiết không" vì lệnh mới uỷ quyền quyết — và màn ấy chỉ còn hơn ở phần liệt kê ba
   đồng tiền ngủ.
 
-## #99 — DỮ LIỆU NGỦ sau ADR-069: tài nguyên · RP · tinh luyện vẫn được cộng, không còn cổng tiêu; 5 action + 1 hộp thoại còn nằm lại không ai gọi
+## #99 — ✅ **ĐÃ XỬ LÝ (2026-09-06, ADR-071)** — DỮ LIỆU NGỦ sau ADR-069: tài nguyên · RP · tinh luyện vẫn được cộng, không còn cổng tiêu; 5 action + 1 hộp thoại còn nằm lại không ai gọi
 
 > Mở 2026-09-06 (ADR-069). Đây là cái giá CỐ Ý của vòng ấy: gỡ cổng khỏi đường chơi mà KHÔNG xoá
 > thứ Đàm đã kiếm và KHÔNG đụng state đồng bộ. Mục này để phiên sau biết cái gì đang ngủ, chứ không
@@ -5654,7 +5661,7 @@ trong chú thích thì đừng để `--selftest` của chính nó vẫn dùng �
 - **Estimated Complexity**: Medium (vì có migration dữ liệu thật).
 - **Blocking Conditions**: Đàm xác nhận không nhớ tiếc kho tài nguyên.
 - **Review Trigger**: lần tới ai thêm một loại phần thưởng "tài nguyên".
-- **Owner**: chưa ai · **Status**: MỞ (2026-09-06)
+- **Owner**: phiên 2026-09-06 · **Status**: ✅ ĐÃ XỬ LÝ (2026-09-06, ADR-071)
 - **Cập nhật 2026-09-06 (ADR-070, cùng ngày)**: đã dọn phần NHÌN THẤY và phần MÃ CHẾT của mục này —
   xoá 5 action (`startCrafting` · `researchBlueprint` · `craftBuilding` · `upgradeBuilding` ·
   `evolveRelic`) + `engine/craftReadiness.js` + `LootDropModal.jsx` (màn cuối liệt kê ba đồng tiền);
@@ -5663,6 +5670,7 @@ trong chú thích thì đừng để `--selftest` của chính nó vẫn dùng �
   `research.rp` · `resourcesRefined` ở `completeFocusSession`, `cancelCrafting` hoàn tài nguyên, phép
   trừ tài nguyên khi huỷ phiên, `tinhThe` (không còn được cộng). Vẫn KHÔNG đụng state đồng bộ — phần
   (1) của Recommended Solution (migration) vẫn chờ Đàm chơi vài tuần với luật mới.
+- **Đóng 2026-09-06 (ADR-071, vòng 36)**: chọn phương án (B) *THÔI GHI, giữ khoá* thay vì migration: `calculateRewards` thôi trả `resources/rpEarned/t2Drop/largeChest`; store xoá `mergeResources` + ba hàm trừ khi xoá phiên, khối RP/tinh luyện, phạt tài nguyên + lượt tha thứ khi huỷ (`applyDisasterPenalty` · `calculateSessionResourceFloor` xoá), hoàn tiền `cancelCrafting`, hai nhiệm vụ «Kiếm N RP» và loại `researchPoints`; thẻ tổng kết/chuỗi thẻ bỏ «Rương Lớn/+tài nguyên/+RP». Bản ghi lịch sử MỚI không còn ba trường ấy; bản cũ giữ nguyên. **Còn lại có chủ đích**: các khoá `resources` · `research` · `resourcesRefined` · `tinhThe` · `forgiveness` vẫn trong save (dữ liệu chết) — migration xoá khoá chỉ khi Đàm xác nhận không tiếc kho.
 
 ## #100 — ✅ **ĐÃ XỬ LÝ (2026-09-06, ADR-070)** — Hai chỗ vẫn phải BẤM để nhận thứ đã đạt: "Chốt bước" chuỗi tuần, và lưới 360 huy hiệu dài ~5.350px
 

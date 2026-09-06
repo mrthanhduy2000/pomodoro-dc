@@ -8,7 +8,7 @@
 ## Dự án là gì
 App Pomodoro cá nhân của Đàm (non-coder). React + Vite + PWA · Zustand + localStorage ·
 Supabase sync · Vercel. Bản thật: `https://pomodoro-dc.vercel.app`.
-Mặt trận đang làm: **vòng lặp chính + nâng cấp** (ADR-068/069, `src/components/` + `src/engine/`).
+Mặt trận đang làm: **vòng lặp chính + nâng cấp + màn Thống kê trả lời** (ADR-068/069/070/071, `src/components/` + `src/engine/`).
 Thành phố 3D (`src/engine/city3d/` + `src/components/city/render3d/`) là HỘP ĐEN đã xong — Đàm cấm đụng.
 
 ## 5 luật thật sự cắn — vi phạm là hỏng thật
@@ -36,7 +36,22 @@ Thành phố 3D (`src/engine/city3d/` + `src/components/city/render3d/`) là H�
   Phase 21 (*"push nhánh phụ, không tự gộp `main`"*) đã bị lệnh này thay thế.
   ⚠️ **Phase 21 do đó lên production TRƯỚC khi Đàm nhìn ảnh nghiệm thu** — mục "chờ Đàm nhìn ảnh"
   ở phần dưới VẪN CÒN HIỆU LỰC, chỉ là nay nó nghiệm thu một thứ đang chạy thật.
-- **Trò chơi — VÒNG 35 (2026-09-06, MỚI NHẤT): MỘT CÁI KẾT DUY NHẤT, KHÔNG NÚT NHẬN, KHÔNG MÀN
+- **Thống kê + kinh tế — VÒNG 36 (2026-09-06, MỚI NHẤT): THỐNG KÊ TRẢ LỜI, KHÔNG TRÌNH BÀY; ĐÓNG #99
+  (ADR-071), không đụng Thành phố.** Lệnh *"build lớn · simplify mạnh · vui hơn · UX/UI · TOÀN QUYỀN"*.
+  (1) `StatsDashboard.jsx` **3.792 → 294 dòng**: mở ra là thấy ba thẻ *khá lên không* (tuần này so
+  CÙNG QUÃNG tuần trước, 7 cặp cột) · *mạnh nhất khi nào* (giờ · độ dài · loại việc, mỗi dòng kèm cỡ
+  mẫu) · *làm gì tiếp* (MỘT nút «Bắt đầu N phút · loại» nhảy thẳng sang Tập trung); dải «Điều đáng chú
+  ý» giữ; Nhật ký · Ghi chú GẤP xuống dưới (`StatsJournal.jsx` · `StatsNotes.jsx`). Số ở
+  `engine/statsAnswers.js` (thuần, ghép `coachIntel`/`gameMath`). Xoá 3 tab · 6 kỳ · biểu đồ · bản đồ
+  nhiệt · `statsPeriod.js` · `statsFocus.js`. (2) **#99 đóng**: tài nguyên · RP · tinh luyện THÔI được
+  cộng (khoá vẫn trong save — không migration), huỷ phiên không trừ/không tiêu lượt tha thứ,
+  `cancelCrafting` không hoàn, bỏ nhiệm vụ «Kiếm N RP», thẻ bỏ «Rương Lớn/+tài nguyên/+RP». (3) Chữ
+  khủng hoảng kỷ trong save đọc lại từ `ERA_CRISES` lúc nạp (`withCanonicalCrisisText`) — luật chung
+  *"save lưu id + số, chữ đọc từ bảng"*. ⚠️ Bài học: *ba dòng «mạnh nhất» chỉ có số khi phiên ĐẶT MỤC
+  TIÊU* — fixture 599 phiên không có mục tiêu nên cả ba trống; màn nói thẳng việc cần làm thay vì im.
+  Cửa soi: `node scripts/shot.mjs --phone --fixture <fx> --tab "Thống kê" --full`. Test **1.597 bài (1.596 pass · 0 fail · 1 skipped)**.
+  Nợ: **100 mục · 43 đã đóng · 57 còn mở**.
+- **Trò chơi — VÒNG 35 (2026-09-06): MỘT CÁI KẾT DUY NHẤT, KHÔNG NÚT NHẬN, KHÔNG MÀN
   CHẾT (ADR-070), không đụng Thành phố.** Lệnh *"tự quyết định mọi thứ và tech debt · build lớn ·
   simplify mạnh · vui hơn · UX/UI"*. (1) Bước tuần + thưởng trọn ngày TỰ VÀO trong
   `completeFocusSession`, kể ở chuỗi thẻ — xoá `claimWeeklyStep`/`claimMissionAllBonus` và mọi nút
@@ -293,8 +308,8 @@ Thành phố 3D (`src/engine/city3d/` + `src/components/city/render3d/`) là H�
   để khoe một dòng chữ vốn luôn hiện sẵn: 30,9 phút chờ trong 579 phiên.
   ⚠️ **KHÔNG làm** cái chấm chú ý theo `sp > 0`: đo lại thì `hasReadyOpportunity` ĐÃ đọc `sp` và
   gác đúng (sáng ở 2 SP, tắt ở 1 SP). Bật chấm ở 1 SP là đẩy Đàm sang màn anh không làm được gì.
-- **Thống kê — VÒNG 21 (2026-08-30, phiên khác):** gộp ba bộ lọc thời gian thành MỘT
-  (`engine/statsPeriod.js` là nguồn kỳ duy nhất, 6 kỳ theo nghĩa LỊCH — trước đó ba tab có ba mặc
+- **Thống kê — VÒNG 21 (2026-08-30, phiên khác) — ⚠️ ĐÃ BỊ ADR-071 (2026-09-06) THAY THẾ: không còn kỳ, không còn tab; chỉ dải «Điều đáng chú ý» còn sống:** gộp ba bộ lọc thời gian thành MỘT
+  (`engine/statsPeriod.js` là nguồn kỳ duy nhất — nay đã xoá, 6 kỳ theo nghĩa LỊCH — trước đó ba tab có ba mặc
   định khác nhau nên bấm sang tab là cửa sổ thời gian âm thầm đổi); sửa lỗi NHÃN "tuần này" vốn
   tính bằng `now − 7 ngày`; thêm dải "Điều đáng chú ý" đưa ~10 phép phân tích SẴN CÓ trong
   `gameMath.js` ra màn hình (trước đó chúng chỉ chảy vào AI Coach, tức cần mạng + tốn tiền Gemini);

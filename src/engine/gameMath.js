@@ -23,16 +23,10 @@ import {
   EP_MULTIPLIER_TIERS,
   DEEP_SESSION_THRESHOLD,
   DEFAULT_DEEP_FOCUS_THRESHOLD,
-  DISASTER_MIN_PENALTY_RATE,
-  DISASTER_MAX_PENALTY_RATE,
-  DISASTER_EVENTS,
-  SHARP_TOOLS_RESOURCE_BONUS,
   JACKPOT_CHANCE,
   JACKPOT_MULTIPLIER,
   JACKPOT_EP_MULTIPLIER,
-  ERA_1_RESOURCES,
   ERA_THRESHOLDS,
-  ERA_METADATA,
   EXP_PER_LEVEL,
   SP_PER_LEVEL,
   // ── Bộ kỹ năng V2 ─────────────────────────────────────────────────────
@@ -97,7 +91,6 @@ import {
   LICH_DAY_ALLBONUS,
   KE_HOACH_HOAN_HAO_NEXT_WEEK_BONUS,
   BAC_THAY_CHIEN_LUOC_XP_BONUS,
-  BAC_THAY_CHIEN_LUOC_RP_BONUS,
   BAC_THAY_CHIEN_LUOC_EP_BONUS,
   BAC_THAY_CHIEN_LUOC_MIN_MIN,
   // Thăng Hoa
@@ -114,10 +107,6 @@ import {
   SKILL_TREE,
   SKILL_SYNERGIES,
   // Hệ thống nghiên cứu & nguyên liệu tinh luyện
-  RP_PER_MINUTE_BASE,
-  RP_CATEGORY_MULT,
-  T2_DROP_THRESHOLD_MIN,
-  T2_DROP_AMOUNT,
   COMBO_DECAY_MS,
   BO_NHO_CO_BAP_COMBO_HOURS,
   RELIC_EVOLUTION,
@@ -131,18 +120,13 @@ import {
   RELIC_DISASTER_REDUCTION_CAP,
   RELIC_COMBO_WINDOW_CAP_HOURS,
   // Deprecated (giữ để backward compat trong cancel disaster + signature)
-  Y_CHI_THEP_RETENTION,
-  BAT_KHUAT_DISASTER_XP_PENALTY,
   TIME_BENDER_CHANCE,
   WARMUP_REDUCED_THRESHOLD,
-  DA_NANG_RESOURCE_BONUS,
-  CAN_BANG_RESOURCE_BONUS,
   STREAK_MILESTONES,
 } from './constants';
 
 // ─── Hàm ngẫu nhiên ──────────────────────────────────────────────────────────
 const rand    = () => Math.random();
-const randInt = (min, max) => Math.floor(rand() * (max - min + 1)) + min;
 
 // ─── Xác định Quyển đang chơi từ tổng EP ─────────────────────────────────────
 export function getActiveBook(totalEP) {
@@ -162,11 +146,6 @@ export function getActiveBook(totalEP) {
   if (totalEP < t.ERA_13_END) return 13;
   if (totalEP < t.ERA_14_END) return 14;
   return 15;
-}
-
-export function getActiveResources(totalEP) {
-  const book = getActiveBook(totalEP);
-  return ERA_METADATA[book]?.resources ?? ERA_1_RESOURCES;
 }
 
 export function getComboDecayMs(unlockedSkills = {}, relics = [], relicEvolutions = {}, extraHours = 0) {
@@ -320,15 +299,6 @@ export function applyTimeBender(minutesFocused, timeBenderUnlocked = false) {
   return { effectiveMinutes: minutesFocused + bonusMinutes, bonusMinutes };
 }
 
-// ─── Lăn tài nguyên cho một loại ─────────────────────────────────────────────
-function rollResourceDrop(resourceDef, effectiveMinutes, resourceMultiplier) {
-  let total = 0;
-  for (let i = 0; i < effectiveMinutes; i++) {
-    total += randInt(resourceDef.minPerMin, resourceDef.maxPerMin);
-  }
-  return Math.round(total * resourceMultiplier);
-}
-
 // ─────────────────────────────────────────────────────────────────────────────
 // HÀM CHÍNH: calculateRewards
 // ─────────────────────────────────────────────────────────────────────────────
@@ -352,7 +322,6 @@ export function calculateRewards(
   // ── Giải nén kỹ năng V2 ───────────────────────────────────────────────────
   const {
     // Backward compat (skills cũ — luôn false sau migration)
-    luoi_ria_ben:        luoiRiaBen         = false,
     // THIỀN ĐỊNH
     vao_guong:           vaoGuong           = false,
     chuyen_can:          chuyenCan          = false,
@@ -393,10 +362,7 @@ export function calculateRewards(
   const {
     epBonus       = 0,
     expBonus      = 0,
-    resourceBonus = 0,
     allBonus      = 0,
-    gachaBonus    = 0,
-    pitySeal      = 0,
     xpSeal        = 0,
   } = activeBuffs;
 
@@ -415,8 +381,6 @@ export function calculateRewards(
     erasCompleted             = 0,
     sessionsInCurrentEra      = 0,
     allDailyMissionsDone      = false,
-    isNewCategoryToday        = false,
-    wonderRPBonus             = 0,
     // V2 mới
     benVungActive             = false, // player.benVungUnlocked
     nhipHoanHaoActiveToday    = false, // dailyTracking.nhipHoanHaoBonusActive
@@ -436,7 +400,7 @@ export function calculateRewards(
   const baseXP = effectiveMinutes * BASE_XP_PER_MINUTE;
 
   // ── 3. Hệ số nhân bậc tập trung (không còn warmup, dùng default 26') ────
-  let { multiplier, chestGuaranteed, tierLabel } = getMultiplierTier(minutesFocused, false);
+  let { multiplier, tierLabel } = getMultiplierTier(minutesFocused, false);
 
   // Vùng Dòng Chảy: phiên ≥45' → tăng 1 bậc
   if (vungDongChay && minutesFocused >= VUNG_DONG_CHAY_MIN_MIN) {
@@ -444,7 +408,6 @@ export function calculateRewards(
       multiplier = 1.3;
     } else if (multiplier < 2.0) {
       multiplier = 2.0;
-      chestGuaranteed = true;
     }
     tierLabel = getTierLabel(multiplier);
   }
@@ -493,8 +456,6 @@ export function calculateRewards(
   };
   let skillEPBonus = 0;        // EP only
   let skillAllBonus = 0;       // both XP và EP
-  let skillResourceBonus = 0;  // raw resources
-  let skillRPBonus = 0;        // RP
   // ADR-069: phần thưởng NGẪU NHIÊN của nhánh Vận May — cộng thẳng vào hệ số XP/EP (không qua
   // softcap nhánh, vì nó là một cú nhảy hiếm chứ không phải một buff đều), vẫn dưới trần cứng.
   let luckXpBonus = 0;
@@ -513,7 +474,6 @@ export function calculateRewards(
   if (tapTrungSieuViet && minutesFocused >= TAP_TRUNG_SV_MIN_MIN) {
     branchXp.THIEN_DINH += TAP_TRUNG_SV_XP_BONUS;
     skillEPBonus += TAP_TRUNG_SV_EP_BONUS;
-    chestGuaranteed = true;
   }
 
   // — Ý CHÍ —
@@ -588,7 +548,6 @@ export function calculateRewards(
   }
   if (bacThayCL && allDailyMissionsDone && minutesFocused >= BAC_THAY_CHIEN_LUOC_MIN_MIN) {
     branchXp.CHIEN_LUOC += BAC_THAY_CHIEN_LUOC_XP_BONUS;
-    skillRPBonus += BAC_THAY_CHIEN_LUOC_RP_BONUS;
     skillEPBonus += BAC_THAY_CHIEN_LUOC_EP_BONUS;
   }
   if (keHoachWeeklyBuffActive) {
@@ -671,33 +630,9 @@ export function calculateRewards(
   }
   const finalEXP = finalXP;
 
-  // ── 8. Tài nguyên ────────────────────────────────────────────────────────
-  const activeBook      = getActiveBook(totalEP);
-  const activeResources = getActiveResources(totalEP);
-  const resMul = finalMultiplier
-    * (luoiRiaBen ? (1 + SHARP_TOOLS_RESOURCE_BONUS) : 1)
-    * (1 + resourceBonus + allBonus + skillResourceBonus + skillAllBonus);
-
-  const resources = {};
-  for (const resDef of activeResources) {
-    const amount = rollResourceDrop(resDef, effectiveMinutes, resMul);
-    resources[resDef.id] = applyLucky
-      ? Math.round(amount * SO_DO_MULTIPLIER)
-      : amount;
-  }
-
-  // ── 9. Điểm Nghiên Cứu (RP) ───────────────────────────────────────────────
-  const categoryMult = isNewCategoryToday ? RP_CATEGORY_MULT : 1.0;
-  const researchBonus = skillRPBonus + (gachaBonus / 100) + (pitySeal * 0.02);
-  let rpEarned = Math.round(
-    effectiveMinutes * RP_PER_MINUTE_BASE * categoryMult * jackpotXpFactor * (1 + wonderRPBonus + researchBonus),
-  );
-  if (applyLucky) {
-    rpEarned = Math.round(rpEarned * SO_DO_MULTIPLIER);
-  }
-
-  // ── 10. Tài nguyên tinh luyện ─────────────────────────────────────────────
-  const t2Drop = minutesFocused >= T2_DROP_THRESHOLD_MIN ? T2_DROP_AMOUNT : 0;
+  // ── 8. Kỷ đang chơi. ADR-071 (đóng #99): tài nguyên · RP · tinh luyện KHÔNG còn được tính —
+  //    đồng tiền duy nhất là PHIÊN (ADR-069). ──
+  const activeBook = getActiveBook(totalEP);
 
   return {
     baseXP,
@@ -718,202 +653,12 @@ export function calculateRewards(
     donLucChosen,                      // 'so_do' | 'sieu_tap_trung' | 'jackpot' | null
     luckXpBonus,                       // ADR-069: Vận May quay trúng +XP (0 nếu không)
     luckEpBonus,                       // ADR-069: Vận May quay trúng +EP (0 nếu không)
-    largeChest:       chestGuaranteed,
-    resources,
     activeBook,
-    rpEarned,
-    t2Drop,
     activeSynergies,
     synergyBonus,
   };
 }
 
-/**
- * calculateSessionResourceFloor
- * Ước lượng mức tài nguyên tối thiểu mà một session đã tích lũy được tới thời
- * điểm hiện tại, chỉ dùng các yếu tố xác định được và bỏ qua mọi bonus ngẫu
- * nhiên. Hàm này được dùng để cap thất thoát khi hủy session, để mức phạt không
- * thể vượt quá phần session đang chạy chắc chắn đã tạo ra.
- *
- * @param {number} minutesFocused
- * @param {object} unlockedSkills
- * @param {number} totalEP
- * @param {object} activeBuffs
- * @param {object} sessionCtx
- * @returns {{ activeBook: number, resources: object, effectiveMinutes: number, resourceMultiplier: number }}
- */
-export function calculateSessionResourceFloor(
-  minutesFocused,
-  unlockedSkills = {},
-  totalEP = 0,
-  activeBuffs = {},
-  sessionCtx = {},
-) {
-  const clampedMinutes = Math.max(0, Math.floor(minutesFocused ?? 0));
-  const {
-    lam_nong_nhanh:    lamNongNhanhLegacy = false,
-    luoi_ria_ben:      luoiRiaBen         = false,
-    khoi_dong_nhanh:   khoiDongNhanh      = false,
-    vung_dong_chay:    vungDongChay       = false,
-    da_nang:           daNang             = false,
-    can_bang:          canBang            = false,
-  } = unlockedSkills;
-
-  const warmupActive = khoiDongNhanh || lamNongNhanhLegacy;
-  const {
-    resourceBonus = 0,
-    allBonus = 0,
-  } = activeBuffs;
-  const {
-    diverseCategoriesBonus = false,
-    balancedDayBonus = false,
-    benVungActive = false,
-    hasSession45Today = false,
-    hasSession60Today = false,
-    keHoachWeeklyBuffActive = false,
-  } = sessionCtx;
-
-  let { multiplier } = getMultiplierTier(clampedMinutes, warmupActive);
-  if (vungDongChay && clampedMinutes >= VUNG_DONG_CHAY_MIN_MIN) {
-    if (multiplier < 1.3) {
-      multiplier = 1.3;
-    } else if (multiplier < 2.0) {
-      multiplier = 2.0;
-    }
-  }
-
-  let skillAllBonus = 0;
-  let skillResourceBonus = 0;
-  if (daNang && diverseCategoriesBonus) {
-    skillResourceBonus += DA_NANG_RESOURCE_BONUS;
-  }
-  if (canBang && balancedDayBonus) {
-    skillResourceBonus += CAN_BANG_RESOURCE_BONUS;
-  }
-  if (unlockedSkills.ben_vung && benVungActive && clampedMinutes >= BEN_VUNG_MIN_MINUTES) {
-    skillAllBonus += BEN_VUNG_PERMANENT_ALLBONUS;
-  }
-  if (unlockedSkills.lich_day && hasSession45Today && hasSession60Today) {
-    skillAllBonus += LICH_DAY_ALLBONUS;
-  }
-  if (keHoachWeeklyBuffActive) {
-    skillAllBonus += KE_HOACH_HOAN_HAO_NEXT_WEEK_BONUS;
-  }
-
-  const activeBook = getActiveBook(totalEP);
-  const activeResources = getActiveResources(totalEP);
-  const resourceMultiplier = multiplier
-    * (luoiRiaBen ? (1 + SHARP_TOOLS_RESOURCE_BONUS) : 1)
-    * (1 + resourceBonus + allBonus + skillResourceBonus + skillAllBonus);
-  const resources = {};
-
-  for (const resourceDef of activeResources) {
-    const guaranteedTotal = clampedMinutes * resourceDef.minPerMin;
-    resources[resourceDef.id] = Math.max(0, Math.round(guaranteedTotal * resourceMultiplier));
-  }
-
-  return {
-    activeBook,
-    resources,
-    effectiveMinutes: clampedMinutes,
-    resourceMultiplier,
-  };
-}
-
-// ─────────────────────────────────────────────────────────────────────────────
-// HÀM CHÍNH: applyDisasterPenalty
-// ─────────────────────────────────────────────────────────────────────────────
-/**
- * applyDisasterPenalty
- * Hủy Pomodoro trong Chế Độ Nghiêm:
- * - random mức phạt gốc 1%–5%
- * - nhân với tiến độ đã đi qua của phiên
- * - Kỹ năng "Sự Tha Thứ": nếu còn lượt miễn phạt thì bỏ qua penalty
- *
- * @param {object} allResources
- * @param {object} unlockedSkills
- * @param {number} forgivenessChargesRemaining
- * @param {number} progressRatio
- * @param {object} options
- * @returns {PenaltyResult}
- */
-export function applyDisasterPenalty(
-  allResources,
-  unlockedSkills = {},
-  forgivenessChargesRemaining = 0,
-  disasterReduction = 0,
-  progressRatio = 1,
-  penaltyMultiplier = 1,
-  options = {},
-) {
-  const {
-    su_tha_thu: suThatThu = false,
-    y_chi_thep: yChiThep = false,
-    bat_khuat: batKhuat = false,
-  } = unlockedSkills;
-  const {
-    scopeBookKey = null,
-    resourceLossCap = null,
-  } = options;
-
-  const disaster = DISASTER_EVENTS[randInt(0, DISASTER_EVENTS.length - 1)];
-  const clampedProgressRatio = Math.max(0, Math.min(1, progressRatio));
-
-  if (suThatThu && forgivenessChargesRemaining > 0) {
-    return {
-      waived: true, chargeConsumed: true,
-      newResources: structuredClone(allResources),
-      deducted: {},
-      disaster,
-      progressRatio: clampedProgressRatio,
-      basePenaltyRate: null,
-      adjustedPenaltyRate: null,
-      appliedPenaltyRate: 0,
-    };
-  }
-
-  const basePenaltyRate = DISASTER_MIN_PENALTY_RATE + rand() * (DISASTER_MAX_PENALTY_RATE - DISASTER_MIN_PENALTY_RATE);
-  const adjustedPenaltyRate = Math.max(DISASTER_MIN_PENALTY_RATE, basePenaltyRate - disasterReduction);
-  const skillPenaltyMultiplier = batKhuat
-    ? BAT_KHUAT_DISASTER_XP_PENALTY
-    : yChiThep
-      ? (1 - Y_CHI_THEP_RETENTION)
-      : 1;
-  const appliedPenaltyRate = adjustedPenaltyRate * skillPenaltyMultiplier * clampedProgressRatio * Math.max(0, penaltyMultiplier);
-
-  const newResources = structuredClone(allResources);
-  const deducted     = {};
-
-  for (const [bookKey, bookResources] of Object.entries(newResources)) {
-    deducted[bookKey] = {};
-    for (const [resId, amount] of Object.entries(bookResources)) {
-      const shouldApplyPenalty = !scopeBookKey || scopeBookKey === bookKey;
-      const uncappedLoss = shouldApplyPenalty
-        ? Math.floor(amount * appliedPenaltyRate)
-        : 0;
-      const resourceCap = resourceLossCap?.[bookKey]?.[resId];
-      const loss = Number.isFinite(resourceCap)
-        ? Math.min(uncappedLoss, Math.max(0, Math.floor(resourceCap)))
-        : uncappedLoss;
-      newResources[bookKey][resId] = amount - loss;
-      deducted[bookKey][resId]     = loss;
-    }
-  }
-
-  return {
-    waived: false,
-    chargeConsumed: false,
-    newResources,
-    deducted,
-    disaster,
-    progressRatio: clampedProgressRatio,
-    basePenaltyRate,
-    adjustedPenaltyRate,
-    appliedPenaltyRate,
-    skillPenaltyMultiplier,
-    skillMode: batKhuat ? 'bat_khuat' : yChiThep ? 'y_chi_thep' : 'default',
-  };
-}
 
 // ─── Tính lên cấp ─────────────────────────────────────────────────────────────
 export function computeLevelUps(prevTotalEXP, gainedEXP) {
@@ -1242,7 +987,7 @@ const COACH_BUCKET_MIN_SAMPLE = 4;        // đủ mẫu trong 1 buổi mới d�
 const WEEKDAY_LABELS = ['Chủ nhật', 'Thứ Hai', 'Thứ Ba', 'Thứ Tư', 'Thứ Năm', 'Thứ Sáu', 'Thứ Bảy'];
 
 // Các phiên "thật" (đã hoàn thành, không huỷ, có thời lượng hợp lệ).
-function coachCompletedSessions(history) {
+export function coachCompletedSessions(history) {
   return (Array.isArray(history) ? history : []).filter((e) =>
     e && !isCancelledHistoryEntry(e) && e.completed !== false
     && Number.isFinite(e.minutes) && e.minutes > 0);
@@ -1323,6 +1068,9 @@ export function getWeekdayHighlight(history = [], opts = {}) {
  *
  * @returns {{direction:'up'|'down'|'flat',thisMinutes,prevMinutes,pct,thisN,prevN}|null}
  */
+/** Lệch ít hơn bấy nhiêu % thì coi là "giữ nhịp" — dùng CHUNG cho Coach và ô "khá lên không" của Thống kê. */
+export const WEEK_TREND_THRESHOLD_PCT = 15;
+
 export function getWeeklyTrend(history = [], opts = {}) {
   const { getEntryWeekKey, nowWeekKey, prevWeekKey } = opts;
   if (typeof getEntryWeekKey !== 'function' || !nowWeekKey || !prevWeekKey) return null;
@@ -1336,8 +1084,8 @@ export function getWeeklyTrend(history = [], opts = {}) {
   if (prevN === 0 || thisN === 0) return null;
   const pct = prevMinutes > 0 ? Math.round(((thisMinutes - prevMinutes) / prevMinutes) * 100) : 0;
   let direction = 'flat';
-  if (pct >= 15) direction = 'up';
-  else if (pct <= -15) direction = 'down';
+  if (pct >= WEEK_TREND_THRESHOLD_PCT) direction = 'up';
+  else if (pct <= -WEEK_TREND_THRESHOLD_PCT) direction = 'down';
   return { direction, thisMinutes, prevMinutes, pct, thisN, prevN };
 }
 
@@ -1857,66 +1605,6 @@ export function computeHeatmapData(history, days = 84) {
       : minutes <= 120 ? 3
       : 4,
   }));
-}
-
-// ─── Year Grid (365 ngày, GitHub-style) ──────────────────────────────────────
-export function computeYearGrid(history) {
-  const now = Date.now();
-  const map = {};
-  for (let i = 364; i >= 0; i--) {
-    const d = localDateStr(now - i * 86_400_000);
-    map[d] = 0;
-  }
-  for (const h of history) {
-    const d = localDateStr(new Date(h.timestamp));
-    if (d in map) map[d] += getHistoryMinutes(h);
-  }
-  return Object.entries(map).map(([date, minutes]) => ({
-    date,
-    minutes,
-    intensity: minutes === 0 ? 0
-      : minutes <= 25  ? 1
-      : minutes <= 60  ? 2
-      : minutes <= 120 ? 3
-      : 4,
-  }));
-}
-
-// ─── Thống kê phân tích theo category ────────────────────────────────────────
-export function computeCategoryStats(history, categories) {
-  const catMap = {};
-  for (const cat of categories) {
-    catMap[cat.id] = { ...cat, sessions: 0, completed: 0, cancelled: 0, minutes: 0, xp: 0 };
-  }
-  // Bucket "không có category"
-  catMap['__none__'] = { id: '__none__', label: 'Chưa phân loại', color: '#475569', icon: '❓', sessions: 0, completed: 0, cancelled: 0, minutes: 0, xp: 0 };
-
-  for (const h of history) {
-    if (h.categoryId && !catMap[h.categoryId] && h.categorySnapshot) {
-      catMap[h.categoryId] = {
-        id: h.categoryId,
-        label: h.categorySnapshot.label ?? 'Loại cũ',
-        color: h.categorySnapshot.color ?? '#475569',
-        icon: h.categorySnapshot.icon ?? '🏷️',
-        sessions: 0,
-        completed: 0,
-        cancelled: 0,
-        minutes: 0,
-        xp: 0,
-      };
-    }
-    const key = h.categoryId && catMap[h.categoryId] ? h.categoryId : '__none__';
-    const isCancelled = isCancelledHistoryEntry(h);
-    catMap[key].sessions += 1;
-    catMap[key].completed = (catMap[key].completed ?? 0) + (isCancelled ? 0 : 1);
-    catMap[key].cancelled = (catMap[key].cancelled ?? 0) + (isCancelled ? 1 : 0);
-    catMap[key].minutes  += getHistoryMinutes(h);
-    catMap[key].xp       += getHistoryXP(h);
-  }
-
-  return Object.values(catMap)
-    .filter((c) => c.sessions > 0)
-    .sort((a, b) => b.minutes - a.minutes);
 }
 
 // ─── Thống kê theo khoảng thời gian ──────────────────────────────────────────

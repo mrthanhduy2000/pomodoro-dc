@@ -44,8 +44,8 @@ function buildXpCard(reward) {
   // ADR-070: EP là trục kỷ nguyên — buff EP của bậc/di vật/kỳ quan phải THẤY được ở đúng thẻ này,
   // nếu không "+8% EP" chỉ là một dòng chữ trong bảng mà không ai kiểm được bằng mắt.
   if (toNumber(reward.finalEP) > 0) chips.push({ id: 'ep', label: 'Kỷ nguyên', value: `+${Math.round(toNumber(reward.finalEP))} EP` });
-  if (reward.largeChest) chips.push({ id: 'chest', label: 'Rương Lớn' });
-  // ADR-069: chip "+N tinh luyện" ĐÃ BỎ — tinh luyện rời khỏi đường chơi (không còn cổng nào tiêu nó).
+  // ADR-069/071: chip «+N tinh luyện» và «Rương Lớn» ĐÃ BỎ — ba đồng tiền ngủ rời khỏi đường chơi, và một
+  // cái rương không còn gì để đựng thì chỉ là một cái nhãn. Bậc phiên (×1.3/×2.0) vẫn kể ở thẻ bậc.
   if (toNumber(reward.streakDays) >= 2 && toNumber(reward.streakBonus) > 0) {
     chips.push({ id: 'streak', label: `Chuỗi ${reward.streakDays} ngày`, value: `+${reward.streakBonus} XP` });
   }

@@ -11,6 +11,86 @@
 
 ---
 
+## ADR-071 — THỐNG KÊ TRẢ LỜI, KHÔNG TRÌNH BÀY; ĐÓNG #99: BA ĐỒNG TIỀN NGỦ THÔI ĐƯỢC CỘNG; CHỮ TRONG SAVE ĐỌC TỪ BẢNG
+
+- **Ngày**: 2026-09-06 (vòng 36, ngay sau ADR-070)
+- **Trạng thái**: đã áp dụng. Không đụng Thành phố (`engine/city3d/`, `components/city/render3d/`);
+  ADR-007 nguyên. KHÔNG đổi hình dạng JSONB đồng bộ: các khoá `resources` · `research` ·
+  `resourcesRefined` · `tinhThe` · `forgiveness` vẫn nằm trong save, chỉ THÔI được ghi.
+- **Bối cảnh**: lệnh Đàm vòng 36 — *"Build lớn. Simplify mạnh. Làm game vui hơn. Tập trung nhiều hơn
+  vào UX/UI. TOÀN QUYỀN"*, mặt trận chính là màn Thống kê: *"Thống kê phải TRẢ LỜI, chứ không TRÌNH
+  BÀY. Mở ra là thấy ngay, không phải bấm tab con nào: (a) tôi có đang khá lên không; (b) khi nào tôi
+  mạnh nhất; (c) làm gì tiếp — đúng một gợi ý, bấm được"*, kèm luật *"một con số không có mẫu số thì
+  không phải mục tiêu"* và *"Xoá nhiều là tốt"*. Nếu còn sức: đóng nốt `TECH_DEBT #99`, rồi tự quyết ba
+  câu hỏi mục 9 của vòng trước. Luật tiết kiệm token của vòng này: không chạy công cụ đo Thành phố,
+  không bảng số trước/sau nhiều cột, ảnh nghiệm thu ≤6 tấm 390px của đúng màn vừa sửa.
+- **Vấn đề**:
+  · `StatsDashboard.jsx` **3.792 dòng** (23% mã giao diện), 5 tab · 6 kỳ · 4 biểu đồ · 2 bản đồ nhiệt;
+    ở 390px nếp gấp đầu là HAI HÀNG NÚT, và ba câu Đàm hỏi nằm rải ở ba tab khác nhau — không câu nào
+    được trả lời ở nếp gấp đầu. Phần lớn con số ở đó không có mẫu số ("Giờ 12,4" — so với gì?).
+  · `#99`: sau ADR-069/070 tài nguyên · RP · tinh luyện không còn cổng tiêu, nhưng `completeFocusSession`
+    vẫn tính và cộng chúng mỗi phiên, huỷ phiên vẫn trừ tài nguyên và tiêu lượt «Sự Tha Thứ»,
+    `cancelCrafting` vẫn hoàn 50% nguyên liệu, hai nhiệm vụ ngày «Kiếm 80/160 RP» vẫn trong bộ, thẻ
+    tổng kết vẫn in «+18 tài nguyên · +50 RP · Rương Lớn». ~1.100 dòng phục vụ một kinh tế không ai thấy.
+  · Save còn hai chỗ chép CHỮ của bảng: di vật (đã sửa ADR-070) và **khủng hoảng kỷ** (`eraCrisis.name/
+    icon/description` + nhãn hai lựa chọn chép từ `ERA_CRISES` lúc kích hoạt) — bảng đổi chữ thì save
+    kể chuyện cũ trong im lặng.
+- **Phương án cân nhắc**:
+  · *Thống kê* — (A) giữ 5 tab, thêm tab «Tổng kết» đứng đầu: bác — vẫn phải bấm, vẫn 3.792 dòng.
+    (B) rút còn 3 tab: bác — vẫn TRÌNH BÀY, mỗi tab một bảng số. **(C — chọn)** ba thẻ trả lời ở đầu,
+    dải «Điều đáng chú ý» giữ nguyên, sổ tra cứu (Nhật ký · Ghi chú) GẤP xuống dưới — không giấu, chỉ
+    gấp; xoá thẳng Tổng Quan · Chiều Sâu · Phân Loại · bộ chọn kỳ · biểu đồ · bản đồ nhiệt.
+  · *So tuần* — (A) trọn tuần trước vs tuần này (như `getWeeklyTrend` của Coach): bác — sáng thứ Ba tuần
+    này có hai ngày, tuần trước bảy ⇒ ô đỏ suốt sáu ngày mỗi tuần. **(B — chọn)** tuần này vs CÙNG QUÃNG
+    của tuần trước (thứ Hai → đúng giờ này); ngưỡng "giữ nhịp" dùng CHUNG `WEEK_TREND_THRESHOLD_PCT`.
+  · *#99* — (A) migration xoá khoá + `normalizePersistedGameState`: bác — đổi JSONB đang tranh chấp CAS,
+    và xoá thứ Đàm đã kiếm mà anh chưa xác nhận không tiếc. **(B — chọn)** THÔI GHI, giữ khoá: phép
+    cộng/trừ/hoàn/phạt và hai nhiệm vụ RP xoá hẳn, dữ liệu cũ nằm yên; bản ghi lịch sử MỚI không còn
+    `resources/rpEarned/refinedEarned`, bản ghi cũ giữ nguyên (Thống kê vẫn đọc được).
+  · *Chữ trong save* — (A) chỉ di vật (ADR-070): bác — cùng một lỗi còn nằm ở khủng hoảng kỷ.
+    **(B — chọn)** luật chung *"save lưu id + số, CHỮ đọc từ bảng lúc nạp"*: di vật (`withCanonical
+    RelicText`) · nhiệm vụ (`normalizeMissionTemplate`, đã có) · khủng hoảng kỷ (`withCanonicalCrisisText`,
+    mới) — chỉ làm tươi CHỮ, không đổi `sessions/minMinutes` của thử thách ĐANG chạy.
+- **Giải pháp**:
+  1. `engine/statsAnswers.js` (THUẦN, +test): `buildWeekComparison` (7 cặp cột thứ Hai→Chủ nhật,
+     cùng quãng) · `buildBestWindow` (giờ · độ dài · loại việc, đọc thẳng `buildFocusProfile` — cùng số
+     với Coach, Wilson lower bound) · `buildNextAction` (bọc `recommendNextSession`; thiếu dữ liệu vẫn
+     là MỘT NÚT chạy được) · `buildStatsAnswers`. Bộ getter giờ VN tách thành `time.vietnamHistoryTimeOpts`
+     dùng chung với `useCoachContext` (trước là bản chép tay).
+  2. `StatsDashboard.jsx` 3.792 → **294 dòng**: ba `AnswerCard` + `InsightStrip` + «Sổ tra cứu» (hai nút
+     có số mục, mặc định gấp). Nút «Bắt đầu N phút · loại» đặt `timerConfig.focusMinutes` +
+     `pendingCategoryId` rồi `onNavigate({tab:'focus'})` — App truyền `handleNotificationNavigate`
+     (cùng đường với thông báo đẩy); đang có phiên chạy thì chỉ chuyển màn, không đổi đồng hồ.
+     `StatsJournal.jsx` · `StatsNotes.jsx` · `statsTheme.js` tách ra nguyên văn (hàng lọc loại việc
+     thôi cuộn ngang). Xoá `statsPeriod.js` · `statsFocus.js` (+test), `statsPeriodWiring.test.js`,
+     `computeYearGrid` · `computeCategoryStats`, 6 hàm định dạng biểu đồ.
+  3. `#99`: `calculateRewards` thôi trả `resources/rpEarned/t2Drop/largeChest` (xoá mục 8–10, hai hàm
+     phạt, `rollResourceDrop`, `getActiveResources`); store xoá `mergeResources` + 3 hàm trừ khi xoá
+     phiên, khối RP/tinh luyện/Lộc Ban Tặng-tinh-luyện, hệ số kinh tế công trình, phạt huỷ phiên +
+     lượt tha thứ, hoàn tiền `cancelCrafting`, nhiệm vụ `researchPoints`; `rewardFeed`/chuỗi thẻ bỏ
+     «Rương Lớn» · «+N tài nguyên/RP/tinh luyện» (thẻ phiên thường nói BẬC phiên). `challengeEngine.js`
+     bỏ 12 hàm chết của đường thử-thách-bậc/hiến-tế cũ (460 → 219 dòng).
+  4. `withCanonicalCrisisText` + `findEraCrisisById` (`challengeEngine.js`), gọi ở
+     `normalizePersistedGameState`; test tầng thuần + tầng store (`gameStore.adr071.test.js`).
+- **Trade-off**: mất biểu đồ cột theo kỳ, bản đồ nhiệt 16 tuần/365 ngày, tab Phân Loại (kể cả
+  `buildCategoryAdvisor` 170 dòng — `#93`), bộ chọn 6 kỳ. Đổi lại: mở màn là thấy câu trả lời, mọi tỉ
+  lệ có mẫu số. Mất «Rương Lớn» trên thẻ (một cái rương không còn gì để đựng). Lượt «Sự Tha Thứ» thôi
+  bị tiêu — kỹ năng ấy nay chỉ còn vế +XP sau huỷ (ADR-069). Save cũ vẫn mang các khoá tiền ngủ (dữ liệu
+  chết, không đọc, không ghi) — migration để dành khi Đàm xác nhận không tiếc.
+- **Ba câu tự quyết (mục 9 vòng 35)**: (1) **Chuỗi thẻ GIỮ, chỉ ngắn đi một chip** — thẻ Bước tuần /
+  Di vật lên bậc / Kỷ mới chỉ hiện khi việc ấy xảy ra (hiếm), gộp vào thẻ XP là làm thẻ dài ở MỌI phiên
+  để tiết kiệm ở vài phiên; (2) **Mốc di vật 20/50 phiên ≥25′ GIỮ** — đo trên fixture 599 phiên (bản
+  thật không đọc được từ hộp cát, proxy 403): 19,2 phiên ≥25′/tuần ⇒ trung vị **7,1 ngày** tới bậc 1,
+  **17,8 ngày** tới bậc 2; ở nhịp 8 phiên/tuần là ~2,5 và ~6 tuần — đủ chậm để là "lớn lên", đủ nhanh để
+  còn nhớ; (3) **Luật chữ-đọc-từ-bảng mở rộng thành luật chung** (xem Phương án).
+- **Ảnh hưởng**: 29 file, +464/−5.959 dòng mã (chưa kể tài liệu); `gameStore.js` 5.744 → 5.413,
+  `gameMath.js` 2.044 → 1.732. Test mới: `statsAnswers.test.js` (7) · `statsNavClarity.test.js` (viết
+  lại, 6) · `challengeEngine.test.js` (+2) · `gameStore.adr071.test.js` (3); characterization test của
+  `completeFocusSession`/`cancelFocusSession`/`rewardFeed`/`sessionRewardStory` đổi theo luật mới.
+- **Điều kiện xem lại**: Đàm dùng màn Thống kê mới vài tuần — nếu ba dòng «mạnh nhất» vẫn trống (không
+  đặt mục tiêu phiên) thì cần một cách khác để có mẫu số, không phải một biểu đồ khác. Migration xoá
+  khoá tiền ngủ: chỉ khi Đàm nói không tiếc kho.
+
 ## ADR-070 — MỘT CÁI KẾT DUY NHẤT, KHÔNG NÚT NHẬN, KHÔNG MÀN CHẾT: phần thưởng đã đạt thì tự vào, di vật lớn theo phiên, đặc quyền công trình về trục sống
 
 - **Ngày**: 2026-09-06 (vòng 35, ngay sau ADR-069)

@@ -44,7 +44,6 @@ function makeSession(id, {
   timestamp = todayTimestamp(id),
   xpEarned = minutes,
   epEarned = 0,
-  rpEarned = 0,
   breakCompletedOnTime = false,
   breakCompletedAt = null,
 } = {}) {
@@ -56,7 +55,6 @@ function makeSession(id, {
     minutes,
     xpEarned,
     epEarned,
-    rpEarned,
     completed: true,
     status: 'completed',
     book: 1,

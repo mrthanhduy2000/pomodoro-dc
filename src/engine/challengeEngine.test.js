@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 
-import { aggregateActiveBuffs } from './challengeEngine.js';
+import { withCanonicalCrisisText, findEraCrisisById, aggregateActiveBuffs } from './challengeEngine.js';
 import {
   RELIC_EVOLUTION,
   RELIC_RESOURCE_BONUS_CAP,
@@ -72,4 +72,38 @@ test('aggregateActiveBuffs: KHÔNG nerf loadout Huyền Thoại thật (no-op d�
   // xpSeal vẫn bị trần cũ (tổng thô 0.30 > 0.15 → clamp về 0.15) — hành vi sẵn có.
   assert.equal(acc.xpSeal, XP_SEAL_HARD_CAP);
   assert.ok(rawSum.xpSeal > XP_SEAL_HARD_CAP);
+});
+
+// ─── ADR-071: chữ của khủng hoảng kỷ ĐỌC LẠI TỪ BẢNG lúc nạp save ───────────────────────────
+// Cùng luật với di vật (`withCanonicalRelicText`) và nhiệm vụ (`normalizeMissionTemplate`): save chỉ
+// được tin ở `crisisId` + số tiến độ; mọi câu chữ là bản chép của `ERA_CRISES` và sẽ hoá cũ khi bảng đổi.
+test('withCanonicalCrisisText: chữ cũ trong save được thay bằng chữ của bảng, SỐ tiến độ/luật giữ nguyên', () => {
+  const canon = findEraCrisisById('ky_bang_ha');
+  assert.ok(canon, 'ERA_CRISES phải còn khủng hoảng kỷ 1');
+  const cu = {
+    active: true, crisisId: 'ky_bang_ha', name: 'Tên cũ', icon: '❄', description: 'mô tả cũ',
+    sacrificeOption: { label: 'cũ', description: 'cũ', icon: 'x', resourceLoss: 0.4 },
+    challengeOption: { label: 'cũ', description: 'cũ', icon: 'x', sessions: 9, minMinutes: 99, windowHours: 7 },
+    challengeSessionsRequired: 9, challengeMinMinutes: 99, challengeSessionsDone: 2, passed: false,
+  };
+  const moi = withCanonicalCrisisText(cu);
+  assert.equal(moi.name, canon.name);
+  assert.equal(moi.icon, canon.icon);
+  assert.equal(moi.description, canon.description);
+  assert.equal(moi.challengeOption.label, canon.challengeOption.label);
+  assert.equal(moi.sacrificeOption.description, canon.sacrificeOption.description);
+  // Luật của thử thách ĐANG chạy không được đổi giữa chừng
+  assert.equal(moi.challengeOption.sessions, 9);
+  assert.equal(moi.challengeOption.minMinutes, 99);
+  assert.equal(moi.challengeOption.windowHours, 7);
+  assert.equal(moi.challengeSessionsRequired, 9);
+  assert.equal(moi.challengeSessionsDone, 2);
+});
+
+test('withCanonicalCrisisText: id lạ hoặc trạng thái mặc định (crisisId null) ⇒ trả nguyên, không xoá dữ liệu', () => {
+  const la = { active: true, crisisId: 'khong_co_trong_bang', name: 'Giữ', challengeSessionsDone: 1 };
+  assert.deepEqual(withCanonicalCrisisText(la), la);
+  const macDinh = { active: false, crisisId: null, name: null, icon: null, description: null, sacrificeOption: null, challengeOption: null };
+  assert.deepEqual(withCanonicalCrisisText(macDinh), macDinh);
+  assert.equal(withCanonicalCrisisText(null), null);
 });

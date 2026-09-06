@@ -109,9 +109,6 @@ test('completeFocusSession: phiên 25 phút khóa base-XP/EP/tier/tài nguyên/t
   assert.equal(h0.tier, 'Tiêu Chuẩn ×1.0');
   assert.equal(h0.multiplier, 1);
   assert.equal(h0.jackpot, false);
-  assert.equal(h0.rpEarned, 50);
-  assert.equal(h0.refinedEarned, 0);
-  assert.deepEqual(h0.resources, { da_silex: 100, xuong: 75 });
   assert.equal(h0.status, 'completed');
   assert.equal(h0.completed, true);
   assert.equal(h0.cancelled, false);
@@ -128,11 +125,11 @@ test('completeFocusSession: phiên 25 phút khóa base-XP/EP/tier/tài nguyên/t
 // 2) Nhiều loại phiên (độ dài khác nhau) — khóa base-XP/EP/tier/hệ số/tài nguyên
 // ═══════════════════════════════════════════════════════════════════════════════
 const LENGTH_CASES = [
-  { min: 0,  base: 0,   ep: 0,  tier: 'Tiêu Chuẩn ×1.0',      mult: 1,   rp: 0,   refined: 0, resources: { da_silex: 0,   xuong: 0 },   blueprint: false },
-  { min: 15, base: 16,  ep: 15, tier: 'Tiêu Chuẩn ×1.0',      mult: 1,   rp: 30,  refined: 0, resources: { da_silex: 60,  xuong: 45 },  blueprint: false },
-  { min: 25, base: 26,  ep: 25, tier: 'Tiêu Chuẩn ×1.0',      mult: 1,   rp: 50,  refined: 0, resources: { da_silex: 100, xuong: 75 },  blueprint: false },
-  { min: 45, base: 61,  ep: 50, tier: 'Tập Trung Sâu ×1.3',   mult: 1.3, rp: 90,  refined: 1, resources: { da_silex: 234, xuong: 176 }, blueprint: true },
-  { min: 60, base: 127, ep: 72, tier: 'Phiên Chuyên Sâu ×2.0', mult: 2,  rp: 120, refined: 1, resources: { da_silex: 480, xuong: 360 }, blueprint: true },
+  { min: 0,  base: 0,   ep: 0,  tier: 'Tiêu Chuẩn ×1.0',      mult: 1,   blueprint: false },
+  { min: 15, base: 16,  ep: 15, tier: 'Tiêu Chuẩn ×1.0',      mult: 1,  blueprint: false },
+  { min: 25, base: 26,  ep: 25, tier: 'Tiêu Chuẩn ×1.0',      mult: 1,  blueprint: false },
+  { min: 45, base: 61,  ep: 50, tier: 'Tập Trung Sâu ×1.3',   mult: 1.3, blueprint: true },
+  { min: 60, base: 127, ep: 72, tier: 'Phiên Chuyên Sâu ×2.0', mult: 2, blueprint: true },
 ];
 
 for (const c of LENGTH_CASES) {
@@ -147,10 +144,7 @@ for (const c of LENGTH_CASES) {
     assert.equal(result.epEarned, c.ep);
     assert.equal(h0.tier, c.tier);
     assert.equal(h0.multiplier, c.mult);
-    assert.equal(h0.rpEarned, c.rp);
-    assert.equal(h0.refinedEarned, c.refined);
-    assert.deepEqual(h0.resources, c.resources);
-    // "blueprint session" = rớt refined hoặc ≥45 phút ⇒ totalBlueprints tăng
+    // "blueprint session" = ≥45 phút ⇒ totalBlueprints tăng (ADR-071: không còn rớt tinh luyện)
     assert.equal(s.historyStats.totalBlueprints, c.blueprint ? 1 : 0);
   });
 }
@@ -213,19 +207,20 @@ test('completeFocusSession: vượt ngưỡng cấp ⇒ lên đúng 1 cấp và 
 });
 
 // ═══════════════════════════════════════════════════════════════════════════════
-// 7) Loot: phiên 45 phút rớt refined + cập nhật kho + historyStats
+// 7) ADR-071 (đóng #99): phiên 45 phút KHÔNG còn rớt tinh luyện/tài nguyên — chỉ thống kê phiên sâu
 // ═══════════════════════════════════════════════════════════════════════════════
-test('completeFocusSession: phiên 45 phút rớt 1 refined, gộp tài nguyên thô, mở loot', () => {
+test('completeFocusSession: phiên 45 phút KHÔNG cộng tinh luyện/tài nguyên/RP (ADR-071), vẫn tính phiên sâu', () => {
   resetStore();
+  const truoc = useGameStore.getState();
+  const khoTruoc = JSON.stringify([truoc.resources, truoc.resourcesRefined, truoc.research?.rp ?? 0]);
   withRandom(NO_EVENT, () => useGameStore.getState().completeFocusSession(45));
   const s = useGameStore.getState();
 
-  // Refined rớt vào kho của kỷ nguyên hiện tại (book 1)
-  assert.equal(s.resourcesRefined[1].t2, 1);
-  assert.equal(s.resourcesRefined[1].t3, 0);
-  // Tài nguyên thô được gộp vào túi book1
-  assert.equal(s.resources.book1.da_silex, 234);
-  assert.equal(s.resources.book1.xuong, 176);
+  // Ba đồng tiền ngủ đứng yên từng byte — đồng tiền duy nhất là phiên (ADR-069/071)
+  assert.equal(JSON.stringify([s.resources, s.resourcesRefined, s.research?.rp ?? 0]), khoTruoc);
+  assert.equal(s.history[0].rpEarned, undefined, 'bản ghi mới không còn trường rpEarned');
+  assert.equal(s.history[0].refinedEarned, undefined);
+  assert.equal(s.history[0].resources, undefined);
   // Thống kê
   assert.equal(s.historyStats.totalBlueprints, 1);
   assert.equal(s.historyStats.bestSessionMinutes, 45);

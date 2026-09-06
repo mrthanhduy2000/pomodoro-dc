@@ -1,4 +1,62 @@
-> Cập nhật lần cuối: **2026-09-06 (vòng 35)** — **MỘT CÁI KẾT DUY NHẤT, KHÔNG NÚT NHẬN, KHÔNG MÀN
+> Cập nhật lần cuối: **2026-09-06 (vòng 36)** — **THỐNG KÊ TRẢ LỜI, KHÔNG TRÌNH BÀY; ĐÓNG #99
+> (ADR-071).** Lệnh Đàm: *"Build lớn. Simplify mạnh. Làm game vui hơn. Tập trung nhiều hơn vào UX/UI.
+> TOÀN QUYỀN … Đừng hỏi lại tôi bất cứ điều gì rồi ngồi chờ."* Không đụng Thành phố. Đóng `#99 · #6`,
+> `#93` hết đối tượng, `#2` xong vế `StatsDashboard.jsx`.
+>
+> ### Ba chỗ đổi (chi tiết + lý do: ADR-071; tóm tắt: CHANGELOG 2026-09-06 vòng 36)
+> 1. **Màn Thống kê viết lại** — `StatsDashboard.jsx` 3.792 → **294 dòng**. Mở ra là thấy ba thẻ:
+>    *«Tôi có đang khá lên không?»* (tuần này so CÙNG QUÃNG tuần trước — thứ Hai tới đúng giờ này —
+>    một câu + 7 cặp cột T2→CN), *«Khi nào tôi mạnh nhất?»* (giờ · độ dài · loại việc, mỗi dòng
+>    «đạt X% · trên N phiên có mục tiêu»; thiếu mẫu thì nói cần gì), *«Làm gì tiếp?»* (đúng MỘT nút
+>    «Bắt đầu N phút · loại» → đặt `timerConfig.focusMinutes` + `pendingCategoryId` rồi
+>    `onNavigate({tab:'focus'})`; đang có phiên chạy thì chỉ chuyển màn). Dải «Điều đáng chú ý» giữ.
+>    Nhật ký · Ghi chú GẤP dưới cùng (hai nút có số mục; `StatsJournal.jsx` · `StatsNotes.jsx` tách
+>    nguyên văn; hàng lọc loại việc thôi cuộn ngang). Số ở `engine/statsAnswers.js` (thuần, +7 test):
+>    chỉ GHÉP `buildFocusProfile`/`recommendNextSession`/`coachCompletedSessions` — không chế công
+>    thức mới; ngưỡng «giữ nhịp» dùng chung `WEEK_TREND_THRESHOLD_PCT`; bộ getter giờ VN tách thành
+>    `time.vietnamHistoryTimeOpts` (Coach dùng chung). XOÁ: Tổng Quan · Chiều Sâu · Phân Loại ·
+>    `PeriodPicker` · 4 biểu đồ · 2 bản đồ nhiệt · `statsPeriod.js` · `statsFocus.js` (+test) ·
+>    `statsPeriodWiring.test.js` · `computeYearGrid` · `computeCategoryStats` · 6 hàm định dạng.
+>    `statsNavClarity.test.js` viết lại (6 bài: thứ tự ba câu trước sổ, sổ gấp mặc định, không cuộn
+>    ngang, nhãn không trùng điều hướng, nút nhảy màn có dây thật ở App, mọi tỉ lệ kèm mẫu số).
+>    `motionCoverage` bỏ ngoại lệ StatsDashboard (4 → 0). `glyph.test.js` soi hai file sổ mới.
+> 2. **Đóng `#99`** — phương án *THÔI GHI, giữ khoá* (không migration, không đụng JSONB CAS):
+>    `calculateRewards` bỏ mục 8–10 (tài nguyên · RP · tinh luyện) và `largeChest`; xoá
+>    `applyDisasterPenalty` · `calculateSessionResourceFloor` · `rollResourceDrop` · `getActiveResources`
+>    (gameMath 2.044 → 1.732); store xoá `mergeResources` + ba hàm trừ khi xoá phiên, khối RP/tinh
+>    luyện/Lộc-Ban-Tặng-tinh-luyện, `getEconomyRewardModifiers`, phạt huỷ phiên + tiêu lượt «Sự Tha
+>    Thứ», hoàn tiền `cancelCrafting`, nhiệm vụ `researchPoints` (2 mục) (store 5.744 → 5.413);
+>    `challengeEngine.js` bỏ 12 hàm chết đường thử-thách-bậc/hiến-tế (460 → 219). Bản ghi lịch sử MỚI
+>    không còn `resources/rpEarned/refinedEarned/positiveEventRPBonus`; `cancelPenalty: null`. Thẻ
+>    tổng kết bỏ «Rương Lớn · +tài nguyên · +RP · +tinh luyện» — phiên thường không mốc/không sự kiện
+>    thì nói BẬC phiên. Characterization test đổi theo (`completeFocusSession` · `cancelFocusSession`
+>    · `rewardFeed` · `sessionRewardStory`), thêm `gameStore.adr071.test.js` (3 bài).
+> 3. **Chữ trong save đọc từ bảng** — `withCanonicalCrisisText` + `findEraCrisisById`
+>    (`challengeEngine.js`, +2 test) gọi ở `normalizePersistedGameState`: `eraCrisis.name/icon/
+>    description` + nhãn hai lựa chọn đọc lại từ `ERA_CRISES`; `sessions/minMinutes` của thử thách
+>    ĐANG chạy giữ nguyên. Cùng luật với di vật (ADR-070) và nhiệm vụ (`normalizeMissionTemplate`).
+>
+> ### Ba câu tự quyết (mục 9 vòng 35) — đã chốt, lý do ở ADR-071
+> · Chuỗi thẻ GIỮ (chỉ bớt chip «Rương Lớn») · Mốc di vật 20/50 GIỮ (fixture 599 phiên: 19,2
+> phiên ≥25′/tuần ⇒ trung vị 7,1 ngày và 17,8 ngày; bản thật không đọc được từ hộp cát — proxy 403)
+> · Luật chữ-đọc-từ-bảng thành luật chung (di vật · nhiệm vụ · khủng hoảng kỷ).
+>
+> ### Bài học vòng 36
+> · Ảnh nghiệm thu đầu tiên in «Dựa trên 77 phiên…» HAI LẦN — câu lý do của `recommendNextSession`
+>   đã tự mang mẫu số, giao diện ghép thêm là in đôi. Luật: **câu chữ có mẫu số thì mẫu số sống ở
+>   engine, giao diện chỉ in** (test đọc mã canh `{answers.next.reason}` và cấm «Dựa trên» lần hai).
+> · Fixture 599 phiên KHÔNG có `goalAchieved` ⇒ ba dòng «mạnh nhất» trống cả ba. Đó không phải lỗi,
+>   nhưng một màn im lặng là một màn chết: thêm một câu nói thẳng việc cần làm (đặt mục tiêu phiên).
+> · `applyDisaster` (tuỳ chọn huỷ phiên đời cũ) nay bị BỎ QUA — có test khoá "true hay false đều
+>   cùng một bản ghi", để phiên sau không tưởng còn hai đường huỷ.
+> · Ba lần trong vòng này một script sửa-nhiều-file DỪNG ở một assert giữa chừng và các file SAU
+>   điểm dừng không được ghi — mà file trước đã ghi. Luật: **sau mỗi script nhiều file, `git status`
+>   + chạy lại test của TỪNG file định sửa**, đừng tin "ok" in ở cuối một script chưa chạy tới cuối.
+>
+> Test **1.597 bài (1.596 pass · 0 fail · 1 skipped)** · lint sạch · build xanh. Ảnh nghiệm thu (390px, fixture 599 phiên): 3 lát màn
+> Thống kê mới (`scratchpad/shots36/f2-*.png`). `#99 · #6` đóng, `#93` hết đối tượng, `#2` xong nửa.
+>
+> *(mốc trước)* Cập nhật **2026-09-06 (vòng 35)** — **MỘT CÁI KẾT DUY NHẤT, KHÔNG NÚT NHẬN, KHÔNG MÀN
 > CHẾT (ADR-070).** Lệnh Đàm: *"Tiếp tục làm như prompt trên mà không hỏi lại, cho phép bạn tự quyết
 > định mọi thứ và tech debt. Build lớn. Simplify mạnh. Làm game vui hơn. Tập trung nhiều hơn vào UX/UI."*
 > Không đụng Thành phố. Đóng `#96 · #98 · #100`, cập nhật `#99`.

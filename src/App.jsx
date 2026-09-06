@@ -1111,7 +1111,7 @@ export default function App() {
                     <TabPane key="stats">
                       <ShellPane topRail={!isDesktop && !showFocusFullscreen ? renderTopRail() : null}>
                         <DeferredTabContent>
-                          <StatsDashboard />
+                          <StatsDashboard onNavigate={handleNotificationNavigate} />
                         </DeferredTabContent>
                       </ShellPane>
                     </TabPane>

@@ -85,7 +85,8 @@ test('màn sưu tập phải hỏi getGlyph, KHÔNG được nối thẳng ký h
     'src/components/SkillTree.jsx',
     'src/components/BuildScreen.jsx',
     'src/components/RelicInventory.jsx',
-    'src/components/StatsDashboard.jsx',
+    'src/components/StatsJournal.jsx',
+    'src/components/StatsNotes.jsx',
   ];
   for (const duongDan of man) {
     const ma = readFileSync(duongDan, 'utf8');

@@ -110,8 +110,17 @@
 │   │   ├── Coach*.jsx         # 3 lối vào AI Coach: CoachChat (hỏi-đáp), CoachOffline (phân tích
 │   │   │                     #   tổng thể), CoachNudge (tự nhắc sau phiên) — logic AI thật nằm ở
 │   │   │                     #   src/engine/coach/, các file này chỉ là UI + gọi engine.
-│   │   ├── StatsDashboard.jsx # Tab Thống kê — LỚN NHẤT dự án (biểu đồ, nhật ký phiên, bộ lọc).
-│   │   │                     #   Hàm định dạng thuần đã tách ra statsFormatters.js cạnh nó.
+│   │   ├── StatsDashboard.jsx # Màn Thống kê TRẢ LỜI (ADR-071, 294 dòng — từng là 3.792): ba thẻ
+│   │   │                     #   «khá lên không · mạnh nhất khi nào · làm gì tiếp» (số từ
+│   │   │                     #   engine/statsAnswers.js) + dải «Điều đáng chú ý» + sổ tra cứu GẤP.
+│   │   │                     #   ⚠️ Nút «Bắt đầu N phút» đặt timerConfig + pendingCategory rồi
+│   │   │                     #   onNavigate({tab:'focus'}) — App.jsx PHẢI truyền prop ấy
+│   │   │                     #   (`statsNavClarity.test.js` đọc mã nguồn và sẽ ĐỎ nếu thiếu).
+│   │   ├── StatsJournal.jsx   # Sổ tra cứu 1: nhật ký từng phiên (mục tiêu · ghi chú · sửa loại ·
+│   │   │                     #   xoá · hoàn tác). Tách nguyên văn từ StatsDashboard 2026-09-06.
+│   │   ├── StatsNotes.jsx     # Sổ tra cứu 2: ghi chú đã lưu. Cùng lý do tách.
+│   │   ├── statsTheme.js      # Biến màu/chữ dùng chung ba file Thống kê (CSS var có mặc định).
+│   │   │                     #   Hàm định dạng thuần của sổ tra cứu ở statsFormatters.js cạnh nó.
 │   │   ├── PomodoroEngine.jsx # Khung chính chứa đồng hồ Pomodoro/Stopwatch (UI, logic timer
 │   │   │                     #   thật nằm ở src/hooks/useTimer.js)
 │   │   ├── BuildScreen.jsx    # Màn CÔNG TRÌNH một nút (ADR-069): Đang xây · Xây tiếp (≤3 lựa chọn,
@@ -144,21 +153,14 @@
 │   │   │   ├── coachEvalFixtures.js  # ~30 câu mẫu (sạch/bịa) cho eval.test.js
 │   │   │   └── *.test.js          # test đi kèm từng file cùng tên
 │   │   ├── gameMath.js        # Công thức tính điểm/XP/streak/thống kê — file LỚN, sửa cẩn thận
-│   │   ├── statsPeriod.js     # KỲ THỜI GIAN của màn Thống kê — NGUỒN DUY NHẤT (ADR-067).
-│   │   │                     #   6 kỳ (Hôm Nay…Tất Cả) + getPeriodStartTs + getPreviousPeriodRange
-│   │   │                     #   + buildPeriodBuckets (chia cột biểu đồ, mỗi cột TỰ KHAI độ mịn).
-│   │   │                     #   ⚠️ Nghĩa LỊCH: "tuần này" = từ thứ Hai, KHÔNG phải "7 ngày gần
-│   │   │                     #   nhất". Trước 2026-08-30 màn Thống kê khai BA bảng kỳ riêng ở ba
-│   │   │                     #   tab với ba mặc định khác nhau ⇒ chuyển tab là đổi cửa sổ thời
-│   │   │                     #   gian mà không báo. Đừng khai lại bảng kỳ ở tầng giao diện —
-│   │   │                     #   `components/statsPeriodWiring.test.js` đọc mã nguồn và sẽ ĐỎ.
-│   │   ├── statsFocus.js      # Tóm tắt NHỊP TẬP TRUNG — lái toàn bộ tab "Tập Trung"
-│   │   │                     #   (~25 con số: khung giờ rõ nhất, tỉ lệ phiên sâu, chuỗi ngày…).
-│   │   │                     #   ⚠️ MÀU KHÔNG Ở ĐÂY: `FOCUS_BUCKETS` từng mang `accent: '#…'`,
-│   │   │                     #   một quyết định MỸ THUẬT lẫn trong bảng LOGIC — nay màu nằm ở
-│   │   │                     #   `FOCUS_BUCKET_ACCENTS` phía giao diện, khớp theo THỨ TỰ. Đổi số
-│   │   │                     #   dải thì phải sửa CẢ HAI; `statsPeriodWiring.test.js` có bài canh.
-│   │   ├── statsInsights.js   # "Điều đáng chú ý" — dải insight ở tab Tổng Quan.
+│   │   ├── statsAnswers.js    # BA CÂU TRẢ LỜI của màn Thống kê (ADR-071) — THUẦN, không Date.
+│   │   │                     #   Chỉ GHÉP phép phân tích ĐÃ CÓ (coach/coachIntel.js · gameMath.js):
+│   │   │                     #   so tuần CÙNG QUÃNG (thứ Hai→giờ này, 7 cặp cột) · giờ/độ dài/loại
+│   │   │                     #   việc mạnh nhất (kèm cỡ mẫu) · một gợi ý phút+loại bấm được.
+│   │   │                     #   ⚠️ Không chế công thức mới ở đây (một luật hai công thức). Bộ
+│   │   │                     #   getter giờ VN: time.vietnamHistoryTimeOpts (dùng chung với Coach).
+│   │   │                     #   ⚠️ statsPeriod.js · statsFocus.js ĐÃ XOÁ 2026-09-06 cùng 3 tab cũ.
+│   │   ├── statsInsights.js   # "Điều đáng chú ý" — dải insight dưới ba thẻ trả lời của màn Thống kê.
 │   │   │                     #   ⚠️ CHỈ GỌI hàm tín hiệu đã có ở gameMath.js rồi diễn đạt lại;
 │   │   │                     #   TUYỆT ĐỐI không chế công thức mới ở đây (chế thêm = "một luật
 │   │   │                     #   hai công thức"). Hai luật nội dung có test canh: mọi % kèm CỠ

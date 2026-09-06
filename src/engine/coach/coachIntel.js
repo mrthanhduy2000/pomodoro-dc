@@ -21,6 +21,8 @@ import {
 
 export const COACH_BUCKET_MIN_SAMPLE = 4;
 const CAT_MIN_SAMPLE = 4;
+/** Một ô (buổi×độ dài) hay một loại việc cần bấy nhiêu phiên CÓ MỤC TIÊU mới được xếp hạng theo tỉ lệ đạt — Coach + Thống kê dùng chung. */
+export const GOAL_RANK_MIN_SAMPLE = 3;
 const CONSISTENCY_WINDOW = 28;
 const CONSISTENCY_MIN_DAYS = 6;
 const PRED_STREAK_MIN_DAYS = 4;
@@ -159,7 +161,7 @@ export function buildFocusProfile(history = [], opts = {}) {
   const cats = [...byCategory.values()].filter((c) => c.sessions >= CAT_MIN_SAMPLE);
   if (cats.length >= 1) {
     cats.sort((a, b) => b.minutes - a.minutes);
-    const top = cats.slice(0, 4).map((c) => ({ label: c.label, hours: Math.round((c.minutes / 60) * 10) / 10, sessions: c.sessions, goalRate: c.goalTotal >= 3 ? observedRate(c.goalHit, c.goalTotal) : null }));
+    const top = cats.slice(0, 4).map((c) => ({ label: c.label, hours: Math.round((c.minutes / 60) * 10) / 10, sessions: c.sessions, goalRate: c.goalTotal >= GOAL_RANK_MIN_SAMPLE ? observedRate(c.goalHit, c.goalTotal) : null }));
     const lead = top[0];
     const ratePart = lead.goalRate != null ? `, đạt mục tiêu ${pct(lead.goalRate)}%` : '';
     categoryPerformance = { status: confidenceLabel(cats[0].sessions), value: { top }, sampleSize: cats[0].sessions, blurb: `Loại bạn dành nhiều thời gian nhất là "${lead.label}" (${lead.hours}h${ratePart}).` };
@@ -203,7 +205,7 @@ export function recommendNextSession(profile, opts = {}) {
   const currentBucket = getTimeOfDayBucket(nowHour);
   // Tách bạch: ưu tiên ô có DỮ LIỆU MỤC TIÊU (Wilson lower bound — phạt mẫu nhỏ);
   // chỉ rơi xuống "độ trọn vẹn" (số phiên) khi KHÔNG ô nào đủ mục tiêu. Không trộn.
-  const goalCells = cells.filter((c) => c.goalTotal >= 3);
+  const goalCells = cells.filter((c) => c.goalTotal >= GOAL_RANK_MIN_SAMPLE);
   const pool = goalCells.length ? goalCells : cells;
   const goalBasis = goalCells.length > 0;
   const fitOf = (c) => (c.bucketId === currentBucket.id ? 1 : 0.85);
@@ -228,8 +230,8 @@ export function recommendNextSession(profile, opts = {}) {
   let category = null;
   const cats = [...(profile._cats?.values() ?? [])].filter((c) => c.sessions >= 3 && c.label);
   if (cats.length) {
-    cats.sort((a, b) => (b.goalTotal >= 3 ? wilsonLowerBound(b.goalHit, b.goalTotal) : 0) - (a.goalTotal >= 3 ? wilsonLowerBound(a.goalHit, a.goalTotal) : 0));
-    if (cats[0].goalTotal >= 3) category = { id: cats[0].categoryId, label: cats[0].label };
+    cats.sort((a, b) => (b.goalTotal >= GOAL_RANK_MIN_SAMPLE ? wilsonLowerBound(b.goalHit, b.goalTotal) : 0) - (a.goalTotal >= GOAL_RANK_MIN_SAMPLE ? wilsonLowerBound(a.goalHit, a.goalTotal) : 0));
+    if (cats[0].goalTotal >= GOAL_RANK_MIN_SAMPLE) category = { id: cats[0].categoryId, label: cats[0].label };
   }
 
   const headline = goalBasis

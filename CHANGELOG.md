@@ -12,6 +12,30 @@
 
 ---
 
+## 2026-09-06 (vòng 36) — Thống kê trả lời, không trình bày; đóng #99 (ADR-071)
+
+**Mục đích.** Lệnh Đàm *"Build lớn. Simplify mạnh. Làm game vui hơn. UX/UI. TOÀN QUYỀN"* với mặt trận
+chính là màn Thống kê: mở ra phải thấy ngay ba câu trả lời — *khá lên không · mạnh nhất khi nào · làm
+gì tiếp* — không bấm tab con; *"một con số không có mẫu số thì không phải mục tiêu"*.
+
+**Phạm vi.** (1) `StatsDashboard.jsx` 3.792 → 294 dòng: ba thẻ trả lời (engine mới
+`statsAnswers.js`, thuần, ghép các phép phân tích ĐÃ CÓ của `coachIntel`/`gameMath`), dải «Điều đáng
+chú ý» giữ nguyên, sổ tra cứu Nhật ký · Ghi chú gấp xuống dưới (`StatsJournal.jsx` · `StatsNotes.jsx`);
+nút «Bắt đầu N phút · loại» nhảy thẳng sang màn Tập trung. Xoá tab Tổng Quan · Chiều Sâu · Phân Loại,
+bộ chọn 6 kỳ, biểu đồ, bản đồ nhiệt, `statsPeriod.js` · `statsFocus.js`. (2) Đóng `TECH_DEBT #99`:
+tài nguyên · RP · tinh luyện THÔI được cộng (không migration, khoá vẫn nằm trong save), huỷ phiên không
+trừ tài nguyên/không tiêu lượt tha thứ, `cancelCrafting` không hoàn, bỏ hai nhiệm vụ «Kiếm N RP», thẻ
+tổng kết bỏ «Rương Lớn/+tài nguyên/+RP». (3) Chữ của khủng hoảng kỷ trong save đọc lại từ `ERA_CRISES`
+lúc nạp (cùng luật với di vật).
+
+**Ảnh hưởng.** 29 file, +464/−5.959 dòng mã. Bản ghi lịch sử MỚI không còn `resources/rpEarned/
+refinedEarned` (bản cũ giữ nguyên, Thống kê vẫn đọc). `useCoachContext` và Thống kê dùng chung một bộ
+getter giờ VN (`time.vietnamHistoryTimeOpts`).
+
+**Tương thích.** Save cũ nạp bình thường; các khoá tiền ngủ không bị xoá. Không đụng Thành phố.
+
+---
+
 ## 2026-09-06 (vòng 35) — Một cái kết duy nhất, không nút nhận, không màn chết (ADR-070)
 
 **Mục đích.** Lệnh Đàm *"Tiếp tục … tự quyết định mọi thứ và tech debt. Build lớn. Simplify mạnh.

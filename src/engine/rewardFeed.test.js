@@ -49,7 +49,7 @@ test('phiên thường + di vật ⇒ hai toast, KHÔNG có gì đòi chặn mà
   const toasts = buildRewardToasts(ui({
     lootModalOpen: true,
     pendingReward: {
-      totalSessionXP: 120, multiplier: 1.0, resources: { go: 3 }, rpEarned: 4, eraChanged: false,
+      totalSessionXP: 120, multiplier: 1.0, eraChanged: false,
     },
     relicNotification: RELIC,
   }));
@@ -186,13 +186,14 @@ test('bậc cao nhất của phần dư đọc đúng, kể cả khi danh sách 
 
 const PHIEN_THUONG = {
   lootModalOpen: true,
-  pendingReward: { totalSessionXP: 120, resources: { go: 18 }, rpEarned: 50, multiplier: 1.3 },
+  pendingReward: { totalSessionXP: 120, multiplier: 1.3, tierLabel: 'Tập Trung Sâu ×1.3' },
 };
 
-test('không có mốc sắp tới ⇒ thẻ phiên vẫn đếm tài nguyên như cũ', () => {
+test('không có mốc sắp tới ⇒ thẻ phiên nói BẬC của phiên (ADR-071: không còn đếm tài nguyên/RP)', () => {
   const [loot] = buildRewardToasts(PHIEN_THUONG).filter((t) => t.source === 'loot');
   assert.ok(loot, 'mất luôn thẻ tổng kết phiên');
-  assert.match(loot.description, /tài nguyên/, 'không có mốc mà đã thôi nói tài nguyên');
+  assert.equal(loot.description, 'Tập Trung Sâu ×1.3');
+  assert.ok(!/tài nguyên|RP/.test(loot.description), 'ba đồng tiền ngủ lại lên thẻ');
 });
 
 test('sắp tới mốc ⇒ thẻ phiên NÓI VỀ MỐC thay vì đếm tài nguyên', () => {
@@ -252,7 +253,7 @@ test('KHÔNG có sự kiện ⇒ giữ nguyên thẻ chung như cũ', () => {
   const [loot] = buildRewardToasts(PHIEN_THUONG).filter((t) => t.source === 'loot');
   assert.equal(loot.name, 'Phiên đã xong');
   assert.equal(loot.icon, '🎁');
-  assert.match(loot.description, /tài nguyên/);
+  assert.equal(loot.description, 'Tập Trung Sâu ×1.3');
 });
 
 test('mốc sắp tới VẪN THẮNG phần mô tả, nhưng sự kiện giữ tên và icon', () => {
@@ -272,59 +273,15 @@ test('sự kiện KHÔNG nâng bậc độ hiếm — bậc đang đo ĐỘ DÀI
   assert.equal(coSuKien.tier, thuong.tier, 'sự kiện đang tự nâng bậc của mình');
 });
 
-// ─── Rương Lớn + tinh luyện phải được GỌI TÊN trên thẻ (2026-09-01) ──────────
-// Đo trên fixture 624 phiên: Rương Lớn ở 10,1% số phiên, tinh luyện ở 28,8% — cả hai đã được
-// tính từ lâu mà chưa bao giờ hiện tên. "Rương Lớn" trước nay chỉ là chữ "lớn" viết thường bé
-// xíu trên huy hiệu hệ số; tinh luyện thì không hiện ở đâu cả.
-
-// THỬ-CHO-ĐỎ: xoá dòng `if (pendingReward.largeChest) bits.push('Rương Lớn');` ⇒ bài này đỏ.
-test('thẻ tổng kết gọi tên Rương Lớn và tinh luyện, xếp HIẾM trước THƯỜNG', () => {
+// ─── ADR-071 (đóng #99): Rương Lớn · tinh luyện · tài nguyên · RP đã rời khỏi thẻ ─────────
+// Ba đồng tiền không còn được tính; một cái rương không còn gì để đựng chỉ là một cái nhãn.
+test('không mốc, không sự kiện ⇒ thẻ nói bậc phiên; KHÔNG bịa Rương Lớn/tinh luyện/tài nguyên/RP', () => {
   const [the] = buildRewardToasts({
     lootModalOpen: true,
-    pendingReward: {
-      totalSessionXP: 900, multiplier: 2.0, largeChest: true, t2Drop: 1,
-      resources: { go: 18 }, rpEarned: 120,
-    },
+    pendingReward: { totalSessionXP: 300, multiplier: 1.0, tierLabel: 'Tiêu Chuẩn ×1.0', largeChest: true, t2Drop: 1, resources: { go: 4 }, rpEarned: 40 },
   });
-  assert.equal(the.source, 'loot');
-  const mo = the.description;
-  assert.ok(mo.includes('Rương Lớn'), `thiếu Rương Lớn: ${mo}`);
-  assert.ok(mo.includes('tinh luyện'), `thiếu tinh luyện: ${mo}`);
-  // Thứ tự là phần quan trọng: dòng chỉ có MỘT dòng, dài hơn bị cắt "…".
-  assert.ok(
-    mo.indexOf('Rương Lớn') < mo.indexOf('tinh luyện'),
-    `Rương Lớn (10,1% phiên) phải đứng trước tinh luyện (28,8%): ${mo}`,
-  );
-  assert.ok(
-    mo.indexOf('tinh luyện') < mo.indexOf('tài nguyên'),
-    `tinh luyện phải đứng trước tài nguyên (có ở gần như mọi phiên): ${mo}`,
-  );
-});
-
-// THỬ-CHO-ĐỎ: bỏ `pendingReward.largeChest ? 'Rương Lớn' : null` khỏi mảng `khoe` ⇒ đỏ.
-test('phiên CÓ sự kiện vẫn khoe Rương Lớn — 63% phiên đi qua nhánh này', () => {
-  const [the] = buildRewardToasts({
-    lootModalOpen: true,
-    pendingReward: {
-      totalSessionXP: 900, multiplier: 2.0, largeChest: true,
-      positiveEvent: { icon: '💡', label: 'Đột Phá!', desc: 'Khoảnh khắc hiểu sâu bất ngờ' },
-      positiveEventBonus: 120,
-    },
-  });
-  assert.equal(the.icon, '💡');
-  assert.equal(the.name, 'Đột Phá!');
-  assert.ok(the.description.includes('Rương Lớn'), `thiếu Rương Lớn: ${the.description}`);
-  assert.ok(the.description.includes('Khoảnh khắc hiểu sâu'), 'mất câu chuyện của sự kiện');
-});
-
-test('không có gì hiếm thì KHÔNG bịa ra dòng nào', () => {
-  const [the] = buildRewardToasts({
-    lootModalOpen: true,
-    pendingReward: { totalSessionXP: 300, multiplier: 1.0, resources: { go: 4 }, rpEarned: 40 },
-  });
-  assert.ok(!the.description.includes('Rương Lớn'));
-  assert.ok(!the.description.includes('tinh luyện'));
-  assert.equal(the.description, '+4 tài nguyên · +40 RP');
+  for (const cu of ['Rương Lớn', 'tinh luyện', 'tài nguyên', 'RP']) assert.ok(!the.description.includes(cu), `«${cu}» lại lên thẻ: ${the.description}`);
+  assert.equal(the.description, 'Tiêu Chuẩn ×1.0');
 });
 
 // ─── MỐC CHUỖI 7 / 14 / 30 (2026-09-01) ──────────────────────────────────────

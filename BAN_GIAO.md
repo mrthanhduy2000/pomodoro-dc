@@ -34,8 +34,8 @@
 >    Thủy», City says «Viên gạch đầu tiên đang chờ»; the first ending tells the brick story.
 >
 > ### Gates
-> `npm run lint` clean · `npm run build` green · `npm run test:quiet` green (see the gate commit for the
-> exact count). Screenshots (390 px, FULL data as ordered): `scratchpad/shots37/` — `focus-idle2.png`
+> `npm run lint` clean · `npm run build` green · `npm run test:fast` **1,589 tests · 1,588 pass · 0 fail ·
+> 1 skipped** (round 36: 1,597 — 13 files deleted, 30 tests added). Screenshots (390 px, FULL data as ordered): `scratchpad/shots37/` — `focus-idle2.png`
 > (strip + Start on the fold), `ending-project.png` (brick landed), `st-0/st-1.png` (Stats, three lines
 > with numbers), `fresh-focus2.png` + `fresh-city2.png` (session #1 story). Fixture regenerated with
 > goals + reviews (`make-fixture.mjs`: `goalFields`).

@@ -46,9 +46,7 @@ const CityBackdrop = createRecoverableLazy(() => import('./components/city/CityB
 const Settings = createRecoverableLazy(() => import('./components/Settings.jsx'), 'settings');
 const PrestigeModal = createRecoverableLazy(() => import('./components/PrestigeModal.jsx'), 'prestige-modal');
 const LevelUpModal = createRecoverableLazy(() => import('./components/LevelUpModal.jsx'), 'level-up-modal');
-const WeeklyReportModal = createRecoverableLazy(() => import('./components/WeeklyReportModal.jsx'), 'weekly-report-modal');
 const RewardToastHost = createRecoverableLazy(() => import('./components/RewardToastHost.jsx'), 'reward-toast-host');
-const OnboardingOverlay = createRecoverableLazy(() => import('./components/OnboardingOverlay.jsx'), 'onboarding-overlay');
 
 function createBoundaryLogger(scope) {
   return (error, errorInfo) => {
@@ -438,7 +436,7 @@ export default function App() {
   const checkEraCrisisDeadlines = useGameStore((s) => s.checkEraCrisisDeadlines);
   const timerSessionRunning = useGameStore((s) => s.timerSession.isRunning);
   const refreshDailyMissions = useGameStore((s) => s.refreshDailyMissions);
-  const openWeeklyReport = useGameStore((s) => s.openWeeklyReport);
+  const markWeeklyReportSeen = useGameStore((s) => s.markWeeklyReportSeen);
   const missionBoundaryRef = useRef({ day: localDateStr(), week: localWeekMondayStr() });
 
   useEffect(() => {
@@ -586,7 +584,6 @@ export default function App() {
   ));
   const lootModalOpen = useGameStore((s) => s.ui.lootModalOpen);
   const prestigeModalOpen = useGameStore((s) => s.ui.prestigeModalOpen);
-  const weeklyReportOpen = useGameStore((s) => s.ui.weeklyReportOpen);
   const weeklyReportPending = useGameStore((s) => s.ui.weeklyReportPending);
   const lastWeeklyReportSeenDate = useGameStore((s) => s.lastWeeklyReportSeenDate);
   // ⚠️ Dùng CHÍNH `localWeekMondayStr` mà store gọi (`getWeekMonday` chỉ là một lớp bọc quanh nó),
@@ -654,9 +651,10 @@ export default function App() {
   // `weeklyReportUnseen` (suy từ `lastWeeklyReportSeenDate`) chứ không đọc một id tab. Nhét nó vào
   // đây thì phải đặt cho nó một id giả `'weeklyReport'` — một khoá trông như tab mà không có tab
   // nào tên thế, và `selectTab` sẽ nuốt im lặng nếu có ai lỡ truyền nó đi.
+  // ADR-076: the Monday "week summary unseen" dot now sits on the Thống kê tab (the report was folded into Stats).
   const attentionTabIds = useMemo(
-    () => new Set(inventoryNeedsAttention ? ['inventory'] : []),
-    [inventoryNeedsAttention],
+    () => new Set([...(inventoryNeedsAttention ? ['inventory'] : []), ...(weeklyReportUnseen ? ['stats'] : [])]),
+    [inventoryNeedsAttention, weeklyReportUnseen],
   );
   // ⚠️ MỌI đường vào điều hướng phải đi qua đây, kể cả khi nơi gọi truyền id CŨ
   // (`skills`/`collection`/`achievements`) — `resolveTabTarget` dịch chúng thành
@@ -692,6 +690,11 @@ export default function App() {
     if (target.tab !== 'focus') {
       setFocusFullscreen(false);
     }
+  };
+  // ADR-076: the weekly report IS the Stats screen. "Seeing it" = opening Thống kê + recording seen.
+  const openWeeklySummary = () => {
+    markWeeklyReportSeen();
+    selectTab('stats');
   };
 
   // Cái chấm tắt khi Đàm ĐÃ XEM, không phải khi anh đi ngang qua: chỉ mở tab con "Thành tích"
@@ -855,8 +858,6 @@ export default function App() {
               activeTab={activeTab}
               attentionTabIds={attentionTabIds}
               isOpen={sidebarOpen}
-              onOpenWeeklyReport={openWeeklyReport}
-              weeklyReportUnseen={weeklyReportUnseen}
               onSelect={selectTab}
               onToggle={() => setSidebarOpen((value) => !value)}
             />
@@ -945,7 +946,7 @@ export default function App() {
                         */}
                         <FocusMoment
                           weeklyUnseen={weeklyReportUnseen}
-                          onOpenWeekly={openWeeklyReport}
+                          onOpenWeekly={openWeeklySummary}
                           onNavigate={handleNotificationNavigate}
                           sessionInProgress={hasFocusSessionInProgress}
                         />
@@ -1149,7 +1150,7 @@ export default function App() {
                   borderColor: 'var(--line)',
                   background: 'var(--panel-soft)',
                   boxShadow: '0 16px 34px rgba(31,30,29,0.12)',
-                  gridTemplateColumns: `repeat(${Math.min(4, Math.max(1, MOBILE_SECONDARY_TABS.length + 1))}, minmax(0, 1fr))`,
+                  gridTemplateColumns: `repeat(${Math.min(4, Math.max(1, MOBILE_SECONDARY_TABS.length))}, minmax(0, 1fr))`,
                 }}
               >
                 {MOBILE_SECONDARY_TABS.map((tab) => {
@@ -1171,34 +1172,6 @@ export default function App() {
                     </button>
                   );
                 })}
-                {/*
-                  ⚠️ MỤC NÀY LÀ ĐIỀU KIỆN AN TOÀN CỦA ADR-061, KHÔNG PHẢI MỘT TIỆN ÍCH THÊM VÀO.
-                  Trước nó, iPhone **không có đường nào** mở báo cáo tuần — cái nút duy nhất nằm ở
-                  thanh bên desktop (`hidden md:flex`), nên báo cáo chỉ tới được Đàm bằng đúng cái
-                  hộp thoại tự bật mà ADR-061 vừa gỡ. Gỡ tự-bật mà không thêm mục này thì trên
-                  thiết bị Đàm dùng nhiều nhất, báo cáo tuần biến mất hoàn toàn.
-                  Nó là HÀNH ĐỘNG chứ không phải tab, nên nó không nằm trong `MOBILE_SECONDARY_TABS`
-                  (mảng ấy nuôi `selectTab`, mà không có tab nào tên `weeklyReport`) — bù lại số cột
-                  ở trên phải cộng thêm 1, đúng tinh thần "đọc từ danh sách, không chốt cứng".
-                */}
-                <button
-                  type="button"
-                  onClick={() => { openWeeklyReport(); setMoreMenuOpen(false); }}
-                  className="flex min-h-[56px] flex-col items-center justify-center gap-1 rounded-[16px] px-1 py-2 text-[11px] font-medium leading-none transition-colors"
-                  style={{ color: 'var(--muted)', background: 'transparent', border: '1px solid transparent' }}
-                >
-                  <span className="relative">
-                    <AppIcon.report size={17} />
-                    {weeklyReportUnseen && (
-                      <span
-                        aria-hidden="true"
-                        className="absolute -right-1.5 -top-1 h-[6px] w-[6px] rounded-full"
-                        style={{ background: 'var(--accent)' }}
-                      />
-                    )}
-                  </span>
-                  <span className="truncate">Báo cáo tuần</span>
-                </button>
               </Motion.div>
             </>
           )}
@@ -1297,7 +1270,6 @@ export default function App() {
         resetKeys={[
           lootModalOpen,
           prestigeModalOpen,
-          weeklyReportOpen,
           weeklyReportPending,
           levelUpQueueLength,
           achievementQueueLength,
@@ -1309,7 +1281,6 @@ export default function App() {
         <GlobalOverlays
           lootModalOpen={lootModalOpen}
           prestigeModalOpen={prestigeModalOpen}
-          weeklyReportOpen={weeklyReportOpen}
           weeklyReportPending={weeklyReportPending}
           levelUpQueueLength={levelUpQueueLength}
           achievementQueueLength={achievementQueueLength}
@@ -1318,7 +1289,6 @@ export default function App() {
           onNavigate={handleNotificationNavigate}
         />
         <Suspense fallback={null}>
-          <OnboardingOverlay />
         </Suspense>
       </AppErrorBoundary>
     </div>
@@ -1362,7 +1332,6 @@ function GlobalOverlays(props) {
 function OverlayStack({
   lootModalOpen,
   prestigeModalOpen,
-  weeklyReportOpen,
   weeklyReportPending,
   levelUpQueueLength,
   achievementQueueLength,
@@ -1457,13 +1426,13 @@ function OverlayStack({
   // không phải một việc phải làm: lễ mừng thành phố · chuỗi thẻ thưởng. Thăng hoa do Đàm bấm ở Cài
   // đặt, còn `detail === 'level'` là do Đàm bấm vào thẻ — một hộp thoại Đàm tự mở thì không phải
   // "làm phiền".
-  // ⚠️ HẾT NGOẠI LỆ (2026-08-27, đóng `TECH_DEBT #87`). `weeklyReportOpen` từng TỰ bật sáng
+  // ⚠️ HẾT NGOẠI LỆ (2026-08-27, đóng `TECH_DEBT #87`). The weekly-report dialog (deleted in ADR-076) từng TỰ bật sáng
   // thứ Hai, tức nó chặn màn hình mà không nằm trong bốn việc được phép. Nay `checkWeeklyReport`
   // chỉ bật một lời MỜI (`weeklyReportPending` → một thẻ toast); cờ này chỉ lên khi Đàm bấm —
   // nút ở thanh bên hoặc chính cái thẻ ấy — nên nó rơi vào đúng câu đã ghi ở trên: "một hộp
   // thoại Đàm tự mở thì không phải làm phiền".
   const blocking = showStory
-    || prestigeModalOpen || weeklyReportOpen || showLevelModal;
+    || prestigeModalOpen || showLevelModal;
 
   const hasToast = (
     lootModalOpen
@@ -1481,7 +1450,6 @@ function OverlayStack({
       {showStory && <SessionRewardStory onDone={finishStory} />}
       {prestigeModalOpen && <PrestigeModal />}
       {showLevelModal && <LevelUpModal autoDismissMs={0} />}
-      {weeklyReportOpen && <WeeklyReportModal />}
       {/*
         ⚠️ KHÔNG dựng chồng toast trong lúc chuỗi thẻ đang chạy (ADR-068): nó nằm dưới lớp z-50 nên
         không thấy được, nhưng `RewardToastHost` PHÁT TIẾNG khi thẻ mới xuất hiện — dựng cùng lúc là
@@ -1502,7 +1470,7 @@ function OverlayStack({
   );
 }
 
-function EditorialSidebar({ activeTab, attentionTabIds, isOpen, onOpenWeeklyReport, onSelect, onToggle, weeklyReportUnseen = false }) {
+function EditorialSidebar({ activeTab, attentionTabIds, isOpen, onSelect, onToggle }) {
   // ⚠️ NGOẠI LỆ CÓ LÝ DO — cùng chuyện với cột phải: cột trái THU GỌN chứ không XUẤT HIỆN, và
   // bề ngang do chính `animate` khai nên phải NHẢY tới đích chứ không được bỏ đi (`useSnapMotion`).
   const railMotion = useSnapMotion({
@@ -1559,18 +1527,6 @@ function EditorialSidebar({ activeTab, attentionTabIds, isOpen, onOpenWeeklyRepo
       </nav>
 
       <div className="mt-auto flex flex-col gap-1 px-2.5 pb-3 pt-3">
-        {/* ⚠️ CHẤM NÀY LÀ LƯỚI AN TOÀN CỦA VIỆC BỎ HỘP THOẠI TỰ BẬT (`TECH_DEBT #87`). Thẻ toast
-            sáng thứ Hai tự tắt sau 4 giây và có thể bị lỡ; cái chấm thì ở lại tới khi Đàm mở bản
-            tổng kết ra thật. Không có nó thì việc bỏ chặn màn hình đúng là "đổi một phiền toái
-            nhỏ lấy một mất mát thật" — và cú bấm ấy mở thẳng bản TUẦN TRƯỚC, xem `openWeeklyReport`. */}
-        <SidebarItem
-          active={false}
-          attention={weeklyReportUnseen}
-          icon={<AppIcon.report size={18} />}
-          isOpen={isOpen}
-          label="Báo cáo tuần"
-          onClick={onOpenWeeklyReport}
-        />
         <button
           type="button"
           onClick={onToggle}

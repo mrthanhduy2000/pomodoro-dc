@@ -170,36 +170,15 @@ test('no city-moment overlay stands before the reward story any more (ADR-076)',
 });
 
 /**
- * ⚠️ LỐI VÀO TRÊN ĐIỆN THOẠI LÀ ĐIỀU KIỆN AN TOÀN CỦA ADR-061, KHÔNG PHẢI MỘT TIỆN ÍCH.
- *
- * ADR-061 bỏ hộp thoại báo cáo tuần tự bật, thay bằng một thẻ toast 4 giây cộng một CHẤM "chưa
- * xem" làm lưới an toàn. Cái chấm ấy lúc đầu chỉ có ở thanh bên desktop — mà thanh bên là
- * `hidden md:flex`. Nghĩa là trên iPhone: toast lỡ là hết, vì **nút mở báo cáo tuần chưa từng
- * tồn tại ở đó**. Cái hộp thoại tự bật không chỉ là cách báo cáo XUẤT HIỆN trên điện thoại, nó
- * là cách báo cáo TỒN TẠI.
- *
- * Nên mục "Báo cáo tuần" trong menu "Thêm" chính là thứ làm cho việc bỏ chặn màn hình an toàn.
- * Gỡ nó đi thì ADR-061 quay lại thành một hồi quy — trên đúng thiết bị Đàm dùng nhiều nhất, và
- * hoàn toàn im lặng: build xanh, lint sạch, mọi bài test khác xanh.
+ * ADR-076: the weekly report dialog is gone — the Stats screen answers "this week vs last". What must
+ * survive from ADR-061/#87 is the SAFETY NET: a missed Monday toast still leaves a persistent dot,
+ * now on the Thống kê tab, until Đàm opens the summary (which is now just opening Stats).
  */
-test('báo cáo tuần có đường vào trên ĐIỆN THOẠI, không chỉ ở thanh bên desktop', () => {
-  const mobileMenu = APP_CODE.slice(APP_CODE.indexOf('MOBILE_SECONDARY_TABS.map'));
-  assert.ok(
-    /openWeeklyReport\(\)/.test(mobileMenu),
-    'menu "Thêm" trên điện thoại không còn mục mở báo cáo tuần — trên iPhone báo cáo tuần lại '
-    + 'không có đường vào nào.',
-  );
-  // Số cột của menu ấy phải đếm cả mục vừa thêm, nếu không nó tràn hàng.
-  assert.match(
-    APP_CODE,
-    /MOBILE_SECONDARY_TABS\.length \+ 1/,
-    'số cột menu "Thêm" chưa cộng thêm mục báo cáo tuần',
-  );
-  // Và chấm "chưa xem" phải có ở CẢ HAI nơi — nối một chỗ quên một chỗ là hình dạng lỗi đã cắn
-  // dự án nhiều lần, mà lần này chỗ bị quên lại đúng là điện thoại.
-  assert.ok(
-    /\{weeklyReportUnseen && \(/.test(mobileMenu),
-    'mục báo cáo tuần trên điện thoại không có chấm "chưa xem"',
-  );
-  assert.match(APP_CODE, /attention=\{weeklyReportUnseen\}/, 'thanh bên desktop mất chấm "chưa xem"');
+test('the unseen-week dot lives on the Thống kê tab, and the toast navigates there', () => {
+  assert.doesNotMatch(APP_CODE, /WeeklyReportModal|openWeeklyReport\(|weeklyReportOpen\b/, 'the dialog wiring is back');
+  const memo = /const attentionTabIds = useMemo\(([\s\S]*?)\);/.exec(APP_CODE);
+  assert.ok(memo, 'không đọc được `attentionTabIds`');
+  assert.match(memo[1], /weeklyReportUnseen \? \['stats'\]/, 'the unseen-week dot must land on the stats tab');
+  assert.match(APP_CODE, /markWeeklyReportSeen\(\);\s*selectTab\('stats'\)/, 'opening the summary must record "seen" and go to Stats');
+  assert.match(APP_CODE, /onOpenWeekly=\{openWeeklySummary\}/, 'the Focus line must use the same handler');
 });

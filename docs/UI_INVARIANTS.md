@@ -14,9 +14,10 @@
 - **Interruption law has no exceptions** (ADR-060/061): full-screen blocking is reserved for era-up ·
   ascension · era crisis · disaster. It works because one field became two:
   `lastWeeklyReportDate` = *invited*, `lastWeeklyReportSeenDate` = *seen*. Law: **opening = seen,
-  closing writes nothing, an expired toast writes nothing**; the dot on the "Báo cáo tuần" button is
-  the safety net (never expires) and must be wired on **both** platforms (desktop sidebar AND the
-  iPhone "Thêm" menu).
+  an expired toast writes nothing**. Since ADR-076 the weekly report dialog is gone — the Stats
+  screen answers "this week vs last" — so *opening* means `markWeeklyReportSeen()` + the Stats
+  tab, and the never-expiring safety-net dot sits on the **Thống kê tab** (`attentionTabIds`), which
+  exists on both platforms by construction.
 - **Motion: EXACTLY THREE presets**, single source `src/lib/motionPresets.js` — `enter` · `press` ·
   `reward`. All three self-silence under "Reduce motion", so callers must not check it themselves.
   Never hand-write `initial`/`animate`, never add a fourth preset (`motionPresets.test.js` counts).

@@ -90,6 +90,16 @@ const END = arg('--end', '2026-08-13');
 const SEED = Number(arg('--seed', 20260813));
 
 /** Bộ sinh số giả ngẫu nhiên tất định (mulberry32) — thay cho `Math.random` bị cấm. */
+/**
+ * ADR-076: 60% of sessions carry a goal and, when they do, a review (Đạt 3 of 4) — so the Stats
+ * screen, the journal and the coach show a FULL state in screenshots, not the hollow one that hid
+ * an empty card for a whole round.
+ */
+function goalFields(rand) {
+  const goal = rand() < 0.6 ? 'Hoàn thành phần đang dở' : null;
+  return { goal, goalAchieved: goal ? rand() < 0.75 : null };
+}
+
 function rng(seed) {
   let a = seed >>> 0;
   return () => {
@@ -268,7 +278,7 @@ function playthrough(unlockedSkills) {
         cancelled: false, cancelledAt: null, cancelProgressRatio: null, targetMinutes: mins,
         comboCount: 1 + Math.floor(rand() * 3), positiveEvent: null, positiveEventRPBonus: 0,
         note: rand() < 0.18 ? pick(['Xong chương 3', 'Tập trung tốt', 'Hơi mệt nhưng ổn', 'Bị ngắt giữa chừng']) : null,
-        breakNote: null, goal: rand() < 0.3 ? 'Hoàn thành phần đang dở' : null, goalAchieved: null,
+        breakNote: null, ...goalFields(rand),
         nextNote: null, breakCompletedOnTime: rand() < 0.7, breakCompletedAt: finishedAt + 300000,
       });
 

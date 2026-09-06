@@ -44,7 +44,6 @@ const NGOAI_LE = {
   'components/LevelUpModal.jsx': 3,          // pháo hoa — `ParticleField` trả `null` khi Giảm chuyển động
   'components/focus/QuickPresets.jsx': 1,    // thẻ preset đang chọn (ADR-076: tách khỏi PomodoroEngine)
   'components/shared/ActionButton.jsx': 2,   // `ActionButton` (lún = chiều dày bóng) — ADR-076: tách ra làm cửa duy nhất (#86)
-  'components/WeeklyReportModal.jsx': 8,     // mang bố cục: 4 thanh so sánh tuần
   'components/city/CityViewShell.jsx': 2,    // mang bố cục: thanh tiến độ giàn giáo
 };
 

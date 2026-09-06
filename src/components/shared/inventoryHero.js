@@ -93,7 +93,7 @@ export function heroCongTrinh({
       nhan: 'Xây tiếp',
       so: chonDuoc,
       donVi: chonDuoc > 1 ? 'công trình chọn được' : 'công trình chọn được',
-      caption: 'Hàng chờ đang trống — chọn một công trình, phiên sau bắt đầu dựng.',
+      caption: 'Chưa chọn thì phiên sau tự đặt gạch cho công trình rẻ phiên nhất — chọn ở dưới để tự quyết.',
       pct: 1,
       gap: true,
     };

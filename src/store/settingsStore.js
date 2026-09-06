@@ -114,7 +114,6 @@ const useSettingsStore = create(
       cityHomeBackdrop: true,
 
       // ── Onboarding ─────────────────────────────────────────────────────
-      hasViewedInitialOnboarding: false, // overlay 3 thẻ chỉ hiện 1 lần cho người mới
 
       // ── Actions ────────────────────────────────────────────────────────
 
@@ -240,7 +239,6 @@ const useSettingsStore = create(
       setAutoStartBreak:     (v) => set({ autoStartBreak: v }),
       setContinueTimingAfterPomodoro: (v) => set({ continueTimingAfterPomodoro: v }),
       setDisableBreak:       (v) => set({ disableBreak: v }),
-      setHasViewedInitialOnboarding: (v) => set({ hasViewedInitialOnboarding: v !== false }),
       setCityRenderMode: (mode) => set({ cityRenderMode: normalizeRenderMode(mode) }),
       setCityPerfHud:    (v) => set({ cityPerfHud: v === true }),
       setCityHomeBackdrop: (v) => set({ cityHomeBackdrop: v === true }),

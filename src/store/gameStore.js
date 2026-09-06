@@ -1398,8 +1398,6 @@ const makeDefaultUiState = () => ({
   breakTotalSeconds: 0,
   breakIsLong: false,
   activeBreakSessionId: null,
-  weeklyReportOpen: false,
-  weeklyReportMode: 'current',
   // Có một lời mời xem tổng kết tuần đang treo (thẻ toast). KHÔNG phải "đã xem".
   weeklyReportPending: false,
 });
@@ -4485,9 +4483,8 @@ const useGameStore = create(
       // 4 giây mà giữ nguyên cách ghi thì lỡ một cái toast = mất báo cáo của cả tuần — đổi một
       // phiền toái nhỏ lấy một mất mát thật. Nay:
       //   · hết giờ toast  → chỉ tắt lời mời, KHÔNG ghi gì (`dismissWeeklyReportToast`)
-      //   · Đàm mở ra xem  → mới ghi "đã xem" (`openWeeklyReport`)
-      // ⇒ lỡ toast thì chấm ở nút "Báo cáo tuần" vẫn sáng, và cú bấm đầu tiên trong tuần vẫn
-      // mở đúng bản TUẦN TRƯỚC — đúng thứ hộp thoại tự bật ngày xưa đưa ra.
+      //   · Đàm mở Thống kê → mới ghi "đã xem" (`markWeeklyReportSeen`, ADR-076)
+      // ⇒ lỡ toast thì chấm ở tab Thống kê vẫn sáng.
       checkWeeklyReport: () => {
         const state = get();
         const monday = getWeekMonday();
@@ -4505,37 +4502,21 @@ const useGameStore = create(
       },
 
       /**
-       * Mở hộp thoại tổng kết. LUÔN do Đàm chủ động (nút ở thanh bên, hoặc bấm vào thẻ toast).
-       *
-       * ⚠️ Cú mở ĐẦU TIÊN trong tuần rơi vào chế độ `'previous'` — bản TUẦN TRƯỚC, đúng thứ hộp
-       * thoại tự bật ngày xưa đưa ra. Không có luật này thì đổi sang toast là âm thầm đổi luôn
-       * NỘI DUNG Đàm nhận được: nút thanh bên xưa nay mở `'current'` (tuần đang chạy dở).
+       * ADR-076: there is no weekly-report dialog any more — the Stats screen already answers "am I
+       * improving this week vs last". Seeing the summary = opening Stats; this only records "seen"
+       * for the week (the dot on the Thống kê tab goes out) and clears the Monday invitation.
        */
-      openWeeklyReport: () => {
-        const state = get();
+      markWeeklyReportSeen: () => {
         const monday = getWeekMonday();
-        const unseen = state.lastWeeklyReportSeenDate !== monday;
         set((prev) => ({
           lastWeeklyReportSeenDate: monday,
-          ui: {
-            ...prev.ui,
-            weeklyReportOpen: true,
-            weeklyReportMode: unseen ? 'previous' : 'current',
-            weeklyReportPending: false,
-          },
+          ui: { ...prev.ui, weeklyReportPending: false },
         }));
       },
 
       /** Thẻ toast hết 4 giây. CHỈ tắt lời mời — tuyệt đối không ghi "đã xem". */
       dismissWeeklyReportToast: () =>
         set((prev) => ({ ui: { ...prev.ui, weeklyReportPending: false } })),
-
-      /** Đóng hộp thoại. "Đã xem" đã được ghi lúc MỞ, nên ở đây không ghi ngày nào nữa. */
-      dismissWeeklyReport: () => {
-        set((prev) => ({
-          ui: { ...prev.ui, weeklyReportOpen: false, weeklyReportMode: 'current' },
-        }));
-      },
 
       // ─── Import / Export ─────────────────────────────────────────────────
       _importGameData: (data) => {

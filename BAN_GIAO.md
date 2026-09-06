@@ -1,3 +1,63 @@
+> Cập nhật lần cuối: **2026-09-06 (vòng 34)** — **ĐỒNG TIỀN DUY NHẤT LÀ PHIÊN (ADR-069).** Lệnh Đàm:
+> *"SIMPLIFY. MINIMIZE. AMPLIFY FUN. … coi Upgrade + Progression + UX/UI như một sản phẩm cần redesign
+> từ đầu … cơ chế nào tồn tại chỉ vì được code ra thì xoá … TUYỆT ĐỐI KHÔNG ĐỤNG VÀO THÀNH PHỐ."*
+>
+> ### Bốn chỗ đổi (chi tiết + lý do: ADR-069; tóm tắt: CHANGELOG 2026-09-06)
+> 1. **Công trình một màn, một nút** — `BuildScreen.jsx` thay Xưởng + Bản vẽ (1.649 dòng; trang
+>    2.376px → **1.688px**): Đang xây · **Xây tiếp** (≤3 lựa chọn, «Khởi công», mục chỉ hiện khi còn
+>    gì để chọn) · Đã xây (ô kể ĐẶC QUYỀN, không còn «Lv.2 · ×1.75») · Trùng tu (ô riêng, ADR-012).
+>    Store **`startProject`**: không hỏi RP/nguyên liệu, giữ cổng ô/trùng/đã-xây/trùng-tu, mục hàng
+>    chờ GIỮ NGUYÊN hình dạng (giàn giáo của thành phố đọc nó). Luật thuần `engine/buildChoices.js`.
+> 2. **Bậc tự thăng · khủng hoảng kỷ = nhiệm vụ mềm** — `engine/rankLadder.js` đếm thẳng `history`
+>    («đủ EP gác + N phiên ≥M′ trong 48 giờ»); không nút, không hạn, không phạt, không chặn Bắt đầu.
+>    `EraCrisisModal` · `DisasterModal` · `StakePanel` · `ResourceDisplay` **xoá hẳn**; hộp xác nhận
+>    huỷ thôi doạ «phạt N% tài nguyên». `RankDisplay` viết lại thành thẻ kể hai điều kiện.
+> 3. **Chuỗi thẻ thưởng** (ADR-068) thêm: thẻ Thành phố (công trình nhích / «hàng chờ trống — chọn
+>    ngay») · **lên cấp MỜI CHỌN ≤3 kỹ năng tại chỗ** (`hold`, «Để sau — điểm vẫn giữ») · thử thách
+>    kỷ · bậc · di vật. Hộp xác nhận mua kỹ năng bỏ; «Tổ hợp kỹ năng» gấp.
+> 4. **Mọi phần thưởng nằm trên trục sống** — phát hiện KHI SOI ẢNH, không phải khi đọc mã: thẻ
+>    «THĂNG BẬC» in **«+12% Tài Nguyên»** giữa một vòng lặp vừa bỏ tài nguyên; đếm ra 2/8 bậc mỗi
+>    kỷ, **12/15 di vật**, 4 kỹ năng đều thưởng lên ba đồng tiền đã ngủ. Đổi theo chủ đề: bậc lẻ →
+>    EP · di vật «tăng trưởng» → EP, «tri thức» (RP) → XP, «che chở» (giảm thảm hoạ) → giờ combo ·
+>    Vận May quay ra +XP/+EP (chip «🍀 Vận may» ở thẻ +XP) · Sự Tha Thứ → +6% XP phiên kế sau huỷ.
+>    `rewardAxes.test.js` từ chối bảng nào nhắc lại tài nguyên/RP/thảm hoạ.
+>
+> ### Đã trả giá / bắt được trong lúc làm
+> · **Phiên vừa xong bị coi là "tương lai"**: `countQualifyingSessions` bỏ mọi mốc `t > now`, mà
+>   `now_ts` trong `completeFocusSession` được đọc TRƯỚC `resolvedFinishedAt` ⇒ bậc KHÔNG BAO GIỜ tự
+>   lên trong test store (đỏ đúng). Vá: `now = max(now_ts, mốc của chính phiên ấy)`. *Một phép đếm
+>   "gần đây" phải nhận một `now` không sớm hơn thứ nó đang đếm.*
+> · **File đã đổi trên đĩa trước khi script của tôi tới** (`sessionRewardStory.js`, `App.jsx`) —
+>   assert «đúng 1 chỗ khớp» đếm ra 0 và DỪNG thay vì ghi đè. Không có vế đếm ấy thì một phép sửa
+>   trượt và một phép sửa thành công trông y hệt nhau. Mọi script sửa file ở phiên này đều đòi số khớp.
+> · **`test:fast` lượt đầu đỏ 4 bài, không bài nào vì mã hỏng**: hai bài đọc-mã-nguồn còn tìm cổng
+>   `isCrisisBlockingStart` (đã bỏ), một bài neo vào literal `'Bắt đầu phiên'` (nhãn nay là JSX text
+>   trần), một bài đòi hộp thoại thảm hoạ MỞ. ⇒ *Bỏ một cổng thì `grep` tên cổng ấy trong cả test.*
+> · **Lần thứ N của «một luật hai công thức» ở tầng test**: `getComboDecayMs` test viết cứng **18**
+>   thay vì hỏi `RELIC_COMBO_WINDOW_CAP_HOURS` ⇒ đỏ oan đúng lúc nâng trần. Nay hỏi hằng số.
+> · **Một bài test cũ ĐỎ ĐÚNG và thắng tôi**: tôi đặt trần combo 24 («một ngày») dưới tổng Huyền
+>   Thoại 26 với một câu lý lẽ rất xuôi; `challengeEngine.test` «trần không được cắn loadout thật»
+>   đỏ ngay. Luật đã khoá từ trước đúng hơn quyết định mới — trần về 28 (lưới an toàn như mọi trần).
+> · **`soundReach.test` bắt `playDisaster` mồ côi** ngay sau khi xoá `DisasterModal` — gỡ luôn cùng
+>   4 dòng palette. *Xoá một màn thì đi tìm tiếng, thông báo, cờ `ui` và test đang trỏ vào nó.*
+> · **Ảnh nghiệm thu bắt được thứ số không bắt**: cả ba bảng phần thưởng đều hợp lệ, test xanh, số
+>   đúng — chỉ có THỨ NHẬN ĐƯỢC là không ai thấy. Cùng họ ADR-054 (*cổng số xanh chỉ chứng minh thứ
+>   nó đọc, không chứng minh thứ ấy tới được điểm ảnh*), ở tầng thiết kế thay vì tầng dây nối.
+> · Không đụng `engine/city3d/` · `components/city/` · `cityLayout` · địa hình · thực vật; hình dạng
+>   `craftingQueue`/`buildings`/`cityArchive` giữ nguyên (ADR-007 nguyên). Không migration.
+>
+> ### Cửa soi
+> `node scripts/shot.mjs --phone --fixture fx-sp.json --preview "loot-max&dc-preview-card=<thẻ>"` với
+> thẻ = `xp|project|streak|today|quests|quest|level|rank|relic|era`; fixture `fx-sp.json` = tài khoản
+> kỷ 8 + 5 SP + khủng hoảng mềm đang mở, để soi thẻ lên cấp (chọn kỹ năng) và thẻ thử thách.
+>
+> Nợ: **#95 ✅ đóng** (ADR-069) · **#99** mới (dữ liệu ngủ: tài nguyên/RP/tinh luyện vẫn cộng, 5
+> action + `craftReadiness.js` không ai gọi) · **#100** mới («Chốt bước» + lưới 360 huy hiệu vẫn phải
+> bấm) · **#96** vẫn mở (tiến hoá di vật tiêu tinh luyện — nay càng chết; lối ra nhất quán là tiến
+> hoá theo PHIÊN, quyết định của Đàm). Test mới: `buildChoices` (7) · `rankLadder` (6) ·
+> `gameStore.adr069` (7) · `rewardAxes` (5) · +3 Vận May/Ý Chí ở `gameMath`. **`npm run test:fast`:
+> 1.622 bài · 0 fail · 1 skipped.** Lint sạch · build xanh.
+>
 > Cập nhật lần cuối: **2026-09-05 (vòng 33)** — **CÁCH MẠNG VÒNG LẶP CHÍNH (ADR-068).** Lệnh Đàm:
 > *"làm một cuộc cách mạng về upgrade, đừng upgrade nhỏ lẻ nữa… ứng dụng UX Psychology… có thể xoá
 > những gì đã có và xây lại… hạn chế đo mà build thẳng… không đụng Thành phố."*

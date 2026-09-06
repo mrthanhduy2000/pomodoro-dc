@@ -11,6 +11,113 @@
 
 ---
 
+## ADR-069 — ĐỒNG TIỀN DUY NHẤT LÀ PHIÊN: công trình một nút, bậc và thử thách kỷ tự chạy theo lịch sử, kỹ năng chọn ngay lúc lên cấp
+
+- **Ngày**: 2026-09-06
+- **Trạng thái**: đã áp dụng. Không đụng Thành phố (`engine/city3d/`, `components/city/`, địa hình,
+  đường, thực vật, bảng màu, `cityLayout`). Bổ sung cho ADR-068 (chuỗi thẻ thưởng nay là CHỖ DUY
+  NHẤT mọi hệ thăng tiến hiện ra). Không đổi hình dạng dữ liệu đồng bộ — tài khoản cũ không cần
+  migration.
+- **Bối cảnh**: lệnh Đàm (*"SIMPLIFY. MINIMIZE. AMPLIFY FUN."*): *"nhìn toàn bộ hệ thống Upgrade +
+  Progression + UX/UI như một sản phẩm cần redesign từ đầu … giảm 5 bước thành 2 … giảm 3 hệ thống
+  thành 1 … cơ chế nào tồn tại chỉ vì được code ra thì xoá … tuyệt đối không đụng Thành phố"*.
+  Chẩn đoán trên ảnh 390px của tài khoản thật (kỷ 8):
+  · Tab Công trình dài **2.376px** = hai hệ nối đuôi (Xưởng + Nghiên cứu), **ba cổng** (RP → nguyên
+    liệu thô + tinh luyện → ô hàng chờ) và **bốn loại tiền** cho MỘT hành động — trong khi RP dư
+    **8,5 lần** giá nghiên cứu và nguyên liệu dư **14 lần** (`TECH_DEBT #95`): ba cổng đầu chưa bao
+    giờ đóng, chúng chỉ tồn tại để được bấm qua. Thẻ "Hàng chờ" in lại thẻ "Đang xây" ngay trên nó.
+  · Lên bậc là một nghi thức bốn bước (đủ EP → bấm "Bắt đầu thử thách" → N phiên trong 48 giờ →
+    trễ thì hộp thoại đỏ "mất 5% tài nguyên"). Khủng hoảng kỷ còn nặng hơn: **chặn nút Bắt đầu**
+    cho tới khi chọn "hiến tế 40%" hay một thử thách có hạn, trễ thì phạt 20%. Hai hệ, hai bộ luật,
+    hai hộp thoại, cùng trả lời một câu: *"gần đây anh có làm vài phiên tử tế không?"*
+  · "+2 điểm kỹ năng" lúc lên cấp là phần thưởng bị HOÃN: phải đi Hành trang › Kỹ năng, chọn ô,
+    rồi trả lời một hộp xác nhận.
+  · Tab Tiến trình in lại thanh EP của thanh tiêu đề; màn chờ có "Tăng lực phiên" (cược 5% EP,
+    khung "thua thì mất") đứng ngay trước nút Bắt đầu.
+- **Vấn đề**: mọi hệ nâng cấp đều đo cùng một thứ — SỐ PHIÊN TẬP TRUNG — nhưng được đổi ra 4–6 loại
+  tiền và 3 nghi thức bấm nút, nên người chơi phải HIỂU hệ thống trước khi được thưởng bởi nó.
+  Fun-density thấp không vì thiếu cơ chế mà vì cơ chế đứng chắn giữa hành động và phần thưởng.
+- **Phương án đã cân nhắc**:
+  - **(A) Cân bằng lại giá** (hạ RP/nguyên liệu để cổng "có ý nghĩa"). Loại: cổng có ý nghĩa là cổng
+    đôi khi ĐÓNG, tức thêm những lúc "chưa đủ, đợi" vào một vòng lặp đang cần ít ma sát hơn; và
+    Đàm đã tích 180 ngày tài nguyên — chỉnh giá là xoá thứ anh đã kiếm.
+  - **(B) Gộp ba loại tiền thành một** ("điểm xây"). Loại: vẫn là một loại tiền phải đọc, phải so;
+    con số ấy chỉ đại diện cho số phiên — mà số phiên thì đã là cái giá rõ nhất.
+  - **(C) Giữ thử thách bậc nhưng bỏ phạt**. Loại: vẫn còn nút "Bắt đầu" và đồng hồ 48 giờ, tức vẫn
+    còn một việc phải nhớ; và khủng hoảng kỷ vẫn chặn nút Bắt đầu.
+  - **(D — đã chọn) Cái giá duy nhất là PHIÊN và Ô hàng chờ; mọi hệ thăng tiến ĐỌC LỊCH SỬ thay
+    vì đòi bấm nút; phần thưởng hiện ngay trong chuỗi thẻ.**
+- **Giải pháp**:
+  1. **Công trình một màn, một nút** — `components/BuildScreen.jsx` thay `BuildingWorkshop` +
+     `BlueprintInventory` (1.649 dòng): Đang xây (thanh tiến độ, huỷ hai chạm) · **Xây tiếp** (≤3 lựa
+     chọn mở sẵn, còn lại GẤP) · Đã xây (ô nhỏ, chạm mới kể đặc quyền) · Trùng tu di sản (chỉ khi
+     còn việc, ô riêng ADR-012). Luật thuần ở `engine/buildChoices.js`. Store thêm **`startProject`**:
+     cùng hình dạng mục hàng chờ, cùng cổng ô/trùng/đã-xây/trùng-tu, **không hỏi RP, không hỏi
+     nguyên liệu**; ghi `research.researched` để thành tích/bảo tàng vẫn thấy "đã mở".
+     `engine/opportunities.js` còn HAI phép đếm: kỹ năng mở được · **ô hàng chờ trống** (một ô trống
+     LÀ một việc: phiên chỉ đẩy thứ đang nằm trong hàng chờ).
+  2. **Bậc tự thăng** — `engine/rankLadder.js` (thuần): đủ EP gác + đủ N phiên ≥M′ trong 48 giờ
+     gần nhất, đếm THẲNG từ `history` ⇒ `completeFocusSession` thăng một bậc mỗi phiên nhiều nhất và
+     kể vào `pendingReward.rankUp`. Bỏ `initiateRankChallenge`/`checkRankChallengeDeadlines`/phạt.
+  3. **Khủng hoảng kỷ = nhiệm vụ mềm** — mở ra là vào chế độ thử thách ngay, **không deadline,
+     không hộp thoại, không chặn nút Bắt đầu, không phạt**; cùng phép đếm lịch sử; qua thì di vật
+     vào túi và kể ở thẻ `relic`. `checkEraCrisisDeadlines` giữ tên (App gọi lúc mở app) nhưng chỉ
+     đưa dữ liệu đời cũ về dạng mềm. `EraCrisisModal` xoá; `DisasterModal` cũng **xoá hẳn** (huỷ
+     phiên không còn hộp thoại "mất N% tài nguyên" — một hộp không ai mở nữa là mã chết; cờ
+     `ui.disasterModalOpen`/`pendingDisaster` + `closeDisasterModal` gỡ theo, chi tiết phạt vẫn ở
+     bản ghi lịch sử `cancelPenalty`).
+  4. **Chuỗi thẻ thưởng** (ADR-068) thêm bốn thẻ: **`project`** (công trình nhích một nấc, hoặc
+     "hàng chờ trống — chọn ngay" có nút đi thẳng) · **`level` MỜI CHỌN ≤3 kỹ năng mở được ngay tại
+     chỗ** (`hold`: thẻ đứng yên chờ, "Để sau" giữ điểm; không mở được thì nói *"còn N điểm nữa mở
+     được «X»"*) · **`quest`** (thử thách kỷ vừa mở / vừa nhích) · **`rank`** · **`relic`**.
+     `finishStory` dọn toast di vật đã kể thay và điều hướng tới Công trình khi bấm "Chọn ngay".
+  5. **Dọn nhiễu**: `ResourceDisplay` (thẻ EP trùng + Kho) xoá; `StakePanel` rời màn chờ; hộp xác
+     nhận mua kỹ năng bỏ (một chạm; ô nào cũng là kỹ năng thật); "Tổ hợp kỹ năng" gấp lại;
+     `RankDisplay` thành thẻ kể (hai điều kiện, không nút) + thẻ thử thách kỷ.
+  6. **Mọi phần thưởng nằm trên TRỤC SỐNG** (bổ sung cùng ngày, sau khi soi ảnh): khi ba đồng tiền rời
+     đường chơi, ba bảng phần thưởng lộ ra là nhãn không có hiệu ứng — **2/8 bậc mỗi kỷ** thưởng
+     «+N% Tài Nguyên», **12/15 di vật** thưởng tài nguyên/RP/giảm thảm hoạ, **4 kỹ năng** quay ra
+     nguyên liệu/tinh luyện hoặc miễn một khoản phạt đã biến mất. Thẻ «THĂNG BẬC» in «+12% Tài
+     Nguyên» giữa một vòng lặp không còn tài nguyên. Đổi THEO CHỦ ĐỀ, giữ nguyên độ lớn/xác suất:
+     bậc lẻ → **+N% EP** (cùng số) · di vật «tăng trưởng» → EP (½ giá trị cũ) · di vật «tri thức»
+     (RP) → XP · di vật «che chở» (giảm thảm hoạ) → giờ combo · `ban_tay_vang`/`nhan_quan`/`linh_cam`
+     → cú may +XP/+EP cùng xác suất (kể ở thẻ +XP bằng chip «🍀 Vận may») · `su_tha_thu` → +6% XP cho
+     phiên ≥25′ ngay sau khi huỷ (bậc đầu của cặp «tha thứ → phục hồi»; `phuc_hoi` cộng thêm). Bậc
+     «Cơ Bản» của `RELIC_EVOLUTION` PHẢI trùng `successRelic.buff` — một luật một công thức. Hai
+     trần mới `RELIC_EP_BONUS_CAP`/`RELIC_EXP_BONUS_CAP` là lưới an toàn như các trần cũ; trần combo
+     nâng 18 → 28 vì nay có 6 di vật trên trục ấy (vẫn không cắn loadout thật — test đã khoá luật đó
+     từ trước, và nó đã đỏ đúng lúc). Hộp xác nhận huỷ thôi nói «phạt N%–M% tài nguyên»; nó nói sự
+     thật còn lại (không tính XP/EP) và, nếu có kỹ năng Ý Chí, phiên kế được bù gì. Khoá bằng
+     `engine/rewardAxes.test.js` (5 bài, cả ba bảng) + 3 bài Vận May/Ý Chí ở `gameMath.test.js`.
+- **Trade-off**:
+  · Tài nguyên/RP/tinh luyện VẪN được cộng vào store (không đổi `completeFocusSession` phần thưởng,
+    không đổi state đồng bộ) nhưng **không còn cổng nào tiêu chúng** trên đường chơi — chúng là dữ
+    liệu ngủ. Đây là cái giá cố ý để KHÔNG xoá thứ Đàm đã kiếm và không đụng luồng đồng bộ; dọn hẳn
+    là việc của một ADR sau khi anh đã chơi vài tuần (`TECH_DEBT #99`).
+  · Nâng cấp công trình (Lv.2/3 bằng tinh luyện) không còn lối vào; cấp đã có vẫn áp hiệu ứng.
+  · Thử thách bậc và khủng hoảng mất tính "căng" của một đồng hồ đếm ngược — đổi lấy việc không
+    bao giờ bị phạt vì quên mở app. Đàm chọn dopamine, không chọn cortisol.
+  · `startCrafting`/`researchBlueprint`/`upgradeBlueprint`… giữ lại cho test và dữ liệu cũ, không
+    còn màn hình nào gọi (đếm ở `TECH_DEBT #99`).
+  · Đổi trục di vật là đổi CÂN BẰNG: ở loadout Huyền Thoại đủ 15 di vật, EP +106% · XP +65% · combo
+    26 giờ (so với +60% Tất Cả của bậc 8 kỷ 15). Con số chọn bằng phép so với thang bậc, chưa đo trên
+    người chơi thật — điều kiện xem lại (c) bên dưới. Di vật đã nhận vẫn giữ `buff` cũ trong state;
+    mọi nơi TÍNH và HIỆN đều đọc `RELIC_EVOLUTION` theo id nên hiệu ứng đổi ngay, không cần migration.
+- **Ảnh hưởng**: `BuildScreen.jsx` (mới) · `engine/buildChoices.js` + `rankLadder.js` (mới, thuần,
+  có test) · `gameStore.js` (`startProject`, khối bậc/khủng hoảng trong `completeFocusSession`,
+  `pendingReward.{rankUp,relicEarned,crisisOpened}`, xoá 4 action) · `opportunities.js` ·
+  `SessionRewardStory.jsx`/`sessionRewardStory.js` · `RankDisplay.jsx` (viết lại) · `SkillTree.jsx` ·
+  `PomodoroEngine.jsx` (hộp xác nhận huỷ + gỡ dự báo phạt) · `App.jsx` · `NotificationCenter.jsx` ·
+  hai hook cơ hội · `constants.js` (RANK_SYSTEM · ERA_CRISES · RELIC_EVOLUTION · SKILL_TREE nhánh Vận
+  May/Ý Chí · hai trần mới) · `gameMath.js` (cú may XP/EP, Sự Tha Thứ) · `challengeEngine.js` (trần
+  EP/XP) · xoá 7 file (`DisasterModal.jsx` kể cả).
+  Test mới: `buildChoices.test.js` · `rankLadder.test.js` · `gameStore.adr069.test.js` · `rewardAxes.test.js`.
+- **Điều kiện xem lại**: (a) Đàm thấy thiếu "khan hiếm" — công trình nào cũng chọn được ngay ⇒ cân
+  nhắc GIÁ BẰNG PHIÊN cao hơn cho kỳ quan, KHÔNG quay lại tiền tệ; (b) sau vài tuần không ai mở
+  "Xem chi tiết" ⇒ gộp `LootDropModal` vào chuỗi thẻ (`#98`) và dọn dữ liệu ngủ (`#99`); (c) sau
+  vài tuần, nếu kỷ chuyển quá nhanh (EP từ di vật + bậc cộng dồn) ⇒ hạ hệ số ½ của di vật EP, KHÔNG
+  quay lại trục tài nguyên.
+
 ## ADR-068 — VÒNG LẶP CHÍNH theo tâm lý học thói quen: chuỗi lên đầu màn hình, nhiệm vụ ngày về chỗ ra quyết định, và mỗi phiên kết thúc bằng một CHUỖI THẺ chứ không phải một thẻ toast
 
 - **Ngày**: 2026-09-05

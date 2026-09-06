@@ -25,8 +25,13 @@ import { describeStreakTarget } from './todayHero';
 export const STORY_CARD_MS = 2600;
 /** Thẻ cuối đứng lâu hơn để còn bấm "Chi tiết"; hết giờ thì tự đóng — đừng giam màn hình. */
 export const STORY_LAST_CARD_MS = 9000;
-/** Thẻ lên cấp / kỷ mới là tin hiếm, cho thêm nửa giây. */
+/** Thẻ lên cấp / kỷ mới / lên bậc / di vật là tin hiếm, cho thêm nửa giây. */
 const STORY_BIG_CARD_MS = 3400;
+/**
+ * Thẻ ĐỨNG YÊN chờ một quyết định — trả về giá trị này thay cho số mili-giây (ADR-069): thẻ lên cấp
+ * có kỹ năng để chọn. Tự lật một thẻ đang hỏi "chọn cái nào" là trả lời thay người chơi.
+ */
+export const STORY_HOLD = null;
 
 function toNumber(value, fallback = 0) {
   const n = Number(value);
@@ -36,8 +41,7 @@ function toNumber(value, fallback = 0) {
 function buildXpCard(reward) {
   const chips = [];
   if (reward.largeChest) chips.push({ id: 'chest', label: 'Rương Lớn' });
-  const tinhLuyen = toNumber(reward.t2Drop);
-  if (tinhLuyen > 0) chips.push({ id: 'refined', label: `+${tinhLuyen} tinh luyện` });
+  // ADR-069: chip "+N tinh luyện" ĐÃ BỎ — tinh luyện rời khỏi đường chơi (không còn cổng nào tiêu nó).
   if (toNumber(reward.streakDays) >= 2 && toNumber(reward.streakBonus) > 0) {
     chips.push({ id: 'streak', label: `Chuỗi ${reward.streakDays} ngày`, value: `+${reward.streakBonus} XP` });
   }
@@ -45,6 +49,10 @@ function buildXpCard(reward) {
     chips.push({ id: 'combo', label: `Combo ×${reward.comboCount}`, value: `+${reward.comboBonus} XP` });
   }
   if (reward.luckyBurstApplied) chips.push({ id: 'lucky', label: 'Số Đỏ ×2.5' });
+  // ADR-069: nhánh Vận May quay ra XP/EP — một cú trúng phải ĐƯỢC THẤY ở đúng thẻ này, nếu không thì
+  // "phần thưởng biến thiên" chỉ là một con số lớn hơn thường lệ mà không ai biết vì sao.
+  if (toNumber(reward.luckXpBonus) > 0) chips.push({ id: 'luck-xp', label: '🍀 Vận may', value: `+${Math.round(toNumber(reward.luckXpBonus) * 100)}% XP` });
+  if (toNumber(reward.luckEpBonus) > 0) chips.push({ id: 'luck-ep', label: '🍀 Vận may', value: `+${Math.round(toNumber(reward.luckEpBonus) * 100)}% EP` });
   if (toNumber(reward.overclockBonus) > 0) chips.push({ id: 'overclock', label: 'Giam cầm', value: `+${reward.overclockBonus} XP` });
 
   const event = reward.positiveEvent?.label
@@ -143,6 +151,90 @@ function buildQuestsCard({ missions, completedMissionIds, missionXp, bonusXP }) 
 }
 
 /**
+ * Thẻ CÔNG TRÌNH (ADR-069): phiên vừa xong đẩy công trình đang xây thêm một nấc — thứ nhìn thấy
+ * được trong thành phố. Hàng chờ trống thì thẻ đổi thành lời mời chọn (kèm nút đi thẳng).
+ * `project` do nơi gọi dựng từ `describeQueue`/`listNextProjects` SAU phiên:
+ *   · `{ label, icon, total, remaining, done, stepped }` — mục đầu hàng chờ; `stepped` = phiên này
+ *     tiến mấy nấc (1, hoặc 2 khi được đặc quyền tăng tốc)
+ *   · `{ empty: true, choices: string[], eraComplete }` — hàng chờ trống
+ */
+function buildProjectCard(project) {
+  if (!project) return null;
+  if (project.empty) {
+    if (project.eraComplete) return null; // kỷ đã trọn: không có gì để mời
+    if (!Array.isArray(project.choices) || project.choices.length === 0) return null;
+    return { id: 'project', empty: true, choices: project.choices.slice(0, 3), extra: Math.max(0, project.choices.length - 3) };
+  }
+  const total = Math.max(1, toNumber(project.total, 1));
+  const done = Math.max(0, Math.min(total, toNumber(project.done)));
+  const stepped = Math.max(1, toNumber(project.stepped, 1));
+  const before = Math.max(0, done - stepped);
+  return {
+    id: 'project',
+    empty: false,
+    label: project.label ?? 'Công trình',
+    icon: project.icon ?? '',
+    total,
+    done,
+    remaining: Math.max(0, total - done),
+    pct: Math.min(100, (done / total) * 100),
+    pctBefore: Math.min(100, (before / total) * 100),
+  };
+}
+
+/**
+ * Thẻ LÊN CẤP mang luôn lựa chọn kỹ năng (ADR-069): "+2 điểm" mà phải đi tới Hành trang › Kỹ năng
+ * mới tiêu được là một phần thưởng bị hoãn. `skills` do nơi gọi dựng từ `listAvailableSkills`:
+ *   `{ sp, choices: [{ id, label, icon, description, cost, requires, branchLabel }], next: { label, spNeeded } | null }`
+ */
+function buildLevelCard(reward, skills) {
+  const choices = Array.isArray(skills?.choices) ? skills.choices.slice(0, 3) : [];
+  return {
+    id: 'level',
+    newLevel: toNumber(reward.newLevel),
+    spGained: toNumber(reward.spGained),
+    sp: toNumber(skills?.sp),
+    skillChoices: choices,
+    nextSkill: choices.length === 0 && skills?.next ? { label: skills.next.label, spNeeded: toNumber(skills.next.spNeeded) } : null,
+    hold: choices.length > 0,
+  };
+}
+
+function buildRankCard(reward) {
+  const r = reward.rankUp;
+  if (!r?.label) return null;
+  return { id: 'rank', label: r.label, icon: r.icon ?? '🏅', buffLabel: r.buffLabel ?? '' };
+}
+
+function buildRelicCard(reward) {
+  const r = reward.relicEarned;
+  if (!r?.label) return null;
+  return { id: 'relic', label: r.label, icon: r.icon ?? '✨', description: r.description ?? '' };
+}
+
+/**
+ * Thẻ THỬ THÁCH KỶ NGUYÊN (nhiệm vụ mềm): chỉ chen vào khi nó VỪA MỞ hoặc phiên này VỪA ĐƯỢC TÍNH
+ * vào nó — không thì im, vì một thẻ "1/3" lặp lại mỗi phiên trong hai ngày là nhiễu.
+ * `crisisQuest` = `describeCrisisQuest(...)` SAU phiên; `countedThisSession` do nơi gọi tính.
+ */
+function buildQuestCard(reward, crisisQuest) {
+  if (!crisisQuest || crisisQuest.passed) return null;
+  if (!reward.crisisOpened && !crisisQuest.countedThisSession) return null;
+  return {
+    id: 'quest',
+    opened: Boolean(reward.crisisOpened),
+    name: crisisQuest.name,
+    icon: crisisQuest.icon,
+    sessionsDone: toNumber(crisisQuest.sessionsDone),
+    sessionsRequired: Math.max(1, toNumber(crisisQuest.sessionsRequired, 1)),
+    minMinutes: toNumber(crisisQuest.minMinutes),
+    windowHours: toNumber(crisisQuest.windowHours, 48),
+    relicLabel: crisisQuest.relic?.label ?? null,
+    relicIcon: crisisQuest.relic?.icon ?? null,
+  };
+}
+
+/**
  * Dựng danh sách thẻ. Mọi tham số đều là dữ liệu ĐÃ đọc sẵn.
  *
  * @param {object} p
@@ -155,6 +247,9 @@ function buildQuestsCard({ missions, completedMissionIds, missionXp, bonusXP }) 
  * @param {string[]} p.completedMissionIds  `ui.missionCompletedIds` — nhiệm vụ phiên này vừa xong
  * @param {(xp:number)=>number} p.missionXp   phép nhân XP nhiệm vụ (đã gồm hệ số công trình)
  * @param {number} p.bonusXP             "thưởng trọn ngày", đã tính sẵn bằng `dailyAllBonusXP`
+ * @param {object|null} p.project        công trình đầu hàng chờ SAU phiên (xem `buildProjectCard`)
+ * @param {object|null} p.skills         kỹ năng mở được ngay + đích kế (xem `buildLevelCard`)
+ * @param {object|null} p.crisisQuest    thử thách kỷ nguyên SAU phiên (xem `buildQuestCard`)
  */
 export function buildRewardStoryCards({
   reward,
@@ -166,9 +261,17 @@ export function buildRewardStoryCards({
   completedMissionIds = [],
   missionXp = (xp) => xp,
   bonusXP = 0,
+  project = null,
+  skills = null,
+  crisisQuest = null,
 } = {}) {
   if (!reward) return [];
   const cards = [buildXpCard(reward)];
+
+  // Thứ tự là một câu chuyện (ADR-069): xong rồi → THÀNH PHỐ nhích → chuỗi → hôm nay → nhiệm vụ →
+  // thử thách kỷ → (lên cấp + chọn kỹ năng) → (lên bậc) → (di vật) → (kỷ mới).
+  const projectCard = buildProjectCard(project);
+  if (projectCard) cards.push(projectCard);
 
   const streakCard = buildStreakCard(streak, weekDays);
   if (streakCard) cards.push(streakCard);
@@ -179,9 +282,16 @@ export function buildRewardStoryCards({
   const questsCard = buildQuestsCard({ missions, completedMissionIds, missionXp, bonusXP });
   if (questsCard) cards.push(questsCard);
 
-  if (toNumber(reward.levelsGained) > 0) {
-    cards.push({ id: 'level', newLevel: toNumber(reward.newLevel), spGained: toNumber(reward.spGained) });
-  }
+  const questCard = buildQuestCard(reward, crisisQuest);
+  if (questCard) cards.push(questCard);
+
+  if (toNumber(reward.levelsGained) > 0) cards.push(buildLevelCard(reward, skills));
+
+  const rankCard = buildRankCard(reward);
+  if (rankCard) cards.push(rankCard);
+
+  const relicCard = buildRelicCard(reward);
+  if (relicCard) cards.push(relicCard);
 
   if (reward.eraChanged) {
     const meta = ERA_METADATA[reward.newBook] ?? null;
@@ -197,9 +307,10 @@ export function buildRewardStoryCards({
   return cards;
 }
 
-/** Thẻ đứng bao lâu rồi tự lật. */
+/** Thẻ đứng bao lâu rồi tự lật — `STORY_HOLD` (null) là "đứng yên chờ người chơi". */
 export function storyCardDurationMs(card, isLast) {
+  if (card?.hold) return STORY_HOLD;
   if (isLast) return STORY_LAST_CARD_MS;
-  if (card?.id === 'level' || card?.id === 'era') return STORY_BIG_CARD_MS;
+  if (card?.id === 'level' || card?.id === 'era' || card?.id === 'rank' || card?.id === 'relic') return STORY_BIG_CARD_MS;
   return STORY_CARD_MS;
 }

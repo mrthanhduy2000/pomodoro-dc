@@ -287,8 +287,8 @@ export default function DailyMissions({ section = 'all' }) {
 function ClaimButton({ label, lightTheme, onClick }) {
   const enterMotion = useEnterMotion();
   const pressMotion = usePressMotion();
-  // Nhấc 1px khi rê chuột — cùng ngoại lệ mà `DisasterModal` đã đặt tên: nó không
-  // mang bố cục (bỏ đi thì nút vẫn ở đúng chỗ) nên đi qua `useCustomMotion`.
+  // Nhấc 1px khi rê chuột — ngoại lệ trang trí của `motionPresets`: nó không mang bố cục
+  // (bỏ đi thì nút vẫn ở đúng chỗ) nên đi qua `useCustomMotion`.
   const hoverLift = useCustomMotion({ whileHover: { y: -1 } });
   return (
     <motion.button

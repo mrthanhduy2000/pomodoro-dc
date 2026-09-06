@@ -26,7 +26,6 @@ const PACKS = {
     breakStart:   { type: 'sine',     pairs: [[440, 330], [550, 440]], gain: 0.3, offset: 0.1 },
     skillUnlock:  { type: 'sine',     freqs: [1047, 1319, 1568], step: 0.06, dur: 0.25, gain: 0.35 },
     jackpot:      { type: 'triangle', freqs: [261, 329, 392, 523, 659, 784, 1047], step: 0.07, dur: 0.4, gain: 0.55 },
-    disaster:     { rumbleFreq: 120, rumbleEnd: 55, tritone: [185, 131] },
     eraChange:    { type: 'sine',     chord: [261.63, 329.63, 392.00, 523.25] },
     chestOpen:    { freqs: [2093, 2637, 3136, 4186], gain: 0.25 },
   },
@@ -40,7 +39,6 @@ const PACKS = {
     breakStart:   { type: 'sine',     pairs: [[330, 220], [440, 330]], gain: 0.22, offset: 0.15 },
     skillUnlock:  { type: 'sine',     freqs: [659, 784, 1047], step: 0.08, dur: 0.35, gain: 0.25 },
     jackpot:      { type: 'sine',     freqs: [261, 329, 392, 523, 659, 784, 1047], step: 0.10, dur: 0.5, gain: 0.35 },
-    disaster:     { rumbleFreq: 80,  rumbleEnd: 40, tritone: [147, 110] },
     eraChange:    { type: 'sine',     chord: [130.81, 196.00, 261.63, 329.63] },
     chestOpen:    { freqs: [1047, 1319, 1568, 2093], gain: 0.18 },
   },
@@ -54,7 +52,6 @@ const PACKS = {
     breakStart:   { type: 'sawtooth', pairs: [[880, 660], [660, 440]], gain: 0.18, offset: 0.08 },
     skillUnlock:  { type: 'square',   freqs: [1760, 2093, 2637], step: 0.05, dur: 0.20, gain: 0.28 },
     jackpot:      { type: 'sawtooth', freqs: [220, 330, 440, 660, 880, 1047, 1320], step: 0.055, dur: 0.35, gain: 0.5 },
-    disaster:     { rumbleFreq: 140, rumbleEnd: 60, tritone: [220, 155] },
     eraChange:    { type: 'sawtooth', chord: [220, 277.18, 329.63, 440] },
     chestOpen:    { freqs: [1760, 2093, 2637, 3136], gain: 0.22 },
   },
@@ -68,7 +65,6 @@ const PACKS = {
     breakStart:   { type: 'sine',     pairs: [[440, 330]], gain: 0.15, offset: 0 },
     skillUnlock:  { type: 'sine',     freqs: [1047, 1319], step: 0.08, dur: 0.2, gain: 0.2 },
     jackpot:      { type: 'sine',     freqs: [523, 659, 784, 1047], step: 0.10, dur: 0.35, gain: 0.3 },
-    disaster:     { rumbleFreq: 100,  rumbleEnd: 50, tritone: [165, 123] },
     eraChange:    { type: 'sine',     chord: [261.63, 392.00, 523.25] },
     chestOpen:    { freqs: [1047, 1568], gain: 0.18 },
   },
@@ -210,20 +206,7 @@ class SoundEngine {
                      duration: p.dur, gainStart: p.gain, t });
   }
 
-  /** Ominous descending rumble for disasters */
-  playDisaster() {
-    if (!this.enabled) return;
-    const p   = this._p('disaster');
-    const ctx = this._getCtx();
-    const t   = ctx.currentTime;
-    this._osc({ type: 'sawtooth', freq: p.rumbleFreq, freqEnd: p.rumbleEnd,
-                 startTime: t, duration: 1.2, gainStart: 0.45, gainEnd: 0 });
-    p.tritone.forEach((freq, i) => {
-      this._osc({ type: 'square', freq,
-                   startTime: t + 0.1 + i * 0.05, duration: 0.8,
-                   gainStart: 0.18, gainEnd: 0 });
-    });
-  }
+  // ADR-069 (2026-09-06): `playDisaster` ĐÃ GỠ cùng `DisasterModal` — không còn khoảnh khắc nào để nó kêu.
 
   /** Cinematic long tone for era change */
   playEraChange() {

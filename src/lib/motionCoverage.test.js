@@ -40,12 +40,10 @@ const NGOAI_PHAM_VI = 'components/city/render3d';
  *     hứa nào; ép nó vào `enter` là làm hỏng một cảnh diễn đã có ba luật cứng riêng.
  */
 const NGOAI_LE = {
-  'components/BuildingWorkshop.jsx': 2,      // mang bố cục: thanh tiến độ xây
   'components/DailyMissions.jsx': 2,         // mang bố cục: thanh tiến độ nhiệm vụ
   'components/LevelUpModal.jsx': 3,          // pháo hoa — `ParticleField` trả `null` khi Giảm chuyển động
   'components/LootDropModal.jsx': 9,         // so le (2 chỗ) + mưa hạt (trả `null` khi Giảm chuyển động)
   'components/PomodoroEngine.jsx': 3,        // `ActionButton` (lún = chiều dày bóng) + thẻ preset đang chọn
-  'components/RankDisplay.jsx': 6,           // mang bố cục: 3 thanh tiến độ
   'components/StatsDashboard.jsx': 4,        // mang bố cục: cột phân bố + thanh loại việc
   'components/WeeklyReportModal.jsx': 8,     // mang bố cục: 4 thanh so sánh tuần
   'components/city/CityGrowthMoment.jsx': 13, // cảnh diễn 3,2 giây, không dựng khi Giảm chuyển động
@@ -129,7 +127,7 @@ test('ĐỐI CHỨNG — phép đếm phải THẬT SỰ bắt được một kh
 
   // ⚠️ CA NÀY NHỐT ĐÚNG LỖI ĐÃ TÌM RA (2026-08-27). Bản đầu của `demKhaiBaoRoiRac` neo vào ĐẦU
   // DÒNG nên nó đếm ra 0 ở đây, và cả cổng lặng lẽ mù với lối viết gọn một dòng — thứ có thật
-  // trong kho này (`FocusRail.jsx` có 3 dòng như vậy, `BuildingWorkshop.jsx` có 2). Bốn phép thử
+  // trong kho này (`FocusRail.jsx` có 3 dòng như vậy, `BuildingWorkshop.jsx` — nay đã gỡ — có 2). Bốn phép thử
   // ngược khác đều ĐỎ mà ca này thì không, vì sau khi dọn xong thì mọi khai báo CÒN LẠI đều tình
   // cờ nằm ở đầu dòng ⇒ phép quét file không phân biệt được hai bản regex. Chỉ ca tổng hợp này
   // mới phân biệt được, nên nó là thứ DUY NHẤT chặn được hồi quy của chính phép đếm.

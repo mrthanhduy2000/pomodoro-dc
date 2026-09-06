@@ -6,7 +6,6 @@ import { clearTimerLive, updateTimerLive } from './lib/timerLiveService';
 
 import AppErrorBoundary from './components/AppErrorBoundary';
 import PomodoroEngine from './components/PomodoroEngine';
-import ResourceDisplay from './components/ResourceDisplay';
 import RankDisplay from './components/RankDisplay';
 import DailyMissions from './components/DailyMissions';
 import FocusRail from './components/FocusRail';
@@ -36,10 +35,9 @@ import { readPreviewScene, buildPreviewUi } from './dev/previewStage';
 
 const SkillTree = createRecoverableLazy(() => import('./components/SkillTree.jsx'), 'skill-tree');
 const RelicInventory = createRecoverableLazy(() => import('./components/RelicInventory.jsx'), 'relic-inventory');
-const BlueprintInventory = createRecoverableLazy(() => import('./components/BlueprintInventory.jsx'), 'blueprint-inventory');
 const Achievements = createRecoverableLazy(() => import('./components/Achievements.jsx'), 'achievements');
 const StatsDashboard = createRecoverableLazy(() => import('./components/StatsDashboard.jsx'), 'stats-dashboard');
-const BuildingWorkshop = createRecoverableLazy(() => import('./components/BuildingWorkshop.jsx'), 'building-workshop');
+const BuildScreen = createRecoverableLazy(() => import('./components/BuildScreen.jsx'), 'build-screen');
 const CityView = createRecoverableLazy(() => import('./components/CityView.jsx'), 'city-view');
 // ⚠️ Lớp nền thành phố ở trang chủ cũng nạp LƯỜI, dù nó nằm ngay màn hình đầu tiên. Nạp tĩnh sẽ
 // kéo cả `CityStage` + bộ vẽ 2D + bảng số liệu vào chunk chính (đo được +4,9 KB gzip) và làm chậm
@@ -50,8 +48,6 @@ const Settings = createRecoverableLazy(() => import('./components/Settings.jsx')
 const LootDropModal = createRecoverableLazy(() => import('./components/LootDropModal.jsx'), 'loot-drop-modal');
 const CityGrowthMoment = createRecoverableLazy(() => import('./components/city/CityGrowthMoment.jsx'), 'city-growth-moment');
 const FocusCityTease = createRecoverableLazy(() => import('./components/city/FocusCityTease.jsx'), 'focus-city-tease');
-const DisasterModal = createRecoverableLazy(() => import('./components/DisasterModal.jsx'), 'disaster-modal');
-const EraCrisisModal = createRecoverableLazy(() => import('./components/EraCrisisModal.jsx'), 'era-crisis-modal');
 const PrestigeModal = createRecoverableLazy(() => import('./components/PrestigeModal.jsx'), 'prestige-modal');
 const LevelUpModal = createRecoverableLazy(() => import('./components/LevelUpModal.jsx'), 'level-up-modal');
 const WeeklyReportModal = createRecoverableLazy(() => import('./components/WeeklyReportModal.jsx'), 'weekly-report-modal');
@@ -242,7 +238,7 @@ const INVENTORY_TABS = [
   {
     id: 'collection',
     label: 'Công trình',
-    subtitle: 'Nghiên cứu bản vẽ rồi dựng nó lên — một vòng, một màn.',
+    subtitle: 'Chọn một công trình — mỗi phiên tập trung là một nhịp xây.',
   },
   {
     id: 'achievements',
@@ -443,10 +439,7 @@ export default function App() {
   const dailyGoalSessions = useSettingsStore((s) => s.dailyGoalSessions);
   const dailyGoalMinutes = useSettingsStore((s) => s.dailyGoalMinutes);
   const refreshPushState = useSettingsStore((s) => s.refreshPushState);
-  const checkRankChallengeDeadlines = useGameStore((s) => s.checkRankChallengeDeadlines);
   const checkEraCrisisDeadlines = useGameStore((s) => s.checkEraCrisisDeadlines);
-  const closeDisasterModal = useGameStore((s) => s.closeDisasterModal);
-  const isDisasterModalOpen = useGameStore((s) => s.ui.disasterModalOpen);
   const timerSessionRunning = useGameStore((s) => s.timerSession.isRunning);
   const refreshDailyMissions = useGameStore((s) => s.refreshDailyMissions);
   const openWeeklyReport = useGameStore((s) => s.openWeeklyReport);
@@ -472,10 +465,9 @@ export default function App() {
 
     hydrateEngines();
     void refreshPushState();
-    checkRankChallengeDeadlines();
     refreshDailyMissions();
     initSync();
-  }, [storesHydrated, hydrateEngines, refreshPushState, checkRankChallengeDeadlines, refreshDailyMissions]);
+  }, [storesHydrated, hydrateEngines, refreshPushState, refreshDailyMissions]);
 
   /*
     ⚠️ CỬA SOI MÀN-SAU-PHIÊN (2026-09-02). Khoảnh khắc dopamine lớn nhất của app từng là màn DUY
@@ -515,13 +507,6 @@ export default function App() {
     if (!storesHydrated) return;
     if (!timerSessionRunning) checkEraCrisisDeadlines();
   }, [storesHydrated, checkEraCrisisDeadlines, timerSessionRunning]);
-
-  useEffect(() => {
-    if (!storesHydrated) return;
-    if (timerSessionRunning && isDisasterModalOpen) {
-      closeDisasterModal();
-    }
-  }, [closeDisasterModal, isDisasterModalOpen, storesHydrated, timerSessionRunning]);
 
   useEffect(() => {
     if (!storesHydrated) return undefined;
@@ -604,8 +589,6 @@ export default function App() {
     !!s.player.unlockedSkills?.la_chan_streak && s.streak?.skipShieldUsedWeekKey !== localWeekMondayStr()
   ));
   const lootModalOpen = useGameStore((s) => s.ui.lootModalOpen);
-  const disasterModalOpen = useGameStore((s) => s.ui.disasterModalOpen);
-  const eraCrisisModalOpen = useGameStore((s) => s.ui.eraCrisisModalOpen);
   const prestigeModalOpen = useGameStore((s) => s.ui.prestigeModalOpen);
   const weeklyReportOpen = useGameStore((s) => s.ui.weeklyReportOpen);
   const weeklyReportPending = useGameStore((s) => s.ui.weeklyReportPending);
@@ -1038,7 +1021,6 @@ export default function App() {
                             dailyGoalMinutes={dailyGoalMinutes}
                           />
                           <DailyMissions />
-                          <ResourceDisplay />
                           <RankDisplay />
                         </div>
                       ) : (
@@ -1099,12 +1081,13 @@ export default function App() {
                     <TabPane key="missions">
                       <ShellPane
                         title="Tiến trình"
-                        subtitle="Nhịp tuần, tài nguyên và hạng của kỷ này. Nhiệm vụ ngày nằm ngay dưới đồng hồ ở màn Tập trung."
+                        subtitle="Nhịp tuần và bậc của kỷ này — cả hai tự chạy theo phiên. Nhiệm vụ ngày nằm ngay dưới đồng hồ ở màn Tập trung."
                         topRail={!isDesktop && !showFocusFullscreen ? renderTopRail() : null}
                       >
                         <div className="space-y-4">
+                          {/* ADR-069: `ResourceDisplay` ĐÃ GỠ — thẻ EP/kỷ của nó nói lại đúng thanh chặng ở
+                              thanh tiêu đề, còn Kho tài nguyên đã rời khỏi đường chơi. */}
                           <DailyMissions section="weekly" />
-                          <ResourceDisplay />
                           <RankDisplay />
                         </div>
                       </ShellPane>
@@ -1325,8 +1308,6 @@ export default function App() {
         onError={OVERLAYS_ERROR_LOGGER}
         resetKeys={[
           lootModalOpen,
-          disasterModalOpen,
-          eraCrisisModalOpen,
           prestigeModalOpen,
           weeklyReportOpen,
           weeklyReportPending,
@@ -1339,8 +1320,6 @@ export default function App() {
       >
         <GlobalOverlays
           lootModalOpen={lootModalOpen}
-          disasterModalOpen={disasterModalOpen}
-          eraCrisisModalOpen={eraCrisisModalOpen}
           prestigeModalOpen={prestigeModalOpen}
           weeklyReportOpen={weeklyReportOpen}
           weeklyReportPending={weeklyReportPending}
@@ -1394,8 +1373,6 @@ function GlobalOverlays(props) {
 
 function OverlayStack({
   lootModalOpen,
-  disasterModalOpen,
-  eraCrisisModalOpen,
   prestigeModalOpen,
   weeklyReportOpen,
   weeklyReportPending,
@@ -1413,6 +1390,7 @@ function OverlayStack({
   const closeLootModal = useGameStore((s) => s.closeLootModal);
   const dismissMissionNotification = useGameStore((s) => s.dismissMissionNotification);
   const dismissLevelUp = useGameStore((s) => s.dismissLevelUp);
+  const dismissRelicNotification = useGameStore((s) => s.dismissRelicNotification);
   const reduceMotion = useReducedMotion();
   const growth = useCityGrowthMoment(lootModalOpen);
 
@@ -1481,7 +1459,9 @@ function OverlayStack({
    *   · còn lại → đóng phần thưởng, và dọn những toast mà chuỗi thẻ ĐÃ nói thay (nhiệm vụ vừa xong,
    *     lên cấp) — để chúng không kể lại lần thứ hai ở góc màn hình.
    */
-  const finishStory = useCallback(({ openDetail = false, shownMissionIds = [], levelShown = false } = {}) => {
+  const finishStory = useCallback(({
+    openDetail = false, shownMissionIds = [], levelShown = false, relicShown = false, navigate = null,
+  } = {}) => {
     setStoryDone(true);
     if (openDetail) {
       setDetail('loot');
@@ -1491,7 +1471,10 @@ function OverlayStack({
     closeLootModal();
     for (const id of shownMissionIds) dismissMissionNotification(id);
     if (levelShown) dismissLevelUp();
-  }, [pendingEraChanged, closeLootModal, dismissMissionNotification, dismissLevelUp]);
+    // ADR-069: thẻ di vật đã kể thay toast di vật; thẻ "hàng chờ trống" có nút đi thẳng tới Công trình.
+    if (relicShown) dismissRelicNotification();
+    if (navigate) onNavigate?.(navigate);
+  }, [pendingEraChanged, closeLootModal, dismissMissionNotification, dismissLevelUp, dismissRelicNotification, onNavigate]);
 
   // ⚠️ NẠP TRƯỚC gói mã của màn phần thưởng ngay khi một phiên vừa xong. Đo bằng máy
   // (bản Phase 4′): không có dòng này thì gói `loot-drop-modal` chỉ bắt đầu tải SAU
@@ -1511,7 +1494,7 @@ function OverlayStack({
   // chỉ bật một lời MỜI (`weeklyReportPending` → một thẻ toast); cờ này chỉ lên khi Đàm bấm —
   // nút ở thanh bên hoặc chính cái thẻ ấy — nên nó rơi vào đúng câu đã ghi ở trên: "một hộp
   // thoại Đàm tự mở thì không phải làm phiền".
-  const blocking = showMoment || showStory || showLootModal || disasterModalOpen || eraCrisisModalOpen
+  const blocking = showMoment || showStory || showLootModal
     || prestigeModalOpen || weeklyReportOpen || showLevelModal;
 
   const hasToast = (
@@ -1532,8 +1515,6 @@ function OverlayStack({
       )}
       {showStory && <SessionRewardStory onDone={finishStory} />}
       {showLootModal && <LootDropModal />}
-      {disasterModalOpen && <DisasterModal />}
-      {eraCrisisModalOpen && <EraCrisisModal />}
       {prestigeModalOpen && <PrestigeModal />}
       {showLevelModal && <LevelUpModal autoDismissMs={0} />}
       {weeklyReportOpen && <WeeklyReportModal />}
@@ -2163,13 +2144,9 @@ function InventoryView({ onChange, sub }) {
       )}
       {sub === 'collection' && (
         <Suspense fallback={<TabLoadingState />}>
-          {/* Xưởng TRƯỚC Bản vẽ: Xưởng là nơi có việc làm ngay (hàng chờ đang chạy, công trình
-              nâng cấp được), còn Bản vẽ là nơi tiêu RP cho việc SAU. Thứ tự cũ bắt người chơi đi
-              qua 2.745px bảng giá mới tới được chỗ bấm. */}
-          <BuildingWorkshop />
-          <div className="mt-6">
-            <BlueprintInventory />
-          </div>
+          {/* ADR-069: MỘT màn, MỘT nút. Xưởng + Bản vẽ + Nghiên cứu gộp thành `BuildScreen` — chọn một
+              công trình, mỗi phiên là một nhịp xây; không còn RP, nguyên liệu hay bảng giá ở giữa. */}
+          <BuildScreen />
         </Suspense>
       )}
       {sub === 'achievements' && (

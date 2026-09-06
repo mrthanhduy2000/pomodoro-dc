@@ -1,10 +1,15 @@
 /**
  * CƠ HỘI ĐANG CHỜ — "có việc gì đáng vào xem không?"
  *
- * Ba câu hỏi thuần, không dính React, không đọc store:
- *   1. có kỹ năng nào đủ SP để mở ngay không?          → tab con "Kỹ năng"
- *   2. có bản vẽ nào đủ RP để nghiên cứu ngay không?   → tab con "Kho báu" (Bản vẽ)
- *   3. có công trình nào đủ tài nguyên để xây ngay không? → tab con "Kho báu" (Xưởng)
+ * HAI câu hỏi thuần, không dính React, không đọc store:
+ *   1. có kỹ năng nào đủ SP để mở ngay không?              → tab con "Kỹ năng"
+ *   2. hàng chờ xây có ô trống và còn công trình để chọn?   → tab con "Công trình"
+ *
+ * ⚠️ TỪ 2026-09-06 (ADR-069) CHỈ CÒN HAI, KHÔNG PHẢI BA. Câu "có bản vẽ nào đủ RP để nghiên cứu"
+ * đã bỏ cùng với cổng nghiên cứu: bản vẽ nay khởi công thẳng, không có bước trung gian nào để mà
+ * "sẵn sàng". Và câu "đủ tài nguyên để xây" cũng đổi nghĩa: không còn nguyên liệu để mà thiếu, nên
+ * "xây được" = có ô hàng chờ trống + còn công trình chưa xây ở kỷ này. Một ô trống LÀ một việc:
+ * mỗi phiên chỉ đẩy những gì đang nằm trong hàng chờ, nên hàng chờ trống là phiên bị bỏ phí.
  *
  * ⚠️ VÌ SAO CHÚNG NẰM Ở ĐÂY CHỨ KHÔNG NẰM TRONG `NotificationCenter.jsx` NHƯ TRƯỚC:
  * từ lúc điều hướng gộp ba màn (Kỹ năng · Kho báu · Thành tích) vào một tab "Hành trang",
@@ -15,21 +20,9 @@
  * lại — và KHÔNG có gì đỏ lên. Nay chỉ có một công thức, hai người đọc.
  */
 
-import {
-  BLUEPRINT_CATALOG,
-  BLUEPRINT_META,
-  BUILDING_EFFECTS,
-  BUILDING_SPECS,
-  CRAFT_QUEUE_SLOTS,
-  SKILL_TREE,
-  normalizeRawCost,
-  normalizeRefinedBag,
-  getUnifiedRefinedCost,
-} from './constants.js';
-import { countActiveCrafting } from './eraLegacy.js';
+import { BLUEPRINT_CATALOG, SKILL_TREE } from './constants.js';
 import { getEffectiveSkillCost } from './gameMath.js';
-import { khoiCongDuoc } from './craftReadiness.js';
-import { researchCostOf } from './wonderEffects.js';
+import { listNextProjects, slotState } from './buildChoices.js';
 
 export const ALL_SKILLS = Object.values(SKILL_TREE).flatMap((branch) =>
   branch.nodes.map((node) => ({
@@ -43,10 +36,6 @@ export const BLUEPRINT_LOOKUP = Object.fromEntries(
     .flat()
     .map((blueprint) => [blueprint.id, blueprint])
 );
-
-// ⚠️ Giữ tên cũ cho mọi nơi đang gọi, nhưng RUỘT nay là bản dùng chung với store và với màn
-// hình — xem `engine/wonderEffects.js`.
-export { researchCostOf as getEffectiveResearchCost } from './wonderEffects.js';
 
 /**
  * Kỹ năng đã đủ điều kiện tiên quyết VÀ đủ SP để mở ngay bây giờ.
@@ -68,66 +57,36 @@ export function listAvailableSkills({
   });
 }
 
-/** Bản vẽ chưa có mà đã đủ RP để nghiên cứu ngay. */
-export function listResearchableBlueprints({
-  activeBook = 1,
-  blueprints = [],
-  buildings = [],
-  research = null,
+/**
+ * Kỹ năng CHƯA đủ SP nhưng đã đủ tiên quyết — cái rẻ nhất trong số đó là "đích kế tiếp" để nói
+ * *"còn N điểm nữa mở được «X»"*. Trả `null` khi không có gì để với tới.
+ */
+export function nextReachableSkill({
+  sp = 0, unlockedSkills = {}, relics = [], relicEvolutions = {},
 } = {}) {
-  const ownedIds = new Set((blueprints ?? []).map((item) => item.id));
-  const researchedIds = new Set(research?.researched ?? []);
-  const builtIds = new Set(buildings ?? []);
-
-  return Object.entries(BLUEPRINT_META)
-    .filter(([bpId, meta]) => {
-      if ((activeBook ?? 1) < (meta.requiresEra ?? 1)) return false;
-      if (ownedIds.has(bpId) || researchedIds.has(bpId) || builtIds.has(bpId)) return false;
-      const cost = researchCostOf(buildings, bpId, meta.rpCost);
-      return (research?.rp ?? 0) >= cost;
-    })
-    .map(([bpId]) => BLUEPRINT_LOOKUP[bpId])
-    .filter(Boolean);
+  let best = null;
+  for (const skill of ALL_SKILLS) {
+    if (unlockedSkills[skill.id]) continue;
+    if (!skill.requires.every((requirement) => unlockedSkills[requirement])) continue;
+    const cost = getEffectiveSkillCost(skill.id, skill.spCost, relics, relicEvolutions);
+    if (sp >= cost) continue;
+    if (!best || cost < best.cost) best = { ...skill, cost, spNeeded: cost - sp };
+  }
+  return best;
 }
 
-/** Bản vẽ đã sở hữu/đã nghiên cứu mà đủ tài nguyên để đưa vào xưởng ngay. */
+/**
+ * Công trình chọn được NGAY: kỷ đang chơi, chưa xây, chưa vào hàng chờ, và còn ô trống.
+ * Rỗng khi hàng chờ đầy — lúc ấy không có việc gì để làm ở đây, đúng nghĩa đen.
+ */
 export function listBuildableBlueprints({
   activeBook = 1,
-  blueprints = [],
   buildings = [],
   craftingQueue = [],
-  research = null,
-  resources = null,
-  resourcesRefined = null,
 } = {}) {
-  // ⚠️ ĐẾM Ô BẰNG `countActiveCrafting`, KHÔNG dùng `.length` — từ Phase 4D hàng đợi có thể
-  // chứa "di sản" của kỷ đã đóng, và di sản KHÔNG chiếm ô. Dùng `.length` thì một di sản
-  // đang xây dở sẽ âm thầm tắt hết gợi ý "có thể xây ngay" dù ô vẫn còn trống.
-  if (countActiveCrafting(craftingQueue, activeBook) >= CRAFT_QUEUE_SLOTS) return [];
-
-  const ownedIds = new Set((blueprints ?? []).map((item) => item.id));
-  const researchedIds = new Set(research?.researched ?? []);
-  const builtIds = new Set(buildings ?? []);
-  const queuedIds = new Set((craftingQueue ?? []).map((item) => item.bpId));
-
-  return Object.entries(BLUEPRINT_META)
-    .filter(([bpId, meta]) => {
-      const spec = BUILDING_SPECS[bpId];
-      if (!spec) return false;
-      if (!(ownedIds.has(bpId) || researchedIds.has(bpId))) return false;
-      if (builtIds.has(bpId) || queuedIds.has(bpId)) return false;
-
-      // ⚠️ MỘT LUẬT MỘT CÔNG THỨC — dùng chung `craftReadiness.js` với `ReadyCard` và dải mở đầu
-      // tab Công trình. Ba bản chép tay của cùng một luật là ba cơ hội để chúng trôi khỏi nhau.
-      // (Ô hàng đợi đã được kiểm ở đầu hàm nên ở đây `conOTrong` chắc chắn đúng.)
-      return khoiCongDuoc({
-        rawCost: normalizeRawCost(spec.cost ?? {}),
-        refinedCost: getUnifiedRefinedCost(spec.refinedCost),
-        bookResources: resources?.[`book${meta.era}`] ?? {},
-        refinedT2: normalizeRefinedBag(resourcesRefined?.[meta.era]).t2,
-      });
-    })
-    .map(([bpId]) => BLUEPRINT_LOOKUP[bpId])
+  if (slotState({ craftingQueue, activeBook }).free <= 0) return [];
+  return listNextProjects({ activeBook, buildings, craftingQueue })
+    .map((project) => BLUEPRINT_LOOKUP[project.bpId])
     .filter(Boolean);
 }
 
@@ -135,12 +94,10 @@ export function listBuildableBlueprints({
  * "Có ít nhất một cơ hội đang chờ không?" — dùng cho cái chấm trên tab "Hành trang".
  *
  * ⚠️ Chạy ngắt sớm theo thứ tự RẺ → ĐẮT: cái chấm được tính lại ở MỌI lần store đổi (kể cả
- * mỗi giây timer chạy), nên câu hỏi rẻ nhất phải đứng trước. Ba danh sách trên chỉ được
- * dựng đầy đủ khi cái chuông cần đếm và cần kể tên.
+ * mỗi giây timer chạy), nên câu hỏi rẻ nhất phải đứng trước.
  */
 export function hasReadyOpportunity(snapshot = {}) {
   if (listAvailableSkills(snapshot).length > 0) return true;
-  if (listResearchableBlueprints(snapshot).length > 0) return true;
   return listBuildableBlueprints(snapshot).length > 0;
 }
 
@@ -148,22 +105,15 @@ export function hasReadyOpportunity(snapshot = {}) {
  * "VIỆC TIẾP THEO" — MỘT việc duy nhất, để hiện thành một dòng ở màn Tập trung.
  *
  * ⚠️ VÌ SAO CẦN, KHI ĐÃ CÓ CÁI CHẤM VÀ CÁI CHUÔNG. Cái chấm trên tab "Hành trang" nói *"có
- * việc"*; nó KHÔNG nói *"việc gì"*. Đàm phải bấm vào tab, rồi chọn giữa ba tab con, rồi tự dò
- * trong 51 kỹ năng / 75 công trình xem cái nào đang mở được. Đo được: game có 360 thành tích,
- * 51 kỹ năng, 75 công trình, 30 loại tài nguyên — cái khó chưa bao giờ là thiếu việc để làm, mà
- * là **không có gì nói cho anh biết việc nào đáng làm ngay**. Một dòng chữ đọc trong một nhịp
- * mắt, bấm được, đi thẳng tới đúng chỗ.
+ * việc"*; nó KHÔNG nói *"việc gì"*. Một dòng chữ đọc trong một nhịp mắt, bấm được, đi thẳng tới
+ * đúng chỗ.
  *
- * ⚠️ THỨ TỰ ƯU TIÊN — XÂY > NGHIÊN CỨU > KỸ NĂNG, và đây là một quyết định chứ không phải thứ tự
- * tình cờ của ba dòng `if`:
- *   · **Xây** cho kết quả NHÌN THẤY ĐƯỢC trong thành phố 3D ngay phiên sau. Nó đóng đúng vòng lặp
- *     "làm việc → thấy thành quả" mà `cityMoment.js` sinh ra để giữ.
- *   · **Nghiên cứu** đứng thứ hai vì nó là thứ MỞ KHOÁ cho việc xây — làm nó tức là dọn đường.
- *   · **Kỹ năng** đứng cuối dù nó rẻ nhất về thao tác: phần thưởng của nó là mấy phần trăm cộng
- *     thêm, thứ không nhìn thấy được ở đâu cả. Để nó lên đầu là dùng chỗ đắt giá nhất màn hình
- *     cho thứ mờ nhạt nhất.
- * Ô xưởng có hạn (`CRAFT_QUEUE_SLOTS`), nên khi xưởng đầy thì nhánh "xây" tự trả rỗng và việc
- * hiện ra rơi xuống mục kế — không cần thêm luật nào cho chuyện đó.
+ * ⚠️ THỨ TỰ ƯU TIÊN — XÂY > KỸ NĂNG, và đây là một quyết định chứ không phải thứ tự tình cờ:
+ *   · **Xây** cho kết quả NHÌN THẤY ĐƯỢC trong thành phố 3D ngay phiên sau, và một ô hàng chờ
+ *     trống là một phiên sắp bị bỏ phí — thứ hết hạn sớm hơn.
+ *   · **Kỹ năng** đứng sau dù rẻ về thao tác: phần thưởng của nó là mấy phần trăm cộng thêm,
+ *     thứ không nhìn thấy được ở đâu cả; và từ ADR-069 nó còn được mời ngay trong chuỗi thẻ
+ *     thưởng lúc lên cấp, nên dòng này ít khi phải nói thay.
  *
  * ⚠️ `othersCount` LÀ PHẦN KHÔNG ĐƯỢC BỎ. Nếu chỉ hiện một việc mà im lặng về phần còn lại thì
  * hôm nào Đàm có 5 kỹ năng chờ, anh vẫn chỉ thấy đúng một dòng nói về công trình và sẽ tưởng
@@ -177,33 +127,21 @@ export function hasReadyOpportunity(snapshot = {}) {
  */
 export function pickNextAction(snapshot = {}) {
   const buildable = listBuildableBlueprints(snapshot);
-  const researchable = listResearchableBlueprints(snapshot);
   const skills = listAvailableSkills(snapshot);
 
-  const total = buildable.length + researchable.length + skills.length;
+  const total = buildable.length + skills.length;
   if (total === 0) return null;
 
   if (buildable.length > 0) {
     const [top] = buildable;
     return {
       id: 'workshop',
-      icon: '🔨',
+      icon: '🏗',
       label: top.label,
-      text: `Xây «${top.label}» — đủ tài nguyên rồi`,
+      text: `Hàng chờ xây đang trống — chọn «${top.label}» hoặc công trình khác`,
       action: { tab: 'collection', collectionTab: 'workshop' },
-      othersCount: total - 1,
-    };
-  }
-
-  if (researchable.length > 0) {
-    const [top] = researchable;
-    return {
-      id: 'blueprints',
-      icon: '📐',
-      label: top.label,
-      text: `Nghiên cứu «${top.label}» — đủ điểm nghiên cứu`,
-      action: { tab: 'collection', collectionTab: 'blueprints' },
-      othersCount: total - 1,
+      // Một ô trống là MỘT việc, dù có 3 công trình để chọn — chọn xong một cái là hết việc.
+      othersCount: skills.length,
     };
   }
 

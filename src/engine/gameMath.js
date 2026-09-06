@@ -73,12 +73,18 @@ import {
   NHIP_HOAN_HAO_EP_BONUS,
   NHIP_HOAN_HAO_MIN_MINUTES,
   // Vận May
-  BAN_TAY_VANG_RAW_CHANCE,
+  BAN_TAY_VANG_CHANCE,
+  BAN_TAY_VANG_XP_BONUS,
   BAN_TAY_VANG_MIN_MINUTES,
-  NHAN_QUAN_REFINED_CHANCE,
+  NHAN_QUAN_CHANCE,
+  NHAN_QUAN_EP_BONUS,
   NHAN_QUAN_MIN_MINUTES,
-  LINH_CAM_REFINED_CHANCE,
-  LINH_CAM_DOUBLE_CHANCE,
+  LINH_CAM_CHANCE,
+  LINH_CAM_XP_BONUS,
+  LINH_CAM_BIG_CHANCE,
+  LINH_CAM_BIG_XP_BONUS,
+  SU_THA_THU_XP_BONUS,
+  SU_THA_THU_MIN_MINUTES,
   LINH_CAM_MIN_MINUTES,
   DAI_TRUNG_THUONG_MIN_MINUTES,
   SO_DO_TRIGGER_CHANCE,
@@ -353,6 +359,7 @@ export function calculateRewards(
     tap_trung_sieu_viet: tapTrungSieuViet   = false,
     sieu_tap_trung:      sieuTapTrung       = false,
     // Ý CHÍ
+    su_tha_thu:          suThaThu           = false,
     phuc_hoi:            phucHoi            = false,
     chuoi_ngay:          chuoiNgay          = false,
     ben_vung:            benVung            = false,
@@ -486,8 +493,10 @@ export function calculateRewards(
   let skillAllBonus = 0;       // both XP và EP
   let skillResourceBonus = 0;  // raw resources
   let skillRPBonus = 0;        // RP
-  let extraRefined = 0;
-  let extraRawDrop = 0;        // Bàn Tay Vàng
+  // ADR-069: phần thưởng NGẪU NHIÊN của nhánh Vận May — cộng thẳng vào hệ số XP/EP (không qua
+  // softcap nhánh, vì nó là một cú nhảy hiếm chứ không phải một buff đều), vẫn dưới trần cứng.
+  let luckXpBonus = 0;
+  let luckEpBonus = 0;
 
   // — THIỀN ĐỊNH —
   if (vaoGuong && minutesFocused >= VAO_GUONG_MIN_MINUTES) {
@@ -506,6 +515,11 @@ export function calculateRewards(
   }
 
   // — Ý CHÍ —
+  // ADR-069: Sự Tha Thứ là bậc đầu của cặp «tha thứ → phục hồi» — cùng cò bấm `lastSessionCancelled`,
+  // ngưỡng phút thấp hơn; Phục Hồi cộng thêm chứ không thay thế.
+  if (suThaThu && lastSessionCancelled && minutesFocused >= SU_THA_THU_MIN_MINUTES) {
+    branchXp.Y_CHI += SU_THA_THU_XP_BONUS;
+  }
   if (phucHoi && lastSessionCancelled && minutesFocused >= PHUC_HOI_MIN_MINUTES) {
     branchXp.Y_CHI += PHUC_HOI_XP_BONUS;
     skillEPBonus += PHUC_HOI_EP_BONUS;
@@ -539,16 +553,16 @@ export function calculateRewards(
     skillEPBonus += NHIP_HOAN_HAO_EP_BONUS;
   }
 
-  // — VẬN MAY —  (chỉ drops/resources, không cộng XP nhánh)
-  if (banTayVang && minutesFocused >= BAN_TAY_VANG_MIN_MINUTES && rand() < BAN_TAY_VANG_RAW_CHANCE) {
-    extraRawDrop += 1;
+  // — VẬN MAY —  (ADR-069: quay ra XP/EP, không còn quay ra nguyên liệu/tinh luyện)
+  if (banTayVang && minutesFocused >= BAN_TAY_VANG_MIN_MINUTES && rand() < BAN_TAY_VANG_CHANCE) {
+    luckXpBonus += BAN_TAY_VANG_XP_BONUS;
   }
-  if (nhanQuan && minutesFocused >= NHAN_QUAN_MIN_MINUTES && rand() < NHAN_QUAN_REFINED_CHANCE) {
-    extraRefined += 1;
+  if (nhanQuan && minutesFocused >= NHAN_QUAN_MIN_MINUTES && rand() < NHAN_QUAN_CHANCE) {
+    luckEpBonus += NHAN_QUAN_EP_BONUS;
   }
   if (linhCam && minutesFocused >= LINH_CAM_MIN_MINUTES) {
-    if (rand() < LINH_CAM_REFINED_CHANCE) extraRefined += 1;
-    if (rand() < LINH_CAM_DOUBLE_CHANCE) extraRefined += 1;
+    if (rand() < LINH_CAM_CHANCE) luckXpBonus += LINH_CAM_XP_BONUS;
+    if (rand() < LINH_CAM_BIG_CHANCE) luckXpBonus += LINH_CAM_BIG_XP_BONUS;
   }
   // Lộc Ban Tặng: counter handled by store, không cộng vào reward ở đây.
 
@@ -628,9 +642,9 @@ export function calculateRewards(
   // ── 6. Tổng hợp modifier XP / EP ─────────────────────────────────────────
   // skillAllBonus áp dụng cả XP và EP
   // skillXPBonus chỉ XP, skillEPBonus chỉ EP
-  const rawXpFactor = 1 + expBonus + allBonus + skillAllBonus + skillXPBonus + xpSeal;
+  const rawXpFactor = 1 + expBonus + allBonus + skillAllBonus + skillXPBonus + xpSeal + luckXpBonus;
   const xpFactor = Math.min(rawXpFactor, XP_FACTOR_HARD_CAP);
-  const rawEpFactor = 1 + epBonus + allBonus + skillAllBonus + skillEPBonus;
+  const rawEpFactor = 1 + epBonus + allBonus + skillAllBonus + skillEPBonus + luckEpBonus;
   const epFactor = Math.min(rawEpFactor, EP_FACTOR_HARD_CAP);
 
   // ── 7. XP cuối ───────────────────────────────────────────────────────────
@@ -669,14 +683,6 @@ export function calculateRewards(
       ? Math.round(amount * SO_DO_MULTIPLIER)
       : amount;
   }
-  // Bàn Tay Vàng: +1 random raw resource
-  if (extraRawDrop > 0 && activeResources.length > 0) {
-    const pickIdx = Math.floor(rand() * activeResources.length);
-    const pickedId = activeResources[pickIdx]?.id;
-    if (pickedId) {
-      resources[pickedId] = (resources[pickedId] ?? 0) + extraRawDrop;
-    }
-  }
 
   // ── 9. Điểm Nghiên Cứu (RP) ───────────────────────────────────────────────
   const categoryMult = isNewCategoryToday ? RP_CATEGORY_MULT : 1.0;
@@ -689,7 +695,7 @@ export function calculateRewards(
   }
 
   // ── 10. Tài nguyên tinh luyện ─────────────────────────────────────────────
-  const t2Drop = (minutesFocused >= T2_DROP_THRESHOLD_MIN ? T2_DROP_AMOUNT : 0) + extraRefined;
+  const t2Drop = minutesFocused >= T2_DROP_THRESHOLD_MIN ? T2_DROP_AMOUNT : 0;
 
   return {
     baseXP,
@@ -708,6 +714,8 @@ export function calculateRewards(
     sieuTapTrungActive,                // armed + đủ điều kiện (≥45', đã kích hoạt)
     sieuTapTrungApplied: applySieu,    // resolved
     donLucChosen,                      // 'so_do' | 'sieu_tap_trung' | 'jackpot' | null
+    luckXpBonus,                       // ADR-069: Vận May quay trúng +XP (0 nếu không)
+    luckEpBonus,                       // ADR-069: Vận May quay trúng +EP (0 nếu không)
     largeChest:       chestGuaranteed,
     resources,
     activeBook,

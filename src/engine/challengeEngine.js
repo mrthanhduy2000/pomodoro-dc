@@ -20,7 +20,7 @@ import {
   RANK_SYSTEM, ERA_CRISES, DISASTER_PENALTY_RATE, RELIC_EVOLUTION, XP_SEAL_HARD_CAP,
   // Bản Cập Nhật Cộng Hưởng — softcap theo từng loại buff cổ vật (D2)
   RELIC_RESOURCE_BONUS_CAP, RELIC_GACHA_BONUS_CAP, RELIC_PITY_SEAL_CAP,
-  RELIC_DISASTER_REDUCTION_CAP, RELIC_COMBO_WINDOW_CAP_HOURS,
+  RELIC_DISASTER_REDUCTION_CAP, RELIC_COMBO_WINDOW_CAP_HOURS, RELIC_EP_BONUS_CAP, RELIC_EXP_BONUS_CAP,
 } from './constants';
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -391,9 +391,9 @@ export function applyEraCrisisChallengePenalty(allResources, crisisState) {
  * @returns {ActiveBuffs}
  *
  * @typedef {object} ActiveBuffs
- * @property {number} epBonus            - tỉ lệ cộng thêm vào EP từ rank (0.1 = +10%)
- * @property {number} expBonus           - tỉ lệ cộng thêm vào EXP từ rank
- * @property {number} resourceBonus      - % cộng thêm tài nguyên rớt (từ di vật)
+ * @property {number} epBonus            - tỉ lệ cộng thêm vào EP (bậc lẻ + di vật «tăng trưởng», ADR-069)
+ * @property {number} expBonus           - tỉ lệ cộng thêm vào EXP (bậc + di vật «tri thức», ADR-069)
+ * @property {number} resourceBonus      - (đời cũ) % tài nguyên rớt — không bậc/di vật nào còn cấp sau ADR-069
  * @property {number} allBonus           - buff tất cả từ rank/prestige (additive)
  * @property {number} gachaBonus         - key cũ, hiện dùng làm % RP cộng thêm (từ di vật)
  * @property {number} pitySeal           - key cũ, hiện dùng làm bonus RP theo bậc 2% mỗi điểm
@@ -452,6 +452,9 @@ export function aggregateActiveBuffs(activeBook, ranks, relics = [], prestigeBon
   // hiệu ứng THẬT được clamp tại nơi tiêu thụ (clampRelicDisasterReduction + getComboDecayMs).
   accumulated.disasterReduction = Math.min(accumulated.disasterReduction, RELIC_DISASTER_REDUCTION_CAP);
   accumulated.comboWindowHours  = Math.min(accumulated.comboWindowHours,  RELIC_COMBO_WINDOW_CAP_HOURS);
+  // ADR-069: hai trục mới của di vật (EP · XP) — cùng kiểu lưới an toàn, đặt trên tổng đã cộng cả bậc.
+  accumulated.epBonus           = Math.min(accumulated.epBonus,           RELIC_EP_BONUS_CAP);
+  accumulated.expBonus          = Math.min(accumulated.expBonus,          RELIC_EXP_BONUS_CAP);
 
   return accumulated;
 }

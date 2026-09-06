@@ -12,6 +12,38 @@
 
 ---
 
+## 2026-09-06 — Đồng tiền duy nhất là PHIÊN (ADR-069): công trình một nút, bậc và thử thách kỷ tự chạy, kỹ năng chọn ngay lúc lên cấp
+
+**Mục đích.** Lệnh Đàm *"SIMPLIFY. MINIMIZE. AMPLIFY FUN."*: coi Upgrade + Progression + UX/UI là
+một sản phẩm phải thiết kế lại; xoá cơ chế chỉ tồn tại vì đã được code; không đụng Thành phố.
+Đo trên tài khoản thật: xây MỘT công trình phải qua BA cổng và BỐN loại tiền mà RP dư 8,5 lần,
+nguyên liệu dư 14 lần — các cổng chưa bao giờ đóng, chúng chỉ để bấm qua.
+
+**Đã đổi.**
+1. **Công trình một màn, một nút** — `BuildScreen` thay Xưởng + Bản vẽ (1.649 dòng, 2.376px):
+   Đang xây · **Xây tiếp** (≤3 lựa chọn, "Khởi công") · Đã xây · Trùng tu. Không còn RP, bảng
+   giá nguyên liệu, tinh luyện, nâng cấp, huy hiệu loại/hiếm trên từng thẻ. Cái giá = N phiên + ô
+   hàng chờ. Store: `startProject`.
+2. **Bậc tự thăng** theo lịch sử (đủ EP gác + đủ phiên dài trong 48 giờ) — không nút, không hạn,
+   không phạt. **Khủng hoảng kỷ thành nhiệm vụ mềm**: không hộp thoại, không chặn nút Bắt đầu,
+   không hạn; qua thì di vật vào túi. Hộp thoại khủng hoảng và hộp "mất N% tài nguyên" **xoá hẳn**
+   (`EraCrisisModal.jsx` · `DisasterModal.jsx`).
+3. **Chuỗi thẻ thưởng** thêm: thẻ Thành phố (công trình nhích một nấc / "hàng chờ trống — chọn
+   ngay"), thẻ lên cấp **mời chọn ≤3 kỹ năng ngay tại chỗ**, thẻ thử thách kỷ, thẻ bậc, thẻ di vật.
+4. **Dọn nhiễu**: thẻ Kho tài nguyên (trùng thanh EP) gỡ; "Tăng lực phiên" (cược EP) rời màn chờ;
+   hộp xác nhận mua kỹ năng bỏ; "Tổ hợp kỹ năng" gấp; thẻ Bậc chỉ kể hai điều kiện; đầu thẻ "Bản đồ
+   kỹ năng" và mục "Xây tiếp" rỗng thôi nói lại điều dải mở đầu vừa nói; ô công trình đã xây kể ĐẶC
+   QUYỀN thay cho "Lv.2 · ×1.75".
+5. **Mọi phần thưởng nằm trên trục sống** (phát hiện khi soi ảnh: thẻ Thăng bậc in "+12% Tài
+   Nguyên"): bậc lẻ → **+N% EP**; 12/15 di vật → **EP / XP / giờ combo** theo chủ đề (tăng trưởng →
+   EP, tri thức → XP, che chở → combo); ba kỹ năng Vận May quay ra **+XP/+EP** thay vì nguyên
+   liệu/tinh luyện (chip «🍀 Vận may» ở thẻ +XP); Sự Tha Thứ → **+6% XP cho phiên kế sau khi huỷ**.
+   Hộp xác nhận huỷ thôi doạ "phạt N% tài nguyên". Khoá bằng `rewardAxes.test.js`.
+
+**Tương thích.** Không đổi state đồng bộ, không migration, không đụng Thành phố (giàn giáo, bảo
+tàng, ADR-007 nguyên). Tài nguyên/RP/tinh luyện vẫn cộng nhưng không còn cổng tiêu — dữ liệu
+ngủ, ghi `TECH_DEBT #99`. `startCrafting`/`researchBlueprint` giữ cho test + dữ liệu cũ.
+
 ## 2026-09-05 — Cách mạng vòng lặp chính (ADR-068): chuỗi lên đầu, nhiệm vụ về cạnh nút Bắt đầu, và một cái KẾT cho mỗi phiên
 
 **Mục đích.** Lệnh Đàm: *"làm một cuộc cách mạng về upgrade… ứng dụng UX Psychology đằng sau các

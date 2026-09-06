@@ -21,11 +21,7 @@ export default function useNextAction() {
   const sp = useGameStore((state) => state.player.sp);
   const unlockedSkills = useGameStore((state) => state.player.unlockedSkills);
   const activeBook = useGameStore((state) => state.progress.activeBook);
-  const research = useGameStore((state) => state.research);
-  const blueprints = useGameStore((state) => state.blueprints);
   const buildings = useGameStore((state) => state.buildings);
-  const resources = useGameStore((state) => state.resources);
-  const resourcesRefined = useGameStore((state) => state.resourcesRefined);
   const craftingQueue = useGameStore((state) => state.craftingQueue);
   const relics = useGameStore((state) => state.relics);
   const relicEvolutions = useGameStore((state) => state.relicEvolutions);
@@ -35,15 +31,11 @@ export default function useNextAction() {
       sp,
       unlockedSkills,
       activeBook,
-      blueprints,
       buildings,
       craftingQueue,
-      research,
-      resources,
-      resourcesRefined,
       relics,
       relicEvolutions,
     }),
-    [sp, unlockedSkills, activeBook, blueprints, buildings, craftingQueue, research, resources, resourcesRefined, relics, relicEvolutions],
+    [sp, unlockedSkills, activeBook, buildings, craftingQueue, relics, relicEvolutions],
   );
 }

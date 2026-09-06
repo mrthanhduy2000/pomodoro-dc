@@ -1,256 +1,158 @@
-import React from 'react';
-import { motion } from 'framer-motion';
-import { useSnapMotion } from '../lib/motionPresets';
-
+/**
+ * RankDisplay.jsx — BẬC KỶ NÀY, tự thăng (2026-09-06, ADR-069).
+ *
+ * Bản cũ là một nghi thức: nút "Bắt đầu thử thách", đồng hồ đếm ngược 48 giờ, "Đang khóa" khi có
+ * khủng hoảng, và một hộp thoại đỏ "mất 5% tài nguyên" nếu trễ. Nay thẻ này CHỈ KỂ: bậc đang có,
+ * bậc kế, và hai điều kiện để lên — cả hai đọc thẳng từ lịch sử phiên (`engine/rankLadder.js`)
+ * nên không có gì để bấm, không có hạn để trễ. Đủ là lên, ngay trong chuỗi thẻ thưởng.
+ *
+ * Kèm thử thách kỷ nguyên (khủng hoảng cũ) dưới dạng nhiệm vụ mềm, cùng một phép đếm.
+ */
+import React, { useState } from 'react';
 import useGameStore from '../store/gameStore';
-import useSettingsStore from '../store/settingsStore';
-import { ERA_THRESHOLDS, RANK_SYSTEM, RANK_XP_RATIOS } from '../engine/constants';
-import { formatDeadlineRemaining } from '../engine/challengeEngine';
+import { RANK_SYSTEM } from '../engine/constants';
+import { describeCrisisQuest, describeRankStep } from '../engine/rankLadder';
 
-function getEraXPRange(bookNumber) {
-  const start = ERA_THRESHOLDS[`ERA_${bookNumber - 1}_END`] ?? 0;
-  const end = ERA_THRESHOLDS[`ERA_${bookNumber}_END`] ?? ERA_THRESHOLDS.ERA_15_END;
-  return {
-    start,
-    end,
-    gap: Math.max(1, end - start),
-  };
-}
+const CARD = {
+  background: 'var(--card-bg-solid)',
+  border: 'var(--skin-card-border-width,1px) solid var(--line)',
+  borderRadius: 'var(--skin-radius-card,18px)',
+  boxShadow: 'var(--skin-card-shadow)',
+};
+const eyebrowClass = 'mono text-[10px] uppercase tracking-[0.2em]';
 
-export default function RankDisplay() {
-  // NGOẠI LỆ (mang bố cục) — cả ba thanh dưới đây có bề dài CHÍNH LÀ con số chúng đang kể
-  // (EP trong kỷ · cổng EP · tiến độ thử thách hạng). `initial`/`animate` ở lại tại chỗ vì
-  // mỗi thanh một biểu thức; cái gác chỉ lo `transition`.
-  const barMotion = useSnapMotion({ transition: { duration: 0.45, ease: 'easeOut' } });
-  const activeBook = useGameStore((s) => s.progress.activeBook);
-  const rankSystem = useGameStore((s) => s.rankSystem);
-  const rankChallenge = useGameStore((s) => s.rankChallenge);
-  const totalEP = useGameStore((s) => s.progress.totalEP);
-  const initiateChallenge = useGameStore((s) => s.initiateRankChallenge);
-  const eraCrisis = useGameStore((s) => s.eraCrisis);
-  const uiTheme = useSettingsStore((s) => s.uiTheme);
-
-  const lightTheme = uiTheme === 'light';
-  const bookKey = `book${activeBook}`;
-  const currentIdx = rankSystem[bookKey] ?? 0;
-  const ranks = RANK_SYSTEM[activeBook]?.ranks ?? [];
-  const currentRank = ranks[currentIdx];
-  const nextRank = ranks[currentIdx + 1];
-
-  if (!currentRank) return null;
-
-  const isMaxRank = currentIdx >= ranks.length - 1;
-  // ⚠️ ĐƠN VỊ Ở ĐÂY LÀ **EP** (Điểm Tiến Hoá), KHÔNG PHẢI XP — mọi thứ dưới đây bắt nguồn từ
-  // `totalEP`. Tên biến cũ viết chữ "xp" (xpInEra / remainingXP) chính là lý do hai dòng chữ hiện
-  // ra màn hình từng ghi nhầm "XP" — đọc code thấy chữ xp thì viết chữ XP. Bằng chứng nó là nhầm
-  // chứ không phải cố ý: ngay trong file này, nhãn ở dòng "EP trong kỷ" bên dưới vẫn luôn ghi EP.
-  // Đổi tên biến là cách rẻ nhất để lỗi đó không quay lại. (`RANK_XP_RATIOS`/`getEraXPRange` giữ
-  // nguyên tên vì là API dùng chung nhiều nơi — đổi tên chúng là một task riêng, xem `TECH_DEBT.md`.)
-  const { start: eraStart, gap: eraGap } = getEraXPRange(activeBook);
-  const epInEra = Math.max(0, totalEP - eraStart);
-  const epRequired = nextRank ? Math.floor(eraGap * (RANK_XP_RATIOS[currentIdx + 1] ?? 1)) : 0;
-  const epGateMet = epInEra >= epRequired;
-  const epGatePct = epRequired > 0 ? Math.max(0, Math.min(100, (epInEra / epRequired) * 100)) : 100;
-  const remainingEP = Math.max(0, epRequired - epInEra);
-  const canChallenge = !isMaxRank && epGateMet && !rankChallenge?.active && !eraCrisis.active;
-
+function Bar({ pct, accent = false }) {
   return (
-    <section
-      className="border px-5 py-5"
-      style={{
-        background: lightTheme ? 'var(--card-bg-solid)' : 'rgba(24, 21, 17, 0.9)',
-        borderColor: lightTheme ? 'var(--line)' : 'rgba(148, 163, 184, 0.14)',
-        borderWidth: 'var(--skin-card-border-width, 1px)',
-        borderRadius: 'var(--skin-radius-card, 18px)',
-        boxShadow: lightTheme ? 'var(--skin-card-shadow)' : '0 12px 28px rgba(0, 0, 0, 0.14)',
-      }}
-    >
-      <div className="mb-4 flex items-center justify-between gap-3">
-        <div className="mono text-[10px] uppercase tracking-[0.2em]" style={{ color: 'var(--muted-2)' }}>
-          Rank
-        </div>
-        <span className="mono text-[11px] tabular-nums text-[var(--muted)]">
-          Bậc {currentIdx + 1}/{ranks.length}
-        </span>
-      </div>
-
-      <div>
-        <div className="flex items-start justify-between gap-3">
-          <div className="min-w-0">
-            <div className="mono text-[10px] uppercase tracking-[0.2em]" style={{ color: 'var(--muted-2)' }}>
-              Bậc hiện tại
-            </div>
-            <div
-              className="mt-1.5 text-[24px] font-semibold leading-tight tracking-[-0.02em] text-[var(--ink)]"
-              style={{ fontFamily: 'var(--skin-font-display)' }}
-            >
-              {currentRank.label}
-            </div>
-            <div className="mt-1.5 text-[12px] leading-snug text-[var(--muted)]">
-              {currentRank.buffLabel}
-            </div>
-          </div>
-          <div className="shrink-0 text-right">
-            <div className="mono text-[15px] font-semibold tabular-nums" style={{ color: 'var(--accent)' }}>
-              {isMaxRank ? 'MAX' : `+${epInEra.toLocaleString()}`}
-            </div>
-            <div className="mono mt-0.5 text-[10px] uppercase tracking-[0.16em] text-[var(--muted)]">
-              EP trong kỷ
-            </div>
-          </div>
-        </div>
-
-        <div className="mt-3 h-[2px] overflow-hidden rounded-full bg-[var(--line)]">
-          <motion.div
-            className="h-full rounded-full"
-            initial={{ width: 0 }}
-            animate={{ width: `${Math.max(0, Math.min(100, (epInEra / eraGap) * 100))}%` }}
-            {...barMotion}
-            style={{
-              background: 'var(--ink)',
-            }}
-          />
-        </div>
-      </div>
-
-      {!isMaxRank && nextRank && (
-        <div className="mt-4 space-y-4 border-t pt-4" style={{ borderColor: 'var(--line)' }}>
-          <div>
-            <div className="flex items-start justify-between gap-3">
-              <div className="min-w-0">
-                <div className="mono text-[10px] uppercase tracking-[0.2em]" style={{ color: 'var(--muted-2)' }}>
-                  Bậc kế tiếp
-                </div>
-                <div
-                  className="mt-1.5 text-[20px] font-semibold leading-tight tracking-[-0.02em]"
-                  style={{ fontFamily: 'var(--skin-font-display)', color: canChallenge ? 'var(--accent2)' : 'var(--ink)' }}
-                >
-                  {nextRank.label}
-                </div>
-                <div className="mt-1.5 text-[12px] leading-snug text-[var(--muted)]">
-                  {nextRank.buffLabel}
-                </div>
-              </div>
-              <div className="shrink-0 text-right">
-                <div className="mono text-[14px] font-semibold tabular-nums" style={{ color: canChallenge ? 'var(--accent)' : 'var(--muted)' }}>
-                  {canChallenge ? 'Sẵn sàng' : `${remainingEP.toLocaleString()} EP`}
-                </div>
-                <div className="mono mt-0.5 text-[10px] uppercase tracking-[0.16em] text-[var(--muted)]">mốc mở</div>
-              </div>
-            </div>
-
-            <div className="mt-3 h-[2px] overflow-hidden rounded-full bg-[var(--line)]">
-              <motion.div
-                className="h-full rounded-full"
-                initial={{ width: 0 }}
-                animate={{ width: `${epGatePct}%` }}
-                {...barMotion}
-                style={{
-                  background: 'var(--accent)',
-                }}
-              />
-            </div>
-
-            {nextRank.challengeRequirement && (
-              <div className="mt-3 text-[12px] leading-snug text-[var(--muted)]">
-                {`Yêu cầu: ${nextRank.challengeRequirement.sessions} phiên ≥${nextRank.challengeRequirement.minMinutes}' trong ${nextRank.challengeRequirement.windowHours}h.`}
-              </div>
-            )}
-          </div>
-
-          {!rankChallenge?.active && (
-            <div className="flex items-center justify-between gap-3 border-t pt-3" style={{ borderColor: 'var(--line)' }}>
-              <div className="min-w-0">
-                <div className="mono text-[10px] uppercase tracking-[0.16em] text-[var(--muted)]">
-                  Thử thách thăng bậc
-                </div>
-                <div className="mt-1 text-[13px] leading-snug text-[var(--muted)]">
-                  {eraCrisis.active
-                    ? 'Tạm khóa trong lúc khủng hoảng kỷ nguyên còn hiệu lực.'
-                    : canChallenge
-                      ? 'Bạn đã đủ điều kiện để bắt đầu.'
-                      : `Còn ${remainingEP.toLocaleString()} EP trong kỷ này để mở thử thách.`}
-                </div>
-              </div>
-              {canChallenge ? (
-                <button
-                  type="button"
-                  onClick={() => initiateChallenge(activeBook)}
-                  className="whitespace-nowrap px-3.5 py-2 text-[12px] font-semibold"
-                  style={lightTheme ? {
-                    borderRadius: 'var(--skin-radius-control, 14px)',
-                    background: 'var(--ink)',
-                    color: 'var(--canvas)',
-                    border: '1px solid rgba(31, 30, 29, 0.06)',
-                    boxShadow: '0 10px 20px rgba(31, 30, 29, 0.12)',
-                  } : {
-                    borderRadius: 'var(--skin-radius-control, 14px)',
-                    background: 'rgba(var(--accent-rgb), 0.9)',
-                    color: 'var(--ink)',
-                    border: '1px solid rgba(var(--accent-rgb), 0.22)',
-                    boxShadow: '0 10px 20px rgba(var(--accent-rgb), 0.18)',
-                  }}
-                >
-                  Bắt đầu
-                </button>
-              ) : (
-                <div className="mono text-[11px] font-medium" style={{ color: eraCrisis.active ? 'var(--accent2)' : 'var(--muted)' }}>
-                  {eraCrisis.active ? 'Đang khóa' : 'Chưa đủ'}
-                </div>
-              )}
-            </div>
-          )}
-        </div>
-      )}
-
-      {rankChallenge?.active && (
-        <div className="mt-4 border px-4 py-4" style={challengeStyle(lightTheme)}>
-          <div className="flex items-start justify-between gap-3">
-            <div className="min-w-0">
-              <span
-                className="mono inline-flex items-center rounded-full px-2 py-0.5 text-[10px] uppercase tracking-[0.16em]"
-                style={{ background: 'rgba(var(--accent-rgb), 0.1)', color: 'var(--accent2)' }}
-              >
-                Đang thách đấu
-              </span>
-              <div
-                className="mt-1.5 text-[15px] font-semibold leading-tight tracking-[-0.01em]"
-                style={{ fontFamily: 'var(--skin-font-display)', color: lightTheme ? 'var(--accent2)' : 'var(--ink)' }}
-              >
-                {rankChallenge.targetRankLabel}
-              </div>
-            </div>
-            <div className="mono shrink-0 text-[11px] font-medium tabular-nums" style={{ color: lightTheme ? 'var(--accent2)' : 'var(--muted)' }}>
-              {formatDeadlineRemaining(rankChallenge.deadline)}
-            </div>
-          </div>
-
-          <div className="mt-3 h-[2px] overflow-hidden rounded-full bg-[var(--line)]">
-            <motion.div
-              className="h-full rounded-full"
-              initial={{ width: 0 }}
-              animate={{ width: `${Math.max(0, Math.min(100, (rankChallenge.sessionsCompleted / Math.max(1, rankChallenge.sessionsRequired)) * 100))}%` }}
-              {...barMotion}
-              style={{
-                background: 'var(--accent)',
-              }}
-            />
-          </div>
-
-          <div className="mt-2 flex items-center justify-between gap-3 text-[12px] text-[var(--muted)]">
-            <span className="mono tabular-nums">{`${rankChallenge.sessionsCompleted}/${rankChallenge.sessionsRequired} phiên`}</span>
-            <span className="mono tabular-nums">{`≥${rankChallenge.minMinutes}'`}</span>
-          </div>
-        </div>
-      )}
-    </section>
+    <div className="h-1.5 w-full overflow-hidden rounded-full" style={{ background: 'var(--timer-track)' }}>
+      <div
+        className="h-full rounded-full transition-[width] duration-500 ease-out"
+        style={{ width: `${Math.max(0, Math.min(100, pct))}%`, background: accent ? 'var(--accent)' : 'var(--ink)' }}
+      />
+    </div>
   );
 }
 
-function challengeStyle(lightTheme) {
-  return {
-    borderRadius: 'var(--skin-radius-control, 14px)',
-    background: lightTheme ? 'rgba(255, 247, 237, 0.92)' : 'rgba(255,255,255,0.04)',
-    border: `1px solid ${lightTheme ? 'rgba(var(--accent-rgb), 0.18)' : 'rgba(148, 163, 184, 0.14)'}`,
-  };
+function Condition({ label, value, pct, met }) {
+  return (
+    <div>
+      <div className="flex items-baseline justify-between gap-3">
+        <span className="text-[12px]" style={{ color: 'var(--muted)' }}>{label}</span>
+        <span className="mono text-[11px] font-semibold tabular-nums" style={{ color: met ? 'var(--good)' : 'var(--ink)' }}>
+          {met ? '✓ ' : ''}{value}
+        </span>
+      </div>
+      <div className="mt-1.5"><Bar pct={pct} accent={!met} /></div>
+    </div>
+  );
+}
+
+export default function RankDisplay() {
+  const activeBook = useGameStore((s) => s.progress.activeBook);
+  const rankSystem = useGameStore((s) => s.rankSystem);
+  const totalEP = useGameStore((s) => s.progress.totalEP);
+  const history = useGameStore((s) => s.history);
+  const eraCrisis = useGameStore((s) => s.eraCrisis);
+  // Đọc đồng hồ MỘT lần lúc gắn vào (lazy initializer — không gọi `Date.now()` giữa lượt vẽ): thẻ
+  // này kể "48 giờ gần đây", và lệch vài phút không đổi được câu trả lời nào.
+  const [now] = useState(() => Date.now());
+
+  const ranks = RANK_SYSTEM[activeBook]?.ranks ?? [];
+  if (ranks.length === 0) return null;
+  const rankIdx = rankSystem?.[`book${activeBook}`] ?? 0;
+  const step = describeRankStep({ bookNumber: activeBook, rankIdx, totalEP, history, now });
+  const quest = describeCrisisQuest({ eraCrisis, history, now });
+  if (!step.current) return null;
+
+  const epPct = step.epRequired > 0 ? (step.epInEra / step.epRequired) * 100 : 100;
+  const sessionsPct = step.sessionsRequired > 0 ? (step.sessionsDone / step.sessionsRequired) * 100 : 100;
+
+  return (
+    <div className="space-y-4">
+      <section className="px-5 py-5" style={CARD}>
+        <div className="flex items-center justify-between gap-3">
+          <p className={eyebrowClass} style={{ color: 'var(--muted-2)' }}>Bậc kỷ này</p>
+          <span className="mono text-[11px] tabular-nums" style={{ color: 'var(--muted)' }}>
+            {rankIdx + 1}/{ranks.length}
+          </span>
+        </div>
+
+        <div className="mt-3 flex items-center gap-3">
+          <span className="text-[28px] leading-none" aria-hidden="true">{step.current.icon}</span>
+          <div className="min-w-0">
+            <p
+              className="text-[22px] font-semibold leading-tight tracking-[-0.02em]"
+              style={{ color: 'var(--ink)', fontFamily: 'var(--skin-font-display)' }}
+            >
+              {step.current.label}
+            </p>
+            <p className="mt-0.5 text-[12px]" style={{ color: 'var(--muted)' }}>{step.current.buffLabel}</p>
+          </div>
+        </div>
+
+        {step.isMax ? (
+          <p className="mt-4 text-[12.5px]" style={{ color: 'var(--muted)' }}>
+            Bậc cao nhất của kỷ này. Kỷ mới có thang bậc mới.
+          </p>
+        ) : (
+          <div className="mt-4 border-t pt-4" style={{ borderColor: 'var(--line)' }}>
+            <div className="flex items-baseline justify-between gap-3">
+              <p className={eyebrowClass} style={{ color: 'var(--muted-2)' }}>Bậc kế tiếp</p>
+              <span className="text-[13px] font-semibold" style={{ color: 'var(--accent2)' }}>
+                {step.next.icon} {step.next.label} · {step.next.buffLabel}
+              </span>
+            </div>
+            <div className="mt-3 space-y-3">
+              <Condition
+                label="EP trong kỷ"
+                value={`${step.epInEra.toLocaleString()} / ${step.epRequired.toLocaleString()}`}
+                pct={epPct}
+                met={step.epGateMet}
+              />
+              {step.sessionsRequired > 0 && (
+                <Condition
+                  label={`Phiên ≥${step.minMinutes}′ trong ${step.windowHours} giờ gần đây`}
+                  value={`${step.sessionsDone} / ${step.sessionsRequired}`}
+                  pct={sessionsPct}
+                  met={step.sessionsMet}
+                />
+              )}
+            </div>
+            <p className="mt-3 text-[11.5px] leading-snug" style={{ color: 'var(--muted-2)' }}>
+              Đủ cả hai là tự lên bậc ngay sau phiên — không có nút, không có hạn.
+            </p>
+          </div>
+        )}
+      </section>
+
+      {quest && (
+        <section className="px-5 py-5" style={CARD}>
+          <div className="flex items-center justify-between gap-3">
+            <p className={eyebrowClass} style={{ color: 'var(--muted-2)' }}>Thử thách kỷ nguyên</p>
+            <span className="mono text-[11px] tabular-nums" style={{ color: 'var(--muted)' }}>
+              {quest.sessionsDone}/{quest.sessionsRequired}
+            </span>
+          </div>
+          <div className="mt-3 flex items-center gap-3">
+            <span className="text-[28px] leading-none" aria-hidden="true">{quest.icon}</span>
+            <div className="min-w-0">
+              <p
+                className="text-[18px] font-semibold leading-tight"
+                style={{ color: 'var(--ink)', fontFamily: 'var(--skin-font-display)' }}
+              >
+                {quest.name}
+              </p>
+              <p className="mt-0.5 text-[12px] leading-snug" style={{ color: 'var(--muted)' }}>
+                {quest.sessionsRequired} phiên ≥{quest.minMinutes}′ trong {quest.windowHours} giờ gần đây
+                {quest.relic ? ` → di vật «${quest.relic.label}»` : ''}
+              </p>
+            </div>
+          </div>
+          <div className="mt-3"><Bar pct={(quest.sessionsDone / quest.sessionsRequired) * 100} accent /></div>
+          <p className="mt-2 text-[11.5px] leading-snug" style={{ color: 'var(--muted-2)' }}>
+            Không có hạn. Chưa đủ thì cứ đợi phiên sau — không mất gì.
+          </p>
+        </section>
+      )}
+    </div>
+  );
 }

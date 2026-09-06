@@ -30,7 +30,7 @@
  */
 
 export const PREVIEW_PARAM = 'dc-preview';
-/** Thẻ nào của chuỗi thẻ thưởng cần đứng yên để chụp (`xp` · `streak` · `today` · `quests` · `level` · `era`). */
+/** Thẻ nào của chuỗi thẻ thưởng cần đứng yên để chụp (`xp` · `project` · `streak` · `today` · `quests` · `quest` · `level` · `rank` · `relic` · `era`). */
 export const PREVIEW_CARD_PARAM = 'dc-preview-card';
 
 /** Một phiên 25 phút bình thường, không có gì đặc biệt — ca HAY GẶP NHẤT. */
@@ -65,6 +65,13 @@ const PHIEN_THUONG = {
   eraChanged: false,
   buildingPerkRewards: [],
   buildingPerkBonusRefined: 0,
+  // ADR-069: ba tin của chuỗi thẻ thưởng — phiên thường không có tin nào.
+  rankUp: null,
+  relicEarned: null,
+  crisisOpened: null,
+  // ADR-069: cú may của nhánh Vận May (0 = không trúng) — thẻ +XP đọc để hiện chip «🍀 Vận may».
+  luckXpBonus: 0,
+  luckEpBonus: 0,
 };
 
 /** Ca ĐỈNH: jackpot + rương lớn + lên cấp + sự kiện tốt. Dùng để soi lúc màn đông nhất. */
@@ -97,6 +104,11 @@ const PHIEN_DINH = {
   newLevel: 6,
   buildingPerkRewards: [{ label: 'Nhà Kho · lộc công trình', xp: 12, refined: 1 }],
   buildingPerkBonusRefined: 1,
+  rankUp: { label: 'Thủy Thủ', icon: '⚓', buffLabel: '+12% EP' },
+  luckXpBonus: 0.2,
+  luckEpBonus: 0.1,
+  relicEarned: { id: 'la_ban_da_vinci', label: 'La Bàn Da Vinci', icon: '🧭', description: 'Di vật Phục Hưng — tăng mạnh EP mỗi phiên.' },
+  crisisOpened: null,
 };
 
 /**

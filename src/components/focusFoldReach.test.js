@@ -30,14 +30,18 @@ test('chip mục tiêu gần đây ĐỨNG THAY CHỖ nút dẫn đường, khô
   assert.match(NGUON, /Tự viết →/, 'mất đường thoát để tự đặt mục tiêu mới');
   // Chip phải nằm TRONG nhánh "chưa đủ mục tiêu" của cùng hàng nút, tức trước nhánh "Bắt đầu phiên".
   const iChip = NGUON.indexOf('recentGoals.slice(0, 1).map(');
-  const iBatDau = NGUON.indexOf("'Bắt đầu phiên'");
+  // ⚠️ ADR-069: nút Bắt đầu không còn ternary "khủng hoảng ⇒ Đang khoá", nên nhãn là JSX text trần —
+  // neo vào `title` của chính nút ấy (chuỗi duy nhất, nằm trong thẻ), không neo vào một literal có nháy.
+  const iBatDau = NGUON.indexOf('title="Bắt đầu phiên tập trung"');
   assert.ok(iChip !== -1 && iBatDau !== -1 && iChip < iBatDau, 'chip phải ở nhánh chưa-đủ-mục-tiêu của hàng nút.');
 });
 
 test('chip chỉ hiện khi CHƯA đủ mục tiêu — đủ rồi thì nó là chỗ chiếm chỗ', () => {
   const i = NGUON.indexOf('recentGoals.slice(0, 1).map(');
   const khoi = NGUON.slice(Math.max(0, i - 2600), i);
-  assert.match(khoi, /!isCrisisBlockingStart && !isSessionGoalValid \?/, 'thiếu gác: chip vẫn hiện sau khi đã có mục tiêu.');
+  // ADR-069: khủng hoảng kỷ là nhiệm vụ mềm, KHÔNG còn chặn nút Bắt đầu ⇒ gác chỉ còn một vế.
+  assert.match(khoi, /\{!isSessionGoalValid \?/, 'thiếu gác: chip vẫn hiện sau khi đã có mục tiêu.');
+  assert.doesNotMatch(NGUON, /isCrisisBlockingStart/, 'cổng chặn-vì-khủng-hoảng quay lại — ADR-069 đã bỏ nó (thử thách kỷ là nhiệm vụ mềm).');
   // Không có mục tiêu gần đây thì nút phải trở lại dạng đầy-hàng, không để một hàng rỗng.
   assert.match(NGUON, /recentGoals\.length > 0 \? 'compactEscape' : 'compactPrimary'/,
     'nút thoát phải trở lại cỡ đầy-hàng khi không có chip nào bên cạnh.');

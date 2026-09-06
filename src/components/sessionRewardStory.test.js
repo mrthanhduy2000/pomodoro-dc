@@ -3,6 +3,7 @@ import assert from 'node:assert/strict';
 
 import {
   STORY_CARD_MS,
+  STORY_HOLD,
   STORY_LAST_CARD_MS,
   buildRewardStoryCards,
   storyCardDurationMs,
@@ -37,9 +38,10 @@ test('thẻ XP luôn đứng đầu và nói ĐÚNG con số toast đang nói (t
   assert.deepEqual(xp.chips.map((c) => c.id), ['streak', 'combo']);
 });
 
-test('ca đỉnh: Rương Lớn và tinh luyện đứng TRƯỚC các chip khác, sự kiện tích cực được kể, jackpot bật', () => {
+test('ca đỉnh: Rương Lớn đứng TRƯỚC các chip khác, KHÔNG còn chip tinh luyện (ADR-069), sự kiện tích cực được kể, jackpot bật', () => {
   const [xp] = buildRewardStoryCards({ reward: REWARD_MAX });
-  assert.deepEqual(xp.chips.slice(0, 2).map((c) => c.id), ['chest', 'refined']);
+  assert.equal(xp.chips[0].id, 'chest');
+  assert.ok(!xp.chips.some((c) => c.id === 'refined'), 'tinh luyện đã rời khỏi đường chơi — chip của nó không được quay lại');
   assert.equal(xp.jackpot, true);
   assert.equal(xp.tier, 'huyenThoai');
   assert.equal(xp.event.label, REWARD_MAX.positiveEvent.label);
@@ -47,8 +49,9 @@ test('ca đỉnh: Rương Lớn và tinh luyện đứng TRƯỚC các chip khá
 });
 
 test('thứ tự câu chuyện: xp → chuỗi → hôm nay → nhiệm vụ → lên cấp → kỷ mới', () => {
+  // `REWARD_ERA` kế thừa ca đỉnh (có bậc + di vật); tắt hai tin ấy để bài này chỉ đo bộ khung cũ.
   const cards = buildRewardStoryCards({
-    reward: { ...REWARD_ERA, levelsGained: 1 },
+    reward: { ...REWARD_ERA, levelsGained: 1, rankUp: null, relicEarned: null },
     streak: { currentStreak: 4 },
     todayGoal: todayGoal(2),
     missions: missions([{ id: 'm1', label: 'A', progress: 1, goal: 3, rewardXP: 10 }]),
@@ -145,4 +148,89 @@ test('nhịp lật: thẻ thường ngắn, thẻ cuối đứng lâu hơn để
   assert.ok(STORY_LAST_CARD_MS > STORY_CARD_MS);
   // Bốn thẻ thường + thẻ cuối phải xong dưới 20 giây — ngắn hơn hộp thoại 7 giai đoạn cũ.
   assert.ok(STORY_CARD_MS * 4 + STORY_LAST_CARD_MS < 20_000);
+});
+
+// ─── ADR-069: bốn thẻ mới ────────────────────────────────────────────────────
+
+test('thứ tự đầy đủ: xp → công trình → chuỗi → hôm nay → nhiệm vụ → thử thách → lên cấp → bậc → di vật → kỷ', () => {
+  const cards = buildRewardStoryCards({
+    reward: { ...REWARD_ERA, levelsGained: 1, rankUp: { label: 'Thủy Thủ', icon: '⚓', buffLabel: '+12%' }, relicEarned: { label: 'La Bàn', icon: '🧭' }, crisisOpened: { name: 'Bão', icon: '🌊' } },
+    streak: { currentStreak: 4 },
+    todayGoal: todayGoal(2),
+    missions: missions([{ id: 'm1', label: 'A', progress: 1, goal: 3, rewardXP: 10 }]),
+    project: { label: 'Hải Đăng', icon: '🗼', total: 6, done: 3 },
+    crisisQuest: { name: 'Bão', icon: '🌊', sessionsDone: 1, sessionsRequired: 3, minMinutes: 45, windowHours: 48, passed: false, countedThisSession: true, relic: { label: 'La Bàn' } },
+  });
+  assert.deepEqual(cards.map((c) => c.id), ['xp', 'project', 'streak', 'today', 'quests', 'quest', 'level', 'rank', 'relic', 'era']);
+});
+
+test('thẻ công trình: chạy từ nấc TRƯỚC tới nấc SAU; tăng tốc thì nhảy hai nấc', () => {
+  const [, p] = buildRewardStoryCards({ reward: REWARD, project: { label: 'Hải Đăng', icon: '🗼', total: 6, done: 3 } });
+  assert.equal(p.id, 'project');
+  assert.equal(p.remaining, 3);
+  assert.equal(p.pctBefore, (2 / 6) * 100);
+  assert.equal(p.pct, 50);
+  const [, nhanh] = buildRewardStoryCards({ reward: REWARD, project: { label: 'X', total: 6, done: 4, stepped: 2 } });
+  assert.equal(nhanh.pctBefore, (2 / 6) * 100, 'đặc quyền tăng tốc: nấc trước cách nấc sau HAI bậc');
+  // Vượt tổng (dữ liệu lệch) thì kẹp, không âm, không quá 100.
+  const [, kep] = buildRewardStoryCards({ reward: REWARD, project: { label: 'X', total: 2, done: 9 } });
+  assert.equal(kep.pct, 100);
+  assert.equal(kep.remaining, 0);
+});
+
+test('thẻ công trình khi hàng chờ TRỐNG: mời chọn (≤3 tên + phần dư); kỷ trọn hoặc không có gì thì im', () => {
+  const [, moi] = buildRewardStoryCards({ reward: REWARD, project: { empty: true, choices: ['A', 'B', 'C', 'D', 'E'] } });
+  assert.equal(moi.id, 'project');
+  assert.equal(moi.empty, true);
+  assert.deepEqual(moi.choices, ['A', 'B', 'C']);
+  assert.equal(moi.extra, 2);
+  assert.ok(!buildRewardStoryCards({ reward: REWARD, project: { empty: true, choices: [], eraComplete: true } }).some((c) => c.id === 'project'));
+  assert.ok(!buildRewardStoryCards({ reward: REWARD, project: { empty: true, choices: [] } }).some((c) => c.id === 'project'));
+  assert.ok(!buildRewardStoryCards({ reward: REWARD, project: null }).some((c) => c.id === 'project'));
+});
+
+test('thẻ lên cấp: có kỹ năng mở được ⇒ ĐỨNG YÊN chờ chọn (≤3); không có ⇒ nói còn thiếu bao nhiêu, và tự lật', () => {
+  const reward = { ...REWARD, levelsGained: 1, spGained: 2, newLevel: 6 };
+  const chon = buildRewardStoryCards({
+    reward,
+    skills: { sp: 4, choices: [{ id: 'a', label: 'A', cost: 2 }, { id: 'b', label: 'B', cost: 2 }, { id: 'c', label: 'C', cost: 3 }, { id: 'd', label: 'D', cost: 3 }], next: null },
+  }).find((c) => c.id === 'level');
+  assert.equal(chon.hold, true, 'đang hỏi "chọn cái nào" thì không được tự trả lời thay');
+  assert.equal(chon.skillChoices.length, 3, 'nhiều nhất ba lựa chọn — đủ để chọn, không đủ để phải so bảng');
+  assert.equal(chon.sp, 4);
+  assert.equal(chon.nextSkill, null);
+  assert.equal(storyCardDurationMs(chon, false), STORY_HOLD);
+  assert.equal(storyCardDurationMs({ ...chon, hold: false }, false) > 0, true, 'chọn xong thì thẻ lại tự lật như tin hiếm');
+
+  const thieu = buildRewardStoryCards({ reward, skills: { sp: 1, choices: [], next: { label: 'Vào Guồng', spNeeded: 1 } } }).find((c) => c.id === 'level');
+  assert.equal(thieu.hold, false);
+  assert.deepEqual(thieu.nextSkill, { label: 'Vào Guồng', spNeeded: 1 });
+  assert.ok(storyCardDurationMs(thieu, false) > 0);
+
+  const khong = buildRewardStoryCards({ reward }).find((c) => c.id === 'level');
+  assert.equal(khong.hold, false);
+  assert.equal(khong.nextSkill, null);
+});
+
+test('thẻ bậc và thẻ di vật chỉ có khi phần thưởng nói có', () => {
+  assert.ok(!buildRewardStoryCards({ reward: REWARD }).some((c) => c.id === 'rank' || c.id === 'relic'));
+  const cards = buildRewardStoryCards({ reward: REWARD_MAX });
+  const rank = cards.find((c) => c.id === 'rank');
+  assert.equal(rank.label, REWARD_MAX.rankUp.label);
+  assert.equal(rank.buffLabel, REWARD_MAX.rankUp.buffLabel);
+  const relic = cards.find((c) => c.id === 'relic');
+  assert.equal(relic.label, REWARD_MAX.relicEarned.label);
+  assert.ok(storyCardDurationMs(rank, false) > STORY_CARD_MS, 'tin hiếm đứng lâu hơn thẻ thường');
+});
+
+test('thẻ thử thách kỷ nguyên: chỉ khi vừa mở hoặc phiên này vừa được tính; qua rồi thì nhường thẻ di vật', () => {
+  const quest = { name: 'Bão', icon: '🌊', sessionsDone: 1, sessionsRequired: 3, minMinutes: 45, windowHours: 48, passed: false, relic: { label: 'La Bàn' } };
+  assert.ok(!buildRewardStoryCards({ reward: REWARD, crisisQuest: { ...quest, countedThisSession: false } }).some((c) => c.id === 'quest'), 'phiên ngắn không tính vào thử thách thì đừng chiếm thẻ');
+  const tinh = buildRewardStoryCards({ reward: REWARD, crisisQuest: { ...quest, countedThisSession: true } }).find((c) => c.id === 'quest');
+  assert.equal(tinh.sessionsDone, 1);
+  assert.equal(tinh.relicLabel, 'La Bàn');
+  assert.equal(tinh.opened, false);
+  const mo = buildRewardStoryCards({ reward: { ...REWARD, crisisOpened: { name: 'Bão', icon: '🌊' } }, crisisQuest: { ...quest, countedThisSession: false } }).find((c) => c.id === 'quest');
+  assert.equal(mo.opened, true, 'vừa mở thì phải kể, dù phiên này chưa được tính');
+  assert.ok(!buildRewardStoryCards({ reward: REWARD, crisisQuest: { ...quest, passed: true, countedThisSession: true } }).some((c) => c.id === 'quest'));
 });

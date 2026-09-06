@@ -63,7 +63,10 @@ test('MỌI hộp thoại đều nằm TRÊN chuông — kể cả hộp thoại
   // Đây mới là phần giữ cho lỗi không mọc lại: bài trên khoá cái chuông, bài này quét cả thư mục
   // nên một `SomethingModal.jsx` mới ra đời với z-30 sẽ bị bắt ngay, không cần ai nhớ sửa test.
   const bell = Math.max(...readZLayers(codeOnly(readFileSync(join(HERE, 'NotificationCenter.jsx'), 'utf8'))));
-  assert.ok(MODAL_FILES.length >= 5, 'không tìm thấy hộp thoại nào — có phải thư mục đã đổi chỗ?');
+  // Gác chạy-rỗng: ADR-069 (2026-09-06) xoá `EraCrisisModal` + `DisasterModal` ⇒ còn 4 hộp thoại
+  // (Loot · LevelUp · Prestige · WeeklyReport). Con số này là số ĐO, không phải mong muốn — thêm/bớt
+  // hộp thoại thì sửa nó kèm lý do, đừng nới cho qua.
+  assert.ok(MODAL_FILES.length >= 4, 'không tìm thấy hộp thoại nào — có phải thư mục đã đổi chỗ?');
 
   for (const file of MODAL_FILES) {
     const layers = readZLayers(codeOnly(readFileSync(join(HERE, file), 'utf8')));

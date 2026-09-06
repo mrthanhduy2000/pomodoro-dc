@@ -35,6 +35,15 @@ import {
   EXP_PER_LEVEL,
   SP_PER_LEVEL,
 } from './constants.js';
+import {
+  BAN_TAY_VANG_XP_BONUS,
+  RELIC_COMBO_WINDOW_CAP_HOURS,
+  LINH_CAM_BIG_XP_BONUS,
+  LINH_CAM_XP_BONUS,
+  NHAN_QUAN_EP_BONUS,
+  PHUC_HOI_XP_BONUS,
+  SU_THA_THU_XP_BONUS,
+} from './constants.js';
 
 // Giờ của mỗi phiên được lấy trực tiếp từ trường `hour` trong fixture, để test
 // không phụ thuộc múi giờ máy chạy.
@@ -553,16 +562,19 @@ test('clampRelicDisasterReduction: clamp tổng, no-op dưới trần', () => {
 });
 
 test('getComboDecayMs: clamp giờ combo từ cổ vật, KHÔNG thu nhỏ base skill', () => {
+  // ⚠️ Bản cũ viết cứng «18» thay vì hỏi RELIC_COMBO_WINDOW_CAP_HOURS — một luật hai công thức, và nó
+  // ĐỎ OAN ngay khi ADR-069 nâng trần (3 di vật «che chở» chuyển sang trục combo). Nay hỏi thẳng hằng số.
   const HOUR = 3_600_000;
-  const decay30 = getComboDecayMs({}, [{ id: 'fake', buff: { comboWindowHours: 30 } }], {});
-  const decay18 = getComboDecayMs({}, [{ id: 'fake', buff: { comboWindowHours: 18 } }], {});
-  const decay16 = getComboDecayMs({}, [{ id: 'fake', buff: { comboWindowHours: 16 } }], {});
-  assert.equal(decay30, decay18);          // 30 bị clamp về 18 (RELIC_COMBO_WINDOW_CAP_HOURS)
-  assert.ok(decay16 < decay18);            // 16 dưới trần — không clamp
+  const CAP = RELIC_COMBO_WINDOW_CAP_HOURS;
+  const decayOver = getComboDecayMs({}, [{ id: 'fake', buff: { comboWindowHours: CAP + 12 } }], {});
+  const decayCap = getComboDecayMs({}, [{ id: 'fake', buff: { comboWindowHours: CAP } }], {});
+  const decayUnder = getComboDecayMs({}, [{ id: 'fake', buff: { comboWindowHours: CAP - 2 } }], {});
+  assert.equal(decayOver, decayCap);       // vượt trần thì bị clamp về đúng trần
+  assert.ok(decayUnder < decayCap);        // dưới trần — không clamp
   // base skill bo_nho_co_bap được cộng TRÊN phần đã clamp (không bị thu nhỏ)
-  const withSkill30  = getComboDecayMs({ bo_nho_co_bap: true }, [{ id: 'fake', buff: { comboWindowHours: 30 } }], {});
-  const withSkillNo  = getComboDecayMs({ bo_nho_co_bap: true }, [], {});
-  assert.equal(withSkill30 - withSkillNo, 18 * HOUR);
+  const withSkillOver = getComboDecayMs({ bo_nho_co_bap: true }, [{ id: 'fake', buff: { comboWindowHours: CAP + 12 } }], {});
+  const withSkillNo   = getComboDecayMs({ bo_nho_co_bap: true }, [], {});
+  assert.equal(withSkillOver - withSkillNo, CAP * HOUR);
 });
 
 // — DỒN LỰC: tối đa 1 trump nhân-sau-trần mỗi phiên —
@@ -751,4 +763,51 @@ test('getDailyGoalProgress: VƯỢT mục tiêu thì pct KHÔNG bị kẹp — n
   assert.equal(r.pct, 150);
   assert.equal(r.goalMet, true);
   assert.equal(r.currentValue, 6);
+});
+
+// ─── ADR-069 vế 4: Vận May quay ra XP/EP, Ý Chí bù sau khi huỷ ───────────────────────────────
+function withRand(value, fn) {
+  const orig = Math.random;
+  Math.random = () => value;
+  try { return fn(); } finally { Math.random = orig; }
+}
+
+test('Vận May: Bàn Tay Vàng quay trúng ⇒ +20% XP (phiên ≥45′), trượt hoặc phiên ngắn ⇒ 0', () => {
+  const skills = { ban_tay_vang: true };
+  const truot = withRand(0.999, () => calculateRewards(45, skills, 0, {}, {}));
+  const trung = withRand(0.001, () => calculateRewards(45, skills, 0, {}, {}));
+  const ngan = withRand(0.001, () => calculateRewards(30, skills, 0, {}, {}));
+  assert.equal(truot.luckXpBonus, 0);
+  assert.equal(ngan.luckXpBonus, 0, 'dưới 45′ thì không quay');
+  assert.equal(trung.luckXpBonus, BAN_TAY_VANG_XP_BONUS);
+  assert.ok(Math.abs(trung.finalXP / truot.finalXP - (1 + BAN_TAY_VANG_XP_BONUS)) < 0.02, `XP ${trung.finalXP} / ${truot.finalXP}`);
+  // Cùng một hạt ngẫu nhiên, có hay không có kỹ năng thì tài nguyên rớt phải y hệt — kỹ năng không còn chạm vào túi.
+  assert.deepEqual(trung.resources, withRand(0.001, () => calculateRewards(45, {}, 0, {}, {})).resources, 'không còn +1 nguyên liệu thô');
+});
+
+test('Vận May: Nhãn Quan ⇒ +10% EP khi trúng; Linh Cảm cộng dồn cú thường và cú lớn', () => {
+  const nq = { nhan_quan: true };
+  const nqTruot = withRand(0.999, () => calculateRewards(45, nq, 0, {}, {}));
+  const nqTrung = withRand(0.001, () => calculateRewards(45, nq, 0, {}, {}));
+  assert.equal(nqTrung.luckEpBonus, NHAN_QUAN_EP_BONUS);
+  // EP là số nhỏ (≈50) nên phép làm tròn hai lần có thể lệch một đơn vị — dung sai 5% đủ phân biệt +10% với 0%.
+  assert.ok(Math.abs(nqTrung.finalEP / nqTruot.finalEP - (1 + NHAN_QUAN_EP_BONUS)) < 0.05, `EP ${nqTrung.finalEP} / ${nqTruot.finalEP}`);
+  assert.equal(nqTrung.t2Drop, nqTruot.t2Drop, 'không còn +1 tinh luyện');
+
+  const lc = { linh_cam: true };
+  assert.equal(withRand(0.001, () => calculateRewards(45, lc, 0, {}, {})).luckXpBonus, LINH_CAM_XP_BONUS + LINH_CAM_BIG_XP_BONUS, 'cả hai cú');
+  assert.equal(withRand(0.20, () => calculateRewards(45, lc, 0, {}, {})).luckXpBonus, LINH_CAM_XP_BONUS, 'chỉ cú thường (40%)');
+  assert.equal(withRand(0.50, () => calculateRewards(45, lc, 0, {}, {})).luckXpBonus, 0, 'trượt cả hai');
+});
+
+test('Ý Chí: Sự Tha Thứ +6% XP cho phiên ≥25′ ngay sau khi huỷ; Phục Hồi cộng thêm, không thay thế', () => {
+  const ctx = { lastSessionCancelled: true };
+  const khong = calculateRewards(25, {}, 0, {}, ctx);
+  const tha = calculateRewards(25, { su_tha_thu: true }, 0, {}, ctx);
+  assert.ok(Math.abs(tha.finalXP / khong.finalXP - (1 + SU_THA_THU_XP_BONUS)) < 0.03, `XP ${tha.finalXP} / ${khong.finalXP}`);
+  assert.equal(calculateRewards(20, { su_tha_thu: true }, 0, {}, ctx).finalXP, calculateRewards(20, {}, 0, {}, ctx).finalXP, 'dưới 25′ thì không bù');
+  assert.equal(calculateRewards(25, { su_tha_thu: true }, 0, {}, {}).finalXP, calculateRewards(25, {}, 0, {}, {}).finalXP, 'không huỷ trước đó thì không bù');
+  const ca = calculateRewards(30, { su_tha_thu: true, phuc_hoi: true }, 0, {}, ctx);
+  const nen30 = calculateRewards(30, {}, 0, {}, ctx);
+  assert.ok(Math.abs(ca.finalXP / nen30.finalXP - (1 + SU_THA_THU_XP_BONUS + PHUC_HOI_XP_BONUS)) < 0.03, `XP ${ca.finalXP} / ${nen30.finalXP}`);
 });

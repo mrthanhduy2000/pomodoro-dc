@@ -19,7 +19,9 @@ import { fileURLToPath } from 'node:url';
 
 const HERE = dirname(fileURLToPath(import.meta.url));
 const APP = readFileSync(join(HERE, '..', 'App.jsx'), 'utf8');
-const RESOURCE = readFileSync(join(HERE, 'ResourceDisplay.jsx'), 'utf8');
+// ⚠️ `ResourceDisplay.jsx` ĐÃ GỠ (2026-09-06, ADR-069): thẻ EP/kỷ của nó nói lại đúng thanh chặng
+// ở thanh tiêu đề. Bài "một luật một công thức" bên dưới nay canh những chỗ CÒN LẠI đọc chặng.
+const RANK = readFileSync(join(HERE, 'RankDisplay.jsx'), 'utf8');
 
 function codeOnly(source) {
   return source
@@ -57,11 +59,9 @@ test('thanh tiêu đề nằm NGOÀI mọi khối chỉ-desktop', () => {
 test('MỘT LUẬT MỘT CÔNG THỨC: không nơi nào dựng lại phép chia chặng', () => {
   // `ResourceDisplay` từng giữ bản sao riêng (`getCurrentStage`). Hai bản sao trôi khỏi nhau ở
   // BIÊN rồi thanh trên nói "chặng 2" trong khi thẻ dưới nói "chặng 1", và không có gì đỏ lên.
-  assert.ok(
-    /from '\.\.\/engine\/eraStage'/.test(RESOURCE),
-    '`ResourceDisplay` không còn đọc `engine/eraStage` — nó đã có công thức riêng ở đâu đó',
-  );
-  for (const source of [APP, RESOURCE]) {
+  // Thẻ ấy đã gỡ; bài này giữ lại để cái bẫy không mọc lại ở tầng giao diện.
+  assert.ok(/from '\.\/engine\/eraStage'/.test(APP), '`App.jsx` không còn đọc `engine/eraStage` — nó đã có công thức riêng ở đâu đó');
+  for (const source of [APP, RANK]) {
     assert.ok(
       !/function getCurrentStage\b/.test(source),
       'phép chia chặng được dựng lại lần thứ hai ở tầng giao diện',

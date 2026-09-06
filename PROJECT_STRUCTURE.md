@@ -14,7 +14,7 @@
 │   │   │                     #   `notificationLayer.test.js` — thêm hộp thoại mới thì đừng dùng
 │   │   │                     #   z dưới 50, kẻo chuông nổi lên trên lớp mờ và bấm được
 │   │   ├── shared/           # Component/style dùng chung GIỮA NHIỀU file components khác
-│   │   │   ├── BadgeKit.jsx      # TypeBadge/RarityBadge/PerkSummary (BuildingWorkshop + BlueprintInventory)
+│   │   │   ├── BadgeKit.jsx      # TypeBadge/RarityBadge/PerkSummary (BuildScreen dùng PerkSummary; hai màn cũ đã gỡ)
 │   │   │   └── RewardCard.jsx    # THẺ PHẦN THƯỞNG DUY NHẤT của app (ADR-060). Chỉ VẼ, không đọc
 │   │   │                         #   store, không biết luật chơi ⇒ dùng được cả trong hộp thoại
 │   │   │                         #   lẫn trong toast. Độ hiếm lấy từ `engine/rewardTiers.js` và
@@ -114,19 +114,20 @@
 │   │   │                     #   Hàm định dạng thuần đã tách ra statsFormatters.js cạnh nó.
 │   │   ├── PomodoroEngine.jsx # Khung chính chứa đồng hồ Pomodoro/Stopwatch (UI, logic timer
 │   │   │                     #   thật nằm ở src/hooks/useTimer.js)
-│   │   ├── ResourceDisplay.jsx # Thẻ tài nguyên: LUÔN ba thứ (thanh tiến độ kỷ · chuỗi · tinh thể),
-│   │   │                     #   mọi thứ còn lại nằm sau nút "Kho". Trần BA con số là một LỜI HỨA
-│   │   │                     #   có test canh (resourceDisplay.test.js) — đừng thêm số thứ tư.
-│   │   ├── resourceDisplayFormat.js # Ba luật trình bày số của thẻ trên (tabular-nums · nhãn nhỏ
-│   │   │                     #   hơn số 40% · nháy --good khi tăng). File .js thuần CỐ Ý: node --test
-│   │   │                     #   không biên dịch JSX, nên luật để trong .jsx là luật không test nào
-│   │   │                     #   chạm tới được. Cùng quy ước với statsFormatters.js ở trên.
+│   │   ├── BuildScreen.jsx    # Màn CÔNG TRÌNH một nút (ADR-069): Đang xây · Xây tiếp (≤3 lựa chọn,
+│   │   │                     #   "Khởi công") · Đã xây · Trùng tu. Luật ở engine/buildChoices.js; gọi
+│   │   │                     #   đúng MỘT action `startProject`. Thay BuildingWorkshop + BlueprintInventory.
+│   │   │                     #   ⚠️ Không RP, không bảng giá — cổng cũ mọc lại là motSuThatMotCho.test đỏ.
+│   │   ├── RankDisplay.jsx    # Thẻ BẬC kỷ này (kể hai điều kiện, KHÔNG nút — bậc tự thăng, ADR-069)
+│   │   │                     #   + thẻ thử thách kỷ (nhiệm vụ mềm). Luật ở engine/rankLadder.js.
+│   │   │                     #   ⚠️ ResourceDisplay.jsx + resourceDisplayFormat.js ĐÃ GỠ 2026-09-06:
+│   │   │                     #   thẻ EP của nó trùng thanh chặng ở thanh tiêu đề, Kho thì hết cổng tiêu.
 │   │   ├── sessionGoalState.js # BA trạng thái ô "Mục tiêu phiên" (empty/partial/ready) — thuần.
 │   │   │                     #   Tách ra vì hai trạng thái là KHÔNG đủ: ô chưa gõ gì mà bị dán
 │   │   │                     #   màu cảnh báo thì app thành ra mắng người dùng ngay lúc mở lên.
 │   │   │                     #   Cả 2 khối giao diện mục tiêu đều đọc file này ⇒ không lệch nhau.
-│   │   └── ...                # Các màn hình còn lại: Achievements, SkillTree, BuildingWorkshop,
-│   │                          #   BlueprintInventory, RelicInventory, Settings, DailyMissions...
+│   │   └── ...                # Các màn hình còn lại: Achievements, SkillTree, RelicInventory,
+│   │                          #   Settings, DailyMissions... (StakePanel · EraCrisisModal ĐÃ GỠ 2026-09-06)
 │   │                          #   ⚠️ Từ 2026-08-27 ba màn Kỹ năng/Kho báu/Thành tích KHÔNG còn là
 │   │                          #   mục điều hướng riêng — chúng là ba TAB CON của "Hành trang"
 │   │                          #   (`INVENTORY_TABS` trong App.jsx). Bản thân component không đổi.
@@ -163,6 +164,9 @@
 │   │   │                     #   hai công thức"). Hai luật nội dung có test canh: mọi % kèm CỠ
 │   │   │                     #   MẪU · nói TƯƠNG QUAN, không dùng "vì/nên/do".
 │   │   ├── constants.js       # Toàn bộ dữ liệu tĩnh của game (kỹ năng, công trình, thành tích...)
+│   │   │                     #   ⚠️ ADR-069: ba bảng phần thưởng (RANK_SYSTEM · ERA_CRISES/RELIC_EVOLUTION ·
+│   │   │                     #   SKILL_TREE) CHỈ được thưởng trên trục sống EP/XP/combo — `rewardAxes.test.js`
+│   │   │                     #   từ chối bảng nào nhắc lại tài nguyên/RP/thảm hoạ (ba đồng tiền đã ngủ, #99).
 │   │   ├── hashId.js          # FILE LÁ: băm tất định FNV-1a. KHÔNG import gì — đó là điểm chính.
 │   │   │                     #   Tách khỏi cityLayout.js ở Phase 7C để cắt vòng import
 │   │   │                     #   cityLayout ↔ city3d/dwellings. cityLayout TÁI XUẤT, không chép.
@@ -201,7 +205,7 @@
 │   │   │                     #   ADR-011. ⚠️ chấm theo kỷ SAU phiên, không phải kỷ trước.
 │   │   ├── craftProgress.js   # MỘT công thức duy nhất cho "đã xong mấy / còn mấy phiên" của công
 │   │   │                     #   trình đang chế tạo. ⚠️ Trước đây cityLayout.js và
-│   │   │                     #   BuildingWorkshop.jsx mỗi nơi tự tính, lại tra hai bảng KHÁC nhau
+│   │   │                     #   Xưởng (nay BuildScreen) mỗi nơi tự tính, lại tra hai bảng KHÁC nhau
 │   │   │                     #   (BUILDING_EFFECTS vs BLUEPRINT_META) và không kẹp biên ⇒ Xưởng in
 │   │   │                     #   ra "-4/2 phiên". Mọi nơi cần con số này PHẢI gọi
 │   │   │                     #   describeCraftProgress, đừng tự chia lại.
@@ -725,18 +729,25 @@
 │   │   ├── soundEngine.js / ambientEngine.js # Âm thanh 100% procedural (Web Audio API)
 │   │   ├── pushPayloads.js    # Nội dung thông báo push (title/body/tag) — dùng chung client+server
 │   │   ├── time.js            # Helper giờ/ngày/tuần theo múi giờ VN (mọi engine phải dùng cái này)
-│   │   ├── opportunities.js   # "Có việc gì đáng vào xem không?" — kỹ năng đủ SP · bản vẽ đủ RP ·
-│   │   │                     #   công trình đủ tài nguyên. THUẦN. ⚠️ Có ĐÚNG HAI người đọc (chuông
+│   │   ├── opportunities.js   # "Có việc gì đáng vào xem không?" — kỹ năng đủ SP · Ô HÀNG CHỜ XÂY
+│   │   │                     #   TRỐNG (ADR-069: không còn RP/nguyên liệu để mà "đủ"). THUẦN. ⚠️ Có ĐÚNG HAI người đọc (chuông
 │   │   │                     #   thông báo + chấm trên tab Hành trang); chép công thức về lại
 │   │   │                     #   NotificationCenter là "một luật hai công thức", và hai bản sao sẽ
 │   │   │                     #   trôi khỏi nhau ở BIÊN rồi nói ngược nhau mà không gì đỏ lên
+│   │   ├── buildChoices.js    # LUẬT màn Công trình (ADR-069): chọn được gì (chưa xây · chưa vào hàng
+│   │   │                     #   chờ · rẻ-phiên trước), ô còn trống, tiến độ hàng chờ (qua
+│   │   │                     #   craftProgress), trùng tu. Mẫu số "n/5" đếm từ catalog, không viết cứng.
+│   │   ├── rankLadder.js      # BẬC TỰ THĂNG + THỬ THÁCH KỶ = NHIỆM VỤ MỀM (ADR-069). Một phép đếm
+│   │   │                     #   duy nhất "phiên ≥M′ trong N giờ gần đây" đọc thẳng `history`; không
+│   │   │                     #   deadline, không phạt. ⚠️ `now` truyền vào phải KHÔNG SỚM HƠN mốc của
+│   │   │                     #   chính phiên vừa xong (đã cắn: phiên bị coi là "tương lai" và bỏ qua).
 │   │   ├── navAttention.js    # Dấu "thành tích đã xem" (localStorage `dc-nav-seen-v1`). ⚠️ `null`
 │   │   │                     #   (chưa từng ghi) KHÁC `[]` (đã ghi, đang rỗng) — nhập hai thứ đó
 │   │   │                     #   làm một thì lần đầu mở app cái chấm sáng oan cho hàng chục thành
 │   │   │                     #   tích Đàm đã xem từ lâu
 │   │   ├── eraStage.js        # CHẶNG TRONG KỶ — mốc gần nhất người chơi đang đi tới. NGUỒN DUY
 │   │   │                     #   NHẤT của phép "EP này thuộc chặng nào": thanh tiêu đề (App.jsx),
-│   │   │                     #   màn Tập trung, và ResourceDisplay đều đọc đây. ⚠️ `epStart` của
+│   │   │                     #   màn Tập trung đọc đây (ResourceDisplay đã gỡ). ⚠️ `epStart` của
 │   │   │                     #   chặng là mốc TUYỆT ĐỐI (tính từ EP tổng), đừng trừ thêm gốc kỷ.
 │   │   │                     #   ⚠️ Đích của phép đếm ngược là chặng KẾ TIẾP (`nextLabel`), không
 │   │   │                     #   phải chặng đang đứng; `null` ở chặng cuối = đích là KỶ MỚI

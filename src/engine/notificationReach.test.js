@@ -37,8 +37,10 @@ const CO_Y_DE_CAM = [
   // và `scheduleFocusCompletePush` (Web Push, tới cả khi đang ở app khác). Nối thêm kênh thứ ba
   // thì trên chính cái máy đã đăng ký push, Đàm nhận HAI thông báo cho một sự kiện.
   'notifyFocusComplete',
-  // `DisasterModal` đã chiếm trọn màn hình kèm `playDisaster()`. Bắn thêm một thông báo hệ thống
-  // cho thứ đang che kín màn hình là tiếng ồn, không phải tin.
+  // ADR-069 (2026-09-06): `DisasterModal` đã gỡ hẳn — phép trừ tài nguyên khi huỷ phiên chỉ còn ghi
+  // vào lịch sử, vì tài nguyên đã rời đường chơi. Bắn một thông báo hệ thống về một đồng tiền không
+  // còn hiện ở đâu là tiếng ồn, không phải tin. (Trước đó: hộp thoại đã che kín màn hình kèm
+  // `playDisaster()`, nên kênh thứ hai cũng là thừa — hai lý do, cùng một kết luận.)
   'notifyDisaster',
 ];
 

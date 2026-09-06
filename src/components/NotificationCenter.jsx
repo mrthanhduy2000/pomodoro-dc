@@ -7,7 +7,6 @@ import useGameStore from '../store/gameStore';
 // tab "Hành trang" cần đúng câu trả lời này. Đừng chép lại chúng về đây — một luật một công thức.
 import {
   listAvailableSkills,
-  listResearchableBlueprints,
   listBuildableBlueprints,
 } from '../engine/opportunities';
 import { Glyph } from './icons/Glyph';
@@ -73,11 +72,7 @@ export default function NotificationCenter({ onNavigate }) {
   const relics = useGameStore((state) => state.relics);
   const relicEvolutions = useGameStore((state) => state.relicEvolutions);
   const activeBook = useGameStore((state) => state.progress.activeBook);
-  const research = useGameStore((state) => state.research);
-  const blueprints = useGameStore((state) => state.blueprints);
   const buildings = useGameStore((state) => state.buildings);
-  const resources = useGameStore((state) => state.resources);
-  const resourcesRefined = useGameStore((state) => state.resourcesRefined);
   const craftingQueue = useGameStore((state) => state.craftingQueue);
 
   const rootRef = useRef(null);
@@ -93,22 +88,11 @@ export default function NotificationCenter({ onNavigate }) {
     [sp, unlockedSkills, relics, relicEvolutions],
   );
 
-  const researchableBlueprints = useMemo(
-    () => listResearchableBlueprints({ activeBook, blueprints, buildings, research }),
-    [activeBook, blueprints, buildings, research],
-  );
-
+  // ADR-069: chỉ còn HAI phép đếm — kỹ năng mở được, và ô hàng chờ xây đang trống. Bản vẽ không
+  // còn bước "nghiên cứu" nên không có gì để "sẵn sàng nghiên cứu" nữa.
   const buildableBlueprints = useMemo(
-    () => listBuildableBlueprints({
-      activeBook,
-      blueprints,
-      buildings,
-      craftingQueue,
-      research,
-      resources,
-      resourcesRefined,
-    }),
-    [activeBook, blueprints, buildings, craftingQueue, research, resources, resourcesRefined],
+    () => listBuildableBlueprints({ activeBook, buildings, craftingQueue }),
+    [activeBook, buildings, craftingQueue],
   );
 
   const opportunities = useMemo(() => {
@@ -125,30 +109,19 @@ export default function NotificationCenter({ onNavigate }) {
       });
     }
 
-    if (researchableBlueprints.length > 0) {
-      nextItems.push({
-        id: 'blueprints',
-        count: researchableBlueprints.length,
-        Icon: CenterIcon.blueprint,
-        title: `${researchableBlueprints.length} bản vẽ sẵn sàng`,
-        body: describeSample(researchableBlueprints.map((blueprint) => blueprint.label), researchableBlueprints.length),
-        action: { tab: 'collection', collectionTab: 'blueprints' },
-      });
-    }
-
     if (buildableBlueprints.length > 0) {
       nextItems.push({
         id: 'workshop',
-        count: buildableBlueprints.length,
+        count: 1,
         Icon: CenterIcon.workshop,
-        title: `${buildableBlueprints.length} công trình sẵn sàng`,
+        title: 'Hàng chờ xây đang trống',
         body: describeSample(buildableBlueprints.map((blueprint) => blueprint.label), buildableBlueprints.length),
         action: { tab: 'collection', collectionTab: 'workshop' },
       });
     }
 
     return nextItems;
-  }, [availableSkills, researchableBlueprints, buildableBlueprints]);
+  }, [availableSkills, buildableBlueprints]);
 
   const unreadCount = notificationFeed.reduce((count, item) => (
     item.readAt ? count : count + 1

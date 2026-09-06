@@ -17,8 +17,8 @@ import InventoryHero from './shared/InventoryHero.jsx';
 import SkillMatrix from './shared/SkillMatrix.jsx';
 import { buildSkillMatrix, cheapestReachable, countReady, pickDefaultCell, MATRIX_STATE } from './shared/skillMatrix.js';
 import { heroKyNang } from './shared/inventoryHero.js';
-import { motion, AnimatePresence } from 'framer-motion';
-import { SCRIM_FADE, useCustomMotion, useEnterMotion, usePressMotion, useSnapMotion } from '../lib/motionPresets';
+import { motion } from 'framer-motion';
+import { useCustomMotion, useEnterMotion, usePressMotion, useSnapMotion } from '../lib/motionPresets';
 
 import useGameStore       from '../store/gameStore';
 import useSettingsStore   from '../store/settingsStore';
@@ -155,7 +155,6 @@ export default function SkillTree({ _onOpenAchievements }) {
 
   const { progressPct, currentLevelEXP, nextLevelEXP } = getLevelProgress(totalEXP);
 
-  const [confirmNode, setConfirmNode] = useState(null);
   // Ô đang chọn trên bản đồ. `null` = chưa chạm gì ⇒ rơi về ô mặc định (rẻ nhất trong số mở
   // được ngay) — xem `pickDefaultCell`. Giữ ID chứ không giữ cả ô: ô được DỰNG LẠI mỗi lần
   // SP/kỹ năng đổi, nên giữ tham chiếu cũ là giữ một trạng thái đã lỗi thời.
@@ -176,16 +175,12 @@ export default function SkillTree({ _onOpenAchievements }) {
     return NODE_STATE.AVAILABLE;
   }, [unlockedSkills, sp, relics, relicEvolutions]);
 
+  // ADR-069: MỘT CHẠM — không còn hộp xác nhận. Nút "Mở · N SP" đã nằm trong khung chi tiết, ngay
+  // dưới mô tả + giá; hỏi "Mở Khóa?" lần nữa là bắt đọc lại cùng ba dòng ấy trong một hộp thoại.
+  // Chọn nhầm ô không đáng sợ: ô nào cũng là một kỹ năng thật, và lên cấp là có điểm mới.
   const handleBuy = (node) => {
     if (getNodeState(node) !== NODE_STATE.AVAILABLE) return;
-    setConfirmNode(node);
-  };
-
-  const handleConfirmBuy = () => {
-    if (!confirmNode) return;
-    const success = unlockSkill(confirmNode.id, confirmNode.spCost, confirmNode.requires);
-    if (success) soundEngine.playSkillUnlock();
-    setConfirmNode(null);
+    if (unlockSkill(node.id, node.spCost, node.requires)) soundEngine.playSkillUnlock();
   };
 
   // Đếm kỹ năng đã mở khóa
@@ -302,23 +297,16 @@ export default function SkillTree({ _onOpenAchievements }) {
         {/* TRÁI — Cây kỹ năng */}
         <div className="flex min-w-0 flex-col gap-4">
           <div className="px-5 py-5" style={CARD}>
-            <div className="flex items-start justify-between gap-3">
-              <div className="min-w-0">
-                <h3 className="text-[1.45rem] font-semibold leading-tight" style={{ fontFamily: 'var(--skin-font-display)', color: 'var(--ink)' }}>
-                  Bản đồ kỹ năng
-                </h3>
-                <p className="mt-1 text-[12px] leading-snug" style={{ color: 'var(--muted)' }}>
-                  {readyCount > 0
-                    ? `${readyCount} ô mở được ngay — ô viền đậm, có giá SP ở góc.`
-                    : 'Chưa ô nào mở được ngay. Tích thêm SP, hoặc mở nút phía trên trong cùng cột.'}
-                </p>
-              </div>
-              <div className="flex shrink-0 items-center gap-1.5 px-3 py-1.5" style={{ background: 'rgba(var(--accent-rgb), 0.1)', border: '1px solid rgba(var(--accent-rgb), 0.18)', borderRadius: 'var(--skin-radius-control,14px)' }}>
-                <span style={{ color: 'var(--accent2)', display: 'inline-flex' }}><BoltGlyph size={14} /></span>
-                <span className="mono text-[15px] font-bold tabular-nums" style={{ color: 'var(--ink)' }}>{sp}</span>
-                <span className="mono text-[10px] uppercase tracking-[0.18em]" style={{ color: 'var(--accent2)' }}>SP</span>
-              </div>
-            </div>
+            {/*
+              ⚠️ ĐẦU THẺ CHỈ CÒN CÁI TÊN (2026-09-06). Bản trước có thêm một dòng phụ («12 ô mở được
+              ngay — ô viền đậm, có giá SP ở góc») và một viên «⚡ 5 SP» — cả hai nói lại ĐÚNG hai điều
+              dải mở đầu ngay phía trên vừa nói (con số dẫn đầu là SP chưa tiêu; caption là «mở được
+              N kỹ năng — ô viền đậm trên bản đồ»). Hai chỗ nói cùng một chuyện thì chỗ nói ít hơn
+              phải nhường, và ở đây chỗ nói ít hơn là cái đầu thẻ.
+            */}
+            <h3 className="text-[1.45rem] font-semibold leading-tight" style={{ fontFamily: 'var(--skin-font-display)', color: 'var(--ink)' }}>
+              Bản đồ kỹ năng
+            </h3>
 
             {/*
               ⚠️ CẢ 36 KỸ NĂNG TRONG MỘT KHUNG HÌNH — xem `shared/skillMatrix.js` để biết vì sao
@@ -389,26 +377,23 @@ export default function SkillTree({ _onOpenAchievements }) {
         </div>
       </div>
 
-      {/* ── Tổ hợp kỹ năng (toàn chiều rộng) ─────────────────────────────── */}
-      <SynergyPanel
-        lightTheme={lightTheme}
-        synergies={SKILL_SYNERGIES}
-        activeSynergies={activeSynergies}
-        branchCounts={branchCounts}
-      />
-
-      {/* ── Hộp xác nhận mua ──────────────────────────────────────────────── */}
-      <AnimatePresence>
-        {confirmNode && (
-          <PurchaseConfirmDialog
-            node={confirmNode}
-            sp={sp}
+      {/* ── Tổ hợp kỹ năng — GẤP (ADR-069): bảng tra cứu, đọc vài tháng một lần, không phải mỗi lần mở tab. ── */}
+      <details>
+        <summary
+          className="mono cursor-pointer list-none text-[10px] uppercase tracking-[0.2em]"
+          style={{ color: 'var(--muted-2)' }}
+        >
+          Tổ hợp kỹ năng · {activeSynergies.length}/{SKILL_SYNERGIES.length} kích hoạt ▾
+        </summary>
+        <div className="mt-3">
+          <SynergyPanel
             lightTheme={lightTheme}
-            onConfirm={handleConfirmBuy}
-            onCancel={() => setConfirmNode(null)}
+            synergies={SKILL_SYNERGIES}
+            activeSynergies={activeSynergies}
+            branchCounts={branchCounts}
           />
-        )}
-      </AnimatePresence>
+        </div>
+      </details>
     </div>
   );
 }
@@ -622,87 +607,6 @@ function SkillDetail({ cell, branchKey, branchLabel, giaChuoi, lightTheme, onBuy
   );
 }
 
-
-// ─── PurchaseConfirmDialog ────────────────────────────────────────────────────
-
-function PurchaseConfirmDialog({ node, sp, lightTheme, onConfirm, onCancel }) {
-  const enterMotion = useEnterMotion();
-  // Lớp phủ tối chỉ mờ dần, không trôi — xem `SCRIM_FADE` ở `motionPresets.js`.
-  const scrimMotion = useCustomMotion(SCRIM_FADE);
-  const tierStyle = TIER_STYLE[node.tier] ?? TIER_STYLE.basic;
-  const tierBadgeProps = getTierBadgeProps(tierStyle, lightTheme);
-
-  return (
-    <motion.div
-      {...scrimMotion}
-      className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/70"
-      onClick={onCancel}
-    >
-      <motion.div
-        {...enterMotion}
-        onClick={(e) => e.stopPropagation()}
-        className={`w-full max-w-sm p-6 ${lightTheme ? '' : 'bg-white/[0.04] border border-white/8 rounded-2xl shadow-2xl'}`}
-        style={lightTheme ? {
-          background: 'var(--card-bg-solid)',
-          border: 'var(--skin-card-border-width,1px) solid var(--line)',
-          borderRadius: 'var(--skin-radius-card,18px)',
-          boxShadow: 'var(--skin-card-shadow)',
-        } : undefined}
-      >
-        <div className="text-center mb-4">
-          <span className={`mono inline-flex h-14 w-14 items-center justify-center rounded-full border font-semibold ${hasGlyphIcon(node.icon) ? 'text-[26px] leading-none' : 'text-[12px] uppercase tracking-[0.18em]'}`}
-                style={lightTheme ? { borderColor: 'var(--line)', background: 'var(--card-bg-solid2)', color: 'var(--accent2)' } : { borderColor: 'rgba(255,255,255,0.08)', background: 'rgba(255,255,255,0.04)', color: 'var(--accent-light)' }}>
-            {getGlyph(node.icon, node.label)}
-          </span>
-          <h3 className="font-bold text-xl mt-2" style={lightTheme ? { fontFamily: 'var(--skin-font-display)', fontWeight: 600, color: 'var(--ink)' } : { color: '#ffffff' }}>{node.label}</h3>
-          <span className={`inline-block mt-1.5 ${tierBadgeProps.className}`} style={tierBadgeProps.style}>
-            {tierStyle.label}
-          </span>
-          <p className="text-sm mt-2" style={lightTheme ? { color: 'var(--muted)' } : { color: '#94a3b8' }}>{node.description}</p>
-        </div>
-
-        <div
-          className={`flex items-center justify-center gap-2 mb-5 py-2.5 ${lightTheme ? '' : 'bg-slate-800 rounded-xl'}`}
-          style={lightTheme ? {
-            background: 'rgba(var(--accent-rgb), 0.1)',
-            border: '1px solid rgba(var(--accent-rgb), 0.16)',
-            borderRadius: 'var(--skin-radius-control,14px)',
-          } : undefined}
-        >
-          <span className="mono text-[10px] uppercase tracking-[0.18em]" style={lightTheme ? { color: 'var(--accent2)' } : { color: 'var(--accent-light)' }}>SP</span>
-          <span className="mono font-bold tabular-nums" style={lightTheme ? { color: 'var(--ink)' } : undefined}>{node.spCost} SP</span>
-          <span className="text-sm" style={lightTheme ? { color: 'var(--muted)' } : undefined}>· còn {sp} SP</span>
-        </div>
-
-        <div className="flex gap-3">
-          <button
-            onClick={onCancel}
-            className={`flex-1 py-2 text-sm font-medium transition-colors ${lightTheme ? '' : 'bg-white/[0.05] hover:bg-white/[0.08] text-[var(--ink)] rounded-xl'}`}
-            style={lightTheme ? {
-              background: 'var(--card-bg-solid2)',
-              color: 'var(--muted)',
-              border: '1px solid var(--line)',
-              borderRadius: 'var(--skin-radius-control,14px)',
-            } : undefined}
-          >
-            Hủy
-          </button>
-          <button
-            onClick={onConfirm}
-            className={`flex-1 py-2 text-sm font-bold transition-colors ${lightTheme ? '' : 'bg-[rgba(var(--accent-rgb),0.9)] hover:bg-[rgba(var(--accent-rgb),0.82)] text-white rounded-xl'}`}
-            style={lightTheme ? {
-              background: 'var(--accent)',
-              color: '#ffffff',
-              borderRadius: 'var(--skin-radius-control,14px)',
-            } : undefined}
-          >
-            Mở Khóa
-          </button>
-        </div>
-      </motion.div>
-    </motion.div>
-  );
-}
 
 // ─── Synergy Panel ────────────────────────────────────────────────────────────
 function SynergyPanel({ synergies, activeSynergies, branchCounts, lightTheme }) {

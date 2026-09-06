@@ -176,7 +176,7 @@ test('không màn nào còn bảo người chơi đi sang một TAB đã bị g�
   // ⚠️ Bản vá gộp tab TỰ TẠO RA lỗi này: màn Xưởng vẫn in "Đi sang mục Bản vẽ để mở thêm công
   // trình" trong khi Bản vẽ nay nằm ngay bên dưới cùng màn. Một câu chỉ đường tới một cái tab
   // không còn tồn tại thì tệ hơn không có câu nào — và không cổng nào bắt được nó.
-  const MAN = ['BuildingWorkshop', 'BlueprintInventory', 'RelicInventory', 'Achievements', 'SkillTree'];
+  const MAN = ['BuildScreen', 'RelicInventory', 'Achievements', 'SkillTree'];
   for (const ten of MAN) {
     const nguon = readFileSync(join(HERE, 'components', `${ten}.jsx`), 'utf8');
     const pham = [...nguon.matchAll(/(?:sang|qua|tới|đến)\s+(?:mục|tab)\s+([^.<{]{1,20})/gi)].map((h) => h[0].trim());

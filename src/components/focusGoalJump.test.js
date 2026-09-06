@@ -79,7 +79,8 @@ test('nút lúc chưa có mục tiêu bấm được và gọi hàm dẫn đư�
 
 // Luật KHÔNG được nới: vẫn phải đủ ký tự mới bắt đầu được phiên.
 test('cổng "đủ ký tự mới được bắt đầu" vẫn còn nguyên', () => {
-  assert.match(ENGINE, /!isCrisisBlockingStart && !isSessionGoalValid \?/);
+  // ADR-069: không còn vế `!isCrisisBlockingStart` — khủng hoảng kỷ là nhiệm vụ mềm, không chặn nút.
+  assert.match(ENGINE, /\{!isSessionGoalValid \?/);
   const i = ENGINE.indexOf('onClick={handleStartSession}');
   assert.ok(i > 0);
 });

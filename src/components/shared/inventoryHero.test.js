@@ -48,16 +48,23 @@ test('CÓ ĐIỂM MÀ KHÔNG MỞ ĐƯỢC GÌ THÌ KHÔNG ĐƯỢC RỰC — v�
 });
 test('hero CÔNG TRÌNH ưu tiên thứ đang xây (có "còn bao xa") hơn thứ đã xong', () => {
   const dangXay = heroCongTrinh({
-    dangXay: { ten: 'Cảng Biển Lớn', con: 4, tong: 9 }, daXay: 4, tongBanVe: 20, sanSangXay: 3,
+    dangXay: { ten: 'Cảng Biển Lớn', con: 4, tong: 9 }, daXay: 4, tongBanVe: 20, chonDuoc: 3,
   });
   assert.equal(dangXay.so, 4);
   assert.match(dangXay.caption, /Cảng Biển Lớn/);
   assert.equal(dangXay.pct, tiLe(5, 9), 'thanh phải đo phần ĐÃ XONG, không phải phần còn lại');
+  assert.match(dangXay.caption, /ô trống/, 'còn ô trống thì phải mời chọn thêm — hàng chờ hai ô mà chỉ dùng một là phí phiên');
 
-  const chuaXay = heroCongTrinh({ dangXay: null, daXay: 4, tongBanVe: 20, sanSangXay: 3 });
-  assert.equal(chuaXay.so, 3, 'không xây gì mà có bản vẽ sẵn ⇒ dẫn bằng việc làm được');
+  const dayO = heroCongTrinh({
+    dangXay: { ten: 'Cảng Biển Lớn', con: 4, tong: 9 }, daXay: 4, tongBanVe: 20, chonDuoc: 3, hangChoDay: true,
+  });
+  assert.doesNotMatch(dayO.caption, /ô trống/, 'hàng chờ đầy thì đừng mời chọn thêm');
 
-  const trong = heroCongTrinh({ dangXay: null, daXay: 4, tongBanVe: 20, sanSangXay: 0 });
+  const chuaXay = heroCongTrinh({ dangXay: null, daXay: 4, tongBanVe: 20, chonDuoc: 3 });
+  assert.equal(chuaXay.so, 3, 'không xây gì mà có công trình chọn được ⇒ dẫn bằng việc làm được');
+  assert.equal(chuaXay.gap, true);
+
+  const trong = heroCongTrinh({ dangXay: null, daXay: 4, tongBanVe: 20, chonDuoc: 0 });
   assert.equal(trong.gap, false);
 });
 
@@ -68,7 +75,7 @@ test('hero HUY HIỆU dẫn bằng cái SẮP đạt khi có', () => {
   assert.equal(heroHuyHieu({ daMo: 157, tong: 360, ganDat: null }).so, 157);
 });
 
-// THỬ-CHO-ĐỎ: đổi `.label` thành `.name` ở Achievements.jsx hoặc BuildingWorkshop.jsx ⇒ bài này đỏ.
+// THỬ-CHO-ĐỎ: đổi `.label` thành `.name` ở Achievements.jsx hoặc engine/buildChoices.js ⇒ bài này đỏ.
 test('tên hiển thị nằm ở `label` — KHÔNG phải `name`, và mã phải hỏi đúng trường đó', () => {
   // Sự thật về dữ liệu, đọc thẳng từ nguồn.
   assert.ok(ACHIEVEMENTS[0].label, 'ACHIEVEMENTS dùng `label`');
@@ -79,25 +86,26 @@ test('tên hiển thị nằm ở `label` — KHÔNG phải `name`, và mã ph�
   // Và mã phải hỏi đúng trường ấy — nếu không, `?? 'Huy hiệu'` nuốt lỗi và câu hỏng vẫn xuôi tai.
   const ach = readFileSync(new URL('../Achievements.jsx', import.meta.url), 'utf8');
   assert.match(ach, /sapDat\[0\]\.achievement\?\.label/, 'hero Huy hiệu lại hỏi `.name`');
-  const ws = readFileSync(new URL('../BuildingWorkshop.jsx', import.meta.url), 'utf8');
-  assert.doesNotMatch(ws, /BUILDING_EFFECTS\[item\.bpId\]\?\.name/, 'hero Công trình lại hỏi `.name`');
+  // Sau ADR-069 tên công trình đi qua `describeProject` (engine/buildChoices.js) — nó phải hỏi `.label`.
+  const bc = readFileSync(new URL('../../engine/buildChoices.js', import.meta.url), 'utf8');
+  assert.doesNotMatch(bc, /def\?\.name|meta\?\.name/, 'describeProject lại hỏi `.name`');
+  assert.match(bc, /def\?\.label/, 'describeProject phải đọc tên ở `.label`');
 });
 
-test('CÔNG TRÌNH: "sẵn sàng xây" chỉ rực khi THẬT SỰ khởi công được', () => {
-  // Ca đã cắn thật: 4 bản vẽ đã nghiên cứu xong, KHÔNG cái nào đủ nguyên liệu. Bản cũ đếm số bản
-  // vẽ đã mở nên nó rực lên và bảo "chọn một bản vẽ để bắt đầu dựng" — một việc không làm được.
-  const cho = heroCongTrinh({ daXay: 4, tongBanVe: 9, sanSangXay: 0, choNguyenLieu: 4 });
-  assert.equal(cho.gap, false, 'không khởi công được ô nào mà vẫn rực = hứa sai');
-  assert.equal(cho.so, 4);
-  assert.match(cho.caption, /nguyên liệu/, 'phải nói ra vì sao chưa bấm được');
-  assert.doesNotMatch(cho.caption, /bắt đầu dựng/);
+test('CÔNG TRÌNH (ADR-069): không còn cổng nguyên liệu — có ô trống là chọn được, xây trọn kỷ thì lặng', () => {
+  // Trước 2026-09-06 dải này có nhánh "chờ nguyên liệu" vì bản vẽ đã nghiên cứu mà vẫn không
+  // khởi công được. Nay bản vẽ khởi công ngay khi có ô trống, nên chỉ còn ba trạng thái.
+  const chon = heroCongTrinh({ daXay: 2, tongBanVe: 5, chonDuoc: 3 });
+  assert.equal(chon.gap, true, 'có ô trống + có bản vẽ ⇒ đây là việc LÀM ĐƯỢC ngay, phải rực');
+  assert.equal(chon.so, 3);
+  assert.doesNotMatch(chon.caption, /nguyên liệu|nghiên cứu/i, 'cổng cũ đã bỏ thì lời mời không được nhắc tới nó');
 
-  const san = heroCongTrinh({ daXay: 4, tongBanVe: 9, sanSangXay: 2, choNguyenLieu: 3 });
-  assert.equal(san.gap, true);
-  assert.equal(san.so, 2, 'dẫn bằng số KHỞI CÔNG ĐƯỢC, không phải số đã nghiên cứu');
+  const tron = heroCongTrinh({ daXay: 5, tongBanVe: 5, chonDuoc: 0 });
+  assert.equal(tron.gap, false, 'xây trọn kỷ thì không còn việc ⇒ lặng xuống');
+  assert.equal(tron.so, 5);
+  assert.match(tron.caption, /★/, 'trọn kỷ là ngôi sao của bảo tàng — phải nói ra');
 
-  // Hết sạch: không có gì chờ, không có gì xây được ⇒ về nhánh tổng kết, vẫn không rực.
-  const het = heroCongTrinh({ daXay: 9, tongBanVe: 9 });
-  assert.equal(het.gap, false);
-  assert.equal(het.so, 9);
+  const chua = heroCongTrinh({ daXay: 2, tongBanVe: 5, chonDuoc: 0 });
+  assert.equal(chua.gap, false, 'hàng chờ đầy mà chưa trọn ⇒ không có việc mới, không rực');
+  assert.equal(chua.so, 2);
 });

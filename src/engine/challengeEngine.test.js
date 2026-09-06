@@ -9,6 +9,9 @@ import {
   RELIC_PITY_SEAL_CAP,
   RELIC_DISASTER_REDUCTION_CAP,
   RELIC_COMBO_WINDOW_CAP_HOURS,
+  RELIC_EP_BONUS_CAP,
+  RANK_SYSTEM,
+  RELIC_EXP_BONUS_CAP,
   XP_SEAL_HARD_CAP,
 } from './constants.js';
 
@@ -37,7 +40,8 @@ test('aggregateActiveBuffs: KHÔNG nerf loadout Huyền Thoại thật (no-op d�
   const relics = allIds.map((id) => ({ id }));
   const relicEvolutions = Object.fromEntries(allIds.map((id) => [id, 2]));
 
-  const rawSum = { resourceBonus: 0, gachaBonus: 0, pitySeal: 0, disasterReduction: 0, comboWindowHours: 0, xpSeal: 0 };
+  // ADR-069: hai trục mới (epBonus · expBonus) cũng phải là lưới an toàn — cộng vào cùng phép kiểm.
+  const rawSum = { resourceBonus: 0, gachaBonus: 0, pitySeal: 0, disasterReduction: 0, comboWindowHours: 0, xpSeal: 0, epBonus: 0, expBonus: 0 };
   for (const id of allIds) {
     const buff = RELIC_EVOLUTION[id].stages[2].buff ?? {};
     for (const k of Object.keys(rawSum)) rawSum[k] += (buff[k] ?? 0);
@@ -57,6 +61,13 @@ test('aggregateActiveBuffs: KHÔNG nerf loadout Huyền Thoại thật (no-op d�
   assert.ok(acc.disasterReduction <= RELIC_DISASTER_REDUCTION_CAP);
   assert.equal(acc.comboWindowHours, rawSum.comboWindowHours);
   assert.ok(acc.comboWindowHours <= RELIC_COMBO_WINDOW_CAP_HOURS);
+  // Hai trục này còn nhận thêm passiveBuff của bậc đang đứng (kỷ 1 · bậc 0 = expBonus) — trừ phần ấy ra
+  // rồi mới so với tổng di vật, và cả tổng gộp vẫn phải nằm dưới trần.
+  const bac0 = RANK_SYSTEM[1].ranks[0].passiveBuff;
+  assert.ok(approx(acc.epBonus - (bac0.epBonus ?? 0), rawSum.epBonus), `ep ${acc.epBonus} vs ${rawSum.epBonus}`);
+  assert.ok(acc.epBonus <= RELIC_EP_BONUS_CAP);
+  assert.ok(approx(acc.expBonus - (bac0.expBonus ?? 0), rawSum.expBonus), `exp ${acc.expBonus} vs ${rawSum.expBonus}`);
+  assert.ok(acc.expBonus <= RELIC_EXP_BONUS_CAP);
 
   // xpSeal vẫn bị trần cũ (tổng thô 0.30 > 0.15 → clamp về 0.15) — hành vi sẵn có.
   assert.equal(acc.xpSeal, XP_SEAL_HARD_CAP);

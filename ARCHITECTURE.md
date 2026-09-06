@@ -166,14 +166,20 @@ App.jsx <OverlayStack>
         │        └→ <CityGrowthMoment> 3,2 giây → onDone
         │           (song song: LootDropModal.preload() nạp sẵn gói mã)
         │
-        ├─ rồi <SessionRewardStory> — CHUỖI THẺ THƯỞNG sau MỌI phiên (ADR-068):
-        │        xp → chuỗi (dải bảy ngày) → nhịp hôm nay → nhiệm vụ → lên cấp → kỷ mới
+        ├─ rồi <SessionRewardStory> — CHUỖI THẺ THƯỞNG sau MỌI phiên (ADR-068, mở rộng ADR-069):
+        │        xp → THÀNH PHỐ (công trình nhích một nấc / "hàng chờ trống — chọn ngay")
+        │           → chuỗi (dải bảy ngày) → nhịp hôm nay → nhiệm vụ → thử thách kỷ
+        │           → lên cấp (MỜI CHỌN ≤3 kỹ năng ngay tại chỗ — thẻ đứng yên chờ, "Để sau")
+        │           → bậc mới → di vật mới → kỷ mới
         │        chạm để lật · tự lật 2,6 s · "Bỏ qua" một chạm · thẻ cuối: Tiếp tục / Xem chi tiết
-        │        luật thẻ: engine-thuần ở components/sessionRewardStory.js (không đọc store)
+        │        luật thẻ: engine-thuần ở components/sessionRewardStory.js (không đọc store);
+        │        ba đầu vào mới dựng ở component từ engine/buildChoices · opportunities · rankLadder
         │        └→ onDone (`finishStory`):
         │             · lên kỷ            ⇒ giữ pendingReward, cổng dưới mở hộp thoại
         │             · bấm Xem chi tiết  ⇒ detail = 'loot'
+        │             · bấm "Chọn công trình ngay" ⇒ closeLootModal() + điều hướng Hành trang › Công trình
         │             · còn lại           ⇒ closeLootModal() + dọn toast chuỗi thẻ đã nói thay
+        │                                    (nhiệm vụ vừa xong · lên cấp · di vật)
         │
         └─ rồi PHÂN TẦNG theo mức độ làm phiền (ADR-060, sửa một nửa ở ADR-068):
                  ├─ pendingReward.eraChanged  ⇒ <LootDropModal> — LÊN KỶ được chặn màn hình
@@ -196,6 +202,30 @@ trong chính phiên viết ADR-060 và nay có test canh.
 4 giây — nó kết thúc bằng `SessionRewardStory`, một chuỗi 3–6 thẻ toàn màn hình, mỗi thẻ một con
 số, bỏ qua được bằng một chạm. Vế "chặn màn hình chỉ cho việc phải QUYẾT ĐỊNH" vẫn đúng cho mọi lớp
 phủ ĐÒI quyết định; chuỗi thẻ là PHẦN THƯỞNG, và phần thưởng thì phải được nhìn thấy (luật peak-end).
+
+### 6.2b Vòng NÂNG CẤP sau ADR-069 — đồng tiền duy nhất là PHIÊN
+
+```
+phiên xong ──► completeFocusSession
+                 ├─ craftingQueue[*].sessionsRemaining −1   (KHÔNG đổi — tầng thành phố đọc y như cũ)
+                 ├─ evaluateRankPromotion(history SAU phiên) ⇒ rankSystem[book]+1 · pendingReward.rankUp
+                 ├─ describeCrisisQuest(history SAU phiên)   ⇒ qua ⇒ relics += successRelic · pendingReward.relicEarned
+                 ├─ detectEraCrisis(EP) ⇒ openCrisisQuest(...)  (mở ở dạng MỀM: không deadline, không hộp thoại)
+                 └─ levelsGained ⇒ chuỗi thẻ MỜI CHỌN kỹ năng ⇒ unlockSkill ngay trong thẻ
+
+Hành trang › Công trình (BuildScreen)
+   listNextProjects(era, buildings, queue) ─► "Khởi công" ─► startProject(bpId)
+        · cổng còn lại: ô hàng chờ (CRAFT_QUEUE_SLOTS) · chưa xây · chưa trong hàng chờ · trùng tu có ô riêng
+        · KHÔNG hỏi RP / nguyên liệu / tinh luyện  (ba cổng ấy chưa bao giờ đóng — TECH_DEBT #95, đã đóng)
+        · ghi research.researched để thành tích/bảo tàng vẫn thấy "đã mở"
+```
+
+**Luật**: mọi hệ thăng tiến ĐỌC LỊCH SỬ thay vì đòi bấm nút — `engine/rankLadder.countQualifyingSessions`
+là phép đếm DUY NHẤT cho "phiên ≥M′ trong N giờ gần đây" (bậc, thử thách kỷ, màn Tiến trình). Không có
+hạn ⇒ không có "trễ" ⇒ không có phạt; chưa đủ thì đợi phiên sau. ⚠️ Tài nguyên · RP · tinh luyện VẪN được
+cộng vào store (không đổi state đồng bộ, không xoá thứ đã kiếm) nhưng **không còn cổng tiêu** — dữ liệu
+ngủ, xem `TECH_DEBT #99`. ⚠️ Thành phố không biết có thay đổi nào: hình dạng `craftingQueue`/`buildings`/
+`cityArchive` giữ nguyên từng byte, ADR-007 nguyên.
 
 ### 6.3 Phân tầng mức độ làm phiền (ADR-060)
 
@@ -316,7 +346,7 @@ giàn giáo mà cảnh 3D đang dựng.
 **Tiến độ chế tạo có ĐÚNG MỘT công thức (2026-08-13)**: `describeCraftProgress`
 (`src/engine/craftProgress.js`, thuần) là nơi DUY NHẤT quy `{ bpId, sessionsRemaining }` ra
 `{ total, remaining, done, ratio, pct }`. `cityLayout.js` (để dựng giàn giáo cao dần) và
-`BuildingWorkshop.jsx` (để in "3/5 phiên") cùng gọi nó. ⚠️ Vì sao phải gom: trước đây hai nơi tự
+`BuildScreen.jsx` — qua `engine/buildChoices.describeQueue` — (để in "3/5 phiên") cùng gọi nó. ⚠️ Vì sao phải gom: trước đây hai nơi tự
 chia lại, **lại tra hai bảng khác nhau** (`BUILDING_EFFECTS.sessionsToComplete` vs
 `BLUEPRINT_META.sessionsToComplete`) và không kẹp biên ⇒ Xưởng in ra **"-4/2 phiên"**. Hai bảng
 hiện khớp nhau 75/75 và có bài test canh cho khỏi lệch, nhưng "hiện đang khớp" không phải là một

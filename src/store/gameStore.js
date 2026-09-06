@@ -141,17 +141,15 @@ import notificationManager from '../engine/notifications';
 import {
   detectEraCrisis,
   createEraCrisisState,
-  applyEraCrisisSacrifice,
-  startEraCrisisChallenge,
-  updateEraCrisisChallenge,
-  checkEraCrisisChallengeExpiry,
-  applyEraCrisisChallengePenalty,
-  createRankChallenge,
-  updateRankChallenge,
-  checkRankChallengeExpiry,
-  applyRankChallengePenalty,
   aggregateActiveBuffs,
 } from '../engine/challengeEngine';
+// ADR-069: bậc tự thăng + thử thách kỷ nguyên thành nhiệm vụ mềm — cùng một phép đếm lịch sử.
+import {
+  describeCrisisQuest,
+  evaluateRankPromotion,
+  openCrisisQuest,
+  settleCrisisQuest,
+} from '../engine/rankLadder';
 
 export { GAME_STORE_STORAGE_KEY, GAME_STORE_EXPORT_VERSION };
 export const GAME_STORE_SCHEMA_VERSION = 4;
@@ -317,22 +315,6 @@ function makeEraUpFeedNotification(bookNumber) {
     icon: eraMeta.icon ?? '⏳',
     category: 'era',
     action: { tab: 'focus' },
-  };
-}
-
-function makeEraCrisisExpiredDisaster(crisisState) {
-  const lossPercent = Math.round((crisisState?.challengeOption?.failureLoss ?? 0) * 100);
-  const crisisName = crisisState?.name ?? 'Khủng hoảng kỷ nguyên';
-
-  return {
-    disaster: {
-      label: 'Khủng hoảng quá hạn',
-      icon: crisisState?.icon ?? '⏰',
-      description: `${crisisName} đã quá hạn trước khi bạn hoàn thành thử thách. Mất ${lossPercent}% tài nguyên.`,
-    },
-    deducted: {},
-    waived: false,
-    chargeConsumed: false,
   };
 }
 
@@ -1436,11 +1418,6 @@ function getBuildingCancelPenaltyMultiplier(buildings, buildingLevels = {}) {
   return 1 - cappedReduction;
 }
 
-function getWonderCrisisWindowBonusHours(buildings) {
-  const wonders = aggregateWonderEffects(buildings);
-  return wonders.has('longer_crisis_window') ? 12 : 0;
-}
-
 // ⚠️ `getWonderCancelPenaltyMultiplier` · `getWonderStreakBonusCap` ·
 // `getDailyMissionXPBonusMultiplier` ĐÃ CHUYỂN sang `engine/wonderEffects.js` (2026-09-05) —
 // cả ba đều có một bản chép tay ở tầng giao diện, và cả ba bản ấy thiếu phép kiểm
@@ -1991,8 +1968,6 @@ function normalizeStoredCombo(combo = {}) {
 const makeDefaultUiState = () => ({
   lootModalOpen: false,
   pendingReward: null,
-  disasterModalOpen: false,
-  pendingDisaster: null,
   eraCrisisModalOpen: false,
   notificationCenterOpen: false,
   notificationFeed: [],
@@ -3900,22 +3875,24 @@ const useGameStore = create(
         let sessionResult = null;
 
         // Nếu đang trong Khủng Hoảng Kỷ Nguyên chế độ Đương Đầu
+        // ADR-069: khủng hoảng kỷ là NHIỆM VỤ MỀM — đọc thẳng lịch sử, không hạn, không phạt, không
+        // nhánh "thất bại". Đếm KÈM phiên vừa xong (nó chưa nằm trong `state.history` ở đây).
         let updatedCrisis = state.eraCrisis;
         let relicEarned   = null;
         let crisisJustPassed = false;
 
-        if (state.eraCrisis.active && state.eraCrisis.choiceMade === 'challenge') {
-          const { newCrisisState, completed, failed, relic } =
-            updateEraCrisisChallenge(state.eraCrisis, minutesFocused);
-
-          if (failed) {
-            get().checkEraCrisisDeadlines();
-            return null; // phiên này chỉ xử lý penalty, không tính reward thông thường
+        if (state.eraCrisis?.active) {
+          const questNow = Date.now();
+          const quest = describeCrisisQuest({
+            eraCrisis: state.eraCrisis,
+            history: [{ timestamp: questNow, minutes: minutesFocused }, ...(state.history ?? [])],
+            now: questNow,
+          });
+          if (quest?.passed) {
+            updatedCrisis    = settleCrisisQuest(state.eraCrisis, quest);
+            relicEarned      = quest.relic;
+            crisisJustPassed = true;
           }
-
-          updatedCrisis    = newCrisisState;
-          relicEarned      = relic;
-          crisisJustPassed = completed;
         }
 
         // ─── Combo / Momentum ───────────────────────────────────────────
@@ -4070,42 +4047,12 @@ const useGameStore = create(
         const comboBonus = Math.round(reward.finalXP * comboBonusPct);
 
         // Kiểm tra cập nhật Thử Thách Thăng Cấp đang active
-        let newRankChallenge = state.rankChallenge;
-        let rankJustCompleted = false;
+        // ADR-069: bậc TỰ THĂNG theo lịch sử (xem `engine/rankLadder.js`) — không còn thử thách
+        // chủ động, không hạn, không phạt. Quyết định nằm ở dưới, sau khi `newHistory` đã có phiên
+        // này. Trạng thái `rankChallenge` đời cũ (nếu còn) được xoá êm.
+        let newRankChallenge = null;
         let newRankSystem     = { ...state.rankSystem };
-
-        if (state.rankChallenge?.active) {
-          const { challenge, completed, failed } =
-            updateRankChallenge(state.rankChallenge, minutesFocused);
-          newRankChallenge = challenge;
-
-          if (failed) {
-            const penalizedRes = applyRankChallengePenalty(state.resources);
-            set((prev) => ({
-              resources:     penalizedRes,
-              rankChallenge: null,
-              latestSessionUndo: null,
-              ui: {
-                ...prev.ui,
-                pendingDisaster: {
-                  disaster:  { label: 'Thử Thách Thất Bại', icon: '💔', description: `Bạn không hoàn thành thử thách thăng cấp lên bậc ${challenge.targetRankLabel} kịp thời. Mất 5% tài nguyên.` },
-                  deducted:  {},
-                  waived:    false,
-                  chargeConsumed: false,
-                },
-                disasterModalOpen: true,
-              },
-            }));
-            return null;
-          }
-
-          if (completed) {
-            const bookKey = `book${challenge.bookNumber}`;
-            newRankSystem = { ...newRankSystem, [bookKey]: challenge.targetRankIdx };
-            newRankChallenge = null;
-            rankJustCompleted = true;
-          }
-        }
+        let rankPromotion     = null;
 
         // Gộp tài nguyên
         const newResources = mergeResources(
@@ -4314,7 +4261,8 @@ const useGameStore = create(
           if (!prev.eraCrisis.active || crisisJustPassed) {
             const detectedCrisis = detectEraCrisis(rewardSourceEP, finalTotalEP);
             if (detectedCrisis) {
-              newEraCrisis = createEraCrisisState(detectedCrisis);
+              // Mở ra ở dạng nhiệm vụ mềm ngay: không hộp thoại, không hạn (ADR-069).
+              newEraCrisis = openCrisisQuest(createEraCrisisState(detectedCrisis));
             }
           }
 
@@ -4366,6 +4314,26 @@ const useGameStore = create(
             breakCompletedAt: null,
           };
           const newHistory = [sessionEntry, ...prev.history].slice(0, 2000);
+
+          // ADR-069: thăng bậc tự động — đủ EP gác + đủ phiên gần đây (đếm cả phiên này).
+          // Bỏ qua khi vừa lên kỷ: bậc thuộc kỷ, và kỷ vừa đóng thì bậc của nó không còn hiệu lực.
+          if (!eraChanged) {
+            const rankBookKey = `book${activeBook}`;
+            // ⚠️ `now` phải KHÔNG SỚM HƠN mốc của chính phiên này: `now_ts` được đọc ở đầu hàm, còn
+            // `resolvedFinishedAt` đọc sau vài mili-giây — lấy `now_ts` thì phiên vừa xong bị bộ đếm
+            // coi là "tương lai" và bỏ qua (đã cắn thật khi viết `gameStore.adr069.test.js`).
+            const promo = evaluateRankPromotion({
+              bookNumber: activeBook,
+              rankIdx: prev.rankSystem?.[rankBookKey] ?? 0,
+              totalEP: finalTotalEP,
+              history: newHistory,
+              now: Math.max(now_ts, getHistoryEntryTimestampMs(sessionEntry) ?? now_ts),
+            });
+            if (promo.promoted) {
+              rankPromotion = { bookNumber: activeBook, targetIdx: promo.targetIdx, rank: promo.rank };
+              newRankSystem = { ...newRankSystem, [rankBookKey]: promo.targetIdx };
+            }
+          }
           const newSavedNotes = upsertSavedNoteEntry(prev.savedNotes ?? [], sessionEntry);
           const currentHistoryStats = normalizeStoredHistoryStats(prev.historyStats, prev.history);
           const sessionWasBlueprint = (reward.t2Drop ?? 0) > 0 || buildingPerkReward.refined > 0 || minutesFocused >= 45;
@@ -4598,10 +4566,7 @@ const useGameStore = create(
           const syncedProgress = syncLongBreakCycleProgress(prev.progress, now_ts);
           const sessionNotifications = [
             eraChanged ? makeEraUpFeedNotification(finalBook) : null,
-            rankJustCompleted ? makeRankUpFeedNotification(
-              state.rankChallenge?.bookNumber,
-              state.rankChallenge?.targetRankIdx,
-            ) : null,
+            rankPromotion ? makeRankUpFeedNotification(rankPromotion.bookNumber, rankPromotion.targetIdx) : null,
             activeNewlyBuilt.length > 0 ? makeWorkshopCompletedNotification(activeNewlyBuilt) : null,
             legacyCompletions.length > 0 ? makeLegacyCompletedNotification(legacyCompletions) : null,
             activeAcceleratedCraftingIds.length > 0 ? {
@@ -4695,15 +4660,25 @@ const useGameStore = create(
                 newlyBuiltIds: activeNewlyBuilt,
                 positiveEventRPBonus,
                 rpEarned: finalSessionRP,
+                // ADR-069: ba tin mới cho chuỗi thẻ thưởng — bậc vừa lên, di vật vừa nhận, thử thách
+                // kỷ vừa mở. `ui` không nằm trong `partialize` nên không lên Supabase.
+                rankUp: rankPromotion
+                  ? { label: rankPromotion.rank.label, icon: rankPromotion.rank.icon, buffLabel: rankPromotion.rank.buffLabel }
+                  : null,
+                relicEarned: relicEarned ?? null,
+                crisisOpened: newEraCrisis.active && !state.eraCrisis.active
+                  ? { name: newEraCrisis.name, icon: newEraCrisis.icon }
+                  : null,
               },
               levelUpQueue: levelsGained > 0
                 ? [...prev.ui.levelUpQueue, { levelsGained, newLevel, spGained }]
                 : prev.ui.levelUpQueue,
               relicNotification: relicEarned,
-              rankUpNotification: rankJustCompleted
-                ? { rankLabel: RANK_SYSTEM[state.rankChallenge?.bookNumber]?.ranks[state.rankChallenge?.targetRankIdx]?.label, rankIcon: RANK_SYSTEM[state.rankChallenge?.bookNumber]?.ranks[state.rankChallenge?.targetRankIdx]?.icon }
+              rankUpNotification: rankPromotion
+                ? { rankLabel: rankPromotion.rank.label, rankIcon: rankPromotion.rank.icon }
                 : prev.ui.rankUpNotification,
-              eraCrisisModalOpen: newEraCrisis.active && !state.eraCrisis.active,
+              // ADR-069: không còn hộp thoại khủng hoảng — thử thách kể trong chuỗi thẻ thưởng.
+              eraCrisisModalOpen: false,
               achievementQueue: newlyUnlocked.length > 0
                 ? [...prev.ui.achievementQueue, ...newlyUnlocked]
                 : prev.ui.achievementQueue,
@@ -4908,11 +4883,6 @@ const useGameStore = create(
                 : syncLongBreakCycleProgress(prev.progress, now),
               sessionMeta: { ...prev.sessionMeta, lastSessionCancelled: true, breakCompletedOnTime: false },
               latestSessionUndo: null,
-              ui: {
-                ...prev.ui,
-                disasterModalOpen: false,
-                pendingDisaster: null,
-              },
             };
           });
           return;
@@ -4940,8 +4910,6 @@ const useGameStore = create(
               latestSessionUndo: null,
               ui: {
                 ...prev.ui,
-                disasterModalOpen: false,
-                pendingDisaster: null,
                 notificationFeed: appendUiNotification(
                   prev.ui.notificationFeed,
                   makeSafeCancelPerkNotification(safeCancelPerk),
@@ -5012,11 +4980,9 @@ const useGameStore = create(
             },
             sessionMeta: { ...prev.sessionMeta, lastSessionCancelled: true, breakCompletedOnTime: false },
             latestSessionUndo: null,
-            ui: {
-              ...prev.ui,
-              disasterModalOpen: !result.waived,
-              pendingDisaster: penaltyDetails,
-            },
+            // ADR-069: KHÔNG còn hộp thoại "mất N% tài nguyên" sau khi huỷ (`DisasterModal` đã gỡ hẳn) —
+            // tài nguyên đã rời khỏi đường chơi, nên câu ấy chỉ còn là một lời trách. Chi tiết phạt vẫn
+            // nằm ở bản ghi lịch sử (`cancelPenalty`) cho Thống kê đọc.
           };
         });
       },
@@ -5153,141 +5119,25 @@ const useGameStore = create(
           };
         }),
 
-      // ─── Hệ thống Danh Xưng ──────────────────────────────────────────────
-
+      // ─── Hệ thống Danh Xưng · Thử thách kỷ nguyên (ADR-069) ──────────────────
       /**
-       * initiateRankChallenge
-       * Bắt đầu Thử Thách Thăng Cấp lên bậc tiếp theo.
-       * Chỉ gọi khi người chơi chủ động nhấn nút "Thách Đấu".
+       * checkEraCrisisDeadlines — TÊN GIỮ (App gọi lúc mở app), RUỘT ĐỔI (2026-09-06, ADR-069):
+       * không còn hạn để mà "hết hạn". Việc duy nhất còn lại là đưa dữ liệu ĐỜI CŨ (khủng hoảng
+       * chưa chọn, hoặc còn deadline) về dạng nhiệm vụ mềm — không phạt ai vì dữ liệu đời trước.
+       * `initiateRankChallenge` · `checkRankChallengeDeadlines` · `resolveEraCrisis` ·
+       * `openEraCrisisModal` đã GỠ HẲN cùng hai hộp thoại của chúng.
        */
-      initiateRankChallenge: (bookNumber) => {
-        const state     = get();
-        const bookKey   = `book${bookNumber}`;
-        const currentRankIdx = state.rankSystem[bookKey];
-        const targetIdx = currentRankIdx + 1;
-        const maxRank   = RANK_SYSTEM[bookNumber].ranks.length - 1;
-
-        if (targetIdx > maxRank) return false;
-        if (state.rankChallenge?.active) return false;
-
-        const req = RANK_SYSTEM[bookNumber].ranks[targetIdx].challengeRequirement;
-        if (!req) {
-          const rankUpFeed = makeRankUpFeedNotification(bookNumber, targetIdx);
-          // Không cần thử thách — thăng cấp luôn
-          set((prev) => ({
-            rankSystem: { ...prev.rankSystem, [bookKey]: targetIdx },
-            latestSessionUndo: null,
-            ui: {
-              ...prev.ui,
-              notificationFeed: rankUpFeed
-                ? appendUiNotification(prev.ui.notificationFeed, rankUpFeed)
-                : prev.ui.notificationFeed,
-              rankUpNotification: {
-                rankLabel: RANK_SYSTEM[bookNumber].ranks[targetIdx].label,
-                rankIcon:  RANK_SYSTEM[bookNumber].ranks[targetIdx].icon,
-              },
-            },
-          }));
-          return true;
-        }
-
-        const challenge = createRankChallenge(bookNumber, targetIdx);
-        set({ rankChallenge: challenge, latestSessionUndo: null });
-        return true;
-      },
-
-      /**
-       * checkRankChallengeDeadlines
-       * Gọi khi app khởi động để xử lý thử thách hết hạn khi offline.
-       */
-      checkRankChallengeDeadlines: () => {
-        const state = get();
-        const { failed } = checkRankChallengeExpiry(state.rankChallenge);
-        if (failed) {
-          const penalizedRes = applyRankChallengePenalty(state.resources);
-          set((prev) => ({
-            resources:    penalizedRes,
-            rankChallenge: null,
-            latestSessionUndo: null,
-            ui: {
-              ...prev.ui,
-              pendingDisaster: {
-                disaster:  { label: 'Thử Thách Hết Hạn', icon: '⏰', description: 'Thử thách thăng cấp đã hết thời gian. Mất 5% tài nguyên.' },
-                deducted:  {},
-                waived:    false,
-                chargeConsumed: false,
-              },
-              disasterModalOpen: true,
-            },
-          }));
-        }
-      },
-
       checkEraCrisisDeadlines: () => {
         const state = get();
-        const { failed } = checkEraCrisisChallengeExpiry(state.eraCrisis);
-        if (!failed) return false;
-
-        const { newResources, newCrisisState } =
-          applyEraCrisisChallengePenalty(state.resources, state.eraCrisis);
-        const pendingDisaster = makeEraCrisisExpiredDisaster(state.eraCrisis);
-
+        const crisis = state.eraCrisis;
+        if (!crisis?.active) return false;
+        if (crisis.choiceMade === 'challenge' && crisis.challengeDeadline == null) return false;
         set((prev) => ({
-          resources: newResources,
-          eraCrisis: newCrisisState,
-          latestSessionUndo: null,
-          ui: {
-            ...prev.ui,
-            eraCrisisModalOpen: false,
-            disasterModalOpen: true,
-            pendingDisaster,
-          },
+          eraCrisis: openCrisisQuest(prev.eraCrisis),
+          ui: { ...prev.ui, eraCrisisModalOpen: false },
         }));
-
         return true;
       },
-
-      // ─── Khủng Hoảng Kỷ Nguyên ───────────────────────────────────────────
-
-      /**
-       * resolveEraCrisis
-       * Người chơi chọn 'sacrifice' hoặc 'challenge'.
-       */
-      resolveEraCrisis: (choice) => {
-        const state = get();
-        if (!state.eraCrisis.active) return;
-
-        if (choice === 'sacrifice') {
-          const { newResources, newCrisisState } =
-            applyEraCrisisSacrifice(state.resources, state.eraCrisis);
-          set((prev) => ({
-            resources: newResources,
-            eraCrisis: newCrisisState,
-            latestSessionUndo: null,
-            ui: { ...prev.ui, eraCrisisModalOpen: false },
-          }));
-        } else {
-          const crisisWindowBonus = getWonderCrisisWindowBonusHours(state.buildings);
-          const crisisSeed = crisisWindowBonus > 0
-            ? {
-                ...state.eraCrisis,
-                challengeOption: {
-                  ...state.eraCrisis.challengeOption,
-                  windowHours: (state.eraCrisis.challengeOption?.windowHours ?? 0) + crisisWindowBonus,
-                },
-              }
-            : state.eraCrisis;
-          const newCrisisState = startEraCrisisChallenge(crisisSeed);
-          set((prev) => ({
-            eraCrisis: newCrisisState,
-            latestSessionUndo: null,
-            ui: { ...prev.ui, eraCrisisModalOpen: false },
-          }));
-        }
-      },
-
-      openEraCrisisModal: () =>
-        set((prev) => ({ ui: { ...prev.ui, eraCrisisModalOpen: true } })),
 
       // ─── Break Timer ─────────────────────────────────────────────────────
       addPassiveXP: (amount) =>
@@ -5387,11 +5237,6 @@ const useGameStore = create(
       closeLootModal: () =>
         set((prev) => ({ ui: { ...prev.ui, lootModalOpen: false, pendingReward: null } })),
 
-      closeDisasterModal: () =>
-        set((prev) => ({ ui: { ...prev.ui, disasterModalOpen: false, pendingDisaster: null } })),
-
-      closeEraCrisisModal: () =>
-        set((prev) => ({ ui: { ...prev.ui, eraCrisisModalOpen: false } })),
 
       dismissLevelUp: () =>
         set((prev) => ({ ui: { ...prev.ui, levelUpQueue: prev.ui.levelUpQueue.slice(1) } })),
@@ -5769,6 +5614,66 @@ const useGameStore = create(
         return true;
       },
 
+
+      /**
+       * startProject — KHỞI CÔNG MỘT NÚT (2026-09-06, ADR-069).
+       *
+       * Đường DUY NHẤT màn Công trình dùng để đưa một bản vẽ vào hàng chờ. Khác `startCrafting`
+       * ở đúng một chỗ: KHÔNG hỏi RP, KHÔNG hỏi nguyên liệu thô/tinh luyện — vì đo trên tài
+       * khoản thật ba cổng ấy chưa bao giờ đóng (RP dư 8,5 lần, nguyên liệu dư 14 lần,
+       * `TECH_DEBT #95`), tức chúng chỉ là nút để bấm qua. Cái giá còn lại là thứ người chơi hiểu
+       * ngay: N PHIÊN và một Ô hàng chờ.
+       *
+       * Giữ nguyên MỌI luật về hình dạng dữ liệu: cùng một mục `{ bpId, sessionsRemaining,
+       * startedAt }`, cùng cổng ô (`countActiveCrafting`), cùng diện trùng tu (ADR-012,
+       * `canRestoreBlueprint`) — nên tầng thành phố (giàn giáo, bảo tàng) không biết có gì đổi.
+       * Bản vẽ được ghi vào `research.researched` để mọi thứ đọc "đã mở" (thành tích, bảo tàng)
+       * vẫn thấy đúng.
+       *
+       * `startCrafting`/`researchBlueprint` giữ lại cho dữ liệu cũ + test hiện có; màn hình không
+       * gọi chúng nữa (xem `TECH_DEBT #99`).
+       */
+      startProject: (bpId) => {
+        const state = get();
+        const meta  = BLUEPRINT_META[bpId];
+        if (!meta || !BUILDING_SPECS[bpId]) return false;
+        if ((state.craftingQueue ?? []).some((q) => q.bpId === bpId)) return false;
+
+        const isRestoration = !isCurrentEraBlueprint(bpId, state.progress.activeBook);
+        if (isRestoration) {
+          if (!canRestoreBlueprint({
+            bpId,
+            activeBook:  state.progress.activeBook,
+            cityArchive: state.cityArchive,
+            queue:       state.craftingQueue,
+            legacySlots: LEGACY_QUEUE_SLOTS,
+          })) return false;
+        } else {
+          if (state.buildings.includes(bpId)) return false;
+          if (countActiveCrafting(state.craftingQueue, state.progress.activeBook) >= CRAFT_QUEUE_SLOTS) return false;
+        }
+
+        const workshopFeed = makeWorkshopQueuedNotification(bpId, meta.sessionsToComplete);
+        set((prev) => {
+          const researched = prev.research?.researched ?? [];
+          return {
+            research: {
+              ...(prev.research ?? { rp: 0, researched: [] }),
+              researched: researched.includes(bpId) ? researched : [...researched, bpId],
+            },
+            craftingQueue: [
+              ...(prev.craftingQueue ?? []),
+              { bpId, sessionsRemaining: meta.sessionsToComplete, startedAt: Date.now() },
+            ],
+            latestSessionUndo: null,
+            ui: {
+              ...prev.ui,
+              notificationFeed: appendUiNotification(prev.ui.notificationFeed, workshopFeed),
+            },
+          };
+        });
+        return true;
+      },
 
       /**
        * repairBuilding

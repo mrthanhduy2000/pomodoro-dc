@@ -8,7 +8,8 @@
 ## Dự án là gì
 App Pomodoro cá nhân của Đàm (non-coder). React + Vite + PWA · Zustand + localStorage ·
 Supabase sync · Vercel. Bản thật: `https://pomodoro-dc.vercel.app`.
-Mặt trận đang làm: **thành phố 3D** (`src/engine/city3d/` + `src/components/city/render3d/`).
+Mặt trận đang làm: **vòng lặp chính + nâng cấp** (ADR-068/069, `src/components/` + `src/engine/`).
+Thành phố 3D (`src/engine/city3d/` + `src/components/city/render3d/`) là HỘP ĐEN đã xong — Đàm cấm đụng.
 
 ## 5 luật thật sự cắn — vi phạm là hỏng thật
 1. **ADR-007 — bảo tàng bất động.** Công trình đã xây KHÔNG BAO GIỜ đổi chỗ. Địa hình
@@ -35,7 +36,19 @@ Mặt trận đang làm: **thành phố 3D** (`src/engine/city3d/` + `src/compon
   Phase 21 (*"push nhánh phụ, không tự gộp `main`"*) đã bị lệnh này thay thế.
   ⚠️ **Phase 21 do đó lên production TRƯỚC khi Đàm nhìn ảnh nghiệm thu** — mục "chờ Đàm nhìn ảnh"
   ở phần dưới VẪN CÒN HIỆU LỰC, chỉ là nay nó nghiệm thu một thứ đang chạy thật.
-- **Trò chơi — VÒNG 33 (2026-09-05, MỚI NHẤT): CÁCH MẠNG VÒNG LẶP CHÍNH (ADR-068), không đụng
+- **Trò chơi — VÒNG 34 (2026-09-06, MỚI NHẤT): ĐỒNG TIỀN DUY NHẤT LÀ PHIÊN (ADR-069), không đụng
+  Thành phố.** Lệnh *"SIMPLIFY. MINIMIZE. AMPLIFY FUN."* (1) Công trình một màn, một nút
+  (`BuildScreen.jsx`; store `startProject` không hỏi RP/nguyên liệu — cái giá = N phiên + ô hàng
+  chờ); (2) bậc TỰ thăng theo lịch sử, khủng hoảng kỷ = nhiệm vụ mềm — không nút, không hạn, không
+  phạt, không chặn Bắt đầu (`engine/rankLadder.js`; xoá `EraCrisisModal` · `DisasterModal` ·
+  `StakePanel` · `ResourceDisplay`); (3) chuỗi thẻ thưởng thêm thẻ Thành phố · lên cấp MỜI CHỌN ≤3
+  kỹ năng tại chỗ · thử thách kỷ · bậc · di vật; (4) **mọi phần thưởng nằm trên trục sống** — bậc lẻ
+  → EP, 12/15 di vật → EP/XP/combo, Vận May → +XP/+EP, Sự Tha Thứ → +6% XP sau huỷ
+  (`rewardAxes.test.js`). Tài nguyên/RP/tinh luyện thành DỮ LIỆU NGỦ (`TECH_DEBT #99`, cố ý —
+  không xoá thứ Đàm đã kiếm, không đổi state đồng bộ). ⚠️ Bài học: thẻ Thăng bậc in «+12% Tài
+  Nguyên» — *một bảng phần thưởng hợp lệ + test xanh vẫn có thể thưởng lên thứ không ai thấy; chỉ
+  ẢNH mới bắt được.* Cửa soi: `--preview "loot-max&dc-preview-card=level|rank|relic|project|quest"`.
+- **Trò chơi — VÒNG 33 (2026-09-05): CÁCH MẠNG VÒNG LẶP CHÍNH (ADR-068), không đụng
   Thành phố.** Ba chỗ đổi: (1) `TodayHero` mở đầu màn Tập trung — chuỗi · dải bảy ngày T2→CN ·
   mốc kế tiếp (thay ô Chuỗi ở thanh tiêu đề tại tab này + hai thẻ ở cột phải desktop); (2) nhiệm
   vụ ngày nằm ngay dưới đồng hồ, tab `missions` đổi nhãn "Tiến trình" và vào menu Thêm ⇒ thanh dưới
@@ -370,11 +383,13 @@ Mặt trận đang làm: **thành phố 3D** (`src/engine/city3d/` + `src/compon
    · **`TECH_DEBT #96`** — **tiến hoá di vật là một cơ chế CHẾT**: `evolveRelic` tiêu tinh luyện
    của kỷ ĐÃ QUA, mà tinh luyện chỉ rơi vào kỷ đang chơi và công trình kỷ cũ bị gỡ khi lên kỷ ⇒
    không có đường nào kiếm. Ảnh chụp: 3/3 nút "Chưa đủ tài nguyên", vĩnh viễn. Mọi lối ra đều là
-   đổi luật KINH TẾ.
-   · **`TECH_DEBT #95`** — xây MỘT công trình phải qua **BA cổng tiền tệ**, cả ba đều là hàm của
-   số phút. Kho thô thừa **14 lần** nhu cầu. Đây là **kinh tế**, không phải hiển thị ⇒ nằm ở phía
-   bên kia ranh giới an toàn *"đừng xoá thứ Đàm đã KIẾM ĐƯỢC"*. ⚠️ **ĐÃ BÁC** phương án "nối dây
-   nút đổi thô lấy tinh luyện": chính con số 14 lần bác nó.
+   đổi luật KINH TẾ. ⚠️ **Sau ADR-069 (2026-09-06) nó càng chết** — tinh luyện đã là dữ liệu ngủ
+   (`#99`). Lối ra NHẤT QUÁN với ADR-069: tiến hoá theo PHIÊN (vd. N phiên ≥45′ ở kỷ mới), KHÔNG
+   quay lại tiền tệ. Vẫn là quyết định của Đàm vì nó đổi tốc độ mạnh lên của di vật.
+   · ✅ **`TECH_DEBT #95` — ĐÃ ĐÓNG 2026-09-06 (ADR-069)**: cái giá duy nhất còn lại là PHIÊN + ô
+   hàng chờ; ba cổng tiền tệ gỡ khỏi đường chơi, tài nguyên/RP thành dữ liệu ngủ (`#99`), không xoá
+   thứ Đàm đã kiếm. Nợ mới cùng ngày: `#99` (dữ liệu ngủ) · `#100` («Chốt bước» + lưới huy hiệu vẫn
+   phải bấm để nhận thứ đã đạt).
 1. **Kim tự tháp / ziggurat** — kỷ 2 (Ai Cập) và kỷ 3 (Iraq) đang ra mái nón nhiều cạnh,
    không có khối chóp bốn mặt. `prism` với `sides: 4` + `taper: 0` chính là thứ cần.
 2. **"Giống 3D hơn"** — bóng đổ nét hơn (`SHADOW_MAP_DESKTOP` 2048 → 4096, siết

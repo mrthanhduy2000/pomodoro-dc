@@ -83,8 +83,7 @@ test('màn sưu tập phải hỏi getGlyph, KHÔNG được nối thẳng ký h
   const man = [
     'src/components/Achievements.jsx',
     'src/components/SkillTree.jsx',
-    'src/components/BuildingWorkshop.jsx',
-    'src/components/BlueprintInventory.jsx',
+    'src/components/BuildScreen.jsx',
     'src/components/RelicInventory.jsx',
     'src/components/StatsDashboard.jsx',
   ];

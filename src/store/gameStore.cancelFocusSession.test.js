@@ -85,14 +85,15 @@ test('cancelFocusSession: non-strict (applyDisaster:false) không trừ tài ngu
   assert.equal(s.historyStats.cancelledSessions, 1);
   assert.equal(s.historyStats.cancelledMinutes, 12);
   assert.equal(s.sessionMeta.lastSessionCancelled, true);
-  assert.equal(s.ui.disasterModalOpen, false);
   assert.equal(s.staking.active, false);
 });
 
 // ═══════════════════════════════════════════════════════════════════════════════
-// 2) Hủy CÓ phạt (strict, 0 than lượng) — trừ tài nguyên theo trần, mở modal thảm hoạ
+// 2) Hủy CÓ phạt (strict, 0 than lượng) — trừ tài nguyên theo trần; KHÔNG còn mở hộp thoại thảm hoạ
+//    (ADR-069: tài nguyên đã rời đường chơi, câu "mất N% tài nguyên" chỉ còn là một lời trách —
+//    chi tiết vẫn ghi ở `pendingDisaster` + lịch sử để thống kê đọc)
 // ═══════════════════════════════════════════════════════════════════════════════
-test('cancelFocusSession: strict (0 than lượng) trừ tài nguyên theo trần và mở disaster modal', () => {
+test('cancelFocusSession: strict (0 than lượng) trừ tài nguyên theo trần, ghi chi tiết, KHÔNG mở hộp thoại', () => {
   setupCancellable(0);
   withRandom(0.5, () => useGameStore.getState().cancelFocusSession(0.5, { applyDisaster: true, ...OPTS }));
   const s = useGameStore.getState();
@@ -104,10 +105,10 @@ test('cancelFocusSession: strict (0 than lượng) trừ tài nguyên theo trầ
   assert.equal(h.cancelPenalty.waived, false);
   assert.equal(h.cancelPenalty.appliedPenaltyRate, 0.015);
   assert.deepEqual(h.cancelPenalty.deducted.book1, { da_silex: 12, xuong: 12 });
-  // Phiên hủy vẫn xp/ep = 0 và mở modal thảm hoạ
+  // Phiên hủy vẫn xp/ep = 0; hộp thoại KHÔNG mở nhưng chi tiết phạt vẫn được giữ lại
   assert.equal(h.xpEarned, 0);
   assert.equal(h.epEarned, 0);
-  assert.equal(s.ui.disasterModalOpen, true);
+  assert.equal(s.ui.disasterModalOpen, undefined, 'ADR-069: cờ hộp thoại "mất N% tài nguyên" đã gỡ hẳn khỏi store');
   assert.equal(s.historyStats.cancelledSessions, 1);
 });
 

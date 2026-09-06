@@ -27,12 +27,8 @@ export default function useInventoryAttention() {
     sp: state.player.sp,
     unlockedSkills: state.player.unlockedSkills,
     activeBook: state.progress.activeBook,
-    blueprints: state.blueprints,
     buildings: state.buildings,
     craftingQueue: state.craftingQueue,
-    research: state.research,
-    resources: state.resources,
-    resourcesRefined: state.resourcesRefined,
     relics: state.relics,
     relicEvolutions: state.relicEvolutions,
   }));

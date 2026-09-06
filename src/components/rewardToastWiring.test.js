@@ -150,14 +150,15 @@ test('chồng toast nằm giữa chuông thông báo và sàn hộp thoại', ()
 });
 
 /**
- * Cả bốn màn được phép chặn màn hình phải còn nguyên. Bài này bắt hướng hỏng
- * NGƯỢC lại: dọn quá tay rồi đẩy luôn khủng hoảng kỷ hay thảm hoạ xuống toast,
- * tức là để một việc BUỘC PHẢI QUYẾT ĐỊNH trôi qua trong 4 giây.
+ * Màn được phép chặn màn hình phải còn nguyên. Bài này bắt hướng hỏng NGƯỢC lại: dọn quá tay
+ * rồi đẩy luôn một việc BUỘC PHẢI QUYẾT ĐỊNH xuống toast, tức để nó trôi qua trong 4 giây.
  */
-test('bốn việc buộc phải quyết định VẪN chặn màn hình', () => {
+test('những việc buộc phải quyết định VẪN chặn màn hình', () => {
+  // ⚠️ ADR-069 (2026-09-06): `EraCrisisModal` và `DisasterModal` ĐÃ GỠ — khủng hoảng kỷ không còn
+  // là một quyết định (hiến tế hay thử thách) mà là một nhiệm vụ mềm tự chạy theo lịch sử, và
+  // hộp "mất N% tài nguyên" sau khi huỷ chỉ còn là một lời trách về một đồng tiền đã rời đường
+  // chơi. Còn đúng MỘT hộp thoại buộc-phải-quyết-định: chuyển kỷ (prestige).
   for (const [flag, component] of [
-    ['disasterModalOpen', 'DisasterModal'],
-    ['eraCrisisModalOpen', 'EraCrisisModal'],
     ['prestigeModalOpen', 'PrestigeModal'],
   ]) {
     assert.ok(

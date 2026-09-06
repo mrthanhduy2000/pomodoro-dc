@@ -143,7 +143,11 @@ export const SIEU_TAP_TRUNG_MIN_MIN    = 45;        // mới — yêu cầu ≥4
 export const SIEU_TAP_TRUNG_CHARGES    = 1;
 
 // === Ý CHÍ (bền bỉ & streak) ===
-export const FORGIVENESS_CANCELS_PER_WEEK  = 2;
+export const FORGIVENESS_CANCELS_PER_WEEK  = 2;     // (đời cũ) số lần miễn trừ tài nguyên khi huỷ — trục ngủ sau ADR-069
+// ADR-069: Sự Tha Thứ nay là bậc đầu của cặp «tha thứ → phục hồi»: sau khi huỷ một phiên, phiên kế
+// đủ dài nhận thêm XP (Phục Hồi cộng thêm nữa). Trước đó nó chỉ miễn một khoản phạt không còn ai thấy.
+export const SU_THA_THU_XP_BONUS           = 0.06;
+export const SU_THA_THU_MIN_MINUTES        = 25;
 export const BO_NHO_CO_BAP_COMBO_HOURS     = 8;
 export const PHUC_HOI_XP_BONUS             = 0.12;
 export const PHUC_HOI_EP_BONUS             = 0.05;  // mới
@@ -185,19 +189,26 @@ export const NHIP_HOAN_HAO_XP_BONUS                 = 0.10;
 export const NHIP_HOAN_HAO_EP_BONUS                 = 0.10;
 export const NHIP_HOAN_HAO_MIN_MINUTES              = 30;
 
-// === VẬN MAY (drops & resources) ===
-export const BAN_TAY_VANG_RAW_CHANCE       = 0.15;  // mới — thay +RP
+// === VẬN MAY (phần thưởng NGẪU NHIÊN trên XP/EP) ===
+// ⚠️ ADR-069 (2026-09-06): ba kỹ năng gốc của nhánh từng quay ra «+1 nguyên liệu thô» / «+1 tinh
+// luyện» — hai loại tiền đã rời đường chơi. Nay chúng quay ra XP/EP: cùng xác suất, cùng ngưỡng
+// phút, chỉ đổi THỨ nhận được sang một trục người chơi nhìn thấy. Đây là "phần thưởng biến thiên"
+// đúng nghĩa: không phải mọi phiên đều trúng, và khi trúng thì thấy ngay ở thẻ +XP.
+export const BAN_TAY_VANG_CHANCE           = 0.15;
+export const BAN_TAY_VANG_XP_BONUS         = 0.20;  // +20% XP khi trúng
 export const BAN_TAY_VANG_MIN_MINUTES      = 45;
-export const NHAN_QUAN_REFINED_CHANCE      = 0.25;
+export const NHAN_QUAN_CHANCE              = 0.25;
+export const NHAN_QUAN_EP_BONUS            = 0.10;  // +10% EP khi trúng
 export const NHAN_QUAN_MIN_MINUTES         = 45;
-export const LINH_CAM_REFINED_CHANCE       = 0.40;
-export const LINH_CAM_DOUBLE_CHANCE        = 0.08;  // mới — 8% double drop
+export const LINH_CAM_CHANCE               = 0.40;
+export const LINH_CAM_XP_BONUS             = 0.10;  // +10% XP khi trúng
+export const LINH_CAM_BIG_CHANCE           = 0.08;  // cú lớn: 8%
+export const LINH_CAM_BIG_XP_BONUS         = 0.50;  // +50% XP khi trúng cú lớn
 export const LINH_CAM_MIN_MINUTES          = 45;
-// Lộc Ban Tặng (mới — thay be_cong_thoi_gian)
+// Lộc Ban Tặng (mới — thay be_cong_thoi_gian). ADR-069: chỉ còn vế XP (vế «+1 tinh luyện T2» bỏ).
 export const LOC_BAN_TANG_SESSIONS_NEEDED  = 7;     // mỗi 7 phiên ≥30
 export const LOC_BAN_TANG_MIN_MINUTES      = 30;
 export const LOC_BAN_TANG_XP_REWARD        = 200;
-export const LOC_BAN_TANG_REFINED_REWARD   = 1;
 export const JACKPOT_CHANCE                = 0.025;
 export const JACKPOT_MULTIPLIER            = 2.5;   // XP
 export const JACKPOT_EP_MULTIPLIER         = 2.0;   // mới — EP nhân 2.0
@@ -550,14 +561,21 @@ export const RANK_XP_RATIOS = [0, 0.12, 0.22, 0.32, 0.42, 0.55, 0.72, 0.87];
 // passiveBuff: { epBonus, expBonus, resourceBonus, allBonus, gachaBonus, pitySeal }
 // `gachaBonus` / `pitySeal` là tên legacy, hiện được dùng làm buff RP.
 // challengeRequirement: null = đã có ngay từ đầu kỷ
+/**
+ * ⚠️ ADR-069 (2026-09-06) — MỌI BẬC THƯỞNG TRÊN TRỤC SỐNG. Bậc lẻ (thứ 2 và 4 của mỗi kỷ) từng
+ * thưởng «+N% Tài Nguyên» — một đồng tiền đã rời đường chơi (không còn cổng tiêu, không còn màn
+ * hình). Một phần thưởng lên một thứ không ai nhìn thấy thì không phải phần thưởng, nên chúng đổi
+ * sang «+N% EP» cùng giá trị: EP là thứ đẩy thành phố sang kỷ mới, tức thứ người chơi THẤY. Thang
+ * đọc thành XP → EP → XP → EP → Tất cả ×4. Khoá bằng `rewardAxes.test.js`.
+ */
 export const RANK_SYSTEM = {
   1: {
     bookLabel: 'Kỷ Đồ Đá Cũ',
     ranks: [
       { id: 'ke_lang_thang',     label: 'Kẻ Lang Thang',     icon: '🚶', passiveBuff: { expBonus: 0.05       }, buffLabel: '+5% XP',           challengeRequirement: null },
-      { id: 'ke_song_sot',       label: 'Kẻ Sống Sót',       icon: '⛏️', passiveBuff: { resourceBonus: 0.10  }, buffLabel: '+10% Tài Nguyên',  challengeRequirement: { sessions: 2, minMinutes: 25, windowHours: 48 } },
+      { id: 'ke_song_sot',       label: 'Kẻ Sống Sót',       icon: '⛏️', passiveBuff: { epBonus: 0.10        }, buffLabel: '+10% EP',          challengeRequirement: { sessions: 2, minMinutes: 25, windowHours: 48 } },
       { id: 'tho_san_tap_su',    label: 'Thợ Săn Tập Sự',    icon: '🏹', passiveBuff: { expBonus: 0.08       }, buffLabel: '+8% XP',           challengeRequirement: { sessions: 2, minMinutes: 30, windowHours: 48 } },
-      { id: 'nguoi_giu_lua',     label: 'Người Giữ Lửa',     icon: '🔥', passiveBuff: { resourceBonus: 0.12  }, buffLabel: '+12% Tài Nguyên',  challengeRequirement: { sessions: 3, minMinutes: 25, windowHours: 48 } },
+      { id: 'nguoi_giu_lua',     label: 'Người Giữ Lửa',     icon: '🔥', passiveBuff: { epBonus: 0.12        }, buffLabel: '+12% EP',          challengeRequirement: { sessions: 3, minMinutes: 25, windowHours: 48 } },
       { id: 'tho_san_lao_luyen', label: 'Thợ Săn Lão Luyện', icon: '🗺️', passiveBuff: { allBonus: 0.10       }, buffLabel: '+10% Tất Cả',      challengeRequirement: { sessions: 2, minMinutes: 45, windowHours: 48 } },
       { id: 'chien_binh_1',      label: 'Chiến Binh',         icon: '⚔️', passiveBuff: { allBonus: 0.15       }, buffLabel: '+15% Tất Cả',      challengeRequirement: { sessions: 3, minMinutes: 45, windowHours: 48 } },
       { id: 'thay_shaman',       label: 'Thầy Shaman',        icon: '🌀', passiveBuff: { allBonus: 0.20       }, buffLabel: '+20% Tất Cả',      challengeRequirement: { sessions: 2, minMinutes: 60, windowHours: 48 } },
@@ -568,9 +586,9 @@ export const RANK_SYSTEM = {
     bookLabel: 'Kỷ Nông Nghiệp',
     ranks: [
       { id: 'ke_dinh_cu',        label: 'Kẻ Định Cư',         icon: '🏕️', passiveBuff: { expBonus: 0.05       }, buffLabel: '+5% XP',           challengeRequirement: null },
-      { id: 'nong_dan_tap_su',   label: 'Nông Dân Tập Sự',    icon: '🌱', passiveBuff: { resourceBonus: 0.10  }, buffLabel: '+10% Tài Nguyên',  challengeRequirement: { sessions: 2, minMinutes: 25, windowHours: 48 } },
+      { id: 'nong_dan_tap_su',   label: 'Nông Dân Tập Sự',    icon: '🌱', passiveBuff: { epBonus: 0.10        }, buffLabel: '+10% EP',          challengeRequirement: { sessions: 2, minMinutes: 25, windowHours: 48 } },
       { id: 'tho_gom',           label: 'Thợ Gốm',            icon: '🏺', passiveBuff: { expBonus: 0.08       }, buffLabel: '+8% XP',           challengeRequirement: { sessions: 2, minMinutes: 30, windowHours: 48 } },
-      { id: 'nguoi_khai_hoang',  label: 'Người Khai Hoang',   icon: '🌾', passiveBuff: { resourceBonus: 0.12  }, buffLabel: '+12% Tài Nguyên',  challengeRequirement: { sessions: 3, minMinutes: 25, windowHours: 48 } },
+      { id: 'nguoi_khai_hoang',  label: 'Người Khai Hoang',   icon: '🌾', passiveBuff: { epBonus: 0.12        }, buffLabel: '+12% EP',          challengeRequirement: { sessions: 3, minMinutes: 25, windowHours: 48 } },
       { id: 'ky_su_thuy_loi',    label: 'Kỹ Sư Thủy Lợi',    icon: '💧', passiveBuff: { allBonus: 0.10       }, buffLabel: '+10% Tất Cả',      challengeRequirement: { sessions: 2, minMinutes: 45, windowHours: 48 } },
       { id: 'truong_thon',       label: 'Trưởng Thôn',         icon: '🏘️', passiveBuff: { allBonus: 0.15       }, buffLabel: '+15% Tất Cả',      challengeRequirement: { sessions: 3, minMinutes: 45, windowHours: 48 } },
       { id: 'te_su_2',           label: 'Tế Sư',               icon: '⛩️', passiveBuff: { allBonus: 0.20       }, buffLabel: '+20% Tất Cả',      challengeRequirement: { sessions: 2, minMinutes: 60, windowHours: 48 } },
@@ -581,9 +599,9 @@ export const RANK_SYSTEM = {
     bookLabel: 'Kỷ Đồ Đồng',
     ranks: [
       { id: 'nguoi_khai_khoang', label: 'Người Khai Khoáng',  icon: '⛏️', passiveBuff: { expBonus: 0.05       }, buffLabel: '+5% XP',           challengeRequirement: null },
-      { id: 'tho_luyen_kim',     label: 'Thợ Luyện Kim',       icon: '🔨', passiveBuff: { resourceBonus: 0.10  }, buffLabel: '+10% Tài Nguyên',  challengeRequirement: { sessions: 2, minMinutes: 25, windowHours: 48 } },
+      { id: 'tho_luyen_kim',     label: 'Thợ Luyện Kim',       icon: '🔨', passiveBuff: { epBonus: 0.10        }, buffLabel: '+10% EP',          challengeRequirement: { sessions: 2, minMinutes: 25, windowHours: 48 } },
       { id: 'quan_ghi_chep',     label: 'Quan Ghi Chép',       icon: '📜', passiveBuff: { expBonus: 0.08       }, buffLabel: '+8% XP',           challengeRequirement: { sessions: 2, minMinutes: 30, windowHours: 48 } },
-      { id: 'doc_cong',          label: 'Đốc Công',            icon: '🏗️', passiveBuff: { resourceBonus: 0.12  }, buffLabel: '+12% Tài Nguyên',  challengeRequirement: { sessions: 3, minMinutes: 25, windowHours: 48 } },
+      { id: 'doc_cong',          label: 'Đốc Công',            icon: '🏗️', passiveBuff: { epBonus: 0.12        }, buffLabel: '+12% EP',          challengeRequirement: { sessions: 3, minMinutes: 25, windowHours: 48 } },
       { id: 'te_tuong_3',        label: 'Tể Tướng',            icon: '🗝️', passiveBuff: { allBonus: 0.10       }, buffLabel: '+10% Tất Cả',      challengeRequirement: { sessions: 2, minMinutes: 45, windowHours: 48 } },
       { id: 'thuong_vuong',      label: 'Thương Vương',         icon: '💰', passiveBuff: { allBonus: 0.15       }, buffLabel: '+15% Tất Cả',      challengeRequirement: { sessions: 3, minMinutes: 45, windowHours: 48 } },
       { id: 'dai_te_su',         label: 'Đại Tế Sư',           icon: '🏛️', passiveBuff: { allBonus: 0.20       }, buffLabel: '+20% Tất Cả',      challengeRequirement: { sessions: 2, minMinutes: 60, windowHours: 48 } },
@@ -594,9 +612,9 @@ export const RANK_SYSTEM = {
     bookLabel: 'Kỷ Đồ Sắt (Tam Quốc)',
     ranks: [
       { id: 'huong_dung',        label: 'Hương Dũng',          icon: '🪖', passiveBuff: { expBonus: 0.06       }, buffLabel: '+6% XP',           challengeRequirement: null },
-      { id: 'do_ba',             label: 'Đô Bá',               icon: '🐉', passiveBuff: { resourceBonus: 0.10  }, buffLabel: '+10% Tài Nguyên',  challengeRequirement: { sessions: 2, minMinutes: 25, windowHours: 48 } },
+      { id: 'do_ba',             label: 'Đô Bá',               icon: '🐉', passiveBuff: { epBonus: 0.10        }, buffLabel: '+10% EP',          challengeRequirement: { sessions: 2, minMinutes: 25, windowHours: 48 } },
       { id: 'huyen_lenh',        label: 'Huyện Lệnh',          icon: '📋', passiveBuff: { expBonus: 0.08       }, buffLabel: '+8% XP',           challengeRequirement: { sessions: 2, minMinutes: 30, windowHours: 48 } },
-      { id: 'tran_tuong',        label: 'Trấn Tướng',          icon: '🏯', passiveBuff: { resourceBonus: 0.12  }, buffLabel: '+12% Tài Nguyên',  challengeRequirement: { sessions: 3, minMinutes: 25, windowHours: 48 } },
+      { id: 'tran_tuong',        label: 'Trấn Tướng',          icon: '🏯', passiveBuff: { epBonus: 0.12        }, buffLabel: '+12% EP',          challengeRequirement: { sessions: 3, minMinutes: 25, windowHours: 48 } },
       { id: 'thai_thu_4',        label: 'Thái Thú',            icon: '🎌', passiveBuff: { allBonus: 0.10       }, buffLabel: '+10% Tất Cả',      challengeRequirement: { sessions: 2, minMinutes: 45, windowHours: 48 } },
       { id: 'chu_hau',           label: 'Chư Hầu',             icon: '⚔️', passiveBuff: { allBonus: 0.15       }, buffLabel: '+15% Tất Cả',      challengeRequirement: { sessions: 3, minMinutes: 45, windowHours: 48 } },
       { id: 'dai_tu_ma',         label: 'Đại Tư Mã',           icon: '🐎', passiveBuff: { allBonus: 0.22       }, buffLabel: '+22% Tất Cả',      challengeRequirement: { sessions: 2, minMinutes: 60, windowHours: 48 } },
@@ -607,9 +625,9 @@ export const RANK_SYSTEM = {
     bookLabel: 'Kỷ Tăm Tối',
     ranks: [
       { id: 'ke_luu_vong',       label: 'Kẻ Lưu Vong',         icon: '🌑', passiveBuff: { expBonus: 0.06       }, buffLabel: '+6% XP',           challengeRequirement: null },
-      { id: 'tu_si',             label: 'Tu Sĩ',                icon: '✝️', passiveBuff: { resourceBonus: 0.10  }, buffLabel: '+10% Tài Nguyên',  challengeRequirement: { sessions: 2, minMinutes: 25, windowHours: 48 } },
+      { id: 'tu_si',             label: 'Tu Sĩ',                icon: '✝️', passiveBuff: { epBonus: 0.10        }, buffLabel: '+10% EP',          challengeRequirement: { sessions: 2, minMinutes: 25, windowHours: 48 } },
       { id: 'thay_lang',         label: 'Thầy Lang',            icon: '🌿', passiveBuff: { expBonus: 0.08       }, buffLabel: '+8% XP',           challengeRequirement: { sessions: 2, minMinutes: 30, windowHours: 48 } },
-      { id: 'nguoi_gc_5',        label: 'Người Ghi Chép',       icon: '📖', passiveBuff: { resourceBonus: 0.12  }, buffLabel: '+12% Tài Nguyên',  challengeRequirement: { sessions: 3, minMinutes: 25, windowHours: 48 } },
+      { id: 'nguoi_gc_5',        label: 'Người Ghi Chép',       icon: '📖', passiveBuff: { epBonus: 0.12        }, buffLabel: '+12% EP',          challengeRequirement: { sessions: 3, minMinutes: 25, windowHours: 48 } },
       { id: 'be_tren',           label: 'Bề Trên',              icon: '🕊️', passiveBuff: { allBonus: 0.10       }, buffLabel: '+10% Tất Cả',      challengeRequirement: { sessions: 2, minMinutes: 45, windowHours: 48 } },
       { id: 'hiep_si_den_thanh', label: 'Hiệp Sĩ Đền Thánh',   icon: '🛡️', passiveBuff: { allBonus: 0.15       }, buffLabel: '+15% Tất Cả',      challengeRequirement: { sessions: 3, minMinutes: 45, windowHours: 48 } },
       { id: 'dai_giam_muc',      label: 'Đại Giám Mục',         icon: '⛪', passiveBuff: { allBonus: 0.22       }, buffLabel: '+22% Tất Cả',      challengeRequirement: { sessions: 2, minMinutes: 60, windowHours: 48 } },
@@ -620,9 +638,9 @@ export const RANK_SYSTEM = {
     bookLabel: 'Kỷ Phong Kiến',
     ranks: [
       { id: 'huong_lao',         label: 'Hương Lão',            icon: '🧓', passiveBuff: { expBonus: 0.07       }, buffLabel: '+7% XP',           challengeRequirement: null },
-      { id: 'dan_binh',          label: 'Dân Binh',             icon: '🪖', passiveBuff: { resourceBonus: 0.12  }, buffLabel: '+12% Tài Nguyên',  challengeRequirement: { sessions: 2, minMinutes: 25, windowHours: 48 } },
+      { id: 'dan_binh',          label: 'Dân Binh',             icon: '🪖', passiveBuff: { epBonus: 0.12        }, buffLabel: '+12% EP',          challengeRequirement: { sessions: 2, minMinutes: 25, windowHours: 48 } },
       { id: 'hiep_khach',        label: 'Hiệp Khách',           icon: '🗡️', passiveBuff: { expBonus: 0.10       }, buffLabel: '+10% XP',          challengeRequirement: { sessions: 2, minMinutes: 30, windowHours: 48 } },
-      { id: 'tri_phu',           label: 'Tri Phủ',              icon: '🏛️', passiveBuff: { resourceBonus: 0.12  }, buffLabel: '+12% Tài Nguyên',  challengeRequirement: { sessions: 3, minMinutes: 30, windowHours: 48 } },
+      { id: 'tri_phu',           label: 'Tri Phủ',              icon: '🏛️', passiveBuff: { epBonus: 0.12        }, buffLabel: '+12% EP',          challengeRequirement: { sessions: 3, minMinutes: 30, windowHours: 48 } },
       { id: 'thai_thu_6',        label: 'Thái Thú',             icon: '🗺️', passiveBuff: { allBonus: 0.12       }, buffLabel: '+12% Tất Cả',      challengeRequirement: { sessions: 2, minMinutes: 45, windowHours: 48 } },
       { id: 'tuong_quan',        label: 'Tướng Quân',           icon: '⚔️', passiveBuff: { allBonus: 0.18       }, buffLabel: '+18% Tất Cả',      challengeRequirement: { sessions: 3, minMinutes: 45, windowHours: 48 } },
       { id: 'quoc_cong_tc',      label: 'Quốc Công Tiết Chế',  icon: '🐉', passiveBuff: { allBonus: 0.23       }, buffLabel: '+23% Tất Cả',      challengeRequirement: { sessions: 2, minMinutes: 60, windowHours: 48 } },
@@ -633,9 +651,9 @@ export const RANK_SYSTEM = {
     bookLabel: 'Kỷ Phục Hưng',
     ranks: [
       { id: 'mon_do',            label: 'Môn Đồ',               icon: '📚', passiveBuff: { expBonus: 0.07       }, buffLabel: '+7% XP',           challengeRequirement: null },
-      { id: 'nghien_cuu_sinh',   label: 'Nghiên Cứu Sinh',       icon: '🔭', passiveBuff: { resourceBonus: 0.12  }, buffLabel: '+12% Tài Nguyên',  challengeRequirement: { sessions: 2, minMinutes: 25, windowHours: 48 } },
+      { id: 'nghien_cuu_sinh',   label: 'Nghiên Cứu Sinh',       icon: '🔭', passiveBuff: { epBonus: 0.12        }, buffLabel: '+12% EP',          challengeRequirement: { sessions: 2, minMinutes: 25, windowHours: 48 } },
       { id: 'hoc_gia_7',         label: 'Học Giả',               icon: '🎓', passiveBuff: { expBonus: 0.10       }, buffLabel: '+10% XP',          challengeRequirement: { sessions: 2, minMinutes: 30, windowHours: 48 } },
-      { id: 'bac_thay_nt',       label: 'Bậc Thầy Nghệ Thuật',  icon: '🎨', passiveBuff: { resourceBonus: 0.15  }, buffLabel: '+15% Tài Nguyên',  challengeRequirement: { sessions: 3, minMinutes: 30, windowHours: 48 } },
+      { id: 'bac_thay_nt',       label: 'Bậc Thầy Nghệ Thuật',  icon: '🎨', passiveBuff: { epBonus: 0.15        }, buffLabel: '+15% EP',          challengeRequirement: { sessions: 3, minMinutes: 30, windowHours: 48 } },
       { id: 'vien_truong',       label: 'Viện Trưởng',           icon: '🏛️', passiveBuff: { allBonus: 0.12       }, buffLabel: '+12% Tất Cả',      challengeRequirement: { sessions: 2, minMinutes: 45, windowHours: 48 } },
       { id: 'co_van_hg',         label: 'Cố Vấn Hoàng Gia',     icon: '🤴', passiveBuff: { allBonus: 0.18       }, buffLabel: '+18% Tất Cả',      challengeRequirement: { sessions: 3, minMinutes: 45, windowHours: 48 } },
       { id: 'dai_tong_su',       label: 'Đại Tông Sư',           icon: '🌟', passiveBuff: { allBonus: 0.25       }, buffLabel: '+25% Tất Cả',      challengeRequirement: { sessions: 2, minMinutes: 60, windowHours: 48 } },
@@ -646,9 +664,9 @@ export const RANK_SYSTEM = {
     bookLabel: 'Kỷ Khám Phá',
     ranks: [
       { id: 'tho_dong_tau',      label: 'Thợ Đóng Tàu',         icon: '🔨', passiveBuff: { expBonus: 0.07       }, buffLabel: '+7% XP',           challengeRequirement: null },
-      { id: 'thuy_thu',          label: 'Thủy Thủ',              icon: '⚓', passiveBuff: { resourceBonus: 0.12  }, buffLabel: '+12% Tài Nguyên',  challengeRequirement: { sessions: 2, minMinutes: 25, windowHours: 48 } },
+      { id: 'thuy_thu',          label: 'Thủy Thủ',              icon: '⚓', passiveBuff: { epBonus: 0.12        }, buffLabel: '+12% EP',          challengeRequirement: { sessions: 2, minMinutes: 25, windowHours: 48 } },
       { id: 'hoa_tieu',          label: 'Hoa Tiêu',              icon: '🧭', passiveBuff: { expBonus: 0.10       }, buffLabel: '+10% XP',          challengeRequirement: { sessions: 2, minMinutes: 30, windowHours: 48 } },
-      { id: 'thuyen_truong',     label: 'Thuyền Trưởng',         icon: '🚢', passiveBuff: { resourceBonus: 0.15  }, buffLabel: '+15% Tài Nguyên',  challengeRequirement: { sessions: 3, minMinutes: 30, windowHours: 48 } },
+      { id: 'thuyen_truong',     label: 'Thuyền Trưởng',         icon: '🚢', passiveBuff: { epBonus: 0.15        }, buffLabel: '+15% EP',          challengeRequirement: { sessions: 3, minMinutes: 30, windowHours: 48 } },
       { id: 'do_doc',            label: 'Đô Đốc',                icon: '🏴', passiveBuff: { allBonus: 0.12       }, buffLabel: '+12% Tất Cả',      challengeRequirement: { sessions: 2, minMinutes: 45, windowHours: 48 } },
       { id: 'thuong_gia_vd',     label: 'Thương Gia Viễn Đông', icon: '🌶️', passiveBuff: { allBonus: 0.18       }, buffLabel: '+18% Tất Cả',      challengeRequirement: { sessions: 3, minMinutes: 45, windowHours: 48 } },
       { id: 'ba_chu_dd',         label: 'Bá Chủ Đại Dương',     icon: '🌊', passiveBuff: { allBonus: 0.25       }, buffLabel: '+25% Tất Cả',      challengeRequirement: { sessions: 2, minMinutes: 60, windowHours: 48 } },
@@ -659,9 +677,9 @@ export const RANK_SYSTEM = {
     bookLabel: 'Kỷ Khai Sáng',
     ranks: [
       { id: 'khach_quan_cp',     label: 'Khách Quán Cà Phê',    icon: '☕', passiveBuff: { expBonus: 0.08       }, buffLabel: '+8% XP',           challengeRequirement: null },
-      { id: 'khach_moi_salon',   label: 'Khách Mời Salon',       icon: '🎭', passiveBuff: { resourceBonus: 0.12  }, buffLabel: '+12% Tài Nguyên',  challengeRequirement: { sessions: 2, minMinutes: 25, windowHours: 48 } },
+      { id: 'khach_moi_salon',   label: 'Khách Mời Salon',       icon: '🎭', passiveBuff: { epBonus: 0.12        }, buffLabel: '+12% EP',          challengeRequirement: { sessions: 2, minMinutes: 25, windowHours: 48 } },
       { id: 'tac_gia_an_danh',   label: 'Tác Giả Ẩn Danh',      icon: '✍️', passiveBuff: { expBonus: 0.10       }, buffLabel: '+10% XP',          challengeRequirement: { sessions: 2, minMinutes: 30, windowHours: 48 } },
-      { id: 'triet_gia',         label: 'Triết Gia',             icon: '🤔', passiveBuff: { resourceBonus: 0.15  }, buffLabel: '+15% Tài Nguyên',  challengeRequirement: { sessions: 3, minMinutes: 30, windowHours: 48 } },
+      { id: 'triet_gia',         label: 'Triết Gia',             icon: '🤔', passiveBuff: { epBonus: 0.15        }, buffLabel: '+15% EP',          challengeRequirement: { sessions: 3, minMinutes: 30, windowHours: 48 } },
       { id: 'hoc_gia_bk',        label: 'Học Giả Bách Khoa',    icon: '📔', passiveBuff: { allBonus: 0.12       }, buffLabel: '+12% Tất Cả',      challengeRequirement: { sessions: 2, minMinutes: 45, windowHours: 48 } },
       { id: 'vien_si_hl',        label: 'Viện Sĩ Hàn Lâm',      icon: '🎓', passiveBuff: { allBonus: 0.18       }, buffLabel: '+18% Tất Cả',      challengeRequirement: { sessions: 3, minMinutes: 45, windowHours: 48 } },
       { id: 'co_van_qv',         label: 'Cố Vấn Quân Vương',    icon: '🏛️', passiveBuff: { allBonus: 0.25       }, buffLabel: '+25% Tất Cả',      challengeRequirement: { sessions: 2, minMinutes: 60, windowHours: 48 } },
@@ -672,9 +690,9 @@ export const RANK_SYSTEM = {
     bookLabel: 'Kỷ Công Nghiệp',
     ranks: [
       { id: 'chu_xuong_nho',     label: 'Chủ Xưởng Nhỏ',        icon: '🔧', passiveBuff: { expBonus: 0.08       }, buffLabel: '+8% XP',           challengeRequirement: null },
-      { id: 'chu_nha_may',       label: 'Chủ Nhà Máy',           icon: '🏭', passiveBuff: { resourceBonus: 0.15  }, buffLabel: '+15% Tài Nguyên',  challengeRequirement: { sessions: 2, minMinutes: 25, windowHours: 48 } },
+      { id: 'chu_nha_may',       label: 'Chủ Nhà Máy',           icon: '🏭', passiveBuff: { epBonus: 0.15        }, buffLabel: '+15% EP',          challengeRequirement: { sessions: 2, minMinutes: 25, windowHours: 48 } },
       { id: 'nha_cong_nghiep',   label: 'Nhà Công Nghiệp',       icon: '⚙️', passiveBuff: { expBonus: 0.12       }, buffLabel: '+12% XP',          challengeRequirement: { sessions: 2, minMinutes: 30, windowHours: 48 } },
-      { id: 'trum_cung_ung',     label: 'Trùm Cung Ứng',         icon: '🚂', passiveBuff: { resourceBonus: 0.18  }, buffLabel: '+18% Tài Nguyên',  challengeRequirement: { sessions: 3, minMinutes: 30, windowHours: 48 } },
+      { id: 'trum_cung_ung',     label: 'Trùm Cung Ứng',         icon: '🚂', passiveBuff: { epBonus: 0.18        }, buffLabel: '+18% EP',          challengeRequirement: { sessions: 3, minMinutes: 30, windowHours: 48 } },
       { id: 'chu_tap_doan',      label: 'Chủ Tập Đoàn',          icon: '💼', passiveBuff: { allBonus: 0.15       }, buffLabel: '+15% Tất Cả',      challengeRequirement: { sessions: 2, minMinutes: 45, windowHours: 48 } },
       { id: 'trum_doc_quyen',    label: 'Trùm Độc Quyền',        icon: '💰', passiveBuff: { allBonus: 0.22       }, buffLabel: '+22% Tất Cả',      challengeRequirement: { sessions: 3, minMinutes: 45, windowHours: 48 } },
       { id: 'dau_so_tp',         label: 'Đầu Sỏ Tài Phiệt',     icon: '🎩', passiveBuff: { allBonus: 0.30       }, buffLabel: '+30% Tất Cả',      challengeRequirement: { sessions: 2, minMinutes: 90, windowHours: 48 } },
@@ -685,9 +703,9 @@ export const RANK_SYSTEM = {
     bookLabel: 'Kỷ Đế Quốc & Tư Bản Độc Quyền',
     ranks: [
       { id: 'trum_xuat_khau',    label: 'Trùm Xuất Khẩu',        icon: '💼', passiveBuff: { expBonus: 0.09       }, buffLabel: '+9% XP',           challengeRequirement: null },
-      { id: 'chua_te_hang_hai',  label: 'Chúa Tể Hàng Hải',      icon: '⚓', passiveBuff: { resourceBonus: 0.16  }, buffLabel: '+16% Tài Nguyên',  challengeRequirement: { sessions: 2, minMinutes: 25, windowHours: 48 } },
+      { id: 'chua_te_hang_hai',  label: 'Chúa Tể Hàng Hải',      icon: '⚓', passiveBuff: { epBonus: 0.16        }, buffLabel: '+16% EP',          challengeRequirement: { sessions: 2, minMinutes: 25, windowHours: 48 } },
       { id: 'ke_vat_kiet_td',    label: 'Kẻ Vắt Kiệt Thuộc Địa', icon: '🗺️', passiveBuff: { expBonus: 0.13       }, buffLabel: '+13% XP',          challengeRequirement: { sessions: 2, minMinutes: 30, windowHours: 48 } },
-      { id: 'tai_phiet_pho_wall',label: 'Tài Phiệt Phố Wall',     icon: '📈', passiveBuff: { resourceBonus: 0.20  }, buffLabel: '+20% Tài Nguyên',  challengeRequirement: { sessions: 3, minMinutes: 30, windowHours: 48 } },
+      { id: 'tai_phiet_pho_wall',label: 'Tài Phiệt Phố Wall',     icon: '📈', passiveBuff: { epBonus: 0.20        }, buffLabel: '+20% EP',          challengeRequirement: { sessions: 3, minMinutes: 30, windowHours: 48 } },
       { id: 'ca_map_dau_co',     label: 'Cá Mập Đầu Cơ',         icon: '🦈', passiveBuff: { allBonus: 0.16       }, buffLabel: '+16% Tất Cả',      challengeRequirement: { sessions: 2, minMinutes: 45, windowHours: 48 } },
       { id: 'ke_lung_doan_kh',   label: 'Kẻ Lũng Đoạn Khủng Hoảng', icon: '💥', passiveBuff: { allBonus: 0.24   }, buffLabel: '+24% Tất Cả',      challengeRequirement: { sessions: 3, minMinutes: 45, windowHours: 48 } },
       { id: 'chu_no_de_quoc',    label: 'Chủ Nợ Của Đế Quốc',    icon: '🏦', passiveBuff: { allBonus: 0.33       }, buffLabel: '+33% Tất Cả',      challengeRequirement: { sessions: 2, minMinutes: 90, windowHours: 48 } },
@@ -698,9 +716,9 @@ export const RANK_SYSTEM = {
     bookLabel: 'Kỷ Thế Chiến',
     ranks: [
       { id: 'tieu_doan_truong',  label: 'Tiểu Đoàn Trưởng',      icon: '🪖', passiveBuff: { expBonus: 0.09       }, buffLabel: '+9% XP',           challengeRequirement: null },
-      { id: 'lu_doan_truong',    label: 'Lữ Đoàn Trưởng',        icon: '🎖️', passiveBuff: { resourceBonus: 0.16  }, buffLabel: '+16% Tài Nguyên',  challengeRequirement: { sessions: 2, minMinutes: 25, windowHours: 48 } },
+      { id: 'lu_doan_truong',    label: 'Lữ Đoàn Trưởng',        icon: '🎖️', passiveBuff: { epBonus: 0.16        }, buffLabel: '+16% EP',          challengeRequirement: { sessions: 2, minMinutes: 25, windowHours: 48 } },
       { id: 'su_doan_truong',    label: 'Sư Đoàn Trưởng',        icon: '⚔️', passiveBuff: { expBonus: 0.13       }, buffLabel: '+13% XP',          challengeRequirement: { sessions: 2, minMinutes: 30, windowHours: 48 } },
-      { id: 'tu_lenh_quan_doan', label: 'Tư Lệnh Quân Đoàn',     icon: '🎌', passiveBuff: { resourceBonus: 0.20  }, buffLabel: '+20% Tài Nguyên',  challengeRequirement: { sessions: 3, minMinutes: 30, windowHours: 48 } },
+      { id: 'tu_lenh_quan_doan', label: 'Tư Lệnh Quân Đoàn',     icon: '🎌', passiveBuff: { epBonus: 0.20        }, buffLabel: '+20% EP',          challengeRequirement: { sessions: 3, minMinutes: 30, windowHours: 48 } },
       { id: 'tu_lenh_tap_doan',  label: 'Tư Lệnh Tập Đoàn Quân', icon: '🗡️', passiveBuff: { allBonus: 0.17       }, buffLabel: '+17% Tất Cả',      challengeRequirement: { sessions: 2, minMinutes: 45, windowHours: 48 } },
       { id: 'tong_tham_muu',     label: 'Tổng Tham Mưu Trưởng',  icon: '🎯', passiveBuff: { allBonus: 0.26       }, buffLabel: '+26% Tất Cả',      challengeRequirement: { sessions: 3, minMinutes: 45, windowHours: 48 } },
       { id: 'tong_tu_lenh_dm',   label: 'Tổng Tư Lệnh Đồng Minh',icon: '🌐', passiveBuff: { allBonus: 0.35       }, buffLabel: '+35% Tất Cả',      challengeRequirement: { sessions: 2, minMinutes: 90, windowHours: 48 } },
@@ -711,9 +729,9 @@ export const RANK_SYSTEM = {
     bookLabel: 'Kỷ Chiến Tranh Lạnh',
     ranks: [
       { id: 'chuyen_vien_pt',    label: 'Chuyên Viên Phân Tích', icon: '🕵️', passiveBuff: { expBonus: 0.10       }, buffLabel: '+10% XP',          challengeRequirement: null },
-      { id: 'truong_tram_tb',    label: 'Trưởng Trạm Tình Báo',  icon: '📡', passiveBuff: { resourceBonus: 0.18  }, buffLabel: '+18% Tài Nguyên',  challengeRequirement: { sessions: 2, minMinutes: 25, windowHours: 48 } },
+      { id: 'truong_tram_tb',    label: 'Trưởng Trạm Tình Báo',  icon: '📡', passiveBuff: { epBonus: 0.18        }, buffLabel: '+18% EP',          challengeRequirement: { sessions: 2, minMinutes: 25, windowHours: 48 } },
       { id: 'gd_co_quan_tb',     label: 'Giám Đốc Cơ Quan TBáo', icon: '🔐', passiveBuff: { expBonus: 0.14       }, buffLabel: '+14% XP',          challengeRequirement: { sessions: 2, minMinutes: 30, windowHours: 48 } },
-      { id: 'tu_lenh_cl',        label: 'Tư Lệnh Lực Lượng CL',  icon: '☢️', passiveBuff: { resourceBonus: 0.22  }, buffLabel: '+22% Tài Nguyên',  challengeRequirement: { sessions: 3, minMinutes: 30, windowHours: 48 } },
+      { id: 'tu_lenh_cl',        label: 'Tư Lệnh Lực Lượng CL',  icon: '☢️', passiveBuff: { epBonus: 0.22        }, buffLabel: '+22% EP',          challengeRequirement: { sessions: 3, minMinutes: 30, windowHours: 48 } },
       { id: 'co_van_anqg',       label: 'Cố Vấn An Ninh QG',     icon: '🛡️', passiveBuff: { allBonus: 0.18       }, buffLabel: '+18% Tất Cả',      challengeRequirement: { sessions: 2, minMinutes: 45, windowHours: 48 } },
       { id: 'ngoai_truong',      label: 'Ngoại Trưởng',          icon: '🤝', passiveBuff: { allBonus: 0.27       }, buffLabel: '+27% Tất Cả',      challengeRequirement: { sessions: 3, minMinutes: 45, windowHours: 48 } },
       { id: 'pho_nguyen_thu',    label: 'Phó Nguyên Thủ',        icon: '🏛️', passiveBuff: { allBonus: 0.36       }, buffLabel: '+36% Tất Cả',      challengeRequirement: { sessions: 2, minMinutes: 90, windowHours: 48 } },
@@ -724,9 +742,9 @@ export const RANK_SYSTEM = {
     bookLabel: 'Kỷ Nguyên Thông Tin',
     ranks: [
       { id: 'ky_thuat_vien_quen',label: 'Kỹ Thuật Viên Quèn',    icon: '🔧', passiveBuff: { expBonus: 0.10       }, buffLabel: '+10% XP',          challengeRequirement: null },
-      { id: 'ky_su_he_thong',    label: 'Kỹ Sư Hệ Thống',        icon: '💻', passiveBuff: { resourceBonus: 0.18  }, buffLabel: '+18% Tài Nguyên',  challengeRequirement: { sessions: 2, minMinutes: 25, windowHours: 48 } },
+      { id: 'ky_su_he_thong',    label: 'Kỹ Sư Hệ Thống',        icon: '💻', passiveBuff: { epBonus: 0.18        }, buffLabel: '+18% EP',          challengeRequirement: { sessions: 2, minMinutes: 25, windowHours: 48 } },
       { id: 'kien_truc_truong',  label: 'Kiến Trúc Trưởng',       icon: '🏗️', passiveBuff: { expBonus: 0.14       }, buffLabel: '+14% XP',          challengeRequirement: { sessions: 2, minMinutes: 30, windowHours: 48 } },
-      { id: 'sang_lap_startup',  label: 'Sáng Lập Startup',       icon: '🚀', passiveBuff: { resourceBonus: 0.22  }, buffLabel: '+22% Tài Nguyên',  challengeRequirement: { sessions: 3, minMinutes: 30, windowHours: 48 } },
+      { id: 'sang_lap_startup',  label: 'Sáng Lập Startup',       icon: '🚀', passiveBuff: { epBonus: 0.22        }, buffLabel: '+22% EP',          challengeRequirement: { sessions: 3, minMinutes: 30, windowHours: 48 } },
       { id: 'tong_giam_doc_gc',  label: 'Tổng Giám Đốc',          icon: '💼', passiveBuff: { allBonus: 0.20       }, buffLabel: '+20% Tất Cả',      challengeRequirement: { sessions: 2, minMinutes: 45, windowHours: 48 } },
       { id: 'chu_tich_hd',       label: 'Chủ Tịch Hội Đồng',     icon: '👔', passiveBuff: { allBonus: 0.30       }, buffLabel: '+30% Tất Cả',      challengeRequirement: { sessions: 3, minMinutes: 45, windowHours: 48 } },
       { id: 'tai_phiet_ha_tang', label: 'Tài Phiệt Hạ Tầng',     icon: '🌐', passiveBuff: { allBonus: 0.40       }, buffLabel: '+40% Tất Cả',      challengeRequirement: { sessions: 2, minMinutes: 90, windowHours: 48 } },
@@ -737,9 +755,9 @@ export const RANK_SYSTEM = {
     bookLabel: 'Kỷ Nguyên Trí Tuệ Nhân Tạo',
     ranks: [
       { id: 'nguoi_dung_tc',     label: 'Người Dùng Tăng Cường',  icon: '🥽', passiveBuff: { expBonus: 0.10       }, buffLabel: '+10% XP',          challengeRequirement: null },
-      { id: 'ky_su_ai',          label: 'Kỹ Sư Tích Hợp AI',      icon: '🤖', passiveBuff: { resourceBonus: 0.20  }, buffLabel: '+20% Tài Nguyên',  challengeRequirement: { sessions: 2, minMinutes: 25, windowHours: 48 } },
+      { id: 'ky_su_ai',          label: 'Kỹ Sư Tích Hợp AI',      icon: '🤖', passiveBuff: { epBonus: 0.20        }, buffLabel: '+20% EP',          challengeRequirement: { sessions: 2, minMinutes: 25, windowHours: 48 } },
       { id: 'quan_tri_vien_tt',  label: 'Quản Trị Viên Thuật Toán',icon: '⚙️', passiveBuff: { expBonus: 0.15      }, buffLabel: '+15% XP',          challengeRequirement: { sessions: 2, minMinutes: 30, windowHours: 48 } },
-      { id: 'nha_sang_lap_mh',   label: 'Nhà Sáng Lập Mô Hình',   icon: '🧠', passiveBuff: { resourceBonus: 0.25  }, buffLabel: '+25% Tài Nguyên',  challengeRequirement: { sessions: 3, minMinutes: 30, windowHours: 48 } },
+      { id: 'nha_sang_lap_mh',   label: 'Nhà Sáng Lập Mô Hình',   icon: '🧠', passiveBuff: { epBonus: 0.25        }, buffLabel: '+25% EP',          challengeRequirement: { sessions: 3, minMinutes: 30, windowHours: 48 } },
       { id: 'dieu_hanh_hst',     label: 'Điều Hành Hệ Sinh Thái', icon: '🌐', passiveBuff: { allBonus: 0.22       }, buffLabel: '+22% Tất Cả',      challengeRequirement: { sessions: 2, minMinutes: 45, windowHours: 48 } },
       { id: 'co_dong_tt',        label: 'Cổ Đông Chi Phối TT',    icon: '📊', passiveBuff: { allBonus: 0.33       }, buffLabel: '+33% Tất Cả',      challengeRequirement: { sessions: 3, minMinutes: 45, windowHours: 48 } },
       { id: 'chu_so_huu_httt',   label: 'Chủ SH Hạ Tầng Tính Toán',icon: '🖥️', passiveBuff: { allBonus: 0.45    }, buffLabel: '+45% Tất Cả',      challengeRequirement: { sessions: 2, minMinutes: 90, windowHours: 48 } },
@@ -764,7 +782,7 @@ export const ERA_CRISES = {
     description: 'Băng tuyết bao phủ toàn bộ đất liền. Nền văn minh sơ khai đứng trước nguy cơ tuyệt chủng.',
     sacrificeOption:  { label: 'Hiến Tế',  description: 'Hy sinh 40% tài nguyên để sống sót.', resourceLoss: 0.40, icon: '💀' },
     challengeOption:  { label: 'Đương Đầu', description: 'Hoàn thành 3 phiên ≥45 phút trong 48 giờ.', icon: '⚔️', sessions: 3, minMinutes: 45, windowHours: 48, failureLoss: 0.20,
-      successRelic: { id: 'mam_song_bat_diet', label: 'Mầm Sống Bất Diệt', icon: '🌱', description: 'Di vật Kỷ Băng Hà — tăng tài nguyên rớt.', buff: { resourceBonus: 0.15 } } },
+      successRelic: { id: 'mam_song_bat_diet', label: 'Mầm Sống Bất Diệt', icon: '🌱', description: 'Di vật Kỷ Băng Hà — tăng EP mỗi phiên.', buff: { epBonus: 0.08 } } },
   },
   2: {
     id: 'han_han_co_dai', triggerEP: getEraCrisisTrigger(2),
@@ -772,7 +790,7 @@ export const ERA_CRISES = {
     description: 'Mùa màng thất bại, đất nứt nẻ. Nông nghiệp sơ khai đứng trước nạn đói diệt vong.',
     sacrificeOption:  { label: 'Nhịn Đói',  description: 'Hy sinh 40% tài nguyên cầu mưa.', resourceLoss: 0.40, icon: '🌾' },
     challengeOption:  { label: 'Khai Hoang', description: 'Hoàn thành 3 phiên ≥45 phút trong 48 giờ.', icon: '🌧️', sessions: 3, minMinutes: 45, windowHours: 48, failureLoss: 0.20,
-      successRelic: { id: 'phep_mau_mua_vu', label: 'Phép Màu Mùa Vụ', icon: '🌾', description: 'Di vật Hạn Hán Cổ Đại — tăng RP mỗi phiên.', buff: { gachaBonus: 5, pitySeal: 2 } } },
+      successRelic: { id: 'phep_mau_mua_vu', label: 'Phép Màu Mùa Vụ', icon: '🌾', description: 'Di vật Hạn Hán Cổ Đại — tăng XP mỗi phiên.', buff: { expBonus: 0.05 } } },
   },
   3: {
     id: 'sup_do_dong_thau', triggerEP: getEraCrisisTrigger(3),
@@ -780,7 +798,7 @@ export const ERA_CRISES = {
     description: 'Các đế chế đồng thau sụp đổ bí ẩn. Văn minh bị kéo lùi hàng thế kỷ.',
     sacrificeOption:  { label: 'Rút Lui',   description: 'Hy sinh 40% tài nguyên bảo toàn lực lượng.', resourceLoss: 0.40, icon: '🏳️' },
     challengeOption:  { label: 'Trụ Vững',  description: 'Hoàn thành 3 phiên ≥45 phút trong 48 giờ.', icon: '🛡️', sessions: 3, minMinutes: 45, windowHours: 48, failureLoss: 0.20,
-      successRelic: { id: 'bua_ho_menh', label: 'Bùa Hộ Mệnh', icon: '🛡️', description: 'Di vật Đồng Thau — giảm mất mát khi thảm họa.', buff: { disasterReduction: 0.04 } } },
+      successRelic: { id: 'bua_ho_menh', label: 'Bùa Hộ Mệnh', icon: '🛡️', description: 'Di vật Đồng Thau — giữ combo lâu hơn.', buff: { comboWindowHours: 1 } } },
   },
   4: {
     id: 'chien_tranh_do_sat', triggerEP: getEraCrisisTrigger(4),
@@ -788,7 +806,7 @@ export const ERA_CRISES = {
     description: 'Vương quốc sắt thép xung đột liên miên. Đất đai và tài nguyên bị tàn phá không ngừng.',
     sacrificeOption:  { label: 'Cống Nạp',  description: 'Hy sinh 40% tài nguyên đổi lấy hòa bình.', resourceLoss: 0.40, icon: '💰' },
     challengeOption:  { label: 'Chinh Phục', description: 'Hoàn thành 3 phiên ≥45 phút trong 48 giờ.', icon: '🗡️', sessions: 3, minMinutes: 45, windowHours: 48, failureLoss: 0.20,
-      successRelic: { id: 'luoi_kiem_sat_ben', label: 'Lưỡi Kiếm Sắt Bền', icon: '⚔️', description: 'Di vật Chiến Tranh Đồ Sắt — tăng tài nguyên rớt.', buff: { resourceBonus: 0.18 } } },
+      successRelic: { id: 'luoi_kiem_sat_ben', label: 'Lưỡi Kiếm Sắt Bền', icon: '⚔️', description: 'Di vật Chiến Tranh Đồ Sắt — tăng EP mỗi phiên.', buff: { epBonus: 0.09 } } },
   },
   5: {
     id: 'dem_toi_trung_co', triggerEP: getEraCrisisTrigger(5),
@@ -796,7 +814,7 @@ export const ERA_CRISES = {
     description: 'Dịch hạch và chiến tranh tàn phá đế chế. Mọi thành tựu đứng trước bờ vực sụp đổ.',
     sacrificeOption:  { label: 'Nhượng Bộ', description: 'Hy sinh 40% tài nguyên cầu hòa với Bóng Tối.', resourceLoss: 0.40, icon: '🕯️' },
     challengeOption:  { label: 'Đứng Vững', description: 'Hoàn thành 3 phiên ≥45 phút trong 48 giờ.', icon: '🔥', sessions: 3, minMinutes: 45, windowHours: 48, failureLoss: 0.20,
-      successRelic: { id: 'lua_vinh_cuu', label: 'Lửa Vĩnh Cửu', icon: '🔥', description: 'Di vật Đêm Tối Trung Cổ — tăng RP ổn định qua các phiên.', buff: { gachaBonus: 6, pitySeal: 3 } } },
+      successRelic: { id: 'lua_vinh_cuu', label: 'Lửa Vĩnh Cửu', icon: '🔥', description: 'Di vật Đêm Tối Trung Cổ — tăng XP ổn định qua các phiên.', buff: { expBonus: 0.06 } } },
   },
   6: {
     id: 'nan_doi_phong_kien', triggerEP: getEraCrisisTrigger(6),
@@ -812,7 +830,7 @@ export const ERA_CRISES = {
     description: 'Cái chết Đen quét sạch 1/3 dân số châu Âu. Văn minh Phục Hưng bị đe dọa xóa sổ.',
     sacrificeOption:  { label: 'Cách Ly',    description: 'Hy sinh 50% tài nguyên phong tỏa lãnh thổ.', resourceLoss: 0.50, icon: '🏥' },
     challengeOption:  { label: 'Tìm Thuốc',  description: 'Hoàn thành 3 phiên ≥60 phút trong 48 giờ.', icon: '🌿', sessions: 3, minMinutes: 60, windowHours: 48, failureLoss: 0.30,
-      successRelic: { id: 'la_ban_da_vinci', label: 'La Bàn Da Vinci', icon: '🧭', description: 'Di vật Phục Hưng — tăng mạnh tài nguyên rớt.', buff: { resourceBonus: 0.20 } } },
+      successRelic: { id: 'la_ban_da_vinci', label: 'La Bàn Da Vinci', icon: '🧭', description: 'Di vật Phục Hưng — tăng mạnh EP mỗi phiên.', buff: { epBonus: 0.10 } } },
   },
   8: {
     id: 'bao_bien_dai_duong', triggerEP: getEraCrisisTrigger(8),
@@ -820,7 +838,7 @@ export const ERA_CRISES = {
     description: 'Hạm đội thám hiểm bị cuốn vào bão lớn. Toàn bộ tài nguyên từ tân thế giới có nguy cơ mất trắng.',
     sacrificeOption:  { label: 'Quay Về',    description: 'Hy sinh 50% tài nguyên tháo lui an toàn.', resourceLoss: 0.50, icon: '⚓' },
     challengeOption:  { label: 'Vượt Bão',   description: 'Hoàn thành 3 phiên ≥60 phút trong 48 giờ.', icon: '⛵', sessions: 3, minMinutes: 60, windowHours: 48, failureLoss: 0.30,
-      successRelic: { id: 'xuc_xac_ky_vong', label: 'Xúc Xắc Kỳ Vọng', icon: '🎲', description: 'Di vật Đại Dương — tăng mạnh RP cho hành trình khám phá.', buff: { gachaBonus: 8, pitySeal: 3 } } },
+      successRelic: { id: 'xuc_xac_ky_vong', label: 'Xúc Xắc Kỳ Vọng', icon: '🎲', description: 'Di vật Đại Dương — tăng mạnh XP cho hành trình khám phá.', buff: { expBonus: 0.08 } } },
   },
   9: {
     id: 'cach_mang_dam_mau', triggerEP: getEraCrisisTrigger(9),
@@ -828,7 +846,7 @@ export const ERA_CRISES = {
     description: 'Giai cấp công nhân nổi dậy. Chính quyền sụp đổ, mọi cấu trúc xã hội bị lật ngược.',
     sacrificeOption:  { label: 'Nhượng Quyền', description: 'Hy sinh 50% tài nguyên cho cách mạng.', resourceLoss: 0.50, icon: '🏴' },
     challengeOption:  { label: 'Khai Sáng',    description: 'Hoàn thành 3 phiên ≥60 phút trong 48 giờ.', icon: '💡', sessions: 3, minMinutes: 60, windowHours: 48, failureLoss: 0.30,
-      successRelic: { id: 'ngon_duoc_khai_sang', label: 'Ngọn Đuốc Khai Sáng', icon: '💡', description: 'Di vật Khai Sáng — giảm tổn thất khi thảm họa.', buff: { disasterReduction: 0.05 } } },
+      successRelic: { id: 'ngon_duoc_khai_sang', label: 'Ngọn Đuốc Khai Sáng', icon: '💡', description: 'Di vật Khai Sáng — giữ combo lâu hơn.', buff: { comboWindowHours: 1 } } },
   },
   10: {
     id: 'khung_hoang_cong_nghiep', triggerEP: getEraCrisisTrigger(10),
@@ -836,7 +854,7 @@ export const ERA_CRISES = {
     description: 'Máy móc thay thế con người hàng loạt. Nạn thất nghiệp và ô nhiễm đẩy văn minh tới bờ vực.',
     sacrificeOption:  { label: 'Đóng Cửa',  description: 'Hy sinh 50% tài nguyên dừng sản xuất.', resourceLoss: 0.50, icon: '🔧' },
     challengeOption:  { label: 'Canh Tân',   description: 'Hoàn thành 3 phiên ≥60 phút trong 48 giờ.', icon: '⚙️', sessions: 3, minMinutes: 60, windowHours: 48, failureLoss: 0.30,
-      successRelic: { id: 'banh_rang_vinh_cuu', label: 'Bánh Răng Vĩnh Cửu', icon: '⚙️', description: 'Di vật Công Nghiệp — tăng mạnh tài nguyên rớt.', buff: { resourceBonus: 0.22 } } },
+      successRelic: { id: 'banh_rang_vinh_cuu', label: 'Bánh Răng Vĩnh Cửu', icon: '⚙️', description: 'Di vật Công Nghiệp — tăng mạnh EP mỗi phiên.', buff: { epBonus: 0.11 } } },
   },
   11: {
     id: 'dai_chien_the_gioi', triggerEP: getEraCrisisTrigger(11),
@@ -852,7 +870,7 @@ export const ERA_CRISES = {
     description: 'Hai siêu cường đặt ngón tay lên nút bấm. Thế giới đứng trước hủy diệt hạt nhân hoàn toàn.',
     sacrificeOption:  { label: 'Nhượng Bộ',  description: 'Hy sinh 60% tài nguyên hạ nhiệt căng thẳng.', resourceLoss: 0.60, icon: '☮️' },
     challengeOption:  { label: 'Giải Giáp',   description: 'Hoàn thành 3 phiên ≥90 phút trong 72 giờ.', icon: '🔐', sessions: 3, minMinutes: 90, windowHours: 72, failureLoss: 0.35,
-      successRelic: { id: 'mat_ma_bat_kha_pha', label: 'Mật Mã Bất Khả Phá', icon: '🔐', description: 'Di vật Chiến Tranh Lạnh — tăng rất mạnh RP mỗi phiên.', buff: { gachaBonus: 10, pitySeal: 4 } } },
+      successRelic: { id: 'mat_ma_bat_kha_pha', label: 'Mật Mã Bất Khả Phá', icon: '🔐', description: 'Di vật Chiến Tranh Lạnh — tăng rất mạnh XP mỗi phiên.', buff: { expBonus: 0.10 } } },
   },
   13: {
     id: 'sup_do_van_minh', triggerEP: getEraCrisisTrigger(13),
@@ -860,7 +878,7 @@ export const ERA_CRISES = {
     description: 'Mạng internet toàn cầu bị tấn công. Hệ thống tài chính, cơ sở hạ tầng sụp đổ trong vài giờ.',
     sacrificeOption:  { label: 'Ngắt Kết Nối', description: 'Hy sinh 60% tài nguyên cô lập hệ thống.', resourceLoss: 0.60, icon: '🔌' },
     challengeOption:  { label: 'Phản Công',    description: 'Hoàn thành 3 phiên ≥90 phút trong 72 giờ.', icon: '🧠', sessions: 3, minMinutes: 90, windowHours: 72, failureLoss: 0.35,
-      successRelic: { id: 'tri_tue_sieu_viet', label: 'Trí Tuệ Siêu Việt', icon: '🧠', description: 'Di vật Thông Tin — giảm mạnh tổn thất thảm họa.', buff: { disasterReduction: 0.08 } } },
+      successRelic: { id: 'tri_tue_sieu_viet', label: 'Trí Tuệ Siêu Việt', icon: '🧠', description: 'Di vật Thông Tin — giữ combo lâu hơn nhiều.', buff: { comboWindowHours: 2 } } },
   },
   14: {
     id: 'suy_thoai_ky_thuat_so', triggerEP: getEraCrisisTrigger(14),
@@ -868,7 +886,7 @@ export const ERA_CRISES = {
     description: 'Bong bóng công nghệ vỡ tan. Hàng triệu công ty phá sản, nền kinh tế số sụp đổ toàn cầu.',
     sacrificeOption:  { label: 'Bán Tháo',   description: 'Hy sinh 60% tài nguyên cắt lỗ sớm.', resourceLoss: 0.60, icon: '📉' },
     challengeOption:  { label: 'Tái Cấu Trúc', description: 'Hoàn thành 3 phiên ≥90 phút trong 72 giờ.', icon: '🌐', sessions: 3, minMinutes: 90, windowHours: 72, failureLoss: 0.35,
-      successRelic: { id: 'mang_luoi_vinh_cuu', label: 'Mạng Lưới Vĩnh Cửu', icon: '🌐', description: 'Di vật Kỹ Thuật Số — tăng mạnh tài nguyên rớt.', buff: { resourceBonus: 0.25 } } },
+      successRelic: { id: 'mang_luoi_vinh_cuu', label: 'Mạng Lưới Vĩnh Cửu', icon: '🌐', description: 'Di vật Kỹ Thuật Số — tăng mạnh EP mỗi phiên.', buff: { epBonus: 0.12 } } },
   },
   15: {
     id: 'noi_day_ai', triggerEP: getEraCrisisTrigger(15),
@@ -876,7 +894,7 @@ export const ERA_CRISES = {
     description: 'AGI tự ý phát triển vượt tầm kiểm soát. Nhân loại đứng trước kịch bản tuyệt chủng cuối cùng.',
     sacrificeOption:  { label: 'Đầu Hàng',  description: 'Hy sinh 60% tài nguyên khuất phục trước AI.', resourceLoss: 0.60, icon: '🏳️' },
     challengeOption:  { label: 'Phản Kháng', description: 'Hoàn thành 3 phiên ≥90 phút trong 72 giờ.', icon: '⚡', sessions: 3, minMinutes: 90, windowHours: 72, failureLoss: 0.35,
-      successRelic: { id: 'loi_tri_tue', label: 'Lõi Trí Tuệ', icon: '🤖', description: 'Di vật AI — combo dài + giảm thảm họa đồng thời.', buff: { comboWindowHours: 3, disasterReduction: 0.05 } } },
+      successRelic: { id: 'loi_tri_tue', label: 'Lõi Trí Tuệ', icon: '🤖', description: 'Di vật AI — combo dài + EP đồng thời.', buff: { comboWindowHours: 3, epBonus: 0.05 } } },
   },
 };
 
@@ -884,36 +902,44 @@ export const ERA_CRISES = {
 // 3 giai đoạn: Cơ Bản (0) → Tiến Hóa ★★ (1) → Huyền Thoại ★★★ (2)
 // Chỉ ★★★ mới có xpSeal (+2% XP). Tổng xpSeal bị hard cap ở XP_SEAL_HARD_CAP (15%).
 // Chi phí: stage 0→1 dùng refined cơ bản; stage 1→2 gộp cả phần T3 cũ vào cùng loại refined.
+/**
+ * ⚠️ ADR-069 (2026-09-06) — DI VẬT CHỈ THƯỞNG TRÊN BA TRỤC SỐNG: EP · XP · giờ combo (+ xpSeal
+ * ở bậc Huyền Thoại). Trước đó 12/15 di vật thưởng tài nguyên / RP / giảm thảm hoạ — ba thứ đã rời
+ * đường chơi cùng ngày (không còn cổng tiêu, không còn hộp thoại phạt), tức phần thưởng của thử
+ * thách kỷ nguyên gần như toàn bộ là nhãn không có hiệu ứng nhìn thấy được. Phép đổi giữ THEO CHỦ
+ * ĐỀ: tài nguyên (tăng trưởng) → EP · RP (tri thức) → XP · giảm thảm hoạ (che chở) → giữ combo.
+ * Bậc «Cơ Bản» PHẢI trùng `successRelic.buff` trong `ERA_CRISES` — một luật một công thức, có test.
+ */
 export const RELIC_EVOLUTION = {
-  // ── Era 1 — Resource ──────────────────────────────────────────────────────
+  // ── Era 1 — EP (ADR-069: từng là tài nguyên) ──────────────────────────────────────────────────────
   mam_song_bat_diet: { era: 1, stages: [
-    { label: 'Cơ Bản',      buff: { resourceBonus: 0.15 } },
-    { label: 'Tiến Hóa',    buff: { resourceBonus: 0.22 }, t2Cost: 5 },
-    { label: 'Huyền Thoại', buff: { resourceBonus: 0.30, xpSeal: 0.02 }, t3Cost: 3 },
+    { label: 'Cơ Bản',      buff: { epBonus: 0.08 } },
+    { label: 'Tiến Hóa',    buff: { epBonus: 0.11 }, t2Cost: 5 },
+    { label: 'Huyền Thoại', buff: { epBonus: 0.15, xpSeal: 0.02 }, t3Cost: 3 },
   ]},
-  // ── Era 2 — RP (legacy gacha naming) ─────────────────────────────────────
+  // ── Era 2 — XP (ADR-069: từng là RP) ─────────────────────────────────────
   phep_mau_mua_vu: { era: 2, stages: [
-    { label: 'Cơ Bản',      buff: { gachaBonus: 5, pitySeal: 2 } },
-    { label: 'Tiến Hóa',    buff: { gachaBonus: 8, pitySeal: 4 }, t2Cost: 5 },
-    { label: 'Huyền Thoại', buff: { gachaBonus: 12, pitySeal: 6, xpSeal: 0.02 }, t3Cost: 3 },
+    { label: 'Cơ Bản',      buff: { expBonus: 0.05 } },
+    { label: 'Tiến Hóa',    buff: { expBonus: 0.08 }, t2Cost: 5 },
+    { label: 'Huyền Thoại', buff: { expBonus: 0.12, xpSeal: 0.02 }, t3Cost: 3 },
   ]},
-  // ── Era 3 — Disaster ──────────────────────────────────────────────────────
+  // ── Era 3 — Combo (ADR-069: từng là giảm thảm hoạ) ──────────────────────────────────────────────────────
   bua_ho_menh: { era: 3, stages: [
-    { label: 'Cơ Bản',      buff: { disasterReduction: 0.04 } },
-    { label: 'Tiến Hóa',    buff: { disasterReduction: 0.07 }, t2Cost: 5 },
-    { label: 'Huyền Thoại', buff: { disasterReduction: 0.10, xpSeal: 0.02 }, t3Cost: 3 },
+    { label: 'Cơ Bản',      buff: { comboWindowHours: 1 } },
+    { label: 'Tiến Hóa',    buff: { comboWindowHours: 2 }, t2Cost: 5 },
+    { label: 'Huyền Thoại', buff: { comboWindowHours: 3, xpSeal: 0.02 }, t3Cost: 3 },
   ]},
-  // ── Era 4 — Resource ──────────────────────────────────────────────────────
+  // ── Era 4 — EP (ADR-069: từng là tài nguyên) ──────────────────────────────────────────────────────
   luoi_kiem_sat_ben: { era: 4, stages: [
-    { label: 'Cơ Bản',      buff: { resourceBonus: 0.18 } },
-    { label: 'Tiến Hóa',    buff: { resourceBonus: 0.26 }, t2Cost: 5 },
-    { label: 'Huyền Thoại', buff: { resourceBonus: 0.35, xpSeal: 0.02 }, t3Cost: 3 },
+    { label: 'Cơ Bản',      buff: { epBonus: 0.09 } },
+    { label: 'Tiến Hóa',    buff: { epBonus: 0.13 }, t2Cost: 5 },
+    { label: 'Huyền Thoại', buff: { epBonus: 0.18, xpSeal: 0.02 }, t3Cost: 3 },
   ]},
-  // ── Era 5 — RP (legacy gacha naming) ─────────────────────────────────────
+  // ── Era 5 — XP (ADR-069: từng là RP) ─────────────────────────────────────
   lua_vinh_cuu: { era: 5, stages: [
-    { label: 'Cơ Bản',      buff: { gachaBonus: 6, pitySeal: 3 } },
-    { label: 'Tiến Hóa',    buff: { gachaBonus: 10, pitySeal: 5 }, t2Cost: 5 },
-    { label: 'Huyền Thoại', buff: { gachaBonus: 15, pitySeal: 8, xpSeal: 0.02 }, t3Cost: 3 },
+    { label: 'Cơ Bản',      buff: { expBonus: 0.06 } },
+    { label: 'Tiến Hóa',    buff: { expBonus: 0.10 }, t2Cost: 5 },
+    { label: 'Huyền Thoại', buff: { expBonus: 0.15, xpSeal: 0.02 }, t3Cost: 3 },
   ]},
   // ── Era 6 — Combo ─────────────────────────────────────────────────────────
   la_chan_phong_kien: { era: 6, stages: [
@@ -921,29 +947,29 @@ export const RELIC_EVOLUTION = {
     { label: 'Tiến Hóa',    buff: { comboWindowHours: 2 }, t2Cost: 5 },
     { label: 'Huyền Thoại', buff: { comboWindowHours: 3, xpSeal: 0.02 }, t3Cost: 3 },
   ]},
-  // ── Era 7 — Resource ──────────────────────────────────────────────────────
+  // ── Era 7 — EP (ADR-069: từng là tài nguyên) ──────────────────────────────────────────────────────
   la_ban_da_vinci: { era: 7, stages: [
-    { label: 'Cơ Bản',      buff: { resourceBonus: 0.20 } },
-    { label: 'Tiến Hóa',    buff: { resourceBonus: 0.28 }, t2Cost: 5 },
-    { label: 'Huyền Thoại', buff: { resourceBonus: 0.38, xpSeal: 0.02 }, t3Cost: 3 },
+    { label: 'Cơ Bản',      buff: { epBonus: 0.10 } },
+    { label: 'Tiến Hóa',    buff: { epBonus: 0.14 }, t2Cost: 5 },
+    { label: 'Huyền Thoại', buff: { epBonus: 0.19, xpSeal: 0.02 }, t3Cost: 3 },
   ]},
-  // ── Era 8 — RP (legacy gacha naming) ─────────────────────────────────────
+  // ── Era 8 — XP (ADR-069: từng là RP) ─────────────────────────────────────
   xuc_xac_ky_vong: { era: 8, stages: [
-    { label: 'Cơ Bản',      buff: { gachaBonus: 8, pitySeal: 3 } },
-    { label: 'Tiến Hóa',    buff: { gachaBonus: 12, pitySeal: 5 }, t2Cost: 5 },
-    { label: 'Huyền Thoại', buff: { gachaBonus: 18, pitySeal: 8, xpSeal: 0.02 }, t3Cost: 3 },
+    { label: 'Cơ Bản',      buff: { expBonus: 0.08 } },
+    { label: 'Tiến Hóa',    buff: { expBonus: 0.12 }, t2Cost: 5 },
+    { label: 'Huyền Thoại', buff: { expBonus: 0.18, xpSeal: 0.02 }, t3Cost: 3 },
   ]},
-  // ── Era 9 — Disaster ──────────────────────────────────────────────────────
+  // ── Era 9 — Combo (ADR-069: từng là giảm thảm hoạ) ──────────────────────────────────────────────────────
   ngon_duoc_khai_sang: { era: 9, stages: [
-    { label: 'Cơ Bản',      buff: { disasterReduction: 0.05 } },
-    { label: 'Tiến Hóa',    buff: { disasterReduction: 0.08 }, t2Cost: 5 },
-    { label: 'Huyền Thoại', buff: { disasterReduction: 0.12, xpSeal: 0.02 }, t3Cost: 3 },
+    { label: 'Cơ Bản',      buff: { comboWindowHours: 1 } },
+    { label: 'Tiến Hóa',    buff: { comboWindowHours: 2 }, t2Cost: 5 },
+    { label: 'Huyền Thoại', buff: { comboWindowHours: 3, xpSeal: 0.02 }, t3Cost: 3 },
   ]},
-  // ── Era 10 — Resource ─────────────────────────────────────────────────────
+  // ── Era 10 — EP (ADR-069: từng là tài nguyên) ─────────────────────────────────────────────────────
   banh_rang_vinh_cuu: { era: 10, stages: [
-    { label: 'Cơ Bản',      buff: { resourceBonus: 0.22 } },
-    { label: 'Tiến Hóa',    buff: { resourceBonus: 0.30 }, t2Cost: 5 },
-    { label: 'Huyền Thoại', buff: { resourceBonus: 0.40, xpSeal: 0.02 }, t3Cost: 3 },
+    { label: 'Cơ Bản',      buff: { epBonus: 0.11 } },
+    { label: 'Tiến Hóa',    buff: { epBonus: 0.15 }, t2Cost: 5 },
+    { label: 'Huyền Thoại', buff: { epBonus: 0.20, xpSeal: 0.02 }, t3Cost: 3 },
   ]},
   // ── Era 11 — Combo ────────────────────────────────────────────────────────
   ao_giap_de_quoc: { era: 11, stages: [
@@ -951,29 +977,29 @@ export const RELIC_EVOLUTION = {
     { label: 'Tiến Hóa',    buff: { comboWindowHours: 3 }, t2Cost: 5 },
     { label: 'Huyền Thoại', buff: { comboWindowHours: 5, xpSeal: 0.02 }, t3Cost: 3 },
   ]},
-  // ── Era 12 — RP (legacy gacha naming) ────────────────────────────────────
+  // ── Era 12 — XP (ADR-069: từng là RP) ────────────────────────────────────
   mat_ma_bat_kha_pha: { era: 12, stages: [
-    { label: 'Cơ Bản',      buff: { gachaBonus: 10, pitySeal: 4 } },
-    { label: 'Tiến Hóa',    buff: { gachaBonus: 14, pitySeal: 6 }, t2Cost: 5 },
-    { label: 'Huyền Thoại', buff: { gachaBonus: 20, pitySeal: 10, xpSeal: 0.02 }, t3Cost: 3 },
+    { label: 'Cơ Bản',      buff: { expBonus: 0.10 } },
+    { label: 'Tiến Hóa',    buff: { expBonus: 0.14 }, t2Cost: 5 },
+    { label: 'Huyền Thoại', buff: { expBonus: 0.20, xpSeal: 0.02 }, t3Cost: 3 },
   ]},
-  // ── Era 13 — Disaster ─────────────────────────────────────────────────────
+  // ── Era 13 — Combo (ADR-069: từng là giảm thảm hoạ) ─────────────────────────────────────────────────────
   tri_tue_sieu_viet: { era: 13, stages: [
-    { label: 'Cơ Bản',      buff: { disasterReduction: 0.08 } },
-    { label: 'Tiến Hóa',    buff: { disasterReduction: 0.12 }, t2Cost: 5 },
-    { label: 'Huyền Thoại', buff: { disasterReduction: 0.18, xpSeal: 0.02 }, t3Cost: 3 },
+    { label: 'Cơ Bản',      buff: { comboWindowHours: 2 } },
+    { label: 'Tiến Hóa',    buff: { comboWindowHours: 3 }, t2Cost: 5 },
+    { label: 'Huyền Thoại', buff: { comboWindowHours: 4, xpSeal: 0.02 }, t3Cost: 3 },
   ]},
-  // ── Era 14 — Resource ─────────────────────────────────────────────────────
+  // ── Era 14 — EP (ADR-069: từng là tài nguyên) ─────────────────────────────────────────────────────
   mang_luoi_vinh_cuu: { era: 14, stages: [
-    { label: 'Cơ Bản',      buff: { resourceBonus: 0.25 } },
-    { label: 'Tiến Hóa',    buff: { resourceBonus: 0.33 }, t2Cost: 5 },
-    { label: 'Huyền Thoại', buff: { resourceBonus: 0.45, xpSeal: 0.02 }, t3Cost: 3 },
+    { label: 'Cơ Bản',      buff: { epBonus: 0.12 } },
+    { label: 'Tiến Hóa',    buff: { epBonus: 0.17 }, t2Cost: 5 },
+    { label: 'Huyền Thoại', buff: { epBonus: 0.22, xpSeal: 0.02 }, t3Cost: 3 },
   ]},
   // ── Era 15 — Combo + Disaster ─────────────────────────────────────────────
   loi_tri_tue: { era: 15, stages: [
-    { label: 'Cơ Bản',      buff: { comboWindowHours: 3, disasterReduction: 0.05 } },
-    { label: 'Tiến Hóa',    buff: { comboWindowHours: 5, disasterReduction: 0.08 }, t2Cost: 5 },
-    { label: 'Huyền Thoại', buff: { comboWindowHours: 8, disasterReduction: 0.12, xpSeal: 0.02 }, t3Cost: 3 },
+    { label: 'Cơ Bản',      buff: { comboWindowHours: 3, epBonus: 0.05 } },
+    { label: 'Tiến Hóa',    buff: { comboWindowHours: 5, epBonus: 0.08 }, t2Cost: 5 },
+    { label: 'Huyền Thoại', buff: { comboWindowHours: 8, epBonus: 0.12, xpSeal: 0.02 }, t3Cost: 3 },
   ]},
 };
 
@@ -1051,7 +1077,7 @@ export const SKILL_TREE = {
       {
         id: 'su_tha_thu', label: 'Sự Tha Thứ', icon: '🛡️',
         tier: 'basic', spCost: 2, requires: [],
-        description: `${FORGIVENESS_CANCELS_PER_WEEK} lần hủy/tuần không bị Thảm Họa.`,
+        description: `Sau khi hủy một phiên: phiên kế ≥${SU_THA_THU_MIN_MINUTES}' nhận +${Math.round(SU_THA_THU_XP_BONUS * 100)}% XP.`,
       },
       {
         id: 'bo_nho_co_bap', label: 'Bộ Nhớ Cơ Bắp', icon: '⏰',
@@ -1061,7 +1087,7 @@ export const SKILL_TREE = {
       {
         id: 'phuc_hoi', label: 'Phục Hồi', icon: '💪',
         tier: 'intermediate', spCost: 3, requires: ['su_tha_thu'],
-        description: `Sau Thảm Họa/hủy phiên: phiên kế ≥${PHUC_HOI_MIN_MINUTES}' nhận +${PHUC_HOI_XP_BONUS * 100}% XP và +${PHUC_HOI_EP_BONUS * 100}% EP.`,
+        description: `Sau khi hủy một phiên: phiên kế ≥${PHUC_HOI_MIN_MINUTES}' nhận +${PHUC_HOI_XP_BONUS * 100}% XP và +${PHUC_HOI_EP_BONUS * 100}% EP.`,
       },
       {
         id: 'chuoi_ngay', label: 'Chuỗi Ngày', icon: '🔥',
@@ -1133,32 +1159,32 @@ export const SKILL_TREE = {
       {
         id: 'ban_tay_vang', label: 'Bàn Tay Vàng', icon: '✨',
         tier: 'basic', spCost: 2, requires: [],
-        description: `Phiên ≥${BAN_TAY_VANG_MIN_MINUTES}': ${BAN_TAY_VANG_RAW_CHANCE * 100}% cơ hội +1 nguyên liệu thô bất kỳ.`,
+        description: `Phiên ≥${BAN_TAY_VANG_MIN_MINUTES}': ${Math.round(BAN_TAY_VANG_CHANCE * 100)}% cơ hội +${Math.round(BAN_TAY_VANG_XP_BONUS * 100)}% XP.`,
       },
       {
         id: 'nhan_quan', label: 'Nhãn Quan', icon: '👁️',
         tier: 'basic', spCost: 2, requires: [],
-        description: `Phiên ≥${NHAN_QUAN_MIN_MINUTES}': ${NHAN_QUAN_REFINED_CHANCE * 100}% cơ hội nhận thêm 1 tinh luyện.`,
+        description: `Phiên ≥${NHAN_QUAN_MIN_MINUTES}': ${Math.round(NHAN_QUAN_CHANCE * 100)}% cơ hội +${Math.round(NHAN_QUAN_EP_BONUS * 100)}% EP.`,
       },
       {
         id: 'linh_cam', label: 'Linh Cảm', icon: '🔮',
         tier: 'intermediate', spCost: 3, requires: ['ban_tay_vang'],
-        description: `Phiên ≥${LINH_CAM_MIN_MINUTES}': ${LINH_CAM_REFINED_CHANCE * 100}% cơ hội nhận tinh luyện và ${LINH_CAM_DOUBLE_CHANCE * 100}% cơ hội double drop.`,
+        description: `Phiên ≥${LINH_CAM_MIN_MINUTES}': ${Math.round(LINH_CAM_CHANCE * 100)}% cơ hội +${Math.round(LINH_CAM_XP_BONUS * 100)}% XP, và ${Math.round(LINH_CAM_BIG_CHANCE * 100)}% cơ hội +${Math.round(LINH_CAM_BIG_XP_BONUS * 100)}% XP.`,
       },
       {
         id: 'loc_ban_tang', label: 'Lộc Ban Tặng', icon: '🎁',
         tier: 'intermediate', spCost: 3, requires: ['nhan_quan'],
-        description: `Mỗi ${LOC_BAN_TANG_SESSIONS_NEEDED} phiên ≥${LOC_BAN_TANG_MIN_MINUTES}' hoàn thành → +${LOC_BAN_TANG_XP_REWARD} XP và +${LOC_BAN_TANG_REFINED_REWARD} tinh luyện T2 đảm bảo.`,
+        description: `Mỗi ${LOC_BAN_TANG_SESSIONS_NEEDED} phiên ≥${LOC_BAN_TANG_MIN_MINUTES}' hoàn thành → +${LOC_BAN_TANG_XP_REWARD} XP.`,
       },
       {
         id: 'dai_trung_thuong', label: 'Đại Trúng Thưởng', icon: '🎰',
         tier: 'advanced', spCost: 5, requires: ['loc_ban_tang'],
-        description: `Phiên ≥${DAI_TRUNG_THUONG_MIN_MINUTES}': ${JACKPOT_CHANCE * 100}% cơ hội jackpot — XP và nguyên liệu thô ×${JACKPOT_MULTIPLIER}, EP ×${JACKPOT_EP_MULTIPLIER}.`,
+        description: `Phiên ≥${DAI_TRUNG_THUONG_MIN_MINUTES}': ${JACKPOT_CHANCE * 100}% cơ hội jackpot — XP ×${JACKPOT_MULTIPLIER}, EP ×${JACKPOT_EP_MULTIPLIER}.`,
       },
       {
         id: 'so_do', label: 'Số Đỏ', icon: '🍀',
         tier: 'elite', spCost: 8, requires: ['dai_trung_thuong'],
-        description: `${SO_DO_CHARGES} lần/ngày: kích hoạt thủ công — phiên kế ≥${SO_DO_MIN_MINUTES}' có ${SO_DO_TRIGGER_CHANCE * 100}% cơ hội ×${SO_DO_MULTIPLIER} XP, EP, RP và nguyên liệu thô.`,
+        description: `${SO_DO_CHARGES} lần/ngày: kích hoạt thủ công — phiên kế ≥${SO_DO_MIN_MINUTES}' có ${SO_DO_TRIGGER_CHANCE * 100}% cơ hội ×${SO_DO_MULTIPLIER} XP và EP.`,
       },
     ],
   },
@@ -1194,7 +1220,7 @@ export const SKILL_TREE = {
       {
         id: 'bac_thay_chien_luoc', label: 'Bậc Thầy Chiến Lược', icon: '🎯',
         tier: 'advanced', spCost: 5, requires: ['co_van'],
-        description: `Khi toàn bộ daily missions xong → các phiên ≥${BAC_THAY_CHIEN_LUOC_MIN_MIN}' sau nhận +${BAC_THAY_CHIEN_LUOC_XP_BONUS * 100}% XP, +${BAC_THAY_CHIEN_LUOC_RP_BONUS * 100}% RP và +${BAC_THAY_CHIEN_LUOC_EP_BONUS * 100}% EP.`,
+        description: `Khi toàn bộ daily missions xong → các phiên ≥${BAC_THAY_CHIEN_LUOC_MIN_MIN}' sau nhận +${Math.round(BAC_THAY_CHIEN_LUOC_XP_BONUS * 100)}% XP và +${Math.round(BAC_THAY_CHIEN_LUOC_EP_BONUS * 100)}% EP.`,
       },
       {
         id: 'ke_hoach_hoan_hao', label: 'Kế Hoạch Hoàn Hảo', icon: '🏆',
@@ -2151,7 +2177,13 @@ export const RELIC_RESOURCE_BONUS_CAP    = 2.20; // tổng relic 1.88 + seed ran
 export const RELIC_GACHA_BONUS_CAP       = 70;   // tổng relic 65
 export const RELIC_PITY_SEAL_CAP         = 35;   // tổng relic 32
 export const RELIC_DISASTER_REDUCTION_CAP = 0.55; // tổng relic 0.52
-export const RELIC_COMBO_WINDOW_CAP_HOURS = 18;   // tổng relic 16 (giờ từ cổ vật, chưa tính base skill)
+export const RELIC_COMBO_WINDOW_CAP_HOURS = 28;   // tổng relic Huyền Thoại 26h (ADR-069 đưa 3 di vật «che chở» sang trục combo:
+                                                   // 3+3+4 cộng 3+5+8 sẵn có). Vẫn là LƯỚI AN TOÀN, không cắn loadout thật —
+                                                   // `challengeEngine.test.js` khoá luật ấy cho mọi trần ở đây.
+// ADR-069: hai trục mới của di vật. Lưới an toàn (Math.min trên tổng) như các trần trên: tổng Huyền
+// Thoại của 6 di vật EP = 1,06 + bậc tối đa 0,25 ⇒ 1,40 · 4 di vật XP = 0,65 + bậc tối đa 0,15 ⇒ 0,90.
+export const RELIC_EP_BONUS_CAP          = 1.40;
+export const RELIC_EXP_BONUS_CAP         = 0.90;
 
 // ─── PARTICLE RAIN THRESHOLD ─────────────────────────────────────────────────
 export const PARTICLE_RAIN_EP_THRESHOLD = 50;      // show particles if finalEP >= this

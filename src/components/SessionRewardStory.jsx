@@ -19,7 +19,12 @@ import useGameStore from '../store/gameStore';
 import useSettingsStore from '../store/settingsStore';
 import soundEngine from '../engine/soundEngine';
 import notificationManager from '../engine/notifications';
-import { countSessionsOnDay, getDailyGoalProgress } from '../engine/gameMath';
+import { countSessionsOnDay, getDailyGoalProgress, getEffectiveSkillCost } from '../engine/gameMath';
+import { listAvailableSkills, nextReachableSkill } from '../engine/opportunities';
+import { describeQueue, eraBuildProgress, listNextProjects } from '../engine/buildChoices';
+import { describeCrisisQuest } from '../engine/rankLadder';
+import { getGlyph, hasGlyphIcon } from '../utils/labelMark';
+import { SkillGlyph } from './icons/Glyph';
 import { localDateStr, localWeekMondayStr } from '../engine/time';
 import { missionXpMultiplier } from '../engine/wonderEffects.js';
 import { getRewardTier } from '../engine/rewardTiers';
@@ -38,7 +43,7 @@ import { readPreviewCard, readPreviewScene } from '../dev/previewStage';
 import WeekStrip from './WeekStrip';
 import { buildWeekStrip } from './todayHero';
 import { dailyAllBonusXP, scaleMissionXP } from './missionXp';
-import { buildRewardStoryCards, storyCardDurationMs } from './sessionRewardStory';
+import { STORY_LAST_CARD_MS, buildRewardStoryCards, storyCardDurationMs } from './sessionRewardStory';
 
 const DISPLAY_FONT = 'var(--skin-font-display)';
 const eyebrowClass = 'mono text-[10px] uppercase tracking-[0.24em]';
@@ -57,6 +62,15 @@ export default function SessionRewardStory({ onDone }) {
   const buildings = useGameStore((s) => s.buildings);
   const strategist = useGameStore((s) => Boolean(s.player.unlockedSkills?.bac_thay_chien_luoc));
   const claimMissionAllBonus = useGameStore((s) => s.claimMissionAllBonus);
+  // ADR-069: ba nguồn mới cho ba thẻ mới — công trình đang xây, kỹ năng chọn được, thử thách kỷ.
+  const craftingQueue = useGameStore((s) => s.craftingQueue);
+  const activeBook = useGameStore((s) => s.progress.activeBook);
+  const eraCrisis = useGameStore((s) => s.eraCrisis);
+  const sp = useGameStore((s) => s.player.sp);
+  const unlockedSkills = useGameStore((s) => s.player.unlockedSkills);
+  const relics = useGameStore((s) => s.relics);
+  const relicEvolutions = useGameStore((s) => s.relicEvolutions);
+  const unlockSkill = useGameStore((s) => s.unlockSkill);
   const dailyGoalType = useSettingsStore((s) => s.dailyGoalType);
   const dailyGoalSessions = useSettingsStore((s) => s.dailyGoalSessions);
   const dailyGoalMinutes = useSettingsStore((s) => s.dailyGoalMinutes);
@@ -93,11 +107,23 @@ export default function SessionRewardStory({ onDone }) {
       completedMissionIds,
       missionXp: (xp) => scaleMissionXP(xp, multiplier),
       bonusXP: dailyAllBonusXP({ list: missions?.list, multiplier, strategist }),
+      project: describeProjectAfterSession({ reward, craftingQueue, buildings, activeBook }),
+      skills: describeSkillChoices({ sp, unlockedSkills, relics, relicEvolutions }),
+      crisisQuest: describeQuestAfterSession({ reward, eraCrisis, history }),
     });
   }, [
     reward, streak, missions, completedMissionIds, history, dailyTracking, buildings, strategist,
     dailyGoalType, dailyGoalSessions, dailyGoalMinutes, todayKey, mondayKey,
+    craftingQueue, activeBook, eraCrisis, sp, unlockedSkills, relics, relicEvolutions,
   ]);
+
+  // Kỹ năng vừa chọn trên thẻ lên cấp — giữ cục bộ, vì sau khi mở thì `sp` đổi và thẻ dựng lại.
+  const [pickedSkill, setPickedSkill] = useState(null);
+  const handlePickSkill = useCallback((choice) => {
+    if (!unlockSkill(choice.id, choice.spCost, choice.requires)) return;
+    soundEngine.playSkillUnlock();
+    setPickedSkill(choice);
+  }, [unlockSkill]);
 
   const [index, setIndex] = useState(() => {
     if (!jumpTo) return 0;
@@ -113,6 +139,7 @@ export default function SessionRewardStory({ onDone }) {
       openDetail: false,
       shownMissionIds: quests ? quests.rows.filter((r) => r.justDone).map((r) => r.id) : [],
       levelShown: cards.some((c) => c.id === 'level'),
+      relicShown: cards.some((c) => c.id === 'relic'),
       ...extra,
     });
   }, [cards, onDone]);
@@ -122,12 +149,16 @@ export default function SessionRewardStory({ onDone }) {
     else setIndex((i) => i + 1);
   }, [isLast, finish]);
 
-  // Tự lật. Đứng yên khi đang soi (`frozen`).
+  // Thẻ đang HỎI (chọn kỹ năng) thì đứng yên cho tới khi chọn xong hoặc bấm "Để sau".
+  const holding = Boolean(card?.hold) && !pickedSkill;
+
+  // Tự lật. Đứng yên khi đang soi (`frozen`) hoặc đang hỏi (`holding`).
   useEffect(() => {
-    if (!card || frozen) return undefined;
-    const t = window.setTimeout(next, storyCardDurationMs(card, isLast));
+    if (!card || frozen || holding) return undefined;
+    const ms = storyCardDurationMs(card, isLast) ?? STORY_LAST_CARD_MS;
+    const t = window.setTimeout(next, ms);
     return () => window.clearTimeout(t);
-  }, [card, isLast, next, frozen]);
+  }, [card, isLast, next, frozen, holding]);
 
   // Âm thanh theo thẻ — mỗi thẻ một lần, không kêu lại khi store nhúc nhích.
   const cardId = card?.id ?? null;
@@ -141,6 +172,8 @@ export default function SessionRewardStory({ onDone }) {
       }
     }
     if (cardId === 'streak' && card.justHit) soundEngine.playMilestone();
+    if (cardId === 'rank') soundEngine.playMilestone();
+    if (cardId === 'relic') soundEngine.playChestOpen();
     if (cardId === 'level') {
       soundEngine.playLevelUp();
       // Lên kỷ thì hộp thoại chi tiết mở ngay sau và tự báo — đừng báo hai lần.
@@ -158,7 +191,7 @@ export default function SessionRewardStory({ onDone }) {
       {...scrimMotion}
       className="fixed inset-0 z-50 flex flex-col"
       style={{ background: 'var(--canvas)' }}
-      onClick={next}
+      onClick={holding ? undefined : next}
       role="dialog"
       aria-label="Phần thưởng phiên vừa xong"
     >
@@ -198,10 +231,19 @@ export default function SessionRewardStory({ onDone }) {
           <AnimatePresence mode="wait">
             <motion.div key={card.id} {...enterMotion} className="w-full">
               {card.id === 'xp' && <XpCard card={card} />}
+              {card.id === 'project' && (
+                <ProjectCard
+                  card={card}
+                  onChoose={() => finish({ navigate: { tab: 'collection', collectionTab: 'workshop' } })}
+                />
+              )}
               {card.id === 'streak' && <StreakCard card={card} />}
               {card.id === 'today' && <TodayCard card={card} />}
               {card.id === 'quests' && <QuestsCard card={card} onClaim={claimMissionAllBonus} />}
-              {card.id === 'level' && <LevelCard card={card} />}
+              {card.id === 'quest' && <QuestCard card={card} />}
+              {card.id === 'level' && <LevelCard card={card} picked={pickedSkill} onPick={handlePickSkill} />}
+              {card.id === 'rank' && <RankCard card={card} />}
+              {card.id === 'relic' && <RelicCard card={card} />}
               {card.id === 'era' && <EraCard card={card} />}
             </motion.div>
           </AnimatePresence>
@@ -233,6 +275,15 @@ export default function SessionRewardStory({ onDone }) {
                 Xem chi tiết phần thưởng
               </button>
             </div>
+          ) : holding ? (
+            <button
+              type="button"
+              onClick={(e) => { stop(e); next(); }}
+              className={`${eyebrowClass} w-full py-2 text-center`}
+              style={{ color: 'var(--muted)' }}
+            >
+              Để sau — điểm vẫn giữ
+            </button>
           ) : (
             <p className={`${eyebrowClass} text-center`} style={{ color: 'var(--muted-2)' }}>
               Chạm để tiếp
@@ -500,11 +551,153 @@ function QuestsCard({ card, onClaim }) {
   );
 }
 
-function LevelCard({ card }) {
+/**
+ * ADR-069 — ba hàm THUẦN dựng đầu vào cho ba thẻ mới. Đặt ở đây (không ở `sessionRewardStory.js`)
+ * vì chúng đọc BẢNG (`describeQueue`/`listAvailableSkills`) chứ không đọc luật kể; file luật chỉ
+ * nhận dữ liệu đã dựng sẵn, đúng như mọi thẻ khác.
+ */
+function describeProjectAfterSession({ reward, craftingQueue, buildings, activeBook }) {
+  const queue = describeQueue({ craftingQueue: craftingQueue ?? [], activeBook }).filter((q) => !q.restoration);
+  const first = queue[0] ?? null;
+  if (first) {
+    const accelerated = Array.isArray(reward?.acceleratedCraftingIds) && reward.acceleratedCraftingIds.includes(first.bpId);
+    return { label: first.label, icon: first.icon, total: first.total ?? first.remaining, done: first.done, stepped: accelerated ? 2 : 1 };
+  }
+  const choices = listNextProjects({ activeBook, buildings, craftingQueue: craftingQueue ?? [] });
+  return { empty: true, choices: choices.map((p) => p.label), eraComplete: eraBuildProgress({ activeBook, buildings }).complete };
+}
+
+/** Tối đa 3 kỹ năng mở được ngay, rẻ trước, ưu tiên mỗi nhánh một cái để có LỰA CHỌN thật. */
+function describeSkillChoices({ sp, unlockedSkills, relics, relicEvolutions }) {
+  const snapshot = { sp, unlockedSkills: unlockedSkills ?? {}, relics: relics ?? [], relicEvolutions: relicEvolutions ?? {} };
+  const available = listAvailableSkills(snapshot)
+    .map((skill) => ({ ...skill, cost: getEffectiveSkillCost(skill.id, skill.spCost, snapshot.relics, snapshot.relicEvolutions) }))
+    .sort((a, b) => a.cost - b.cost);
+  const choices = [];
+  const seenBranch = new Set();
+  for (const skill of available) {
+    if (choices.length >= 3) break;
+    if (seenBranch.has(skill.branchLabel)) continue;
+    seenBranch.add(skill.branchLabel);
+    choices.push(skill);
+  }
+  for (const skill of available) {
+    if (choices.length >= 3) break;
+    if (!choices.includes(skill)) choices.push(skill);
+  }
+  return { sp, choices, next: nextReachableSkill(snapshot) };
+}
+
+function describeQuestAfterSession({ reward, eraCrisis, history }) {
+  const quest = describeCrisisQuest({ eraCrisis, history: history ?? [], now: Date.now() });
+  if (!quest) return null;
+  const minutes = Number(reward?.effectiveMinutes) || 0;
+  return { ...quest, countedThisSession: minutes >= quest.minMinutes };
+}
+
+// ─── Thẻ công trình ──────────────────────────────────────────────────────────
+
+function ProjectCard({ card, onChoose }) {
   const rewardMotion = useRewardMotion();
   const enterMotion = useEnterMotion();
+  const pressMotion = usePressMotion();
+  // NGOẠI LỆ (mang bố cục) — bề dài thanh CHÍNH LÀ tiến độ xây; chạy từ mức TRƯỚC phiên tới SAU.
+  const barMotion = useSnapMotion({
+    initial: { width: `${card.pctBefore ?? 0}%` },
+    animate: { width: `${card.pct ?? 0}%` },
+    transition: { duration: 0.6, ease: EASE, delay: 0.25 },
+  });
+  if (card.empty) {
+    return (
+      <div>
+        <p className={eyebrowClass} style={{ color: 'var(--muted)' }}>Thành phố</p>
+        <motion.div {...rewardMotion} className="mt-3 text-[56px] leading-none" aria-hidden="true">🏗</motion.div>
+        <p className="mt-4 text-[20px] font-semibold leading-tight" style={{ color: 'var(--ink)', fontFamily: DISPLAY_FONT }}>
+          Hàng chờ xây đang trống
+        </p>
+        <p className="mt-2 text-[13px] leading-snug" style={{ color: 'var(--muted)' }}>
+          Phiên sau chỉ xây được thứ đã chọn. Chọn: {card.choices.join(' · ')}{card.extra > 0 ? ` · +${card.extra}` : ''}
+        </p>
+        <motion.button
+          type="button"
+          {...withDelay(rewardMotion, 0.4)}
+          {...pressMotion}
+          onClick={(e) => { stop(e); onChoose?.(); }}
+          className="mt-5 w-full max-w-[400px] py-3.5 text-[15px] font-semibold"
+          style={{
+            borderRadius: 'var(--skin-radius-control,14px)',
+            background: 'var(--accent)',
+            color: '#fff',
+            boxShadow: 'var(--skin-card-shadow)',
+          }}
+        >
+          Chọn công trình ngay
+        </motion.button>
+      </div>
+    );
+  }
   return (
     <div>
+      <p className={eyebrowClass} style={{ color: 'var(--muted)' }}>Thành phố</p>
+      <motion.div {...rewardMotion} className={`mt-3 leading-none ${hasGlyphIcon(card.icon) ? 'text-[56px]' : 'mono text-[22px] uppercase tracking-[0.2em]'}`} aria-hidden="true">
+        {getGlyph(card.icon, card.label, 'BP')}
+      </motion.div>
+      <p className="mt-3 text-[22px] font-semibold leading-tight" style={{ color: 'var(--ink)', fontFamily: DISPLAY_FONT }}>
+        {card.label}
+      </p>
+      <p className="mt-3 flex items-baseline justify-center gap-1.5">
+        <span className="text-[44px] font-semibold leading-none tabular-nums tracking-[-0.04em]" style={{ color: 'var(--accent2)', fontFamily: DISPLAY_FONT }}>
+          {card.done}
+        </span>
+        <span className="text-[18px] font-medium tabular-nums" style={{ color: 'var(--muted)' }}>/{card.total} phiên</span>
+      </p>
+      <div className="mx-auto mt-4 h-3 max-w-[340px] overflow-hidden rounded-full" style={{ background: 'var(--timer-track)' }}>
+        <motion.div {...barMotion} className="h-full rounded-full" style={{ background: 'var(--accent)' }} />
+      </div>
+      <motion.p {...withDelay(enterMotion, 0.6)} className="mt-4 text-[15px] font-semibold" style={{ color: 'var(--ink-2)' }}>
+        {card.remaining > 0 ? `Còn ${card.remaining} phiên nữa là mọc lên` : 'Phiên sau nó mọc lên!'}
+      </motion.p>
+    </div>
+  );
+}
+
+// ─── Thẻ thử thách kỷ nguyên (nhiệm vụ mềm) ──────────────────────────────────
+
+function QuestCard({ card }) {
+  const rewardMotion = useRewardMotion();
+  const enterMotion = useEnterMotion();
+  const pct = Math.min(100, (card.sessionsDone / card.sessionsRequired) * 100);
+  return (
+    <div>
+      <p className={eyebrowClass} style={{ color: 'var(--muted)' }}>{card.opened ? 'Thử thách kỷ nguyên mở ra' : 'Thử thách kỷ nguyên'}</p>
+      <motion.div {...rewardMotion} className="mt-3 text-[56px] leading-none" aria-hidden="true">{card.icon}</motion.div>
+      <p className="mt-3 text-[24px] font-semibold leading-tight" style={{ color: 'var(--ink)', fontFamily: DISPLAY_FONT }}>{card.name}</p>
+      <p className="mt-2 text-[13px] leading-snug" style={{ color: 'var(--muted)' }}>
+        {card.sessionsRequired} phiên ≥{card.minMinutes}′ trong {card.windowHours} giờ
+        {card.relicLabel ? ` → di vật «${card.relicLabel}»` : ''}
+      </p>
+      <p className="mt-4 flex items-baseline justify-center gap-1.5">
+        <span className="text-[44px] font-semibold leading-none tabular-nums" style={{ color: 'var(--accent2)', fontFamily: DISPLAY_FONT }}>{card.sessionsDone}</span>
+        <span className="text-[18px] font-medium tabular-nums" style={{ color: 'var(--muted)' }}>/{card.sessionsRequired}</span>
+      </p>
+      <div className="mx-auto mt-3 h-3 max-w-[340px] overflow-hidden rounded-full" style={{ background: 'var(--timer-track)' }}>
+        <div className="h-full rounded-full" style={{ width: `${pct}%`, background: 'var(--accent)' }} />
+      </div>
+      <motion.p {...withDelay(enterMotion, 0.5)} className="mt-4 text-[13px]" style={{ color: 'var(--muted)' }}>
+        Không có hạn, không mất gì — cứ làm là tới.
+      </motion.p>
+    </div>
+  );
+}
+
+// ─── Thẻ lên cấp + chọn kỹ năng ──────────────────────────────────────────────
+
+function LevelCard({ card, picked, onPick }) {
+  const rewardMotion = useRewardMotion();
+  const enterMotion = useEnterMotion();
+  const pressMotion = usePressMotion();
+  return (
+    <div className="w-full">
       <motion.div {...rewardMotion} className="text-[56px] leading-none" aria-hidden="true">⭐</motion.div>
       <p className={`${eyebrowClass} mt-4`} style={{ color: 'var(--muted)' }}>Thăng cấp</p>
       <p
@@ -522,7 +715,98 @@ function LevelCard({ card }) {
           +{card.spGained} điểm kỹ năng
         </motion.p>
       )}
-      <p className="mt-3 text-[12.5px]" style={{ color: 'var(--muted)' }}>Tiêu ở Hành trang › Kỹ năng</p>
+
+      {picked ? (
+        <motion.div {...rewardMotion} className="mx-auto mt-5 max-w-[400px] px-4 py-3.5 text-left" style={{ borderRadius: 'var(--skin-radius-card,18px)', background: 'var(--card-bg-solid)', border: '1px solid color-mix(in srgb, var(--good) 45%, var(--line))' }}>
+          <p className="text-[14px] font-semibold" style={{ color: 'var(--good)' }}>✓ Đã mở «{picked.label}»</p>
+          <p className="mt-1 text-[12px] leading-snug" style={{ color: 'var(--muted)' }}>{picked.description}</p>
+        </motion.div>
+      ) : card.skillChoices.length > 0 ? (
+        <div className="mx-auto mt-5 max-w-[400px] space-y-2 text-left" onClick={stop}>
+          <p className={`${eyebrowClass} text-center`} style={{ color: 'var(--muted-2)' }}>Chọn một kỹ năng · {card.sp} điểm trong tay</p>
+          {card.skillChoices.map((choice, i) => (
+            <motion.button
+              key={choice.id}
+              type="button"
+              {...withDelay(enterMotion, 0.3 + i * 0.1)}
+              {...pressMotion}
+              onClick={(e) => { stop(e); onPick?.(choice); }}
+              className="flex w-full items-center gap-3 px-3.5 py-3 text-left"
+              style={{
+                borderRadius: 'var(--skin-radius-card,18px)',
+                background: 'var(--card-bg-solid)',
+                border: '1px solid color-mix(in srgb, var(--accent) 30%, var(--line))',
+                boxShadow: 'var(--skin-card-shadow)',
+              }}
+            >
+              <span className="inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-full" style={{ background: 'rgba(var(--accent-rgb), 0.10)', color: 'var(--accent2)' }}>
+                <SkillGlyph id={choice.id} size={20} />
+              </span>
+              <span className="min-w-0 flex-1">
+                <span className="block text-[14px] font-semibold leading-tight" style={{ color: 'var(--ink)' }}>{choice.label}</span>
+                <span className="mt-0.5 block text-[11.5px] leading-snug" style={{ color: 'var(--muted)' }}>{choice.description}</span>
+              </span>
+              <span className="mono shrink-0 text-[11px] font-semibold tabular-nums" style={{ color: 'var(--accent2)' }}>{choice.cost} SP</span>
+            </motion.button>
+          ))}
+        </div>
+      ) : card.nextSkill ? (
+        <p className="mt-4 text-[13px]" style={{ color: 'var(--muted)' }}>
+          Còn {card.nextSkill.spNeeded} điểm nữa mở được «{card.nextSkill.label}»
+        </p>
+      ) : (
+        <p className="mt-3 text-[12.5px]" style={{ color: 'var(--muted)' }}>Điểm chờ ở Hành trang › Kỹ năng</p>
+      )}
+    </div>
+  );
+}
+
+// ─── Thẻ lên bậc · di vật ────────────────────────────────────────────────────
+
+function RankCard({ card }) {
+  const rewardMotion = useRewardMotion();
+  const enterMotion = useEnterMotion();
+  return (
+    <div>
+      <p className={eyebrowClass} style={{ color: 'var(--muted)' }}>Thăng bậc</p>
+      <motion.div {...rewardMotion} className="mt-3 text-[64px] leading-none" aria-hidden="true">{card.icon}</motion.div>
+      <p className="mt-4 text-[34px] font-semibold leading-tight tracking-[-0.03em]" style={{ color: 'var(--ink)', fontFamily: DISPLAY_FONT }}>
+        {card.label}
+      </p>
+      {card.buffLabel && (
+        <motion.p
+          {...withDelay(enterMotion, 0.3)}
+          className="mono mt-3 inline-block rounded-full px-4 py-2 text-[13px] font-semibold"
+          style={{ background: 'rgba(var(--accent-rgb), 0.10)', color: 'var(--accent2)' }}
+        >
+          {card.buffLabel}
+        </motion.p>
+      )}
+      <motion.p {...withDelay(enterMotion, 0.5)} className="mt-3 text-[12.5px]" style={{ color: 'var(--muted)' }}>
+        Tự lên nhờ những phiên gần đây — không có nút, không có hạn.
+      </motion.p>
+    </div>
+  );
+}
+
+function RelicCard({ card }) {
+  const rewardMotion = useRewardMotion();
+  const enterMotion = useEnterMotion();
+  return (
+    <div>
+      <p className={eyebrowClass} style={{ color: 'var(--accent2)' }}>Di vật mới</p>
+      <motion.div {...rewardMotion} className="mt-3 text-[64px] leading-none" aria-hidden="true">{card.icon}</motion.div>
+      <p className="mt-4 text-[30px] font-semibold leading-tight tracking-[-0.03em]" style={{ color: 'var(--ink)', fontFamily: DISPLAY_FONT }}>
+        {card.label}
+      </p>
+      {card.description && (
+        <motion.p {...withDelay(enterMotion, 0.3)} className="mt-2 text-[13px] leading-snug" style={{ color: 'var(--muted)' }}>
+          {card.description}
+        </motion.p>
+      )}
+      <motion.p {...withDelay(enterMotion, 0.5)} className="mt-3 text-[12.5px]" style={{ color: 'var(--muted)' }}>
+        Thử thách kỷ nguyên đã qua. Di vật cộng dồn vĩnh viễn.
+      </motion.p>
     </div>
   );
 }

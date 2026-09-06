@@ -66,43 +66,45 @@ export function heroKyNang({ spChuaTieu = 0, daMo = 0, tongKyNang = 0, moDuoc = 
 
 
 /**
- * Hero của tab CÔNG TRÌNH.
- * ⚠️ Ưu tiên thứ ĐANG XÂY hơn thứ đã xây: nó có tiến độ, tức có "còn bao xa".
+ * Hero của tab CÔNG TRÌNH — sau ADR-069 (2026-09-06) chỉ còn BA trạng thái, đúng ba câu hỏi:
+ *   1. đang xây gì, còn bao xa            → dẫn đầu, có tiến độ
+ *   2. hàng chờ trống — chọn được gì       → rực lên, vì đây là việc LÀM ĐƯỢC ngay
+ *   3. kỷ này xây tới đâu                  → lặng xuống thành xám
+ * ⚠️ KHÔNG còn nhánh "chờ nguyên liệu" / "sẵn sàng xây": bản vẽ nay khởi công được ngay khi có ô
+ * trống, không có cổng nào khác để mà "chưa đủ". Cái phễu "CÓ" ≠ "LÀM ĐƯỢC" (2026-09-02) biến mất
+ * cùng với cái cổng sinh ra nó.
  */
 export function heroCongTrinh({
-  dangXay = null, daXay = 0, tongBanVe = 0, sanSangXay = 0, choNguyenLieu = 0,
+  dangXay = null, daXay = 0, tongBanVe = 0, chonDuoc = 0, hangChoDay = false,
 } = {}) {
   if (dangXay && Number.isFinite(dangXay.con) && dangXay.con > 0) {
+    const themCho = chonDuoc > 0 && !hangChoDay ? ' Còn một ô trống — chọn thêm ở dưới.' : '';
     return {
       nhan: 'Đang xây',
       so: dangXay.con,
-      donVi: dangXay.con > 1 ? 'phiên nữa' : 'phiên nữa',
-      caption: `${dangXay.ten} sẽ mọc lên trong thành phố.`,
+      donVi: 'phiên nữa',
+      caption: `${dangXay.ten} sẽ mọc lên trong thành phố.${themCho}`,
       pct: tiLe((dangXay.tong ?? 0) - dangXay.con, dangXay.tong ?? 0),
       gap: true,
     };
   }
-  // ⚠️ `sanSangXay` PHẢI là số bản vẽ KHỞI CÔNG ĐƯỢC NGAY (đủ nguyên liệu + còn ô hàng đợi), không
-  // phải số bản vẽ đã nghiên cứu — xem `engine/craftReadiness.js`. Trước 2026-09-02 nó đếm cái sau,
-  // nên dải này bật màu nhấn và bảo "chọn một bản vẽ để bắt đầu dựng" trong khi mọi thẻ bên dưới
-  // đều ghi "Chưa đủ". Cùng lỗi với `heroKyNang` ở ngay trên: "CÓ" không bằng "LÀM ĐƯỢC".
-  if (sanSangXay > 0) {
+  if (chonDuoc > 0) {
     return {
-      nhan: 'Sẵn sàng xây',
-      so: sanSangXay,
-      donVi: 'bản vẽ đang chờ',
-      caption: 'Chọn một bản vẽ để bắt đầu dựng.',
+      nhan: 'Xây tiếp',
+      so: chonDuoc,
+      donVi: chonDuoc > 1 ? 'công trình chọn được' : 'công trình chọn được',
+      caption: 'Hàng chờ đang trống — chọn một công trình, phiên sau bắt đầu dựng.',
       pct: 1,
       gap: true,
     };
   }
-  if (choNguyenLieu > 0) {
+  if (tongBanVe > 0 && daXay >= tongBanVe) {
     return {
-      nhan: 'Chờ nguyên liệu',
-      so: choNguyenLieu,
-      donVi: choNguyenLieu > 1 ? 'bản vẽ đã mở' : 'bản vẽ đã mở',
-      caption: 'Đã nghiên cứu xong nhưng chưa đủ nguyên liệu để khởi công.',
-      pct: tiLe(daXay, tongBanVe),
+      nhan: 'Kỷ này',
+      so: daXay,
+      donVi: `/ ${tongBanVe} công trình`,
+      caption: 'Đã xây trọn kỷ ★. Kỷ mới sẽ mở thêm bản vẽ.',
+      pct: 1,
       gap: false,
     };
   }
@@ -110,7 +112,7 @@ export function heroCongTrinh({
     nhan: 'Công trình',
     so: daXay,
     donVi: `/ ${tongBanVe} bản vẽ`,
-    caption: 'Nghiên cứu thêm bản vẽ để mở công trình mới.',
+    caption: 'Mỗi phiên tập trung là một nhịp xây.',
     pct: tiLe(daXay, tongBanVe),
     gap: false,
   };

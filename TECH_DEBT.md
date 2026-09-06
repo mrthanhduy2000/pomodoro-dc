@@ -4714,7 +4714,13 @@ cấp `Math.min(3,…)` → `Math.min(9,…)` · cắt bớt danh sách cấp th
 ---
 
 
-## #95 — Xây MỘT công trình phải qua BA cổng tiền tệ, cả ba đều là hàm của số phút — ĐÀM CHỌN, tôi không tự chọn
+## #95 — ✅ **ĐÃ XỬ LÝ (2026-09-06, ADR-069)** — Xây MỘT công trình phải qua BA cổng tiền tệ, cả ba đều là hàm của số phút
+
+> **Đóng 2026-09-06**: Đàm ra lệnh *"cơ chế nào tồn tại chỉ vì được code ra thì xoá"* ⇒ ba cổng
+> (RP · nguyên liệu · tinh luyện) rời khỏi đường chơi; cái giá còn lại là N PHIÊN + Ô hàng chờ
+> (`startProject`, `BuildScreen`). Tài nguyên/RP/tinh luyện VẪN được cộng vào store (không xoá thứ
+> đã kiếm, không đổi đồng bộ) nhưng không còn cổng tiêu ⇒ dữ liệu ngủ, theo dõi ở `#99`.
+> Phương án "đổi 8 thô lấy 1 tinh luyện" bị bác ở dưới nay vô nghĩa vì cả hai đều không tiêu được.
 
 > Mở 2026-09-01 (vòng 23). Đây là phát hiện có điểm ĐƠN GIẢN HOÁ cao nhất cả vòng (8/10) nhưng
 > cũng có điểm RỦI RO cao nhất (6/10), vì nó đụng vào kinh tế game — thứ Đàm đã tích luỹ 180 ngày.
@@ -5596,3 +5602,58 @@ trong chú thích thì đừng để `--selftest` của chính nó vẫn dùng �
 - **Blocking Conditions**: cần biết Đàm có dùng "Xem chi tiết" không — hỏi anh, đừng đo.
 - **Review Trigger**: lần tới thêm một loại phần thưởng mới vào `completeFocusSession`.
 - **Owner**: chưa ai · **Status**: MỞ (2026-09-05, ADR-068)
+- **Cập nhật 2026-09-06 (ADR-069)**: chuỗi thẻ nay có thêm thẻ công trình · lên cấp kèm chọn kỹ năng ·
+  thử thách kỷ · bậc · di vật ⇒ nó đã là bản trình bày CHÍNH. `LootDropModal` chỉ còn hơn ở phần liệt
+  kê tài nguyên/RP/tinh luyện — mà ba thứ ấy không còn cổng tiêu (`#99`). Lý do giữ nó teo lại; khi
+  dọn `#99` thì gộp luôn (thẻ `era` làm màn cuối cho ca lên kỷ).
+
+## #99 — DỮ LIỆU NGỦ sau ADR-069: tài nguyên · RP · tinh luyện vẫn được cộng, không còn cổng tiêu; 5 action + 1 hộp thoại còn nằm lại không ai gọi
+
+> Mở 2026-09-06 (ADR-069). Đây là cái giá CỐ Ý của vòng ấy: gỡ cổng khỏi đường chơi mà KHÔNG xoá
+> thứ Đàm đã kiếm và KHÔNG đụng state đồng bộ. Mục này để phiên sau biết cái gì đang ngủ, chứ không
+> phải để dọn ngay.
+
+- **Tên**: kinh tế tài nguyên còn chạy ngầm sau khi lối vào của nó đã đóng
+- **Module**: `src/store/gameStore.js` (`resources` · `research.rp` · `resourcesRefined` · `tinhThe`
+  vẫn cộng ở `completeFocusSession`; `startCrafting` · `researchBlueprint` · `craftBuilding` ·
+  `upgradeBuilding` · `cancelCrafting` (hoàn tài nguyên) giữ lại cho test + dữ liệu cũ) ·
+  `src/engine/craftReadiness.js` (không còn ai gọi; `DisasterModal.jsx` thì ĐÃ xoá hẳn cùng ngày —
+  huỷ phiên vẫn trừ tài nguyên theo trần và ghi `cancelPenalty` vào lịch sử, chỉ là không ai xem) · `LootDropModal.jsx` (liệt kê ba loại tiền ngủ)
+- **Priority**: Low · **Severity**: Low
+- **Impact**: mỗi phiên vẫn tính toán và đồng bộ một bộ số không ai đọc; hộp thoại chi tiết vẫn
+  liệt kê chúng; sáu bài test store vẫn canh luật tiêu tiền của một đường không còn màn hình.
+- **Root Cause**: ADR-069 chọn "đóng cửa" thay vì "phá nhà" để giữ tương thích ngược và không đổi
+  JSONB đang tranh chấp CAS (`syncService`).
+- **Current Risk**: Thấp. **Future Risk**: Trung bình — phiên sau tưởng ba loại tiền vẫn là một
+  phần của trò chơi rồi thiết kế thêm cổng lên chúng. ⚠️ Cùng ngày đã gỡ MỌI phần thưởng còn trỏ vào
+  ba đồng tiền này (bậc lẻ, 12/15 di vật, 4 kỹ năng — xem ADR-069 mục 6) và `rewardAxes.test.js` từ
+  chối bất kỳ bảng phần thưởng nào nhắc lại chúng ⇒ phần còn ngủ CHỈ là phép cộng vào store + 5 action
+  + `craftReadiness.js` + phần liệt kê ở `LootDropModal`; không còn màn hình nào HỨA chúng.
+- **Recommended Solution** (sau khi Đàm chơi vài tuần với luật mới): (1) ngừng cộng RP/tinh luyện
+  và thu `resources` về một con số kỷ niệm hoặc bỏ hẳn (cần bước migration + `normalizePersisted
+  GameState`); (2) xoá 5 action + `craftReadiness.js` + phép trừ tài nguyên khi huỷ, cùng test của chúng;
+  (3) gộp `LootDropModal` vào chuỗi thẻ (`#98`). Nếu muốn thêm "khan hiếm" thì đặt nó ở PHIÊN
+  (kỳ quan tốn nhiều phiên hơn), không mở lại tiền tệ.
+- **Estimated Complexity**: Medium (vì có migration dữ liệu thật).
+- **Blocking Conditions**: Đàm xác nhận không nhớ tiếc kho tài nguyên.
+- **Review Trigger**: lần tới ai thêm một loại phần thưởng "tài nguyên".
+- **Owner**: chưa ai · **Status**: MỞ (2026-09-06)
+
+## #100 — Hai chỗ vẫn phải BẤM để nhận thứ đã đạt: "Chốt bước" chuỗi tuần, và lưới 360 huy hiệu dài ~5.350px
+
+> Mở 2026-09-06 (ADR-069). Hai việc vòng ấy KHÔNG làm vì phạm vi đã rộng; ghi để phiên sau khỏi
+> tưởng chúng là quyết định.
+
+- **Tên**: phần thưởng đã đạt mà còn một nút giữa nó và người chơi
+- **Module**: `DailyMissions.jsx` (`claimWeeklyStep` — nút "Chốt bước") · `Achievements.jsx` (lưới
+  360 ô, ảnh 390px cao 10.702px ở DPR 2)
+- **Priority**: Low · **Severity**: Low
+- **Impact**: bước tuần đủ điều kiện vẫn đứng đó cho tới khi bấm — cùng loại ma sát mà ADR-069 vừa
+  gỡ ở bậc/khủng hoảng. Lưới huy hiệu là một bảng tra cứu 60 hàng ở nơi người chơi vào để xem "sắp
+  đạt gì" (dải hero đã trả lời câu ấy ở đầu màn).
+- **Recommended Solution**: (1) tự chốt bước tuần ở `completeFocusSession` khi đủ, kể vào chuỗi thẻ
+  (cùng khuôn `rankUp`); (2) Huy hiệu: mặc định chỉ hiện "Sắp đạt" + "Mới mở" + đếm theo nhóm, lưới
+  đầy đủ nằm sau một nút gấp.
+- **Estimated Complexity**: Low.
+- **Review Trigger**: khi Đàm hỏi "sao phải bấm Chốt bước".
+- **Owner**: chưa ai · **Status**: MỞ (2026-09-06)

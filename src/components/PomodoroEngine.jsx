@@ -1,6 +1,5 @@
 import React, { useState, useCallback, useEffect, useMemo } from 'react';
 import { tomTatThietLap } from './pomodoroSetupSummary.js';
-import { cancelPenaltyWonderMultiplier } from '../engine/wonderEffects.js';
 import { AnimatePresence, motion, useReducedMotion } from 'framer-motion';
 
 import { SCRIM_FADE, useCustomMotion, useEnterMotion, usePressMotion, useRewardMotion, useSnapMotion } from '../lib/motionPresets';
@@ -8,7 +7,7 @@ import useGameStore from '../store/gameStore';
 import { pushNow } from '../lib/syncService';
 import useSettingsStore from '../store/settingsStore';
 import { useTimer, formatTime, TIMER_MODES, TIMER_STATES } from '../hooks/useTimer';
-import { getComboDecayMs, getDailyGoalProgress, getMultiplierTier, nextMultiplierStep, suggestSessionLength, clampRelicDisasterReduction } from '../engine/gameMath';
+import { getComboDecayMs, getDailyGoalProgress, getMultiplierTier, nextMultiplierStep, suggestSessionLength } from '../engine/gameMath';
 import { getVietnamHour, localDateStr } from '../engine/time';
 import { FLOWTIME_BREAK_RULES, QUICK_FOCUS_PRESETS, getBreakPlan } from '../engine/breaks';
 
@@ -24,17 +23,12 @@ import {
   BREAK_EXTENSION_MINUTES,
   COMBO_BONUS_PER_STACK,
   COMBO_MAX_STACKS,
-  OVERCLOCK_MIN_SESSION_MIN,
   VUNG_DONG_CHAY_MIN_MIN,
-  DISASTER_MIN_PENALTY_RATE,
-  DISASTER_MAX_PENALTY_RATE,
   Y_CHI_THEP_RETENTION,
   BAT_KHUAT_DISASTER_XP_PENALTY,
-  RELIC_EVOLUTION,
-  BUILDING_EFFECTS,
-  getBuildingLevelMultiplier,
+  PHUC_HOI_MIN_MINUTES,
+  SU_THA_THU_MIN_MINUTES,
 } from '../engine/constants';
-import StakePanel from './StakePanel';
 import { RichNoteEditor } from './RichText';
 import { countRichTextWords, trimRichTextToWordLimit } from '../utils/richText';
 import {
@@ -142,13 +136,8 @@ export default function PomodoroEngine({
   const timerConfig = useGameStore((s) => s.timerConfig);
   const setTimerConfig = useGameStore((s) => s.setTimerConfig);
   const unlockedSkills = useGameStore((s) => s.player.unlockedSkills);
-  const forgiveness = useGameStore((s) => s.forgiveness);
-  const eraCrisis = useGameStore((s) => s.eraCrisis);
-  const openCrisis = useGameStore((s) => s.openEraCrisisModal);
   const relics = useGameStore((s) => s.relics);
   const relicEvolutions = useGameStore((s) => s.relicEvolutions ?? {});
-  const buildings = useGameStore((s) => s.buildings);
-  const buildingLevels = useGameStore((s) => s.buildingLevels ?? {});
   const sessionCategories = useGameStore((s) => s.sessionCategories);
   const sessionHistory = useGameStore((s) => s.history);
   const pendingCategoryId = useGameStore((s) => s.pendingCategoryId);
@@ -307,16 +296,14 @@ export default function PomodoroEngine({
     return () => window.clearTimeout(timeoutId);
   }, [longBreakGraceDeadlineAt, syncLongBreakCycle]);
 
+  // ADR-069: thử thách kỷ nguyên không còn chặn nút Bắt đầu — nó là một nhiệm vụ mềm kể trong
+  // chuỗi thẻ thưởng và ở màn Tiến trình.
   const handleStartSession = useCallback(() => {
-    if (eraCrisis.active && eraCrisis.choiceMade !== 'challenge') {
-      openCrisis();
-      return false;
-    }
     if (isOnBreak || timerState !== TIMER_STATES.IDLE) return false;
     if (pendingSessionGoal.trim().length < SESSION_GOAL_MIN_CHARS) return false;
     start();
     return true;
-  }, [eraCrisis.active, eraCrisis.choiceMade, isOnBreak, openCrisis, pendingSessionGoal, start, timerState]);
+  }, [isOnBreak, pendingSessionGoal, start, timerState]);
 
   useEffect(() => {
     if (isOnBreak || timerState !== TIMER_STATES.IDLE) return undefined;
@@ -439,7 +426,6 @@ export default function PomodoroEngine({
     [sessionHistory, pendingCategoryId],
   );
   const finishedSessionWillStartBreak = !disableBreak && (autoStartBreak || isStopwatchMode);
-  const isCrisisBlockingStart = eraCrisis.active && eraCrisis.choiceMade !== 'challenge';
   const isExtensionWindowOpen = displaySeconds > 0 && displaySeconds <= SESSION_EXTENSION_WINDOW_SECONDS;
   const isExtensionGraceActive = Number.isFinite(extendButtonGrace?.until)
     && extendButtonGrace.sessionStartedAt === sessionStartedAt;
@@ -648,64 +634,14 @@ export default function PomodoroEngine({
     extraBreakMinutes: unlockedSkills.hit_tho_sau ? BREAK_EXTENSION_MINUTES : 0,
   });
 
-  const disasterReductionPreview = useMemo(() => (
-    clampRelicDisasterReduction(relics.reduce((acc, relic) => {
-      const stage = relicEvolutions[relic.id] ?? 0;
-      const evoDef = RELIC_EVOLUTION[relic.id];
-      const buff = evoDef?.stages[stage]?.buff ?? relic.buff ?? {};
-      return acc + (buff.disasterReduction ?? 0);
-    }, 0))
-  ), [relicEvolutions, relics]);
-
-  // ⚠️ BẢN CHÉP TAY ĐÃ GỠ (2026-09-05). Nó hỏi `wonderEffect === '…'` mà KHÔNG kiểm
-  // `type === 'wonder'` — một trong NĂM bản chép cùng hình dạng, xem `engine/wonderEffects.js`.
-  const cancelPenaltyWonder = useMemo(
-    () => cancelPenaltyWonderMultiplier(buildings),
-    [buildings],
-  );
-
-  const cancelPenaltyStabilityMultiplier = useMemo(() => {
-    const totalReduction = buildings.reduce((sum, bpId) => {
-      const effect = BUILDING_EFFECTS[bpId];
-      if (effect?.type !== 'defense') return sum;
-      return sum + (effect.cancelLossReductionPct ?? 0) * getBuildingLevelMultiplier(buildingLevels[bpId] ?? 1);
-    }, 0);
-    return 1 - Math.min(totalReduction, 0.6);
-  }, [buildingLevels, buildings]);
-
-  const cancelPenaltyPreview = useMemo(() => {
-    const progressRatio = Math.max(0, Math.min(1, progressPct / 100));
-
-    if (unlockedSkills.su_tha_thu && forgiveness.chargesRemaining > 0) {
-      return {
-        waived: true,
-        progressPct: progressRatio * 100,
-        minPct: 0,
-        maxPct: 0,
-      };
-    }
-
-    // V2: bat_khuat / y_chi_thep đã loại bỏ → không còn skill giảm penalty.
-    // Sự Tha Thứ vẫn còn, đã handle trên (waived branch).
-    const skillPenaltyMultiplier = 1;
-
-    const adjustedMin = Math.max(DISASTER_MIN_PENALTY_RATE, DISASTER_MIN_PENALTY_RATE - disasterReductionPreview);
-    const adjustedMax = Math.max(DISASTER_MIN_PENALTY_RATE, DISASTER_MAX_PENALTY_RATE - disasterReductionPreview);
-
-    return {
-      waived: false,
-      progressPct: progressRatio * 100,
-      minPct: adjustedMin * skillPenaltyMultiplier * progressRatio * 100 * cancelPenaltyWonder * cancelPenaltyStabilityMultiplier,
-      maxPct: adjustedMax * skillPenaltyMultiplier * progressRatio * 100 * cancelPenaltyWonder * cancelPenaltyStabilityMultiplier,
-    };
-  }, [
-    cancelPenaltyStabilityMultiplier,
-    cancelPenaltyWonder,
-    disasterReductionPreview,
-    forgiveness.chargesRemaining,
-    progressPct,
-    unlockedSkills.su_tha_thu,
-  ]);
+  // ADR-069 (2026-09-06): cả cụm dự báo «phạt N%–M% tài nguyên» khi huỷ ĐÃ GỠ — tài nguyên rời đường
+  // chơi, hộp thoại thảm hoạ đã xoá, nên hộp xác nhận huỷ chỉ còn nói sự thật còn lại: phiên huỷ
+  // không tính XP/EP, và nếu có kỹ năng Ý Chí thì phiên kế được bù.
+  const cancelRecoveryHint = useMemo(() => {
+    if (unlockedSkills.phuc_hoi) return `Phục Hồi: phiên kế ≥${PHUC_HOI_MIN_MINUTES}′ nhận thêm XP và EP.`;
+    if (unlockedSkills.su_tha_thu) return `Sự Tha Thứ: phiên kế ≥${SU_THA_THU_MIN_MINUTES}′ nhận thêm XP.`;
+    return null;
+  }, [unlockedSkills.phuc_hoi, unlockedSkills.su_tha_thu]);
 
   const handleCancelClick = useCallback(() => {
     if (!strictMode) {
@@ -901,12 +837,6 @@ export default function PomodoroEngine({
   const rootLayoutMotion = useSnapMotion({
     animate: { maxWidth: immersiveRootMaxWidth, gap: useImmersiveHeroLayout ? 46 : immersiveMode ? 38 : 34 },
     transition: { duration: 0.28, ease: [0.22, 1, 0.36, 1] },
-  });
-
-  // NGOẠI LỆ (trang trí) — viền báo động nhấp nháy, lặp vô hạn. Chữ trên nút vẫn nói đủ khi tắt.
-  const crisisPulseMotion = useCustomMotion({
-    animate: { borderColor: ['#ef4444', '#f59e0b', '#ef4444'] },
-    transition: { duration: 1.5, repeat: Infinity },
   });
 
   const shouldPrioritizeSessionReview = immersiveMode && showSessionReview;
@@ -1511,11 +1441,6 @@ export default function PomodoroEngine({
                 )}
               </>
             )}
-            {!isBreakMode && unlockedSkills.su_tha_thu && (
-              <span className={`mt-0.5 text-xs ${lightTheme ? 'text-[var(--good)]' : 'text-[var(--accent-light)]'}`}>
-                {forgiveness.chargesRemaining} lần miễn phạt
-              </span>
-            )}
             {isBreakMode && (
               <span className="text-xs mt-0.5" style={{ color: lightTheme ? 'var(--muted)' : 'var(--muted)' }}>
                 Hít thở, thư giãn & quay lại đúng giờ
@@ -1583,7 +1508,7 @@ export default function PomodoroEngine({
                 trông như nút chính mà làm việc khác là cách nhanh nhất để mất lòng tin vào nút.
                 Ca khủng hoảng thì giữ nguyên `disabled` — ở đó thứ chặn không nằm trên màn này.
               */}
-              {!isCrisisBlockingStart && !isSessionGoalValid ? (
+              {!isSessionGoalValid ? (
                 /*
                   ⚠️ CHỖ NÀY TỪNG LÀ MỘT NÚT CHỈ-ĐỂ-CUỘN, VÀ ĐÓ LÀ MA SÁT LỚN NHẤT CỦA CẢ APP.
                   Đo ở khung 390×844 thật (thanh điều hướng bắt đầu ở y=774): nút "Điền mục tiêu →"
@@ -1640,18 +1565,15 @@ export default function PomodoroEngine({
                 </div>
               ) : (
                 <ActionButton
-                  disabled={isCrisisBlockingStart}
                   onClick={handleStartSession}
                   variant="primary"
                   size="compactPrimary"
                   className={compactTimerActionButtonClassName}
-                  title={isCrisisBlockingStart
-                    ? 'Cần xử lý Khủng hoảng Kỷ Nguyên trước khi bắt đầu phiên mới'
-                    : 'Bắt đầu phiên tập trung'}
+                  title="Bắt đầu phiên tập trung"
                 >
                   {/* "phiên" ở cuối là chữ thừa: cả màn hình này đang nói về một phiên, và ô nhập
                       ngay bên dưới đã ghi rõ "MỤC TIÊU PHIÊN". Bỏ nó đi thì nhãn vừa khung 390px. */}
-                  {isCrisisBlockingStart ? 'Xử lý khủng hoảng' : 'Bắt đầu phiên'}
+                  Bắt đầu phiên
                 </ActionButton>
               )}
               {/*
@@ -2163,10 +2085,10 @@ export default function PomodoroEngine({
         <AnimatePresence>
           {showCancelConfirm && (
             <CancelConfirmDialog
-              hasForgivenessCharge={unlockedSkills.su_tha_thu && forgiveness.chargesRemaining > 0}
               onAbort={() => setShowCancelConfirm(false)}
               onConfirm={handleConfirmCancel}
-              preview={cancelPenaltyPreview}
+              progressPct={progressPct}
+              recoveryHint={cancelRecoveryHint}
             />
           )}
         </AnimatePresence>
@@ -2179,18 +2101,6 @@ export default function PomodoroEngine({
       className="relative mx-auto flex w-full max-w-full flex-col items-center overflow-x-hidden select-none"
       {...rootLayoutMotion}
     >
-      {eraCrisis.active && (
-        <motion.button
-          {...crisisPulseMotion}
-          onClick={openCrisis}
-          className="w-full py-2 rounded-xl border-2 border-red-700 bg-red-950 text-red-300 text-sm font-bold flex items-center justify-center gap-2"
-        >
-          <span className="animate-pulse">{eraCrisis.icon}</span>
-          {eraCrisis.name} — Nhấn để Xem Lựa Chọn
-          <span className="animate-pulse">{eraCrisis.icon}</span>
-        </motion.button>
-      )}
-
       {useImmersiveHeroLayout ? (
         <>
           {shouldPrioritizeSessionReview && (
@@ -2225,10 +2135,10 @@ export default function PomodoroEngine({
       <AnimatePresence>
         {showCancelConfirm && (
           <CancelConfirmDialog
-            hasForgivenessCharge={unlockedSkills.su_tha_thu && forgiveness.chargesRemaining > 0}
             onAbort={() => setShowCancelConfirm(false)}
             onConfirm={handleConfirmCancel}
-            preview={cancelPenaltyPreview}
+            progressPct={progressPct}
+              recoveryHint={cancelRecoveryHint}
           />
         )}
       </AnimatePresence>
@@ -2300,9 +2210,9 @@ export default function PomodoroEngine({
 
       {!prioritizeSetupCard && isIdle && !isBreakMode && sessionSetupCard}
 
-      {isIdle && !isBreakMode && !isStopwatchMode && timerConfig.focusMinutes >= OVERCLOCK_MIN_SESSION_MIN && (
-        <StakePanel />
-      )}
+      {/* ADR-069: `StakePanel` (Tăng lực phiên — cược 5% EP) ĐÃ GỠ khỏi màn chờ: một quyết định
+          mang khung "thua thì mất" đặt ngay trước nút Bắt đầu, ở màn tồn tại để bấm Bắt đầu.
+          Store `staking` giữ nguyên, chỉ không còn lối vào. */}
     </Motion.div>
   );
 }
@@ -2730,7 +2640,7 @@ function SessionReviewCard({ completedGoalAchieved, goalText, goalBonusXP = 0, g
   );
 }
 
-function CancelConfirmDialog({ hasForgivenessCharge, onAbort, onConfirm, preview }) {
+function CancelConfirmDialog({ onAbort, onConfirm, progressPct, recoveryHint }) {
   const uiTheme = useSettingsStore((s) => s.uiTheme);
   const lightTheme = uiTheme === 'light';
   const enterMotion = useEnterMotion();
@@ -2774,17 +2684,14 @@ function CancelConfirmDialog({ hasForgivenessCharge, onAbort, onConfirm, preview
           Xác nhận hủy phiên
         </p>
         <p className={`mt-2 text-sm leading-relaxed ${lightTheme ? 'text-[var(--ink-2)]' : 'text-slate-200'}`}>
-          {hasForgivenessCharge
-            ? 'Bạn còn lượt tha thứ, nên lần hủy này sẽ không mất tài nguyên.'
-            : 'Hệ thống sẽ tính phạt theo phần tiến độ bạn đã đi qua. Hủy càng muộn, giá phải trả càng cao.'}
+          {/* ADR-069: không còn «phạt N% tài nguyên». Sự thật còn lại là phiên này sẽ KHÔNG tính XP/EP
+              — nói thẳng, không đe doạ. */}
+          Phiên hủy không tính XP, EP hay nhịp hôm nay — chỉ số phút đã chạy được ghi vào thống kê.
         </p>
-        {preview && (
-          <p className={`mt-2 text-xs leading-relaxed ${lightTheme ? 'text-[var(--muted)]' : 'text-slate-400'}`}>
-            {preview.waived
-              ? `Tiến độ hiện tại ${formatPreviewPercent(preview.progressPct)}%. Phiên này đang được bảo vệ hoàn toàn.`
-              : `Tiến độ hiện tại ${formatPreviewPercent(preview.progressPct)}%. Phạt ước tính ${formatPreviewPercent(preview.minPct)}%–${formatPreviewPercent(preview.maxPct)}% tài nguyên sau khi đã tính kỹ năng và công trình.`}
-          </p>
-        )}
+        <p className={`mt-2 text-xs leading-relaxed ${lightTheme ? 'text-[var(--muted)]' : 'text-slate-400'}`}>
+          Tiến độ hiện tại {formatPreviewPercent(progressPct)}%.
+          {recoveryHint ? ` ${recoveryHint}` : ''}
+        </p>
         <div className="mt-5 flex flex-wrap gap-3">
           <button
             type="button"
@@ -2806,7 +2713,7 @@ function CancelConfirmDialog({ hasForgivenessCharge, onAbort, onConfirm, preview
                 : 'border-[rgba(var(--accent-rgb),0.18)] bg-white/[0.06] text-[var(--accent-light)] hover:bg-white/[0.08]'
             }`}
           >
-            {hasForgivenessCharge ? 'Hủy có bảo vệ' : 'Hủy phiên'}
+            Hủy phiên
           </button>
         </div>
       </motion.div>

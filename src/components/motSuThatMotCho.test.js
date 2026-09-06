@@ -59,34 +59,18 @@ test('Tập trung: viên "×N" chỉ hiện khi trục ấy THẬT SỰ phân bi
   }
 });
 
-// THỬ-CHO-ĐỎ: dán lại `<p>Blueprints</p>` ⇒ đỏ.
-test('Bản vẽ: một màn MỘT cái tên, và cái tên ấy bằng tiếng Việt', () => {
-  const ma = doc('./BlueprintInventory.jsx');
-  // ⚠️ Hỏi NÚT CHỮ ĐƯỢC HIỆN RA, không hỏi cái tên. Bản đầu của bài này viết `/Blueprints/` và
-  // nó ĐỎ OAN vì trúng đúng tên hàm `MyBlueprintsTab` — đúng bài học "assert phải hỏi đích danh
-  // khối cần canh". Một nút chữ JSX nằm riêng một dòng giữa hai thẻ.
-  assert.ok(
-    !/^\s*Blueprints\s*$/m.test(ma),
-    'nhãn tiếng Anh "Blueprints" quay lại — viên tab ở trên đã nói bằng tiếng Việt',
-  );
-  assert.ok(!/^\s*Bản vẽ & nghiên cứu\s*$/m.test(ma), 'tiêu đề lặp lại tên tab quay lại');
-  assert.match(ma, /MyBlueprintsTab/, 'không đọc được file — phép đo chạy rỗng');
-});
-
-// THỬ-CHO-ĐỎ: dán lại câu luật vào `BuiltCard` ⇒ đỏ.
-test('Xưởng: luật chung nói MỘT lần, và tên đặc quyền không tóm tắt lại ở đầu màn', () => {
-  const ma = doc('./BuildingWorkshop.jsx');
-  const soLan = (ma.match(/Cấp công trình vẫn tăng thông số nền/g) ?? []).length;
-  assert.equal(
-    soLan, 1,
-    `câu luật chung xuất hiện ${soLan} lần trong mã. Nó đúng cho MỌI công trình từ cấp 2, nên nó `
-    + 'thuộc về tiêu đề mục chứ không thuộc về từng thẻ (đo trên màn thật: 4 lần một màn).',
-  );
-  assert.ok(
-    !/activePerkLabels/.test(ma),
-    'hàng chip tóm tắt tên đặc quyền quay lại — mỗi tên ấy đã in nguyên văn trên chính thẻ công '
-    + 'trình sinh ra nó, cùng một màn',
-  );
+// THỬ-CHO-ĐỎ: thêm `<h3>Công trình</h3>` vào `BuildScreen.jsx` ⇒ đỏ.
+test('Công trình (ADR-069): một màn MỘT cái tên, và không còn bảng giá nào giữa người chơi và nút', () => {
+  const ma = doc('./BuildScreen.jsx');
+  // Viên tab con đang sáng đã ghi "Công trình"; màn không được gọi tên mình lần nữa bằng tiêu đề.
+  assert.ok(!/<h[1-3][^>]*>\s*Công trình\s*<\/h[1-3]>/.test(ma), 'tiêu đề lặp lại tên tab quay lại');
+  // Ba cổng cũ (RP · nguyên liệu · tinh luyện) là lý do màn cũ dài 2.376px. Chúng không được quay
+  // lại dưới bất kỳ cái tên nào — bản vẽ khởi công thẳng, cái giá là PHIÊN và Ô hàng chờ.
+  for (const dauHieu of ['research.rp', 'ResourceCost', 'refinedCost', 'resourcesRefined', 'researchBlueprint', 'startCrafting(']) {
+    assert.ok(!ma.includes(dauHieu), `\`${dauHieu}\` quay lại màn Công trình — cổng cũ đang mọc lại`);
+  }
+  assert.match(ma, /startProject/, 'màn phải gọi đúng MỘT action khởi công — `startProject`');
+  assert.match(ma, /Khởi công/, 'không đọc được file — phép đo chạy rỗng');
 });
 
 // ─── PHẢN HỒI KHI BẤM (2026-09-01) ───────────────────────────────────────────

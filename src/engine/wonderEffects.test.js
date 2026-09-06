@@ -56,7 +56,7 @@ test('KHÔNG CÒN BẢN CHÉP TAY NÀO — cả ba tầng phải đọc chung m�
   // ⚠️ Đây là bài canh CẤU TRÚC, không canh giá trị: hai bản chép tay có thể khớp nhau hôm nay rồi
   // trôi khỏi nhau ở BIÊN vào một phase khác, do tay một người khác, mà không gì đỏ lên.
   const doc = (f) => readFileSync(new URL(f, import.meta.url), 'utf8');
-  for (const f of ['../store/gameStore.js', './opportunities.js', '../components/BlueprintInventory.jsx']) {
+  for (const f of ['../store/gameStore.js', './opportunities.js', '../components/BuildScreen.jsx']) {
     const src = doc(f);
     assert.equal(/function\s+aggregateWonderEffects\s*\(/.test(src), false, `${f} dựng lại aggregateWonderEffects`);
     assert.equal(/function\s+getActiveWonderEffects\s*\(/.test(src), false, `${f} dựng lại getActiveWonderEffects`);

@@ -41,30 +41,31 @@ the whole context.
 for Vietnamese docs here is **1.72 chars/token**; English is roughly **4**. Full reasoning:
 header comment of `scripts/doc-budget.mjs`.
 
-| File | chars | ≈tokens | % of 200k | RULE |
-|---|---:|---:|---:|---|
-| `TECH_DEBT.md` | 433,948 | 252k | 126% | ❌ **NEVER `cat`** — `grep -n` or `sed -n 'A,Bp'` |
-| `ARCHITECTURE_DECISIONS.md` | 388,555 | 226k | 113% | ❌ never `cat` — `grep -n 'ADR-0NN'` |
-| `CHANGELOG.md` | 266,007 | 154k | 77% | ❌ never `cat` — `head -60` only |
-| `docs/LESSONS_3D.md` | 261,236 | 152k | 76% | ❌ never `cat` — `grep` only |
-| `BAN_GIAO.md` | 234,342 | 136k | 68% | ❌ never `cat` — **`head -60` only** |
-| `PERFORMANCE.md` | 168,262 | 98k | 49% | ❌ never `cat` |
-| `PROJECT_STRUCTURE.md` · `AI_HANDOFF_KNOWLEDGE.md` · `ARCHITECTURE.md` | ~104k each | ~60k | 30% | ⚠️ `grep` first |
+**❌ NEVER `cat` these** — each is 46–78% of a 200k window, and several were over 100% before the
+2026-09-06 split (ADR-075):
+`CHANGELOG.md` · `BAN_GIAO.md` (**`head -60` only**) · `TECH_DEBT.md` · `docs/LESSONS_3D.md` ·
+`PERFORMANCE.md` · `ARCHITECTURE_DECISIONS.md` · `PROJECT_STRUCTURE.md` ·
+`AI_HANDOFF_KNOWLEDGE.md` · `ARCHITECTURE.md` · `docs/archive/*` (frozen history).
+Closed debt entries live in `docs/archive/TECH_DEBT_CLOSED_2026-09-06.md`; ADR-001…050 in
+`docs/archive/ADR_ARCHIVE_001-050.md`.
+
+Exact sizes drift, so they are **not copied here** — `node scripts/doc-budget.mjs` prints them fresh.
+**No file may exceed one context window**: a guarded ceiling, and crossing it means SPLIT, not raise.
 
 **Three obligations, not suggestions:**
 1. **Before opening any `.md` other than `CLAUDE.md` / `START_HERE.md` / `PHASE_RULES.md`:
    `grep -n` first, then read by line range.** Need a table of contents to know which lines?
    → `node scripts/doc-budget.mjs --map <file>` (prints headings + line ranges, costs almost nothing).
 2. **Same for code** — `completeFocusSession` is ~760 lines; do not `cat` all of `gameStore.js`.
-3. **Auto-loaded files have REAL GUARDS** (`scripts/docBudget.test.js`, inside `npm test`): a char
-   limit per file (listed in DOC MAP below) **and** a language gate. Over the limit, or a Vietnamese
-   paragraph in an English doc = **RED TEST**, not a note that scrolls past. Check anytime:
-   `node scripts/doc-budget.mjs` — it prints actual sizes and headroom fresh, which is why no
-   hand-copied "actual size" appears in this file (a stale one is worse than none).
-   When it goes red the fix is **SPLIT into a `docs/` topic file and leave one pointer line** —
-   never raise the limit, never delete knowledge.
-   *(Why guards: the old 40,000 limit was only a sentence — `START_HERE.md` had silently blown its
-   own 20,000 limit and no session noticed. **A threshold with no guard is a funnel.**)*
+3. **Five guards run inside `npm test`** (`scripts/docBudget.test.js`) — each one adversarially
+   break-tested, none is a promise: **char limit** per auto-loaded file (DOC MAP below) ·
+   **language** (a Vietnamese paragraph in an English doc) · **canonical rule** (no auto-loaded file
+   may restate a rule another one owns — this file once had the merge rule backwards in two places) ·
+   **pointer** (every `.md` reference must resolve) · **context-window ceiling** (no reference doc
+   may exceed one window). Any breach = **RED TEST**. Check: `node scripts/doc-budget.mjs`.
+   When one goes red the fix is **SPLIT and leave a pointer** — never raise a limit, never delete
+   knowledge. *(Why guards: the old 40,000 limit was only a sentence, and `START_HERE.md` had
+   silently blown its own limit with nobody noticing. **A threshold with no guard is a funnel.**)*
 
 ## ⚠️ PRIORITY RULE #1 (every AI session)
 1. **Before working:** read **`START_HERE.md`** — the ONLY file required every session. Then
@@ -197,12 +198,12 @@ External data (Supabase/import) **must** pass through `normalizePersistedGameSta
 ⚠️ Hot spot: `completeFocusSession` (~760 lines) — easy to introduce "used a stale value" bugs.
 
 ### Testing — detail in `docs/OPERATIONS.md`
-Always `npm test` + `npm run build` before committing. `npm test` runs **two passes**: `test:fast`
-(**the real count is the last line of THIS pass**, and it must show `# skipped 1`) then `test:cross`
-(~25–33s, prints its own duration). Quick count: `npm run test:fast`.
-⚠️ The slow half is skipped by the **`DC_CROSS_SLOW` env var, NOT `--test-skip-pattern`** (that flag
-silently does nothing). ⚠️ Test glob covers `electron/` · `src/` · `api/` · `scripts/` at any depth —
-adding a folder no longer needs a `package.json` edit.
+Before committing: **`npm run test:quiet`** + `npm run build`. Same tests as `npm test` but
+**2,132 chars of output instead of 408,514** (measured 2026-09-06) — the verbose form costs roughly
+**230,000 tokens**, more than a whole context window, to validate work that is usually smaller.
+The real count is the last line of the FAST pass and **must show `# skipped 1`**; the slow half is
+skipped by the **`DC_CROSS_SLOW` env var, NOT `--test-skip-pattern`** (that flag silently does
+nothing). Test glob covers `electron/` · `src/` · `api/` · `scripts/` at any depth.
 
 ## NEVER do these
 - ❌ Never turn Electron into a separate main app.

@@ -228,6 +228,15 @@ mid-session disconnect notices, NOT savings.
 
 Always run `npm test` before committing, plus `npm run build`.
 
+⚠️ **Output volume is itself a context cost (ADR-075).** The default reporter prints one line per
+test. Measured 2026-09-06 on 1,609 tests: `npm run test:fast` emits **9,802 lines / 408,514 chars**
+(≈230,000 tokens — more than a whole 200k context window), while `npm run test:quiet` emits **89
+lines / 2,132 chars** (≈1,100 tokens). Same tests, **−99.5% output**. It works by running the `dot`
+reporter (one character per test) to stdout while a second `tap` reporter writes the full transcript
+to a temp file, from which only the `# tests / pass / fail / skipped` summary is printed — so the
+documented `# skipped 1` signal survives. Failures still print in full, so nothing is hidden. `npm test` remains the authoritative verbose form for when
+you need the whole transcript.
+
 ⚠️ **`npm test` runs TWO passes (since 2026-08-21)**: `test:fast` (all fast tests — **the real test
 count is the last line of THIS pass**, and it must show `# skipped 1`) then `test:cross` (the
 `scene-tri` ↔ `plinth-tri` cross-check, **~25 seconds** since ADR-048 — before that it was 70–90

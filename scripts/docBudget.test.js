@@ -3,7 +3,9 @@ import assert from 'node:assert/strict'
 import { readFileSync, existsSync } from 'node:fs'
 import { fileURLToPath } from 'node:url'
 import { dirname, resolve } from 'node:path'
-import { BUDGETS, VI_PARAGRAPH_LIMIT, chars, viParagraphs, tokens, overBudget, wrongLanguage } from './doc-budget.mjs'
+import { BUDGETS, VI_PARAGRAPH_LIMIT, CANONICAL_RULES, chars, viParagraphs, tokens, overBudget,
+  wrongLanguage, duplicatedRules, brokenPointers, oversizedReferences,
+  REFERENCE_CEILING_TOKENS } from './doc-budget.mjs'
 
 const ROOT = resolve(dirname(fileURLToPath(import.meta.url)), '..')
 const read = (f) => readFileSync(resolve(ROOT, f), 'utf8')
@@ -116,11 +118,56 @@ test('docs/GOVERNANCE.md + docs/OPERATIONS.md still hold everything split out of
   }
 })
 
-/** START_HERE.md must keep pointing at the reference files, or a session cannot find anything. */
-test('START_HERE.md: keeps the required pointers and the never-cat rule', () => {
+/**
+ * START_HERE.md owns project STATE. Routing and operating rules are canonical in CLAUDE.md, so this
+ * only asserts the state-file essentials plus the two entry pointers.
+ */
+test('START_HERE.md: keeps its state-file essentials and entry pointers', () => {
   const s = flat('START_HERE.md')
-  for (const needle of ['PHASE_RULES.md', 'CLAUDE.md', 'docs/GOVERNANCE.md', 'docs/OPERATIONS.md',
-    'BAN_GIAO.md', 'never `cat`', 'ADR-007', 'doc-budget.mjs']) {
-    assert.ok(s.includes(needle), `START_HERE.md lost the pointer: ${needle}`)
+  for (const needle of ['PHASE_RULES.md', 'CLAUDE.md', 'ADR-007', 'doc-budget.mjs', 'docs/archive/']) {
+    assert.ok(s.includes(needle), `START_HERE.md lost: ${needle}`)
   }
+})
+
+/**
+ * CANONICAL-RULE GATE (ADR-075). A rule may live in exactly one auto-loaded file.
+ * The failure this prevents already happened: START_HERE.md once stated the merge rule BACKWARDS
+ * while CLAUDE.md stated it correctly. Two copies of a rule always drift.
+ */
+test('doc-budget: no auto-loaded file restates a rule owned by another', () => {
+  const dup = duplicatedRules()
+  const msg = dup.map((d) => `${d.file} restates "${d.phrase}" (owner ${d.owner})`).join(' · ')
+  assert.equal(dup.length, 0, `Keep the rule in its owner and leave a pointer: ${msg}`)
+})
+
+test('doc-budget: the canonical-rule gate can actually see a duplicate', () => {
+  // Without this, the gate above could pass by being blind — the exact failure mode the
+  // whole-file language gate had before it was rewritten to scan paragraphs.
+  for (const { owner, phrase } of CANONICAL_RULES) {
+    assert.ok(flat(owner).includes(phrase), `${owner} no longer states its own rule: "${phrase}"`)
+  }
+})
+
+/**
+ * POINTER GATE (ADR-075). A pointer to a file that does not exist sends the next session hunting
+ * and burns context for nothing — measured waste, recorded as TECH_DEBT #101 (47 stale pointers
+ * after the docs were split).
+ */
+test('doc-budget: every .md pointer in an auto-loaded file resolves', () => {
+  const broken = brokenPointers()
+  const msg = broken.map((b) => `${b.file} → ${b.target}`).join(' · ')
+  assert.equal(broken.length, 0, `Broken documentation pointers: ${msg}`)
+})
+
+/**
+ * CONTEXT-WINDOW CEILING (ADR-075). No reference doc, active or archived, may exceed one context
+ * window. `docs/archive/BAN_GIAO_ARCHIVE_2026-08-24.md` sat at 141% until 2026-09-06 — a file that
+ * literally could not be opened in a session, which no warning text had ever prevented.
+ * Crossing this means SPLIT the file; raising the ceiling is not a fix.
+ */
+test('doc-budget: no reference doc is larger than one context window', () => {
+  const huge = oversizedReferences()
+  const msg = huge.map((h) => `${h.file} ≈ ${h.tok.toLocaleString()} tokens`).join(' · ')
+  assert.equal(huge.length, 0, `Split these — they cannot be read in one session: ${msg}`)
+  assert.equal(REFERENCE_CEILING_TOKENS, 200000, 'the ceiling is one 200k context window, by definition')
 })

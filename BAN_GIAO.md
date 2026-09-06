@@ -1,3 +1,49 @@
+> Last update: **2026-09-06 (night)** — **RETRIEVAL ARCHITECTURE: FREEZE CLOSED KNOWLEDGE, CAP EVERY
+> FILE AT ONE CONTEXT WINDOW, GUARD IT (ADR-075).** Third pass of the day, after ADR-073 (split) and
+> ADR-074 (English).
+>
+> ### The remaining waste was retrieval, not storage
+> Always-loaded cost was already down to ~10,000 tokens. But three files could not be read in one
+> session at all: `TECH_DEBT.md` 252,634 tokens (**126%** of a 200k window),
+> `ARCHITECTURE_DECISIONS.md` 227,878 (**114%**), `docs/archive/BAN_GIAO_ARCHIVE_2026-08-24.md`
+> 282,237 (**141%**). And every `grep` waded through knowledge that was already closed history.
+>
+> ### Done
+> 1. **`TECH_DEBT.md` 435,288 → 248,959 chars (126% → 72%)**: 40 closed entries moved verbatim to
+>    `docs/archive/TECH_DEBT_CLOSED_2026-09-06.md` (all 14 fields intact), 40-line index left behind.
+>    The header also carried 13 accumulated threshold snapshots — **28,849 → 1,858 chars**, so
+>    `head -60` finally returns the rules instead of old counts.
+> 2. **`ARCHITECTURE_DECISIONS.md` 392,634 → 159,441 chars (114% → 46%)**: 50 oldest ADRs to
+>    `docs/archive/ADR_ARCHIVE_001-050.md`, 25 newest stay hot, 50-line index left behind. The rule
+>    "never delete an old ADR even when reversed" is intact — they are one `grep` away.
+> 3. **`docs/archive/BAN_GIAO_ARCHIVE_2026-08-24.md` split** at a date boundary: 141% → 70% + 71%.
+>    **No file in the repo now exceeds one context window.**
+> 4. **`START_HERE.md` de-duplicated against `CLAUDE.md`**: three of its six "laws" and its entire
+>    lookup table restated rules `CLAUDE.md` owns. This is the failure that already happened here —
+>    `START_HERE.md` once carried the merge rule BACKWARDS while `CLAUDE.md` had it right.
+> 5. **Three new guards, each break-tested**: canonical rule (no auto-loaded file may restate a rule
+>    another owns) · pointer (every `.md` reference must resolve) · context-window ceiling.
+> 6. **`npm run test:quiet` — the biggest single win of the day, and not a document.** `npm test`
+>    prints one line per test: **9,802 lines / 408,514 chars ≈ 230,000 tokens** for one run — more
+>    than a whole 200k window, 23× the entire always-loaded context. The quiet form runs the same
+>    tests via the `dot` reporter with a `tap` side-channel for the summary: **2,132 chars, −99.5%**,
+>    with `# skipped 1` preserved and failures still printed in full.
+> 7. `TECH_DEBT #103` closed.
+>
+> ### ⚠️ Third measuring-tool failure of the day
+> The first corpus measurement reported the `.md` corpus **shrinking by 665,806 chars** — which would
+> have meant catastrophic data loss. It was the TOOL: the new archives were untracked and
+> `git ls-files` silently excluded them. Measured over the working tree the corpus is **+14,294
+> chars** (indexes and archive headers), nothing lost. Same family as ADR-074's diluted ratio:
+> *the denominator contained something outside the question*.
+>
+> ### Numbers
+> Largest single file **486,294 → 266,956 chars**. Always-loaded **10,171 → 9,942 tokens/session**
+> (5.0% of a 200k window). Corpus +0.5%, nothing deleted. `npm test` 1,605 → 1,609.
+> Check anytime: `node scripts/doc-budget.mjs`.
+
+---
+
 > Cập nhật lần cuối: **2026-09-06 (tối, cùng phiên "tối ưu context window")** — **TÀI LIỆU TỰ-NẠP
 > CHUYỂN SANG TIẾNG ANH + CỔNG CANH NGÔN NGỮ (ADR-074).** Đàm: *"chuyển thành tiếng Anh đi… khi giao
 > tiếp với tôi thì sử dụng tiếng Việt để tiết kiệm token"*.

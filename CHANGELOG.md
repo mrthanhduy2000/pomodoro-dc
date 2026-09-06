@@ -10,6 +10,22 @@
 > **Muốn hiểu VÌ SAO một quyết định được chọn** → `ARCHITECTURE_DECISIONS.md`. **Muốn biết migration
 > cụ thể nào cần chạy** → `MIGRATION.md`.
 
+## 2026-09-06 (night) — Retrieval architecture: freeze closed knowledge, cap files at one context window (ADR-075)
+
+- **Purpose**: after ADR-073/074 the always-loaded cost was solved, but three reference files were
+  larger than a 200k context window and every lookup paid for closed history.
+- **Scope**: 40 closed `TECH_DEBT` entries and the 50 oldest ADRs moved verbatim into `docs/archive/`
+  with full indexes left in the active files; the 2026-08-24 handover archive split in two;
+  `TECH_DEBT.md` header stripped of 13 stale threshold snapshots; `START_HERE.md` de-duplicated
+  against `CLAUDE.md`. Three new guards in `npm test`: canonical rule, pointer resolution, and a
+  context-window ceiling — each adversarially break-tested.
+- **Also**: added `npm run test:quiet` — same tests as `npm test` but **408,514 → 2,132 chars of
+  output (−99.5%)**; the verbose form costs ≈230,000 tokens per run, more than a whole context window.
+- **Impact**: `TECH_DEBT.md` 126% → 72% of a window, `ARCHITECTURE_DECISIONS.md` 114% → 46%, largest
+  file 486,294 → 266,956 chars, no file above one window. Always-loaded 10,171 → 9,942 tokens.
+- **Compatibility**: documentation only, no product code touched. Nothing deleted — corpus +0.5%
+  (indexes and archive headers). Tests 1,605 → 1,609.
+
 ## 2026-09-06 (tối) — Tài liệu tự-nạp chuyển sang tiếng Anh + cổng canh ngôn ngữ (ADR-074)
 
 - **Mục đích**: tiếng Việt tốn ~2,3 lần token so với tiếng Anh cho cùng một ý (1,723 vs ~4 ký

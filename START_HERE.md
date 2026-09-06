@@ -1,16 +1,10 @@
 # START_HERE — read this file, and only this file, when opening a new session
 
-⚠️ **LIMIT: 16,000 chars — now a REAL GUARD, not a promise.** `npm test` goes RED
-(`scripts/docBudget.test.js`) if this file exceeds it. Check: `node scripts/doc-budget.mjs`.
-This file is required reading every session, so every wasted line is multiplied by the session count.
-**When the test goes red the ONLY fix is: push the oldest round into
-`docs/archive/START_HERE_LOG_*.md`, keeping the 3 most recent. Never raise the limit, never delete
-knowledge.**
-
-> **This is the ONLY file required before working.** Everything else is REFERENCE — open only what
-> `grep` hits. Working method, prompt format, report format: **`PHASE_RULES.md`**.
-> Rules, token budget, infrastructure: **`CLAUDE.md`** (auto-loaded).
-> **Docs are written in English; replies to Đàm are written in Vietnamese** (`CLAUDE.md` §Language).
+> **The ONLY file required before working.** It holds project STATE; rules, token budget,
+> infrastructure and the doc map are canonical in **`CLAUDE.md`** (auto-loaded). Working method,
+> prompt shape, report format: **`PHASE_RULES.md`**.
+> ⚠️ **Limit 16,000 chars, guarded by `npm test`.** When it goes red, push the oldest round into
+> `docs/archive/START_HERE_LOG_*.md` (keep the 3 most recent) — never raise the limit, never delete.
 
 ## What this project is
 Đàm's personal Pomodoro app (he is a non-coder). React + Vite + PWA · Zustand + localStorage ·
@@ -20,20 +14,18 @@ Current front: **main loop + upgrades + a Stats screen that answers questions**
 The 3D city (`src/engine/city3d/` + `src/components/city/render3d/`) is a **finished black box —
 Đàm forbids touching it.**
 
-## 6 laws that actually bite — breaking one breaks something real
+## Laws that bite here — the ones NOT already in `CLAUDE.md`
+`CLAUDE.md` §Infrastructure owns the operational laws (only `main` ships · confirm Vercel "Ready" ·
+the Vercel function ceiling and where API tests go · CAS sync · Gemini key) and §NEVER owns "never start a focus
+session on dev/localhost". Do not restate them here — a summary that drifts from the rule is worse
+than no summary (this file once had the merge rule backwards). These three are code invariants and
+live here:
 1. **ADR-007 — the museum never moves.** A building already placed NEVER changes position. Terrain
    must not depend on play progress. Breaking this = losing Đàm's city.
-2. **Only `main` reaches production.** A side branch is a Preview only. ⚠️ **Merge into `main` and
-   push yourself — do not ask** (Đàm, 2026-08-22: *"sau này tự deploy, tôi không có việc gì phải tự
-   deploy cả"*). Stop and ask only if resolving a conflict would discard another session's work.
-   Always state what went to production BEYOND your own work. Then confirm Vercel shows "Ready".
-3. **Never lower DPR · never add a fourth light source.** The two fastest ways to ruin the visuals.
-4. **Never start a focus session on dev/localhost** — it shares the production Supabase row.
-5. **`no-use-before-define` is ON** (2026-08-29) — a `const` used above its declaration renders a
+2. **Never lower DPR · never add a fourth light source.** The two fastest ways to ruin the visuals.
+3. **`no-use-before-define` is ON** (2026-08-29) — a `const` used above its declaration renders a
    BLANK app, and lint/test/build all miss it (it happened). Three legitimate exemptions in
    `CityScene3D.jsx` carry a reason each. Never disable the rule "just to move fast".
-6. **Vercel Hobby: max 12 Serverless Functions.** `api/` tests must live in `api/_tests/`.
-   Currently 10 real functions.
 
 ## Where we are
 Production branch `main` carries **both** work streams (merged 2026-08-28 on Đàm's direct order).
@@ -179,18 +171,13 @@ at 20 and 120 sessions). Accepted by EYE: eras 1–9 must show no rows/alignment
 
 ## Commands
 ```
-npm install --legacy-peer-deps          # this flag is required
-npm test                                # real count is the last line of the FAST pass
-npm run lint && npm run build
-node scripts/doc-budget.mjs             # token budget of all docs
-node scripts/doc-budget.mjs --map <file>  # headings + line ranges, instead of cat
+npm install --legacy-peer-deps                                   # required flag
+npm run test:quiet                                               # 2,132 chars of output, not 408,514
+node scripts/doc-budget.mjs [--map <file>]                       # doc token budget / table of contents
 node scripts/city-preview.mjs --era 6 --hour 12 --width 1500     # inspect one era
 node scripts/shot.mjs --phone --tab "Thống kê" --full            # 2D UI screenshot
 ```
+(`npm test` / lint / build semantics: `CLAUDE.md` §Testing.)
 
 ## Where to look things up
-`PHASE_RULES.md` how to work · `CLAUDE.md` rules + token budget · `docs/GOVERNANCE.md` process +
-report templates · `docs/OPERATIONS.md` infra/deploy/sync · `PROJECT_STRUCTURE.md` where files live ·
-`ARCHITECTURE.md` data flow · `ARCHITECTURE_DECISIONS.md` why · `TECH_DEBT.md` known debt ·
-`PERFORMANCE.md` measurements · `BAN_GIAO.md` journal (**first 60 lines only**) ·
-`docs/archive/` full history. **All of these except the first two are `grep`-only — never `cat`.**
+`CLAUDE.md` §DOC MAP is the canonical routing table (which file, when to open, what is `grep`-only).

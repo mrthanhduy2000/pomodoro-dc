@@ -64,13 +64,30 @@ export const BUDGETS = {
  * Thresholds from real measurement on 2026-09-06:
  *   - English paragraphs quoting Đàm verbatim (the legitimate case): max 4.21%.
  *   - Genuinely Vietnamese paragraphs (from TECH_DEBT.md): 13.95–15.69%.
- * 8% sits between them with ~2x headroom on both sides. Paragraphs under 200 chars are ignored —
+ * 8% sits between them with ~2x headroom on both sides. Windows under 200 chars are ignored —
  * a short quoted line is allowed to be pure Vietnamese.
  */
 export const VI_PARAGRAPH_LIMIT = 0.08
-export const MIN_PARAGRAPH_CHARS = 200
+export const MIN_PASSAGE_CHARS = 200
 
-/** Reference docs: no limit, but printed so their cost is never invisible. */
+/**
+ * Hard ceiling for ANY reference doc, active or archived: it must fit inside one context window.
+ * A file larger than the window cannot be read in a session at all — `docs/archive/BAN_GIAO_ARCHIVE
+ * _2026-08-24.md` was 141% of a 200k window until 2026-09-06 and nobody could have opened it safely.
+ * Expressed in TOKENS, so it uses the language-aware estimate (English ~4 chars/token, Vietnamese
+ * 1.723); the estimate is documented at the top of this file and is the weakest link in this gate.
+ * Crossing it means SPLIT the file — never raise the ceiling.
+ */
+export const REFERENCE_CEILING_TOKENS = 200000
+
+/** Reference docs whose estimated size exceeds one context window. Empty = gate green. */
+export function oversizedReferences() {
+  return REFERENCE_DOCS
+    .map((file) => ({ file, tok: tokens(file) }))
+    .filter((r) => r.tok !== null && r.tok > REFERENCE_CEILING_TOKENS)
+}
+
+/** Reference docs: no per-file limit below the ceiling, but printed so their cost is never invisible. */
 export const REFERENCE_DOCS = [
   'TECH_DEBT.md',
   'ARCHITECTURE_DECISIONS.md',
@@ -91,6 +108,8 @@ export const REFERENCE_DOCS = [
   // larger than an entire 200k context window, and nothing else would ever warn about it.
   'docs/archive/BAN_GIAO_ARCHIVE_2026-08-24.md',
   'docs/archive/START_HERE_LOG_2026-09-06.md',
+  'docs/archive/TECH_DEBT_CLOSED_2026-09-06.md',
+  'docs/archive/ADR_ARCHIVE_001-050.md',
 ]
 
 const read = (file) => {
@@ -110,18 +129,7 @@ export function viRatio(file) {
   return (s.match(VI_LETTERS)?.length ?? 0) / s.length
 }
 
-/** Paragraphs long enough to judge, that read as Vietnamese rather than English. */
-export function viParagraphs(file) {
-  const s = read(file)
-  if (s === null) return []
-  return s
-    .split(/\n\s*\n/)
-    .filter((p) => p.length >= MIN_PARAGRAPH_CHARS)
-    .map((p) => ({ ratio: (p.match(VI_LETTERS)?.length ?? 0) / p.length, head: p.slice(0, 70).replace(/\n/g, ' ') }))
-    .filter((p) => p.ratio > VI_PARAGRAPH_LIMIT)
-}
-
-/** Token estimate, picking the ratio that matches the language actually used in the file. */
+/** Token estimate, using the coefficient that matches the language the file is actually written in. */
 export function tokens(file) {
   const n = chars(file)
   if (n === null) return null
@@ -136,11 +144,107 @@ export function overBudget() {
     .filter((r) => r.size !== null && r.size > r.limit)
 }
 
+/**
+ * Passages long enough to judge that read as Vietnamese rather than English.
+ *
+ * ⚠️ Scans a SLIDING WINDOW OF LINES, not blank-line paragraphs. The blank-line version failed its
+ * own break-test on 2026-09-06: text appended without a blank line in front merges into the previous
+ * English paragraph and its ratio is diluted below the threshold. Two dilution bugs in one day, both
+ * the same law — *check what the denominator actually contains*. A line window cannot be widened by
+ * an author's whitespace habits.
+ *
+ * Window: consecutive lines accumulated to >= MIN_PASSAGE_CHARS (capped at MAX_WINDOW_LINES), then
+ * advanced one line at a time, so an inserted block is measured against itself, not against the page.
+ */
+export const MAX_WINDOW_LINES = 8
+
+export function viParagraphs(file) {
+  const body = read(file)
+  if (body === null) return []
+  const lines = body.split('\n')
+  const hits = []
+  for (let i = 0; i < lines.length; i++) {
+    let text = ''
+    for (let j = i; j < Math.min(i + MAX_WINDOW_LINES, lines.length); j++) {
+      text += lines[j] + ' '
+      if (text.length < MIN_PASSAGE_CHARS) continue
+      const ratio = (text.match(VI_LETTERS)?.length ?? 0) / text.length
+      if (ratio > VI_PARAGRAPH_LIMIT) {
+        hits.push({ ratio, line: i + 1, head: text.slice(0, 70).replace(/\s+/g, ' ') })
+        i = j // do not report the same block eight more times
+      }
+      break
+    }
+  }
+  return hits
+}
+
 /** Auto-loaded files containing a Vietnamese passage. Empty = gate green. */
 export function wrongLanguage() {
   return Object.keys(BUDGETS)
     .map((file) => ({ file, paras: viParagraphs(file) }))
     .filter((r) => r.paras.length > 0)
+}
+
+/**
+ * Canonical-rule gate (ADR-075). Rules must live in exactly ONE auto-loaded file.
+ *
+ * `CLAUDE.md` is the single source of truth for rules, infrastructure and routing; `START_HERE.md`
+ * holds project STATE. Before 2026-09-06 both restated the same operating laws, and the failure that
+ * predicts is already in this project's history: `START_HERE.md` once carried the merge rule
+ * BACKWARDS ("never merge main yourself") while `CLAUDE.md` said the opposite. A summary that drifts
+ * from the rule is worse than no summary, so duplication is now a test failure, not a style opinion.
+ *
+ * Each entry is a phrase that identifies one operating law, plus the file that owns it.
+ */
+export const CANONICAL_RULES = [
+  { owner: 'CLAUDE.md', phrase: 'Only `main` reaches production' },
+  { owner: 'CLAUDE.md', phrase: '12 Serverless Functions' },
+  { owner: 'CLAUDE.md', phrase: 'api/_tests/' },
+  { owner: 'CLAUDE.md', phrase: 'compare-and-swap' },
+  { owner: 'CLAUDE.md', phrase: 'GEMINI_API_KEY' },
+  { owner: 'CLAUDE.md', phrase: 'DC_CROSS_SLOW' },
+  { owner: 'CLAUDE.md', phrase: 'ASK BEFORE ACTING' },
+]
+
+/** Auto-loaded files that restate a rule owned by another file. Empty = gate green. */
+export function duplicatedRules() {
+  const found = []
+  for (const { owner, phrase } of CANONICAL_RULES) {
+    for (const file of Object.keys(BUDGETS)) {
+      if (file === owner) continue
+      const body = read(file)
+      if (body && body.includes(phrase)) found.push({ file, owner, phrase })
+    }
+  }
+  return found
+}
+
+/**
+ * Pointer gate (ADR-075). A doc reference that points at a path which does not exist sends the next
+ * session hunting and burns context for nothing — the exact waste TECH_DEBT #101 recorded (47 stale
+ * "see CLAUDE.md" pointers after the split). Scans auto-loaded docs for markdown-ish file paths and
+ * asserts each one resolves. Only `.md` paths are checked; code paths move too often to pin here.
+ *
+ * EXTERNAL_DOCS are referenced on purpose but live outside the repo, in Đàm's local Claude memory
+ * folder (`~/.claude/projects/.../memory/`). `CLAUDE.md` §PRIORITY RULE #1 already states that web
+ * sessions have no such folder, so these must not be reported as broken.
+ */
+export const EXTERNAL_DOCS = new Set([
+  'upgrade-roadmap.md', 'ui-review-2026-06.md', 'resonance-update.md', 'ask-before-acting.md',
+])
+export function brokenPointers() {
+  const seen = []
+  for (const file of Object.keys(BUDGETS)) {
+    const body = read(file)
+    if (!body) continue
+    for (const m of body.matchAll(/`([A-Za-z0-9_./-]+\.md)`/g)) {
+      const target = m[1]
+      if (target.includes('*') || EXTERNAL_DOCS.has(target)) continue
+      if (!existsSync(resolve(ROOT, target))) seen.push({ file, target })
+    }
+  }
+  return seen
 }
 
 const bar = (pct) => '█'.repeat(Math.min(20, Math.round(pct / 5))) + '·'.repeat(Math.max(0, 20 - Math.round(pct / 5)))
@@ -179,15 +283,20 @@ function report() {
     totalTok += tokens(file)
     const pct = (tokens(file) / 200000) * 100
     // Warning thresholds (TECH_DEBT #103) — reference docs may be large, so this warns, never blocks.
-    const warn = pct >= 100 ? '  ⚠️ one cat = BLOWS a 200k window'
-      : pct >= 50 ? '  ⚠️ time to freeze older parts into docs/archive/' : ''
+    const isArchive = file.startsWith('docs/archive/')
+    const warn = pct >= 100 ? '  ❌ LARGER THAN A CONTEXT WINDOW — split it'
+      : isArchive ? '  📚 archive — grep / --map only'
+      : pct >= 50 ? '  ⚠️ approaching: freeze older parts into docs/archive/' : ''
     console.log('  ' + file.padEnd(34) + fmt(n).padStart(10) + fmt(tokens(file)).padStart(9) +
       '  ' + pct.toFixed(1).padStart(6) + '%' + warn)
   }
   console.log('\n  → TOTAL docs: ' + fmt(total) + ' chars ≈ ' + fmt(totalTok) + ' tokens = ' +
     ((totalTok / 200000) * 100).toFixed(0) + '% of a 200k window\n')
 
-  if (over.length || wrong.length) {
+  const dup = duplicatedRules()
+  const broken = brokenPointers()
+  const huge = oversizedReferences()
+  if (over.length || wrong.length || dup.length || broken.length || huge.length) {
     if (over.length) {
       console.error('❌ OVER LIMIT: ' + over.map((r) => `${r.file} (${fmt(r.size)}/${fmt(r.limit)})`).join(' · '))
       console.error('   Fix: SPLIT into a docs/ topic file and leave one pointer line. Do not raise the limit, do not delete knowledge.')
@@ -197,12 +306,23 @@ function report() {
         console.error(`❌ NOT ENGLISH: ${r.file} — ${r.paras.length} Vietnamese paragraph(s)`)
         for (const p of r.paras) console.error(`     ${(p.ratio * 100).toFixed(1)}%  ${p.head}…`)
       }
-      console.error('   Fix: auto-loaded docs are English (CLAUDE.md §LANGUAGE RULE). Vietnamese costs ~2.3× the tokens.')
+      console.error('   Fix: auto-loaded docs are English (CLAUDE.md §LANGUAGE RULE). Vietnamese costs ~2.3x the tokens.')
+    }
+    if (dup.length) {
+      for (const d of dup) console.error(`❌ DUPLICATED RULE: ${d.file} restates "${d.phrase}" owned by ${d.owner}`)
+      console.error('   Fix: keep the rule in its owner and leave a pointer. Two copies always drift.')
+    }
+    if (broken.length) {
+      for (const b of broken) console.error(`❌ BROKEN POINTER: ${b.file} → ${b.target} does not exist`)
+    }
+    if (huge.length) {
+      for (const h of huge) console.error(`❌ LARGER THAN A CONTEXT WINDOW: ${h.file} ≈ ${fmt(h.tok)} tokens`)
+      console.error('   Fix: SPLIT the file (a date or number boundary). It cannot be read in one session as it is.')
     }
     console.error('')
     return 1
   }
-  console.log('✅ All auto-loaded files are within limits and in English.\n')
+  console.log('✅ Limits, language, canonical rules, pointers and file sizes all clean.\n')
   return 0
 }
 

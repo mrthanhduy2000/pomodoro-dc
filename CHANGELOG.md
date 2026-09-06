@@ -10,6 +10,16 @@
 > **Muốn hiểu VÌ SAO một quyết định được chọn** → `ARCHITECTURE_DECISIONS.md`. **Muốn biết migration
 > cụ thể nào cần chạy** → `MIGRATION.md`.
 
+## 2026-09-06 (night, fifth pass) — Document governance runs on discovery (ADR-076)
+
+- **Purpose**: the ADR-075 guards all read a hand-written list, so any document created later was
+  ungoverned — three archives created the same day were already outside it.
+- **Scope**: `discoverDocs()` + `classify()` replace the hardcoded list; classes come from the path,
+  so a file that does not exist yet is already governed. Rotation limits extended from 2 to 4
+  append-only logs (`TECH_DEBT.md`, `ARCHITECTURE_DECISIONS.md` added).
+- **Impact**: 28 documents governed instead of 20 listed; new files need no registration.
+- **Compatibility**: tooling and docs only. Break-tested both new gates.
+
 ## 2026-09-06 (night, third pass) — TECH_DEBT split by subsystem; UI invariants lazy-loaded (ADR-075)
 
 - **Purpose**: `TECH_DEBT.md` was the most-grepped reference file, and 87% of it was debts on the

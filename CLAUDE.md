@@ -53,11 +53,14 @@ ceiling, and crossing it means SPLIT, not raise.
    → `node scripts/doc-budget.mjs --map <file>` (prints headings + line ranges, costs almost nothing).
 2. **Same for code** — `completeFocusSession` is ~760 lines; do not `cat` all of `gameStore.js`.
 3. **Six guards run inside `npm test`** (`scripts/docBudget.test.js`) — each adversarially
-   break-tested, none is a promise: **char limit** per auto-loaded file (DOC MAP below) ·
+   break-tested, none is a promise. They run off **discovery, not a list**: every `.md` is found and
+   classified by path (`docs/archive/**` = archive · the four above = auto-loaded ·
+   append-only logs = journal · everything else = active), so **a document created by a later session
+   is governed before it exists** (ADR-076). The gates: **char limit** per auto-loaded file (DOC MAP below) ·
    **language** (a Vietnamese passage in an English doc) · **canonical rule** (no auto-loaded file
    may restate a rule another owns — this file once had the merge rule backwards in two places) ·
    **pointer** (every `.md` reference must resolve) · **context-window ceiling** (no reference doc
-   above one window) · **rotation** (`BAN_GIAO.md` / `CHANGELOG.md` must archive old entries). Any breach = **RED TEST**. Check: `node scripts/doc-budget.mjs`.
+   above one window) · **rotation** (every append-only log — `BAN_GIAO.md` · `CHANGELOG.md` · `TECH_DEBT.md` · `ARCHITECTURE_DECISIONS.md` — must shed old entries into `docs/archive/`). Any breach = **RED TEST**. Check: `node scripts/doc-budget.mjs`.
    When one goes red the fix is **SPLIT and leave a pointer** — never raise a limit, never delete
    knowledge. *(Why guards: the old 40,000 limit was only a sentence, and `START_HERE.md` had
    silently blown its own limit with nobody noticing. **A threshold with no guard is a funnel.**)*

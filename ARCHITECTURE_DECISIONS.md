@@ -73,6 +73,43 @@ roughly 44%. Titles below are the lookup key; read one with
 
 ---
 
+## ADR-076 — Document governance runs on DISCOVERY, not on a hand-written list
+
+- **Date**: 2026-09-06 (night, after ADR-075)
+- **Context**: ADR-075 left six guards protecting the documentation budget, but every one of them
+  read a hardcoded array (`REFERENCE_DOCS`) or a two-entry limit table. Đàm asked the right question:
+  *what about the files that later work creates — is there a solution, or will it just grow back?*
+- **Root problem**: a guard driven by a list only governs what someone remembered to add. Proof was
+  immediate: three archives created **that same day** (183,626 · 223,614 · 246,133 chars) were
+  already outside the list and therefore outside every gate. That is exactly how this repository
+  reached 2.7M chars in the first place — nothing was watching the files nobody listed.
+- **Options considered**:
+  1. Keep the list and add a rule ("remember to register new docs").
+  2. A generated budget file (`doc-limits.json`) that every doc must appear in, regenerated on demand.
+  3. Discover every `.md` and classify it by PATH CONVENTION.
+- **Why the others were rejected**: (1) is the failure mode itself — a rule with no enforcement is
+  the "threshold with no guard is a funnel" lesson repeated. (2) works, but a per-file number is a
+  maintenance chore and a lazy session can regenerate it to make red go away, which defeats the
+  ratchet.
+- **Chosen solution**: option (3). `discoverDocs()` walks the tree (skipping `node_modules`, `.git`,
+  `dist`, `coverage`) and `classify()` assigns a class from the path alone:
+  `docs/archive/**` → archive (capped only by the context window) · the four auto-loaded files →
+  their explicit char limits · append-only logs → journal (rotation limit) · **everything else →
+  active** (context-window ceiling, warning at half a window). A file that does not exist yet already
+  falls into "active", so it is governed the moment it is created — nothing to register, nothing to
+  remember.
+- **Also**: the rotation class grew from 2 files to 4. `TECH_DEBT.md` and `ARCHITECTURE_DECISIONS.md`
+  are append-only too — new debts and new ADRs arrive with every session — so they now carry rotation
+  limits (120,000 and 250,000 chars) that force shedding old entries into `docs/archive/`.
+- **Break-tested**: creating `docs/FUTURE_THING.md` at 900,000 chars turns the ceiling gate red
+  naming that file, though no list mentions it; padding `TECH_DEBT.md` past 120,000 chars turns the
+  rotation gate red.
+- **Trade-off**: discovery costs a directory walk per test run (negligible) and the classes are
+  coarse — a genuinely special document cannot get a bespoke limit without adding it to a table. That
+  is deliberate: coarse rules that need no maintenance beat precise rules nobody maintains.
+- **Review conditions**: if a legitimate document must exceed one context window, do not raise the
+  ceiling — split it, and if splitting is genuinely impossible, that is the signal to revisit this ADR.
+
 ## ADR-075 — Retrieval architecture: freeze closed knowledge, cap every file at one context window, guard it
 
 - **Date**: 2026-09-06 (night, same day as ADR-073/074)

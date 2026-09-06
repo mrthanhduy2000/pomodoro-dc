@@ -4,7 +4,8 @@ import { readFileSync, existsSync } from 'node:fs'
 import { fileURLToPath } from 'node:url'
 import { dirname, resolve } from 'node:path'
 import { BUDGETS, VI_PARAGRAPH_LIMIT, CANONICAL_RULES, chars, viParagraphs, tokens, overBudget,
-  wrongLanguage, duplicatedRules, brokenPointers, oversizedReferences, needsRotation, ACTIVE_DOC_LIMITS,
+  wrongLanguage, duplicatedRules, brokenPointers, oversizedReferences, needsRotation, ROTATION_LIMITS,
+  discoverDocs, classify,
   REFERENCE_CEILING_TOKENS } from './doc-budget.mjs'
 
 const ROOT = resolve(dirname(fileURLToPath(import.meta.url)), '..')
@@ -183,5 +184,25 @@ test('doc-budget: active journals stay under their rotation limit', () => {
   const rot = needsRotation()
   const msg = rot.map((r) => `${r.file}: ${r.size}/${r.limit}`).join(' · ')
   assert.equal(rot.length, 0, `Rotate the oldest entries into docs/archive/: ${msg}`)
-  assert.ok(Object.keys(ACTIVE_DOC_LIMITS).length >= 2, 'the rotation gate must guard the growing journals')
+  assert.ok(Object.keys(ROTATION_LIMITS).length >= 4, 'every append-only doc must have a rotation limit')
+})
+
+/**
+ * DISCOVERY GATE (ADR-076). Every other gate used to run off a hand-written list, so a document
+ * created by a later session was invisible to all of them. Proof it mattered: on 2026-09-06 three
+ * archives created that same day (183k, 223k, 246k chars) were already outside the list.
+ * Documents are now discovered and classified by path convention, so a file that does not exist yet
+ * is already governed.
+ */
+test('doc-budget: discovery finds every .md and classifies it', () => {
+  const docs = discoverDocs()
+  assert.ok(docs.length >= 25, `discovery found only ${docs.length} docs — the walk is broken`)
+  for (const f of ['CLAUDE.md', 'README.md', 'docs/GOVERNANCE.md', 'docs/archive/ADR_ARCHIVE_001-050.md']) {
+    assert.ok(docs.includes(f), `discovery missed ${f}`)
+  }
+  assert.equal(classify('CLAUDE.md'), 'autoloaded')
+  assert.equal(classify('BAN_GIAO.md'), 'journal')
+  assert.equal(classify('docs/archive/anything.md'), 'archive')
+  assert.equal(classify('docs/some-future-file.md'), 'active', 'an unknown new doc must still be governed')
+  assert.ok(!docs.some((f) => f.includes('node_modules')), 'the walk must skip node_modules')
 })

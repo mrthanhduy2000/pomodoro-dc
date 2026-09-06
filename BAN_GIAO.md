@@ -1,3 +1,22 @@
+> Last update: **2026-09-06 (night, fifth pass)** — **GOVERNANCE NOW RUNS ON DISCOVERY (ADR-076).**
+>
+> Đàm asked the right question: *what about the files later work creates — will it just grow back?*
+> It would have. Every guard from ADR-075 read a **hand-written list**, so a document nobody
+> registered was invisible to all of them. Proof arrived immediately: **three archives created that
+> same day** (183,626 · 223,614 · 246,133 chars) were already outside the list.
+>
+> Fixed at the root: `discoverDocs()` walks the tree and `classify()` assigns a class from the PATH —
+> `docs/archive/**` = archive · the four auto-loaded files = autoloaded · append-only logs = journal ·
+> **everything else = active**. A file that does not exist yet already lands in "active", so it is
+> governed the moment it is created. Nothing to register, nothing to remember.
+> Rotation also grew from 2 files to 4: `TECH_DEBT.md` (120,000) and `ARCHITECTURE_DECISIONS.md`
+> (250,000) are append-only too — new debts and new ADRs arrive every session.
+>
+> **Break-tested**: a brand-new `docs/FUTURE_THING.md` of 900,000 chars turns the ceiling gate red by
+> name although no list mentions it; padding `TECH_DEBT.md` past its limit turns rotation red.
+
+---
+
 > Last update: **2026-09-06 (night, fourth pass)** — **STARTUP CONTEXT DOWN TO 8,606 TOKENS.**
 >
 > `START_HERE.md` 11,030 → 9,764 chars: rounds 34 and 35 compressed to the two lessons that outlive

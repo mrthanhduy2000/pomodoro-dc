@@ -1085,7 +1085,12 @@ Reopening something means moving it back out of the archive — never duplicatin
    `AGENTS.md` · `docs/GOVERNANCE.md` · `docs/OPERATIONS.md` viết **TIẾNG ANH** (tiếng Việt tốn
    ~2,3 lần token cho cùng một ý). Kho tra cứu: phần cũ giữ tiếng Việt, phần **MỚI viết tiếng Anh**.
    **Báo cáo cho Đàm: tiếng Việt.** Bảng ranh giới đầy đủ ở `CLAUDE.md` §LANGUAGE RULE.
-6. **SÁU CỔNG CANH THẬT** (`scripts/docBudget.test.js`, chạy trong `npm test`; mỗi cổng đều đã qua
+6. ⚠️ **CÁC CỔNG CHẠY BẰNG TỰ PHÁT HIỆN, KHÔNG BẰNG DANH SÁCH** *(ADR-076)*: `discoverDocs()` quét
+   cả cây, `classify()` gán lớp theo ĐƯỜNG DẪN — `docs/archive/**` = archive · 4 file tự-nạp =
+   autoloaded · log chỉ-ghi-thêm = journal · **còn lại = active**. Nhờ vậy **một file do phiên sau
+   tạo ra đã bị quản trước cả khi nó tồn tại**, không cần ai nhớ khai báo. (Bằng chứng cần cơ chế
+   này: ba archive tạo ngay trong ngày 2026-09-06 đã lọt ra ngoài danh sách viết tay.)
+7. **SÁU CỔNG CANH THẬT** (`scripts/docBudget.test.js`, chạy trong `npm test`; mỗi cổng đều đã qua
    phép phá — không cổng nào là lời hứa):
    · **Trần ký tự** file tự-nạp: `CLAUDE.md` ≤ 16.000 · `START_HERE.md` ≤ 16.000 ·
      `PHASE_RULES.md` ≤ 8.000 · `AGENTS.md` ≤ 3.500.
@@ -1097,12 +1102,13 @@ Reopening something means moving it back out of the archive — never duplicatin
      ở thư mục memory trên máy Đàm, đã khai trong `EXTERNAL_DOCS`).
    · **Trần cửa sổ ngữ cảnh** *(ADR-075)*: không file tra cứu nào được vượt 200.000 token ước tính.
      Vượt = phải TÁCH, không được nới trần.
-   · **Xoay vòng nhật ký** *(ADR-075)*: `BAN_GIAO.md` · `CHANGELOG.md` ≤ 120.000 ký tự. Vượt = phải
+   · **Xoay vòng log chỉ-ghi-thêm** *(ADR-075, mở rộng ở ADR-076)*: `BAN_GIAO.md` · `CHANGELOG.md` ·
+     `TECH_DEBT.md` ≤ 120.000 ký tự · `ARCHITECTURE_DECISIONS.md` ≤ 250.000. Vượt = phải
      chuyển mục cũ nhất sang `docs/archive/` (đúng `PHASE_RULES.md` §5), không được nới trần.
    Kiểm: **`node scripts/doc-budget.mjs`**. ⚠️ Đo bằng **ký tự Unicode (JS `String.length`)**, KHÔNG
    bằng `wc -c` (thổi phồng ~21%) và không bằng `len()` của Python (emoji ngoài BMP lệch). Hệ số:
    VI **1,723** ký tự/token (đo được) · EN **4,0** (ước lượng, chưa đo).
-7. ❌ **CẤM `cat` kho tra cứu**: `TECH_DEBT.md` (250k token = 125% cửa sổ 200k) ·
+8. ❌ **CẤM `cat` kho tra cứu**: `TECH_DEBT.md` (250k token = 125% cửa sổ 200k) ·
    `ARCHITECTURE_DECISIONS.md` (223k) · `CHANGELOG.md` (154k) · `docs/LESSONS_3D.md` (152k) ·
    `BAN_GIAO.md` (134k, chỉ `head -60`) · `PERFORMANCE.md` (98k). Dùng `grep -n`, `sed -n 'A,Bp'`,
    hoặc `node scripts/doc-budget.mjs --map <file>` để lấy mục lục + khoảng dòng.

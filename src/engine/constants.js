@@ -910,96 +910,103 @@ export const ERA_CRISES = {
  * ĐỀ: tài nguyên (tăng trưởng) → EP · RP (tri thức) → XP · giảm thảm hoạ (che chở) → giữ combo.
  * Bậc «Cơ Bản» PHẢI trùng `successRelic.buff` trong `ERA_CRISES` — một luật một công thức, có test.
  */
+// ADR-070 (2026-09-06): DI VẬT TIẾN HOÁ THEO PHIÊN, không theo tinh luyện (`TECH_DEBT #96` từng ghi:
+// tinh luyện của kỷ đã qua không có đường nào kiếm ⇒ 3/3 nút tiến hoá "Chưa đủ tài nguyên" vĩnh viễn).
+// Số phiên ≥RELIC_EVOLVE_MIN_MINUTES kể TỪ LÚC NHẬN để chạm từng bậc; luật ở `engine/relicGrowth.js`.
+// ⚠️ ADR-070: bậc KHÔNG còn giá (`t2Cost`/`t3Cost` đã gỡ) — tiến hoá đổi bằng PHIÊN, không bằng đồng tiền ngủ.
+export const RELIC_EVOLVE_SESSIONS = [0, 20, 50];
+export const RELIC_EVOLVE_MIN_MINUTES = 25;
+
 export const RELIC_EVOLUTION = {
   // ── Era 1 — EP (ADR-069: từng là tài nguyên) ──────────────────────────────────────────────────────
   mam_song_bat_diet: { era: 1, stages: [
     { label: 'Cơ Bản',      buff: { epBonus: 0.08 } },
-    { label: 'Tiến Hóa',    buff: { epBonus: 0.11 }, t2Cost: 5 },
-    { label: 'Huyền Thoại', buff: { epBonus: 0.15, xpSeal: 0.02 }, t3Cost: 3 },
+    { label: 'Tiến Hóa',    buff: { epBonus: 0.11 } },
+    { label: 'Huyền Thoại', buff: { epBonus: 0.15, xpSeal: 0.02 } },
   ]},
   // ── Era 2 — XP (ADR-069: từng là RP) ─────────────────────────────────────
   phep_mau_mua_vu: { era: 2, stages: [
     { label: 'Cơ Bản',      buff: { expBonus: 0.05 } },
-    { label: 'Tiến Hóa',    buff: { expBonus: 0.08 }, t2Cost: 5 },
-    { label: 'Huyền Thoại', buff: { expBonus: 0.12, xpSeal: 0.02 }, t3Cost: 3 },
+    { label: 'Tiến Hóa',    buff: { expBonus: 0.08 } },
+    { label: 'Huyền Thoại', buff: { expBonus: 0.12, xpSeal: 0.02 } },
   ]},
   // ── Era 3 — Combo (ADR-069: từng là giảm thảm hoạ) ──────────────────────────────────────────────────────
   bua_ho_menh: { era: 3, stages: [
     { label: 'Cơ Bản',      buff: { comboWindowHours: 1 } },
-    { label: 'Tiến Hóa',    buff: { comboWindowHours: 2 }, t2Cost: 5 },
-    { label: 'Huyền Thoại', buff: { comboWindowHours: 3, xpSeal: 0.02 }, t3Cost: 3 },
+    { label: 'Tiến Hóa',    buff: { comboWindowHours: 2 } },
+    { label: 'Huyền Thoại', buff: { comboWindowHours: 3, xpSeal: 0.02 } },
   ]},
   // ── Era 4 — EP (ADR-069: từng là tài nguyên) ──────────────────────────────────────────────────────
   luoi_kiem_sat_ben: { era: 4, stages: [
     { label: 'Cơ Bản',      buff: { epBonus: 0.09 } },
-    { label: 'Tiến Hóa',    buff: { epBonus: 0.13 }, t2Cost: 5 },
-    { label: 'Huyền Thoại', buff: { epBonus: 0.18, xpSeal: 0.02 }, t3Cost: 3 },
+    { label: 'Tiến Hóa',    buff: { epBonus: 0.13 } },
+    { label: 'Huyền Thoại', buff: { epBonus: 0.18, xpSeal: 0.02 } },
   ]},
   // ── Era 5 — XP (ADR-069: từng là RP) ─────────────────────────────────────
   lua_vinh_cuu: { era: 5, stages: [
     { label: 'Cơ Bản',      buff: { expBonus: 0.06 } },
-    { label: 'Tiến Hóa',    buff: { expBonus: 0.10 }, t2Cost: 5 },
-    { label: 'Huyền Thoại', buff: { expBonus: 0.15, xpSeal: 0.02 }, t3Cost: 3 },
+    { label: 'Tiến Hóa',    buff: { expBonus: 0.10 } },
+    { label: 'Huyền Thoại', buff: { expBonus: 0.15, xpSeal: 0.02 } },
   ]},
   // ── Era 6 — Combo ─────────────────────────────────────────────────────────
   la_chan_phong_kien: { era: 6, stages: [
     { label: 'Cơ Bản',      buff: { comboWindowHours: 1 } },
-    { label: 'Tiến Hóa',    buff: { comboWindowHours: 2 }, t2Cost: 5 },
-    { label: 'Huyền Thoại', buff: { comboWindowHours: 3, xpSeal: 0.02 }, t3Cost: 3 },
+    { label: 'Tiến Hóa',    buff: { comboWindowHours: 2 } },
+    { label: 'Huyền Thoại', buff: { comboWindowHours: 3, xpSeal: 0.02 } },
   ]},
   // ── Era 7 — EP (ADR-069: từng là tài nguyên) ──────────────────────────────────────────────────────
   la_ban_da_vinci: { era: 7, stages: [
     { label: 'Cơ Bản',      buff: { epBonus: 0.10 } },
-    { label: 'Tiến Hóa',    buff: { epBonus: 0.14 }, t2Cost: 5 },
-    { label: 'Huyền Thoại', buff: { epBonus: 0.19, xpSeal: 0.02 }, t3Cost: 3 },
+    { label: 'Tiến Hóa',    buff: { epBonus: 0.14 } },
+    { label: 'Huyền Thoại', buff: { epBonus: 0.19, xpSeal: 0.02 } },
   ]},
   // ── Era 8 — XP (ADR-069: từng là RP) ─────────────────────────────────────
   xuc_xac_ky_vong: { era: 8, stages: [
     { label: 'Cơ Bản',      buff: { expBonus: 0.08 } },
-    { label: 'Tiến Hóa',    buff: { expBonus: 0.12 }, t2Cost: 5 },
-    { label: 'Huyền Thoại', buff: { expBonus: 0.18, xpSeal: 0.02 }, t3Cost: 3 },
+    { label: 'Tiến Hóa',    buff: { expBonus: 0.12 } },
+    { label: 'Huyền Thoại', buff: { expBonus: 0.18, xpSeal: 0.02 } },
   ]},
   // ── Era 9 — Combo (ADR-069: từng là giảm thảm hoạ) ──────────────────────────────────────────────────────
   ngon_duoc_khai_sang: { era: 9, stages: [
     { label: 'Cơ Bản',      buff: { comboWindowHours: 1 } },
-    { label: 'Tiến Hóa',    buff: { comboWindowHours: 2 }, t2Cost: 5 },
-    { label: 'Huyền Thoại', buff: { comboWindowHours: 3, xpSeal: 0.02 }, t3Cost: 3 },
+    { label: 'Tiến Hóa',    buff: { comboWindowHours: 2 } },
+    { label: 'Huyền Thoại', buff: { comboWindowHours: 3, xpSeal: 0.02 } },
   ]},
   // ── Era 10 — EP (ADR-069: từng là tài nguyên) ─────────────────────────────────────────────────────
   banh_rang_vinh_cuu: { era: 10, stages: [
     { label: 'Cơ Bản',      buff: { epBonus: 0.11 } },
-    { label: 'Tiến Hóa',    buff: { epBonus: 0.15 }, t2Cost: 5 },
-    { label: 'Huyền Thoại', buff: { epBonus: 0.20, xpSeal: 0.02 }, t3Cost: 3 },
+    { label: 'Tiến Hóa',    buff: { epBonus: 0.15 } },
+    { label: 'Huyền Thoại', buff: { epBonus: 0.20, xpSeal: 0.02 } },
   ]},
   // ── Era 11 — Combo ────────────────────────────────────────────────────────
   ao_giap_de_quoc: { era: 11, stages: [
     { label: 'Cơ Bản',      buff: { comboWindowHours: 2 } },
-    { label: 'Tiến Hóa',    buff: { comboWindowHours: 3 }, t2Cost: 5 },
-    { label: 'Huyền Thoại', buff: { comboWindowHours: 5, xpSeal: 0.02 }, t3Cost: 3 },
+    { label: 'Tiến Hóa',    buff: { comboWindowHours: 3 } },
+    { label: 'Huyền Thoại', buff: { comboWindowHours: 5, xpSeal: 0.02 } },
   ]},
   // ── Era 12 — XP (ADR-069: từng là RP) ────────────────────────────────────
   mat_ma_bat_kha_pha: { era: 12, stages: [
     { label: 'Cơ Bản',      buff: { expBonus: 0.10 } },
-    { label: 'Tiến Hóa',    buff: { expBonus: 0.14 }, t2Cost: 5 },
-    { label: 'Huyền Thoại', buff: { expBonus: 0.20, xpSeal: 0.02 }, t3Cost: 3 },
+    { label: 'Tiến Hóa',    buff: { expBonus: 0.14 } },
+    { label: 'Huyền Thoại', buff: { expBonus: 0.20, xpSeal: 0.02 } },
   ]},
   // ── Era 13 — Combo (ADR-069: từng là giảm thảm hoạ) ─────────────────────────────────────────────────────
   tri_tue_sieu_viet: { era: 13, stages: [
     { label: 'Cơ Bản',      buff: { comboWindowHours: 2 } },
-    { label: 'Tiến Hóa',    buff: { comboWindowHours: 3 }, t2Cost: 5 },
-    { label: 'Huyền Thoại', buff: { comboWindowHours: 4, xpSeal: 0.02 }, t3Cost: 3 },
+    { label: 'Tiến Hóa',    buff: { comboWindowHours: 3 } },
+    { label: 'Huyền Thoại', buff: { comboWindowHours: 4, xpSeal: 0.02 } },
   ]},
   // ── Era 14 — EP (ADR-069: từng là tài nguyên) ─────────────────────────────────────────────────────
   mang_luoi_vinh_cuu: { era: 14, stages: [
     { label: 'Cơ Bản',      buff: { epBonus: 0.12 } },
-    { label: 'Tiến Hóa',    buff: { epBonus: 0.17 }, t2Cost: 5 },
-    { label: 'Huyền Thoại', buff: { epBonus: 0.22, xpSeal: 0.02 }, t3Cost: 3 },
+    { label: 'Tiến Hóa',    buff: { epBonus: 0.17 } },
+    { label: 'Huyền Thoại', buff: { epBonus: 0.22, xpSeal: 0.02 } },
   ]},
   // ── Era 15 — Combo + Disaster ─────────────────────────────────────────────
   loi_tri_tue: { era: 15, stages: [
     { label: 'Cơ Bản',      buff: { comboWindowHours: 3, epBonus: 0.05 } },
-    { label: 'Tiến Hóa',    buff: { comboWindowHours: 5, epBonus: 0.08 }, t2Cost: 5 },
-    { label: 'Huyền Thoại', buff: { comboWindowHours: 8, epBonus: 0.12, xpSeal: 0.02 }, t3Cost: 3 },
+    { label: 'Tiến Hóa',    buff: { comboWindowHours: 5, epBonus: 0.08 } },
+    { label: 'Huyền Thoại', buff: { comboWindowHours: 8, epBonus: 0.12, xpSeal: 0.02 } },
   ]},
 };
 
@@ -2453,9 +2460,6 @@ export function getUpgradeRefinedCost(era, currentLevel = 1) {
     : Math.max(0, (costs.t2 ?? 0) + (costs.t3 ?? 0) * T3_REFINED_EQUIVALENT);
 }
 
-export function getRelicEvolutionRefinedCost(stageDef = {}) {
-  return Math.max(0, (stageDef.t2Cost ?? 0) + (stageDef.t3Cost ?? 0) * T3_REFINED_EQUIVALENT);
-}
 
 // ─── TÊN NGUYÊN LIỆU TINH LUYỆN THEO KỶ NGUYÊN ───────────────────────────────
 export const ERA_REFINED = {
@@ -2477,22 +2481,34 @@ export const ERA_REFINED = {
 };
 
 // ─── HIỆU ỨNG KỲ QUAN (15 kỷ nguyên) ────────────────────────────────────────
+/**
+ * ⚠️ ADR-070 (2026-09-06): MỌI ĐẶC QUYỀN KỲ QUAN NẰM TRÊN TRỤC SỐNG. Trước đó 11/15 kỳ quan thưởng lên
+ * tài nguyên / RP / tinh luyện / giảm thảm hoạ — bốn thứ đã rời đường chơi từ ADR-069 — tức công trình
+ * đắt nhất mỗi kỷ trao một tấm nhãn không có hiệu ứng nhìn thấy được. Nay:
+ *   · `passive` = buff cộng thẳng vào phần thưởng phiên, đọc qua `wonderPassiveBuffs()` ở
+ *     `engine/wonderEffects.js`: `expBonus` · `epBonus` · `comboWindowHours` · `flatXp` (kèm `minMinutes`).
+ *   · Bốn đặc quyền có luật riêng GIỮ id cũ: `longer_crisis_window` (`crisisWindowHours`, cửa sổ thử
+ *     thách kỷ dài thêm) · `streak_cap_plus` · `mission_bonus_20` · `relic_evo_30off` (`relicEvolveFactor`,
+ *     di vật tiến hoá theo phiên nhanh hơn — xem `engine/relicGrowth.js`).
+ * Nhãn/mô tả ở đây là thứ `BuildScreen` in dưới mỗi công trình đã xây: chúng PHẢI nói đúng thứ
+ * `passive` làm (`rewardAxes.test.js` từ chối mọi mô tả còn nhắc tới đồng tiền đã ngủ).
+ */
 export const WONDER_EFFECT_REGISTRY = {
-  extra_forgiveness:    { era: 1,  label: '+1 Sự Tha Thứ/tuần',              description: 'Mỗi tuần được thêm 1 lần hủy phiên mà không nhận Thảm Họa.' },
-  cheaper_t2_craft:     { era: 2,  label: 'Chế tinh luyện rẻ hơn',           description: 'Giảm chi phí chế tác nguyên liệu tinh luyện từ 8 xuống còn 6 nguyên liệu thô.' },
-  longer_crisis_window: { era: 3,  label: 'Cửa sổ khủng hoảng +12 giờ',     description: 'Thêm 12 giờ để hoàn thành thách thức khủng hoảng kỷ nguyên.' },
-  streak_cap_plus:      { era: 4,  label: 'Giới hạn chuỗi +10 ngày',         description: 'Tăng trần bonus XP từ chuỗi ngày thêm 10 ngày.' },
-  research_speed_25:    { era: 5,  label: '+25% RP mỗi phiên',               description: 'Tất cả Điểm Nghiên Cứu (RP) kiếm được tăng 25%.' },
-  building_hp_boost:    { era: 6,  label: '+15% nguyên liệu thô mỗi phiên', description: 'Mỗi phiên tập trung nhận thêm 15% nguyên liệu thô, đồng thời hủy phiên bớt thất thoát hơn.' },
-  t2_research_25off:    { era: 7,  label: '-25% RP bản vẽ kỷ 6-10',          description: 'Giảm 25% chi phí RP nghiên cứu tất cả bản vẽ nhóm kỷ giữa (6-10).' },
-  era_carry_10pct:      { era: 8,  label: 'Dự trữ đầu kỷ mới',               description: 'Khi lên kỷ, nhận thêm nguyên liệu thô của kỷ mới bằng 10% tổng kho thô kỷ trước.' },
-  mission_bonus_20:     { era: 9,  label: '+20% XP từ nhiệm vụ hàng ngày',   description: 'Tăng 20% phần thưởng XP từ tất cả nhiệm vụ hàng ngày.' },
-  deep_session_refined_bonus: { era: 10, label: 'Phiên sâu cho thêm tinh luyện', description: 'Mỗi phiên từ 90 phút trở lên nhận thêm 1 nguyên liệu tinh luyện.' },
-  era_carry_refined_12:       { era: 11, label: 'Vốn tinh luyện đầu kỷ',         description: 'Khi lên kỷ, nhận sẵn 12 nguyên liệu tinh luyện của kỷ mới.' },
-  disaster_hp_50off:    { era: 12, label: 'Mất tài nguyên khi hủy phiên -50%', description: 'Giảm một nửa mức thất thoát tài nguyên khi hủy phiên hoặc nhận thảm họa thường.' },
-  gacha_pity_minus5:    { era: 13, label: '+25% RP mỗi phiên',               description: 'Tăng thêm 25% RP ở mọi phiên tập trung.' },
-  research_speed_30:    { era: 14, label: '+30% RP mỗi phiên',               description: 'Thêm 30% RP (tích lũy với Kỳ Quan Era 5, tổng +55%).' },
-  relic_evo_30off:      { era: 15, label: '-30% chi phí tiến hóa Di Vật',    description: 'Giảm 30% tài nguyên cần thiết để tiến hóa tất cả Di Vật.' },
+  xp_all_5:             { era: 1,  label: '+5% XP mọi phiên',              description: 'Mọi phiên tập trung nhận thêm 5% XP.',                                   passive: { expBonus: 0.05 } },
+  xp_deep_10:           { era: 2,  label: '+10% XP phiên dài',             description: 'Phiên từ 45 phút nhận thêm 10% XP.',                                     passive: { expBonus: 0.10, minMinutes: 45 } },
+  longer_crisis_window: { era: 3,  label: 'Thử thách kỷ rộng thêm 24 giờ', description: 'Cửa sổ đếm phiên của thử thách kỷ nguyên dài 72 giờ thay vì 48.',        crisisWindowHours: 24 },
+  streak_cap_plus:      { era: 4,  label: 'Giới hạn chuỗi +10 ngày',       description: 'Tăng trần thưởng XP từ chuỗi ngày thêm 10 ngày.' },
+  ep_all_10:            { era: 5,  label: '+10% EP mọi phiên',             description: 'Mọi phiên tập trung đẩy thêm 10% EP về phía kỷ mới.',                    passive: { epBonus: 0.10 } },
+  combo_window_2h:      { era: 6,  label: 'Combo giữ thêm 2 giờ',          description: 'Chuỗi combo giữa hai phiên không tắt trong thêm 2 giờ.',                 passive: { comboWindowHours: 2 } },
+  ep_all_8:             { era: 7,  label: '+8% EP mọi phiên',              description: 'Mọi phiên tập trung đẩy thêm 8% EP về phía kỷ mới.',                     passive: { epBonus: 0.08 } },
+  xp_all_8:             { era: 8,  label: '+8% XP mọi phiên',              description: 'Mọi phiên tập trung nhận thêm 8% XP.',                                   passive: { expBonus: 0.08 } },
+  mission_bonus_20:     { era: 9,  label: '+20% XP từ nhiệm vụ hàng ngày', description: 'Tăng 20% phần thưởng XP từ tất cả nhiệm vụ hàng ngày.' },
+  deep_session_xp_150:  { era: 10, label: 'Phiên sâu +150 XP',             description: 'Mỗi phiên từ 90 phút trở lên tặng thêm 150 XP.',                         passive: { flatXp: 150, minMinutes: 90 } },
+  combo_window_3h:      { era: 11, label: 'Combo giữ thêm 3 giờ',          description: 'Chuỗi combo giữa hai phiên không tắt trong thêm 3 giờ.',                 passive: { comboWindowHours: 3 } },
+  xp_all_10:            { era: 12, label: '+10% XP mọi phiên',             description: 'Mọi phiên tập trung nhận thêm 10% XP.',                                  passive: { expBonus: 0.10 } },
+  ep_all_12:            { era: 13, label: '+12% EP mọi phiên',             description: 'Mọi phiên tập trung đẩy thêm 12% EP về phía kỷ mới.',                    passive: { epBonus: 0.12 } },
+  xp_all_12:            { era: 14, label: '+12% XP mọi phiên',             description: 'Mọi phiên tập trung nhận thêm 12% XP.',                                  passive: { expBonus: 0.12 } },
+  relic_evo_30off:      { era: 15, label: 'Di vật tiến hoá nhanh hơn 30%', description: 'Mọi di vật cần ít hơn 30% số phiên để lên bậc.',                         relicEvolveFactor: 0.7 },
 };
 
 export const BUILDING_PERK_REGISTRY = {
@@ -2513,29 +2529,28 @@ export const BUILDING_PERK_REGISTRY = {
   daily_chest: {
     family: 'Rương thưởng',
     label: 'Rương phiên thứ 3',
-    summary: 'Mỗi phiên thứ 3 trong ngày tặng 90 XP và 1 tinh luyện.',
+    summary: 'Mỗi phiên thứ 3 trong ngày tặng 90 XP.',
     effects: ['daily_chest'],
     everySessions: 3,
     xp: 90,
-    refined: 1,
   },
   deep_chest: {
     family: 'Rương thưởng',
     label: 'Rương phiên dài',
-    summary: 'Phiên từ 60 phút tặng 140 XP và 1 tinh luyện.',
+    summary: 'Phiên từ 60 phút tặng 140 XP.',
     effects: ['deep_chest'],
     minMinutes: 60,
     xp: 140,
-    refined: 1,
   },
+  // ADR-070: vế «hủy an toàn» (miễn phạt tài nguyên) đã bỏ — không còn phạt để mà miễn. Còn lại vế
+  // sống: phiên bù sau khi hủy được thưởng, tức công trình «Bảo hiểm» nay là công trình «Phục hồi».
   safety_net: {
-    family: 'Bảo hiểm',
-    label: 'Hủy an toàn + phiên bù',
-    summary: 'Mỗi ngày, lần hủy đầu tiên không gây thảm họa. Sau khi hủy, phiên từ 15 phút tặng 80 XP và 1 tinh luyện.',
-    effects: ['safe_cancel_daily', 'recovery_bonus'],
+    family: 'Phục hồi',
+    label: 'Phiên bù sau khi hủy',
+    summary: 'Sau khi hủy một phiên, phiên kế từ 15 phút tặng 80 XP.',
+    effects: ['recovery_bonus'],
     minMinutes: 15,
     xp: 80,
-    refined: 1,
   },
   same_category_combo: {
     family: 'Combo',
@@ -2548,11 +2563,10 @@ export const BUILDING_PERK_REGISTRY = {
   variety_day: {
     family: 'Combo',
     label: 'Ngày đa dạng',
-    summary: 'Khi dùng đủ 3 danh mục trong ngày, nhận 120 XP và 1 tinh luyện.',
+    summary: 'Khi dùng đủ 3 danh mục trong ngày, nhận 120 XP.',
     effects: ['variety_day'],
     requiredCategories: 3,
     xp: 120,
-    refined: 1,
   },
 };
 
@@ -2565,13 +2579,13 @@ const _BLDG_ROLES = {
   bp_bep_lua:                [1,  'economy'],
   bp_cong_cu_da:             [1,  'infrastructure'],
   bp_trai_nguyen_thuy:       [1,  'defense'],
-  bp_tho_pho_linh:           [1,  'wonder', 'extra_forgiveness'],
+  bp_tho_pho_linh:           [1,  'wonder', 'xp_all_5'],
   // ── Kỷ 2 ──────────────────────────────────────────────────────────────────
   bp_lang_nong:              [2,  'infrastructure'],
   bp_lo_gom:                 [2,  'economy'],
   bp_kenh_tuoi:              [2,  'infrastructure'],
   bp_kho_lua:                [2,  'defense'],
-  bp_den_tho_co:             [2,  'wonder', 'cheaper_t2_craft'],
+  bp_den_tho_co:             [2,  'wonder', 'xp_deep_10'],
   // ── Kỷ 3 ──────────────────────────────────────────────────────────────────
   bp_lo_duc_dong:            [3,  'infrastructure'],
   bp_xuong_ren_co:           [3,  'economy'],
@@ -2589,25 +2603,25 @@ const _BLDG_ROLES = {
   bp_benh_xa:                [5,  'economy'],
   bp_thap_canh:              [5,  'defense'],
   bp_nha_tho_lon:            [5,  'infrastructure'],
-  bp_thu_vien_trung_co:      [5,  'wonder', 'research_speed_25'],
+  bp_thu_vien_trung_co:      [5,  'wonder', 'ep_all_10'],
   // ── Kỷ 6 ──────────────────────────────────────────────────────────────────
   bp_lang_xa_viet:           [6,  'infrastructure'],
   bp_truong_thu:             [6,  'economy'],
   bp_quan_truong:            [6,  'defense'],
   bp_phu_quan:               [6,  'infrastructure'],
-  bp_thanh_quan_viet:        [6,  'wonder', 'building_hp_boost'],
+  bp_thanh_quan_viet:        [6,  'wonder', 'combo_window_2h'],
   // ── Kỷ 7 ──────────────────────────────────────────────────────────────────
   bp_xuong_hoa:              [7,  'economy'],
   bp_truong_dai_hoc:         [7,  'infrastructure'],
   bp_nha_bao_tang:           [7,  'economy'],
   bp_thu_vien_kh:            [7,  'infrastructure'],
-  bp_cung_dien_ph:           [7,  'wonder', 't2_research_25off'],
+  bp_cung_dien_ph:           [7,  'wonder', 'ep_all_8'],
   // ── Kỷ 8 ──────────────────────────────────────────────────────────────────
   bp_xuong_dong_tau:         [8,  'infrastructure'],
   bp_thuong_diem:            [8,  'economy'],
   bp_ngon_hai_dang:          [8,  'defense'],
   bp_kho_gia_vi:             [8,  'economy'],
-  bp_cang_bien:              [8,  'wonder', 'era_carry_10pct'],
+  bp_cang_bien:              [8,  'wonder', 'xp_all_8'],
   // ── Kỷ 9 ──────────────────────────────────────────────────────────────────
   bp_quan_ca_phe:            [9,  'infrastructure'],
   bp_salon_tri_thuc:         [9,  'economy'],
@@ -2619,31 +2633,31 @@ const _BLDG_ROLES = {
   bp_nha_may_lt:             [10, 'economy'],
   bp_duong_sat:              [10, 'infrastructure'],
   bp_ngan_hang:              [10, 'economy'],
-  bp_tap_doan_cong:          [10, 'wonder', 'deep_session_refined_bonus'],
+  bp_tap_doan_cong:          [10, 'wonder', 'deep_session_xp_150'],
   // ── Kỷ 11 ─────────────────────────────────────────────────────────────────
   bp_san_chung_khoan:        [11, 'economy'],
   bp_cang_xuat_khau:         [11, 'infrastructure'],
   bp_ngan_hang_trung_uong:   [11, 'defense'],
   bp_toa_bao_tang_de_quoc:   [11, 'economy'],
-  bp_tap_doan_doc_quyen:     [11, 'wonder', 'era_carry_refined_12'],
+  bp_tap_doan_doc_quyen:     [11, 'wonder', 'combo_window_3h'],
   // ── Kỷ 12 ─────────────────────────────────────────────────────────────────
   bp_can_cu_quan_su:         [12, 'infrastructure'],
   bp_xuong_vu_khi:           [12, 'economy'],
   bp_benh_vien_da_chien:     [12, 'infrastructure'],
   bp_trung_tam_chi_huy:      [12, 'defense'],
-  bp_thanh_tri_chien:        [12, 'wonder', 'disaster_hp_50off'],
+  bp_thanh_tri_chien:        [12, 'wonder', 'xp_all_10'],
   // ── Kỷ 13 ─────────────────────────────────────────────────────────────────
   bp_tram_tinh_bao:          [13, 'infrastructure'],
   bp_ham_ten_lua:            [13, 'defense'],
   bp_trung_tam_vu_tru:       [13, 'economy'],
   bp_dai_nghe_len:           [13, 'infrastructure'],
-  bp_ham_phan_ung:           [13, 'wonder', 'gacha_pity_minus5'],
+  bp_ham_phan_ung:           [13, 'wonder', 'ep_all_12'],
   // ── Kỷ 14 ─────────────────────────────────────────────────────────────────
   bp_garage_startup:         [14, 'economy'],
   bp_trung_tam_du_lieu:      [14, 'infrastructure'],
   bp_van_phong_tech:         [14, 'economy'],
   bp_mang_luoi_cdn:          [14, 'defense'],
-  bp_campus_cong_nghe:       [14, 'wonder', 'research_speed_30'],
+  bp_campus_cong_nghe:       [14, 'wonder', 'xp_all_12'],
   // ── Kỷ 15 ─────────────────────────────────────────────────────────────────
   bp_phong_lab_ai:           [15, 'infrastructure'],
   bp_cum_may_chu_ai:         [15, 'economy'],

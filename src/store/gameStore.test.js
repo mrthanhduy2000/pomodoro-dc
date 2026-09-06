@@ -132,7 +132,7 @@ test('refreshDailyMissions rebuilds perfect break progress from session history'
   assert.equal(mission?.claimed, true);
 });
 
-test('claimMissionAllBonus reconciles stale completed missions before awarding XP', () => {
+test('ADR-070: completeFocusSession đối chiếu nhiệm vụ "đã xong" với LỊCH SỬ trước khi tự thưởng trọn ngày', () => {
   resetStore();
 
   setDailyMissionState({
@@ -143,21 +143,19 @@ test('claimMissionAllBonus reconciles stale completed missions before awarding X
       ],
       bonusClaimedToday: false,
     },
-    player: {
-      totalEXP: 0,
-      level: 0,
-      sp: 0,
-    },
   });
 
-  useGameStore.getState().claimMissionAllBonus();
+  // Không còn nút "Nhận" (`claimMissionAllBonus` đã gỡ) — phép đối chiếu mà nút cũ làm nay phải nằm
+  // NGAY TRONG PHIÊN, vì thưởng trọn ngày tự vào ở đó. Gỡ nút mà đánh rơi phép đối chiếu thì một
+  // "3/3" giả (sync lệch máy, phiên đã xoá) sẽ kéo theo một khoản thưởng thật.
+  useGameStore.getState().completeFocusSession(25);
 
   const state = useGameStore.getState();
   const mission = state.missions.list.find((entry) => entry.id === 'complete_3_sessions');
-  assert.equal(mission?.progress, 0);
+  assert.equal(mission?.progress, 1, 'lịch sử trống ⇒ 3/3 giả phải về 0, rồi phiên này tick lên 1');
   assert.equal(mission?.claimed, false);
-  assert.equal(state.missions.bonusClaimedToday, false);
-  assert.equal(state.player.totalEXP, 0);
+  assert.equal(state.missions.bonusClaimedToday, false, 'nhiệm vụ "xong" không có lịch sử đỡ KHÔNG được kéo theo thưởng trọn ngày');
+  assert.equal(state.ui.pendingReward.dailyBonusXP, 0);
 });
 
 test('marking a session achieved grants a one-time goal bonus (XP + EP)', () => {
@@ -268,56 +266,10 @@ test('deleting sessions revokes daily all-mission bonus XP when goals no longer 
 // ═══════════════════════════════════════════════════════════════════════════════
 // BẢN CẬP NHẬT CỘNG HƯỞNG — store
 // ═══════════════════════════════════════════════════════════════════════════════
-
-test('Cộng Hưởng: evolveRelic — không TTCH = cũ; có TTCH thay tối đa 50%', () => {
-  // Không TTCH: trừ toàn bộ refined, không đụng tinhThe
-  resetStore();
-  useGameStore.setState({
-    relics: [{ id: 'mam_song_bat_diet' }],
-    relicEvolutions: {},
-    resourcesRefined: { 1: { t2: 100, t3: 0 } },
-    tinhThe: 12,
-    buildings: [],
-  });
-  assert.equal(useGameStore.getState().evolveRelic('mam_song_bat_diet'), true);
-  const a = useGameStore.getState();
-  assert.equal(a.relicEvolutions.mam_song_bat_diet, 1);
-  const fullCost = 100 - a.resourcesRefined[1].t2;
-  assert.ok(fullCost > 0);
-  assert.equal(a.tinhThe, 12);
-
-  // Có TTCH: trừ ít refined hơn + tiêu TTCH (2 TTCH / đơn vị refined)
-  resetStore();
-  useGameStore.setState({
-    relics: [{ id: 'mam_song_bat_diet' }],
-    relicEvolutions: {},
-    resourcesRefined: { 1: { t2: 100, t3: 0 } },
-    tinhThe: 12,
-    buildings: [],
-  });
-  assert.equal(useGameStore.getState().evolveRelic('mam_song_bat_diet', { ttchToSpend: true }), true);
-  const b = useGameStore.getState();
-  assert.equal(b.relicEvolutions.mam_song_bat_diet, 1);
-  const reducedCost = 100 - b.resourcesRefined[1].t2;
-  assert.ok(reducedCost < fullCost);                  // trả ít refined hơn
-  assert.ok(reducedCost >= Math.ceil(fullCost / 2));  // vẫn ≥50% bằng refined thật
-  assert.ok(b.tinhThe < 12);
-  assert.equal(12 - b.tinhThe, (fullCost - reducedCost) * 2);
-});
-
-test('Cộng Hưởng: evolveRelic từ chối nếu thiếu phần refined ≥50% dù đầy TTCH', () => {
-  resetStore();
-  useGameStore.setState({
-    relics: [{ id: 'mam_song_bat_diet' }],
-    relicEvolutions: {},
-    resourcesRefined: { 1: { t2: 0, t3: 0 } },  // không có refined thật
-    tinhThe: 12,
-    buildings: [],
-  });
-  assert.equal(useGameStore.getState().evolveRelic('mam_song_bat_diet', { ttchToSpend: true }), false);
-  assert.equal(useGameStore.getState().tinhThe, 12);  // không tiêu
-  assert.equal(useGameStore.getState().relicEvolutions.mam_song_bat_diet ?? 0, 0);
-});
+// ADR-070 (2026-09-06): hai bài `evolveRelic` (không TTCH / có TTCH / từ chối khi thiếu refined)
+// đã gỡ CÙNG action — di vật nay tiến hoá theo PHIÊN đã hoàn thành kể từ lúc nhận, không còn một
+// đồng nào để trả. Luật thuần khoá ở `engine/relicGrowth.test.js`; đường store khoá ở
+// `gameStore.adr070.test.js` (bài "DI VẬT LÊN BẬC NGAY TRONG completeFocusSession").
 
 // ⚠️ GIÁ HỎI CHÍNH BẢNG, KHÔNG CHÉP TAY (sửa 2026-08-30). Ba bài dưới đây từng viết cứng 22/14/11
 // SP. Khi giá cây kỹ năng hạ 3/7/14/22 → 2/3/5/8 (cây 336 → 138 SP, tức 15,9 năm → 1,7 năm — xem

@@ -66,7 +66,8 @@ test('MỌI hộp thoại đều nằm TRÊN chuông — kể cả hộp thoại
   // Gác chạy-rỗng: ADR-069 (2026-09-06) xoá `EraCrisisModal` + `DisasterModal` ⇒ còn 4 hộp thoại
   // (Loot · LevelUp · Prestige · WeeklyReport). Con số này là số ĐO, không phải mong muốn — thêm/bớt
   // hộp thoại thì sửa nó kèm lý do, đừng nới cho qua.
-  assert.ok(MODAL_FILES.length >= 4, 'không tìm thấy hộp thoại nào — có phải thư mục đã đổi chỗ?');
+  // ADR-070 (2026-09-06): `LootDropModal` đã gỡ — chuỗi thẻ thưởng là cái kết duy nhất. Còn 3 hộp thoại.
+  assert.ok(MODAL_FILES.length >= 3, 'không tìm thấy hộp thoại nào — có phải thư mục đã đổi chỗ?');
 
   for (const file of MODAL_FILES) {
     const layers = readZLayers(codeOnly(readFileSync(join(HERE, file), 'utf8')));

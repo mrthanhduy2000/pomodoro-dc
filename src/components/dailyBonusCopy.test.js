@@ -43,9 +43,12 @@ test('câu "còn bao nhiêu XP" thật sự có nhắc con số', () => {
   assert.notEqual(DAILY_BONUS_COPY.pending(1), DAILY_BONUS_COPY.pending(2));
 });
 
-// ⚠️ Ca `ready` là ca DUY NHẤT có một nút bấm hiện ra cạnh nó. Câu cũ ("Đã hoàn tất toàn bộ nhiệm
-// vụ ngày.") mô tả trạng thái và không nhắc gì tới cái nút, nên phần thưởng có thể nằm đó không ai
-// lấy. Khoá lại việc câu này phải CHỈ VIỆC, không phải kể trạng thái.
-test('câu lúc xong hết phải chỉ ra việc cần làm, không chỉ kể trạng thái', () => {
-  assert.match(DAILY_BONUS_COPY.ready, /Nhận/);
+// ⚠️ ADR-070: không còn nút "Nhận" — thưởng trọn ngày tự vào trong phiên. Ca `ready` chỉ còn xảy ra
+// khi nhiệm vụ cuối xong NGOÀI phiên, và lúc ấy câu phải nói KHI NÀO thưởng vào. Một câu còn chữ
+// "Nhận" cạnh chỗ không còn nút là một lời hứa treo — khoá cả hai chiều.
+test('câu lúc xong hết phải nói KHI NÀO thưởng vào, và không được gọi một cái nút không còn tồn tại', () => {
+  assert.match(DAILY_BONUS_COPY.ready, /phiên kế/);
+  for (const text of [DAILY_BONUS_COPY.ready, DAILY_BONUS_COPY.claimed, DAILY_BONUS_COPY.pending(43)]) {
+    assert.ok(!/Nhận|bấm|lấy/i.test(text), `câu «${text}» còn gọi người chơi đi bấm/nhận/lấy — nút ấy đã gỡ`);
+  }
 });

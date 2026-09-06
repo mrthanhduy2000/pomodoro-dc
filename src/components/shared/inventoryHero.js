@@ -128,7 +128,7 @@ export function heroHuyHieu({ daMo = 0, tong = 0, ganDat = null } = {}) {
       nhan: 'Sắp đạt',
       so: Math.round(ganDat.pct * 100),
       donVi: '%',
-      caption: `${ganDat.ten} — gần xong rồi.`,
+      caption: ganDat.conLai ? `${ganDat.ten} — ${ganDat.conLai}.` : `${ganDat.ten} — gần xong rồi.`,
       pct: ganDat.pct,
       gap: true,
     };

@@ -51,56 +51,6 @@ test('thẻ phải LEO THANG theo bậc — hiếm mà không nổi thì độ h
   );
 });
 
-// THỬ-CHO-ĐỎ: đổi thứ tự ternary cho `levelsGained` lên trước `eraChanged` ⇒ bài này đỏ.
-test('nhan đề phải nói THỨ TO NHẤT vừa xảy ra, theo đúng thứ tự hiếm', () => {
-  const src = doc('./LootDropModal.jsx');
-  // ⚠️ NEO PHẢI DUY NHẤT. Bản đầu neo vào `resolvedPhase === 0` và bài test ĐỎ trên mã hoàn toàn
-  // đúng: chuỗi ấy xuất hiện **6 lần** trong file (hoạt hoạ lắc, nhịp lặp, tiếng mở rương…) và
-  // `indexOf` trả về lần THỨ NHẤT, cách nhan đề vài nghìn ký tự. Neo vào câu chỉ nhan đề mới có.
-  const i = src.indexOf("'Đang tổng hợp phần thưởng'");
-  assert.ok(i > 0, 'không tìm thấy nhan đề — phép đo đang chạy rỗng');
-  assert.equal(
-    src.split("'Đang tổng hợp phần thưởng'").length - 1, 1,
-    'neo thôi duy nhất ⇒ bài test có thể đang đo một chỗ khác',
-  );
-  const khoi = src.slice(i, i + 420);
-
-  const viTriKy = khoi.indexOf('reward.eraChanged');
-  const viTriCap = khoi.indexOf('reward.levelsGained');
-  assert.ok(viTriKy > 0, 'nhan đề không còn nói tới kỷ nguyên — tin hiếm nhất game lại nằm ở đáy '
-    + 'một trang cao gần bốn màn hình, đúng chỗ Đàm không cuộn tới');
-  assert.ok(viTriCap > 0, 'nhan đề không còn nói tới lên cấp');
-  assert.ok(
-    viTriKy < viTriCap,
-    'lên cấp đang được hỏi TRƯỚC kỷ nguyên ⇒ một phiên vừa mở kỷ mới lại hiện "Lên cấp N", tức '
-    + 'nhan đề nói tin nhỏ hơn trong khi tin lớn hơn có sẵn',
-  );
-
-  // ⚠️ GIỮ NGUYÊN thẻ ăn mừng ở giai đoạn 6: cả chuỗi 7 giai đoạn sinh ra để dồn nén tới đó.
-  // Thứ được sửa là cái NHAN ĐỀ, không phải bỏ phần ăn mừng đi.
-  assert.match(
-    src, /resolvedPhase >= 6 && reward\.eraChanged && \(\s*<EraChangeBanner/,
-    'thẻ ăn mừng kỷ nguyên bị gỡ mất — sửa nhan đề KHÔNG được đánh đổi bằng phần ăn mừng',
-  );
-});
-
-// THỬ-CHO-ĐỎ: dán lại một trong bốn câu ⇒ bài này đỏ.
-test('bốn đoạn KỂ LẠI NGHIỆP VỤ KẾ TOÁN không được quay lại', () => {
-  /*
-    Đo trước khi cắt: 3.384px = 4,01 màn hình điện thoại · 327 chữ · 31 con số cho MỘT phiên xong.
-    Bốn câu dưới đây đều GIẢI THÍCH cách ghi sổ (hoặc mô tả bố cục trang) ở đúng khoảnh khắc đáng
-    lẽ phải ăn mừng, và mọi con số chúng nhắc tới đều đã có sẵn thành thẻ ngay bên cạnh.
-  */
-  const src = doc('./LootDropModal.jsx');
-  const CAM = [
-    'đã được ghi lại thành XP, tài nguyên và RP',
-    'mọi phần thưởng được gom lại ở đây theo cùng một nhịp đọc',
-    'Giá trị cuối sau khi cộng mọi hệ số và phần thưởng thêm',
-    'Tổng kết phiên',
-  ];
-  for (const cau of CAM) {
-    assert.ok(!src.includes(cau), `câu kể-lại-sổ-sách quay lại: "${cau}"`);
-  }
-  // Gác chạy-rỗng: `stripComments` phải thật sự để lại phần JSX, nếu không mọi assert trên xanh oan.
-  assert.ok(src.includes('EraChangeBanner') && src.length > 20_000, 'phép đo đang chạy rỗng');
-});
+// ⚠️ ADR-070 (2026-09-06): hai bài đọc `LootDropModal.jsx` (nhan đề nói thứ to nhất · bốn đoạn kể sổ
+// sách) đã gỡ CÙNG hộp thoại ấy. Chuỗi thẻ thưởng là cái kết duy nhất; thứ tự "tin to nhất trước"
+// nay là thứ tự thẻ, khoá ở `sessionRewardStory.test.js`.

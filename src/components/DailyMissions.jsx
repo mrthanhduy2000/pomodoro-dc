@@ -1,6 +1,6 @@
 import React from 'react';
 import { weeklyChainStepState } from './weeklyChainStep';
-import { AnimatePresence, motion } from 'framer-motion';
+import { motion } from 'framer-motion';
 
 import useGameStore from '../store/gameStore';
 import useSettingsStore from '../store/settingsStore';
@@ -8,7 +8,7 @@ import { missionXpMultiplier } from '../engine/wonderEffects.js';
 import { dailyAllBonusXP, scaleMissionXP } from './missionXp';
 import RewardCard from './shared/RewardCard';
 import { DAILY_BONUS_COPY } from './dailyBonusCopy';
-import { useCustomMotion, useEnterMotion, usePressMotion, useSnapMotion } from '../lib/motionPresets';
+import { useSnapMotion } from '../lib/motionPresets';
 import {
   WEEKLY_CHAINS,
   WEEKLY_CHAIN_XP_SCALE,
@@ -21,9 +21,15 @@ import {
 
 
 // ⚠️ HAI BẢN CHÉP TAY ĐÃ GỠ (2026-09-05) — `getStreakBonusCapDays` và hệ số thưởng nhiệm vụ.
-// Cả hai hỏi `wonderEffect === '…'` mà KHÔNG kiểm `type === 'wonder'`; xem
-// `engine/wonderEffects.js`. `scaleMissionXP` cũng đã dời sang `missionXp.js` vì chuỗi thẻ thưởng
-// sau phiên (ADR-068) in cùng con số — hai bản chép là hai con số sớm muộn lệch nhau.
+// Cả hai từng hỏi thẳng TÊN đặc quyền kỳ quan mà KHÔNG kiểm `type`; xem `engine/wonderEffects.js`.
+// `scaleMissionXP` cũng đã dời sang `missionXp.js` vì chuỗi thẻ thưởng sau phiên (ADR-068) in cùng
+// con số — hai bản chép là hai con số sớm muộn lệch nhau.
+//
+// ⚠️ KHÔNG CÒN NÚT "NHẬN" / "CHỐT BƯỚC" (2026-09-06, ADR-070, đóng `TECH_DEBT #100`). Thưởng trọn
+// ngày tự vào ngay phiên khép nốt nhiệm vụ cuối; bước tuần tự chốt ngay phiên đủ điều kiện — cả hai
+// kể ở chuỗi thẻ thưởng. Màn này nay chỉ trả lời "còn bao xa". Một phần thưởng đủ điều kiện mà còn
+// phải đi tìm cái nút để lấy là một phần thưởng bị hoãn; và một cái nút chỉ hiện ra khi đủ điều kiện
+// là một cái nút hầu như không ai thấy — nó từng nằm ở tab Tiến trình, cách màn Tập trung hai cú chạm.
 
 /**
  * @param {'all'|'daily'|'weekly'} section — ADR-068 chia màn này làm hai chỗ: khối NGÀY nằm ngay
@@ -36,8 +42,6 @@ export default function DailyMissions({ section = 'all' }) {
   const streak = useGameStore((s) => s.streak);
   const buildings = useGameStore((s) => s.buildings);
   const unlockedSkills = useGameStore((s) => s.player.unlockedSkills);
-  const claimMissionAllBonus = useGameStore((s) => s.claimMissionAllBonus);
-  const claimWeeklyStep = useGameStore((s) => s.claimWeeklyStep);
   const refreshDailyMissions = useGameStore((s) => s.refreshDailyMissions);
   const uiTheme = useSettingsStore((s) => s.uiTheme);
 
@@ -60,13 +64,17 @@ export default function DailyMissions({ section = 'all' }) {
   const allMissionBonusXP = dailyAllBonusXP({
     list, multiplier: missionRewardMultiplier, strategist: Boolean(unlockedSkills.bac_thay_chien_luoc),
   });
+  const bonusShownXP = missions.bonusClaimedToday && missions.bonusClaimedXP > 0
+    ? missions.bonusClaimedXP
+    : allMissionBonusXP;
 
   const chain = WEEKLY_CHAINS[weeklyChain?.chainIndex] ?? null;
   const chainDone = Boolean(chain) && weeklyChain.currentStep >= chain.steps.length;
   const chainStepIndex = chainDone ? Math.max(0, chain.steps.length - 1) : (weeklyChain?.currentStep ?? 0);
   const chainStepsCompleted = chainDone ? chain.steps.length : Math.max(0, weeklyChain?.currentStep ?? 0);
   const activeStep = chain && !chainDone ? chain.steps[chainStepIndex] : null;
-  const canClaimWeeklyStep = Boolean(activeStep) && (weeklyChain?.stepProgress ?? 0) >= activeStep.goal;
+  // Chỉ còn xảy ra khi bước đủ NGOÀI phiên (kết thúc nghỉ đúng giờ): phiên kế sẽ tự chốt nó.
+  const stepReadyOutsideSession = Boolean(activeStep) && (weeklyChain?.stepProgress ?? 0) >= activeStep.goal;
   const weeklyBonusXP = chain
     ? Math.max(
         0,
@@ -124,15 +132,10 @@ export default function DailyMissions({ section = 'all' }) {
               name="Thưởng trọn ngày"
               tier="tot"
               /*
-                ⚠️ BA CÂU NÀY ĐỀU ĐÃ BỊ VIẾT NGẮN LẠI (2026-08-30) VÌ CẢ BA ĐANG BỊ CẮT CỤT.
-                `RewardCard.description` khai rõ hợp đồng của nó ngay trong chú thích — *"ĐÚNG MỘT
-                DÒNG; dài hơn thì bị cắt bằng …"* — nhưng không có gì canh, nên ba câu 32–34 ký tự
-                lặng lẽ hiện ra thành "Còn 123 XP từ các mục …". Một câu cụt còn tệ hơn không có
-                câu: nó chiếm đúng bằng ấy chỗ, trông như app hỏng, và không nói được gì.
-                Nay câu dài nhất là 22 ký tự (ca 4 chữ số), có `dailyMissionsCopy.test.js` canh.
-                ⚠️ Ca `allClaimed` đổi luôn giọng: từ mô tả trạng thái ("Đã hoàn tất…") sang CHỈ
-                VIỆC CẦN LÀM ("Xong hết — bấm Nhận"), vì đúng lúc đó có một nút Nhận vừa hiện ra
-                cạnh nó mà câu cũ không hề nhắc tới.
+                ⚠️ BA CÂU NÀY ĐỀU NGẮN CÓ CHỦ ĐÍCH (2026-08-30) — `RewardCard.description` là ĐÚNG MỘT
+                DÒNG, dài hơn thì bị cắt bằng "…" trong im lặng; `dailyBonusCopy.test.js` canh độ dài.
+                ⚠️ ADR-070: không còn nút, nên ba câu chỉ nói KHI NÀO thưởng vào — "đã cộng hôm nay" ·
+                "cộng ở phiên kế" (nhiệm vụ cuối xong ngoài phiên) · "còn N XP nữa".
               */
               description={missions.bonusClaimedToday
                 ? DAILY_BONUS_COPY.claimed
@@ -140,24 +143,11 @@ export default function DailyMissions({ section = 'all' }) {
                   ? DAILY_BONUS_COPY.ready
                   : DAILY_BONUS_COPY.pending(pendingXP)}
               /*
-                ⚠️ SỐ XP ĐI VÀO NÚT KHI CÓ NÚT (2026-09-05). Ở khung 390px, ô số lượng + nút "Nhận"
-                cùng đứng bên phải bóp cái TÊN xuống còn ~40px — ảnh dựng cho ra "Th / ch / tua" ba dòng
-                (bắt được ở thẻ tuần, cùng bố cục). Một hàng chỉ đủ chỗ cho MỘT ô bên phải: có nút thì
-                XP nằm trong nút ("Nhận +43 XP"), không có nút thì XP đứng một mình.
+                ⚠️ MỘT Ô BÊN PHẢI, KHÔNG HƠN (2026-09-05): ở khung 390px, hai ô bên phải bóp cái TÊN
+                xuống còn ~40px ("Th / ch / tua"). Số XP đứng một mình; dấu ✓ đi KÈM TRONG con số khi
+                đã cộng, không thành một ô riêng.
               */
-              amount={missions.bonusClaimedToday || allClaimed ? null : `+${allMissionBonusXP} XP`}
-              action={(
-                <AnimatePresence initial={false}>
-                  {allClaimed && !missions.bonusClaimedToday ? (
-                    <ClaimButton
-                      key="claim-daily"
-                      label={`Nhận +${allMissionBonusXP} XP`}
-                      lightTheme={lightTheme}
-                      onClick={claimMissionAllBonus}
-                    />
-                  ) : null}
-                </AnimatePresence>
-              )}
+              amount={missions.bonusClaimedToday ? `✓ +${bonusShownXP} XP` : `+${allMissionBonusXP} XP`}
             />
           </div>
         </div>
@@ -225,21 +215,13 @@ export default function DailyMissions({ section = 'all' }) {
                 // mô tả vừa nói, tức là trả một cái tên bị cắt để lấy một câu lặp.
                 description={chainDone
                   ? 'Chuỗi tuần này đã hoàn tất.'
-                  : canClaimWeeklyStep
-                    ? 'Bước hiện tại đã đủ điều kiện để chốt.'
+                  : stepReadyOutsideSession
+                    ? 'Đủ rồi — chốt ở phiên kế.'
                     : activeStep
                       ? `Bước ${chainStepIndex + 1} — ${weeklyChain?.stepProgress ?? 0}/${activeStep.goal}: ${activeStep.progressLabel ?? activeStep.label}`
                       : 'Chưa có bước tuần hoạt động.'}
-                // ⚠️ KHÔNG in `amount` ở đây: con số "+328" đã đứng ở đầu khối ("thưởng chuỗi"), và ô
-                // số lượng cạnh nút "Chốt bước" từng bóp tên thẻ thành "Th / ch / tua" (ảnh 390px).
+                // ⚠️ KHÔNG in `amount` ở đây: con số "+328" đã đứng ở đầu khối ("thưởng chuỗi").
                 amount={null}
-                action={canClaimWeeklyStep ? (
-                  <ClaimButton
-                    label="Chốt bước"
-                    lightTheme={lightTheme}
-                    onClick={claimWeeklyStep}
-                  />
-                ) : null}
               />
             </div>
 
@@ -263,7 +245,7 @@ export default function DailyMissions({ section = 'all' }) {
                           +{missions.streakMissionClaimedToday ? 0 : streakMissionXP}
                         </div>
                         <div className="mono mt-0.5 text-[10px] uppercase tracking-[0.16em]" style={{ color: 'var(--muted)' }}>
-                          {missions.streakMissionClaimedToday ? 'đã nhận' : 'streak XP'}
+                          {missions.streakMissionClaimedToday ? 'đã cộng' : 'streak XP'}
                         </div>
                       </>
                     )}
@@ -284,39 +266,6 @@ export default function DailyMissions({ section = 'all' }) {
  * ép dòng nhiệm vụ vào thẻ chung là mua sự đồng bộ bằng cách vứt đi một con số
  * Đàm đang dùng. Thẻ dùng cho thứ ĐÃ hoặc SẼ nhận; hàng dùng cho thứ đang làm.
  */
-function ClaimButton({ label, lightTheme, onClick }) {
-  const enterMotion = useEnterMotion();
-  const pressMotion = usePressMotion();
-  // Nhấc 1px khi rê chuột — ngoại lệ trang trí của `motionPresets`: nó không mang bố cục
-  // (bỏ đi thì nút vẫn ở đúng chỗ) nên đi qua `useCustomMotion`.
-  const hoverLift = useCustomMotion({ whileHover: { y: -1 } });
-  return (
-    <motion.button
-      {...enterMotion}
-      {...pressMotion}
-      {...hoverLift}
-      type="button"
-      onClick={onClick}
-      className="whitespace-nowrap px-3.5 py-2 text-[12px] font-semibold"
-      style={lightTheme ? {
-        borderRadius: 'var(--skin-radius-control, 14px)',
-        background: 'var(--ink)',
-        color: 'var(--canvas)',
-        border: '1px solid rgba(31, 30, 29, 0.06)',
-        boxShadow: '0 10px 20px rgba(31, 30, 29, 0.12)',
-      } : {
-        borderRadius: 'var(--skin-radius-control, 14px)',
-        background: 'rgba(var(--accent-rgb), 0.9)',
-        color: 'var(--ink)',
-        border: '1px solid rgba(var(--accent-rgb), 0.22)',
-        boxShadow: '0 10px 20px rgba(var(--accent-rgb), 0.18)',
-      }}
-    >
-      {label}
-    </motion.button>
-  );
-}
-
 function QuietSection({ children, eyebrow, _lightTheme, meta, title }) {
   return (
     <section

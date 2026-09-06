@@ -14,6 +14,8 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 
 import {
+  BUILDING_EFFECTS,
+  BUILDING_PERK_REGISTRY,
   ERA_CRISES,
   RANK_SYSTEM,
   RELIC_COMBO_WINDOW_CAP_HOURS,
@@ -22,6 +24,7 @@ import {
   RELIC_EXP_BONUS_CAP,
   SKILL_SYNERGIES,
   SKILL_TREE,
+  WONDER_EFFECT_REGISTRY,
 } from './constants.js';
 
 const TRUC_BAC = new Set(['expBonus', 'epBonus', 'allBonus']);
@@ -103,4 +106,39 @@ test('kỹ năng + tổ hợp: không mô tả nào còn hứa một đồng ti�
   }
   for (const sy of Object.values(SKILL_SYNERGIES)) assert.doesNotMatch(sy.description ?? '', TU_NGU_NGU);
   assert.equal(so, 36, 'gác chạy-rỗng: 6 nhánh × 6 kỹ năng');
+});
+
+// ─── ADR-070 (2026-09-06): hai bảng đặc quyền công trình cũng phải nằm trên trục sống ─────────────
+// Trước vòng 35, 11/15 kỳ quan hứa "giảm giá RP", "rẻ tinh luyện", "giảm thảm hoạ", "mang tài nguyên
+// sang kỷ sau" — toàn đồng tiền đã ngủ. Bảng vẫn hợp lệ, số vẫn đúng, chỉ có thứ nhận được là không
+// ai thấy. Khoá y như ba bảng ở trên.
+const DAC_QUYEN_SONG_KHONG_PASSIVE = new Set(['streak_cap_plus', 'mission_bonus_20', 'longer_crisis_window', 'relic_evo_30off']);
+test('kỳ quan: mỗi đặc quyền là buff XP/EP/combo/XP phẳng, hoặc một luật còn được store đọc; mô tả không hứa đồng tiền ngủ', () => {
+  const ids = Object.keys(WONDER_EFFECT_REGISTRY);
+  assert.equal(ids.length, 15, 'gác chạy-rỗng: 15 kỷ × 1 kỳ quan');
+  for (const id of ids) {
+    const eff = WONDER_EFFECT_REGISTRY[id];
+    assert.doesNotMatch(`${eff.label} ${eff.description}`, TU_NGU_NGU, `${id}: mô tả còn hứa một đồng tiền đã ngủ`);
+    const passive = eff.passive ?? {};
+    const truc = ['expBonus', 'epBonus', 'comboWindowHours', 'flatXp'].filter((k) => passive[k] > 0);
+    const luat = DAC_QUYEN_SONG_KHONG_PASSIVE.has(id) || eff.crisisWindowHours > 0 || (eff.relicEvolveFactor > 0 && eff.relicEvolveFactor < 1);
+    assert.ok(truc.length > 0 || luat, `${id}: không có hiệu ứng nào trên trục sống — nhãn không có hiệu ứng`);
+    for (const k of Object.keys(passive)) {
+      assert.ok(['expBonus', 'epBonus', 'comboWindowHours', 'flatXp', 'minMinutes'].includes(k), `${id}: passive có trục lạ «${k}»`);
+    }
+  }
+  // Mọi kỳ quan trong bảng công trình đều trỏ tới một đặc quyền CÓ trong registry — trỏ lạc là im lặng.
+  const wonderIds = Object.values(BUILDING_EFFECTS).filter((e) => e.type === 'wonder').map((e) => e.wonderEffect);
+  assert.equal(wonderIds.length, 15);
+  for (const id of wonderIds) assert.ok(WONDER_EFFECT_REGISTRY[id], `kỳ quan trỏ tới đặc quyền lạ «${id}»`);
+  assert.equal(new Set(wonderIds).size, 15, 'hai kỳ quan dùng chung một đặc quyền ⇒ hai kỷ không phân biệt được');
+});
+
+test('đặc quyền công trình thường: nhãn và tóm tắt không hứa đồng tiền ngủ', () => {
+  const ids = Object.keys(BUILDING_PERK_REGISTRY);
+  assert.ok(ids.length >= 4, 'gác chạy-rỗng');
+  for (const id of ids) {
+    const perk = BUILDING_PERK_REGISTRY[id];
+    assert.doesNotMatch(`${perk.label} ${perk.summary}`, TU_NGU_NGU, `${id}: còn hứa một đồng tiền đã ngủ`);
+  }
 });

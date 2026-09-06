@@ -42,7 +42,6 @@ const NGOAI_PHAM_VI = 'components/city/render3d';
 const NGOAI_LE = {
   'components/DailyMissions.jsx': 2,         // mang bố cục: thanh tiến độ nhiệm vụ
   'components/LevelUpModal.jsx': 3,          // pháo hoa — `ParticleField` trả `null` khi Giảm chuyển động
-  'components/LootDropModal.jsx': 9,         // so le (2 chỗ) + mưa hạt (trả `null` khi Giảm chuyển động)
   'components/PomodoroEngine.jsx': 3,        // `ActionButton` (lún = chiều dày bóng) + thẻ preset đang chọn
   'components/StatsDashboard.jsx': 4,        // mang bố cục: cột phân bố + thanh loại việc
   'components/WeeklyReportModal.jsx': 8,     // mang bố cục: 4 thanh so sánh tuần

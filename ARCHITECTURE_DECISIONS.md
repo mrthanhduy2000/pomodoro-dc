@@ -11,6 +11,119 @@
 
 ---
 
+## ADR-070 — MỘT CÁI KẾT DUY NHẤT, KHÔNG NÚT NHẬN, KHÔNG MÀN CHẾT: phần thưởng đã đạt thì tự vào, di vật lớn theo phiên, đặc quyền công trình về trục sống
+
+- **Ngày**: 2026-09-06 (vòng 35, ngay sau ADR-069)
+- **Trạng thái**: đã áp dụng. Không đụng Thành phố (`engine/city3d/`, `components/city/`, địa hình,
+  đường, thực vật, bảng màu, `cityLayout`; hình dạng `craftingQueue`/`buildings`/`cityArchive` giữ
+  nguyên từng byte — ADR-007 nguyên). Đảo ngược nốt nửa còn lại của ADR-060 (hộp thoại chi tiết) và
+  đóng bốn mục nợ ADR-069 để lại (`#96` · `#98` · `#100`, cập nhật `#99`). Không đổi hình dạng dữ
+  liệu đồng bộ; một trường MỚI (`relics[].earnedAt`) được đóng dấu lúc nạp cho save cũ.
+- **Bối cảnh**: lệnh Đàm *"Tiếp tục làm như prompt trên mà không hỏi lại, cho phép bạn tự quyết định
+  mọi thứ và tech debt. Build lớn. Simplify mạnh. Làm game vui hơn. Tập trung nhiều hơn vào UX/UI."*
+  Sau ADR-069, đo lại trên chính app: còn **bốn chỗ phần thưởng ĐÃ ĐẠT mà vẫn cách người chơi một
+  cái nút hoặc một cánh cửa khoá**:
+  · Bước tuần đủ điều kiện đứng chờ nút «Chốt bước» — ở tab Tiến trình, cách màn Tập trung hai cú
+    chạm; thưởng trọn ngày đứng chờ nút «Nhận» (ở màn Tập trung VÀ trong chuỗi thẻ). Cả hai là
+    đúng loại ma sát ADR-069 vừa gỡ ở bậc/khủng hoảng (`#100`).
+  · Tiến hoá di vật đòi **tinh luyện của kỷ ĐÃ QUA** mà tinh luyện chỉ rơi vào kỷ đang chơi ⇒ 14/15
+    di vật không bao giờ lên bậc; ba nút «Chưa đủ tài nguyên» đứng đó nói dối nhiều tháng (`#96`,
+    ghi "Đàm chọn" — lệnh mới uỷ quyền quyết).
+  · 11/15 kỳ quan hứa «giảm giá RP», «rẻ tinh luyện», «giảm thảm hoạ», «mang tài nguyên sang kỷ
+    sau»; 2/4 đặc quyền công trình thường trả bằng tinh luyện — toàn đồng tiền đã ngủ sau ADR-069.
+    Bảng hợp lệ, test xanh, chỉ có thứ nhận được là không ai thấy (cùng bệnh với ADR-069 mục 6).
+  · Một phiên có **HAI cái kết**: chuỗi thẻ (ADR-068) rồi hộp thoại 7 giai đoạn 1.057 dòng khi lên kỷ
+    hoặc khi bấm «Xem chi tiết» — hai bản trình bày một `pendingReward`, tiếng mở rương kêu hai lần,
+    mỗi trường mới phải nối hai chỗ (`#98`). Hộp thoại ấy chỉ còn hơn ở phần liệt kê ba đồng tiền ngủ.
+- **Vấn đề**: mọi thứ trên đều là **khoảng cách giữa "đã đạt" và "đã nhận"** — một nút, một cánh cửa,
+  hoặc một màn thứ hai. Tâm lý học thói quen: phần thưởng phải đến NGAY sau hành động và đến MỘT
+  LẦN; một nút "Nhận" chỉ hiện khi đủ điều kiện là một nút hầu như không ai thấy, và một cơ chế không
+  thể kích hoạt là một lời hứa treo ở đúng chỗ đáng lẽ tạo ham muốn.
+- **Phương án đã cân nhắc**:
+  - **(A) Giữ nút Nhận nhưng đưa nó lên chuỗi thẻ / thanh tiêu đề**. Loại: vẫn là một việc phải làm
+    để lấy thứ đã có; và bấm trong chuỗi thẻ từng làm chuỗi thẻ dựng lại từ đầu (`#98` kèm).
+  - **(B) Cho tinh luyện kỷ cũ rơi lại / đổi tinh luyện kỷ mới lấy kỷ cũ** để cứu nút tiến hoá. Loại:
+    mở lại một đồng tiền vừa đóng (trái ADR-069); và vẫn là một cánh cửa phải "đủ tiền".
+  - **(C) Giữ `LootDropModal` làm màn chi tiết, chỉ gỡ khi lên kỷ**. Loại: hai bản trình bày vẫn tồn
+    tại; phần "chi tiết" nay liệt kê toàn đồng tiền ngủ; và Đàm chưa từng được hỏi có bấm nó không —
+    lệnh mới uỷ quyền quyết, và quyết là xoá.
+  - **(D — đã chọn) Mọi phần thưởng đã đạt TỰ VÀO ngay trong `completeFocusSession` và được KỂ ở
+    chuỗi thẻ; di vật lớn theo PHIÊN kể từ lúc nhận; đặc quyền công trình là buff trên ba trục sống;
+    chuỗi thẻ là cái kết DUY NHẤT (thẻ «Kỷ nguyên mới» có nút xem thành phố).**
+- **Giải pháp**:
+  1. **Tự chốt bước tuần + thưởng trọn ngày** (store): `autoClaimWeeklySteps` chốt liền mọi bước đã
+     đủ (XP theo ĐÚNG công thức nút cũ, SP thưởng chuỗi, buff Cử Tri/Kế Hoạch Hoàn Hảo đẩy vào hàng);
+     thưởng trọn ngày vào ở phiên khép nốt nhiệm vụ cuối (`getDailyMissionAllBonusXP`, cùng hàm). Cả
+     hai cộng vào XP PHIÊN (lên cấp tính một lần). ⚠️ Phép ĐỐI CHIẾU với lịch sử mà nút «Nhận» cũ làm
+     (`rebuildMissionsFromHistory`) đi theo về `completeFocusSession` — một "3/3" không có lịch sử đỡ
+     (sync lệch máy, phiên đã xoá) không được kéo theo một khoản thưởng thật. `pendingReward` kể ba
+     tin mới: `dailyBonusXP` · `weeklySteps`/`weeklyChainTitle`/`weeklyBonusSP` · `relicsEvolved`.
+     Xoá `claimWeeklyStep` · `claimMissionAllBonus`; `DailyMissions.jsx` không còn nút, chỉ trả lời
+     "còn bao xa" (ca nhiệm vụ cuối xong NGOÀI phiên: «cộng ở phiên kế»).
+  2. **Di vật lớn theo phiên** — `engine/relicGrowth.js` (thuần): mốc `RELIC_EVOLVE_SESSIONS =
+     [0, 20, 50]` phiên ≥`RELIC_EVOLVE_MIN_MINUTES` (25′) đếm TỪ SAU `relic.earnedAt` (phiên nhận
+     không tính; phiên trước khi có di vật không tính — nếu không thì người chơi lâu năm nhận là lên
+     thẳng Huyền Thoại, chẳng còn gì để chờ); `evaluateRelicEvolutions` chạy sau `newHistory` trong
+     `completeFocusSession`, bậc mới áp từ phiên KẾ (buff phiên này đã tính với bậc cũ — cố ý, để
+     hai đường đo khớp). Save cũ không có `earnedAt` ⇒ `normalizePersistedGameState` đóng dấu LÚC
+     NẠP (đồng hồ bắt đầu hôm nay, không nhảy bậc từ lịch sử cũ). Xoá `evolveRelic` + giá
+     `t2Cost`/`t3Cost` + `getRelicEvolutionRefinedCost`/`relicEvolutionCostOf`; `RelicInventory.jsx`
+     hiện thanh «N/20 phiên ≥25′ · còn M». Kỳ quan kỷ 15 (`relic_evo_30off`) rút mốc 30%.
+     ⚠️ Kèm một lỗi thật ảnh 390px bắt được: save cũ mang BẢN CHÉP label/icon/description/buff của di vật
+     từ lúc nhận, nên kho di vật vẫn in «tăng tài nguyên rớt» sau khi ADR-069 đã đổi bảng. Nay
+     `withCanonicalRelicText` (cùng file) đọc lại bốn trường ấy từ `ERA_CRISES` lúc nạp — buff thì store
+     đã đọc từ bảng tiến hoá từ trước, chữ phải đi cùng đường (một luật một công thức).
+  3. **Đặc quyền công trình về trục sống** — `WONDER_EFFECT_REGISTRY` viết lại: 11 kỳ quan → buff
+     thụ động `passive: { expBonus | epBonus | comboWindowHours | flatXp, minMinutes? }` (vd kỷ 2
+     «+10% XP phiên ≥45′», kỷ 6 «+2h combo», kỷ 10 «+150 XP phiên ≥90′»); 4 luật còn được store đọc
+     giữ nguyên id (`streak_cap_plus` · `mission_bonus_20` · `longer_crisis_window` → nay cộng giờ vào
+     thử thách kỷ · `relic_evo_30off`). `engine/wonderEffects.js` là nguồn duy nhất
+     (`wonderPassiveBuffs` cộng vào `activeBuffs`; `wonderCrisisWindowBonusHours`;
+     `wonderRelicEvolveFactor`); gỡ `researchCostOf` · `relicEvolutionCostOf` ·
+     `cancelPenaltyWonderMultiplier` cùng 7 helper chép tay trong store. `BUILDING_PERK_REGISTRY`:
+     rương ngày/rương sâu trả XP thay tinh luyện; `safety_net` → «phiên bù sau khi huỷ» (+80 XP cho
+     phiên kế ≥15′). `rewardAxes.test.js` khoá cả hai bảng (mô tả không được nhắc đồng tiền ngủ; mỗi
+     đặc quyền phải có hiệu ứng trên trục sống hoặc là một luật còn được đọc; 15 kỳ quan 15 đặc quyền
+     KHÁC nhau).
+  4. **Một cái kết** — xoá `LootDropModal.jsx` (1.057 dòng) và mọi cổng của nó ở `OverlayStack`
+     (`showLootModal` · `detail === 'loot'` · `pendingEraChanged` · preload). `finishStory` đóng
+     phần thưởng KHÔNG ĐIỀU KIỆN. Chuỗi thẻ thêm thẻ **Bước tuần** (`chain`), **Di vật lên bậc**
+     (`evolve`), chip «+N EP» ở thẻ +XP (buff EP phải THẤY được), thẻ Nhiệm vụ kể «Trọn ngày +N XP — đã
+     cộng» thay nút; thẻ «Kỷ nguyên mới» có nút **«Xem thành phố mới»** (điều hướng tab Thành phố) và
+     phát `playEraChange` — tiếng và thông báo lên cấp/lên kỷ chỉ còn kêu MỘT lần.
+  5. **Huy hiệu "Kế tiếp"** — `Achievements.jsx`: sau dải hero (nay nói «còn N phút/phiên» thay «gần
+     xong rồi»), một khối 4 huy hiệu gần đạt nhất với thanh + mẫu số (goal-gradient); bỏ bộ lọc BẬC
+     (bậc đã có trên từng ô); gỡ `AchievementCard` chết (~140 dòng không ai gọi từ 2026-09-02).
+  6. **Dọn chữ đồng tiền ngủ** còn nhìn thấy: nhãn «Tinh luyện» ở lịch sử Thống kê → «Phiên sâu»;
+     hàng «Tài nguyên» ở hộp Thăng hoa; câu chào onboarding «XP và tài nguyên» → «XP và điểm kỷ
+     nguyên»; `engine/buffLabel.js` dịch buff một chỗ cho cả kho di vật lẫn chuỗi thẻ.
+- **Trade-off**:
+  - Mọi phần thưởng nay đến mà không cần chạm — mất "cú bấm nhận" (một nhịp dopamine nhỏ), đổi lấy
+    việc không bao giờ có phần thưởng nằm chờ không ai lấy. Chuỗi thẻ là nơi ăn mừng thay cho nút.
+  - Di vật lớn CHẬM và ĐỀU (20 rồi 50 phiên dài) thay vì "mua" — cố ý: tiến hoá thành một mốc tự
+    tới, cùng khuôn bậc/thử thách kỷ. Save cũ đếm từ hôm nay, tức người chơi lâu năm không được
+    hồi tố — chấp nhận, vì hồi tố sẽ nhảy thẳng bậc cuối và giết chính cơ chế chờ.
+  - Không còn màn liệt kê tài nguyên/RP/tinh luyện — chúng là dữ liệu ngủ (`#99`), và màn duy nhất
+    còn nhắc chúng nay bị xoá; phần cộng vào store vẫn giữ (không đụng JSONB đang tranh chấp CAS).
+  - Bước tuần đủ NGOÀI phiên (kết thúc nghỉ đúng giờ) chỉ chốt ở phiên kế — chấp nhận, vì đường
+    duy nhất trao XP là `completeFocusSession`; màn Tiến trình nói rõ «chốt ở phiên kế».
+- **Ảnh hưởng**: `pendingReward` +5 trường; `relics[].earnedAt` mới (đóng dấu lúc nạp); `RELIC_EVOLUTION`
+  mất `t2Cost`/`t3Cost`; store mất 7 action (`claimWeeklyStep` · `claimMissionAllBonus` · `evolveRelic`
+  · `craftBuilding` · `researchBlueprint` · `startCrafting` · `upgradeBuilding`) và 7 helper kỳ quan;
+  xoá `LootDropModal.jsx` · `engine/craftReadiness.js`; thêm `engine/relicGrowth.js` ·
+  `engine/buffLabel.js`; `previewStage.js` đọc trường từ hai file chuỗi thẻ (người đọc duy nhất);
+  `motionCoverage`/`notificationLayer` bớt một hộp thoại. Test: `gameStore.adr070.test.js` (8 bài chạy
+  THẬT qua store: tự chốt bước · trọn ngày · đối chiếu lịch sử · di vật lên bậc · kỳ quan ×1,08 EP ·
+  đóng dấu `earnedAt` khi nạp) · `relicGrowth.test.js` · `buffLabel.test.js` · `wonderEffects.test.js`
+  viết lại · `rewardAxes` +2 bài · `rewardToastWiring` viết lại 3 bài.
+- **Điều kiện xem lại**: (a) Đàm thấy chuỗi thẻ quá dài ở phiên có nhiều tin (xp · thành phố · chuỗi
+  · hôm nay · nhiệm vụ · bước tuần · thử thách · cấp · bậc · di vật · lên bậc · kỷ = 12 thẻ ở ca
+  đỉnh) ⇒ gộp `chain` vào thẻ nhiệm vụ; (b) mốc 20/50 phiên quá xa hoặc quá gần ⇒ chỉnh
+  `RELIC_EVOLVE_SESSIONS` (một hằng số, một chỗ); (c) muốn "khan hiếm" thì đặt ở PHIÊN, không mở lại
+  tiền tệ (`#99`).
+
+---
+
 ## ADR-069 — ĐỒNG TIỀN DUY NHẤT LÀ PHIÊN: công trình một nút, bậc và thử thách kỷ tự chạy theo lịch sử, kỹ năng chọn ngay lúc lên cấp
 
 - **Ngày**: 2026-09-06

@@ -22,7 +22,6 @@ const KEPT_ITEMS = [
 const RESET_ITEMS = [
   { icon: 'XP', label: 'XP', desc: 'Bắt đầu lại từ 0' },
   { icon: 'LV', label: 'Cấp độ', desc: 'Level và XP quay về đầu vòng' },
-  { icon: 'TN', label: 'Tài nguyên', desc: 'Kho nguyên liệu được làm mới' },
   { icon: 'KN', label: 'Kỹ năng', desc: 'Cây kỹ năng reset hoàn toàn' },
   { icon: 'DX', label: 'Danh xưng', desc: 'Thứ bậc quay về mốc đầu' },
   { icon: 'BV', label: 'Bản vẽ', desc: 'Blueprint được dọn lại' },

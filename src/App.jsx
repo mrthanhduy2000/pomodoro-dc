@@ -45,7 +45,6 @@ const CityView = createRecoverableLazy(() => import('./components/CityView.jsx')
 // phần trăm giây cũng không sao, mà bấm được nút Bắt đầu ngay thì có sao.
 const CityBackdrop = createRecoverableLazy(() => import('./components/city/CityBackdrop.jsx'), 'city-backdrop');
 const Settings = createRecoverableLazy(() => import('./components/Settings.jsx'), 'settings');
-const LootDropModal = createRecoverableLazy(() => import('./components/LootDropModal.jsx'), 'loot-drop-modal');
 const CityGrowthMoment = createRecoverableLazy(() => import('./components/city/CityGrowthMoment.jsx'), 'city-growth-moment');
 const FocusCityTease = createRecoverableLazy(() => import('./components/city/FocusCityTease.jsx'), 'focus-city-tease');
 const PrestigeModal = createRecoverableLazy(() => import('./components/PrestigeModal.jsx'), 'prestige-modal');
@@ -1338,17 +1337,17 @@ export default function App() {
 }
 
 /**
- * GlobalOverlays — nơi LUẬT MỨC ĐỘ LÀM PHIỀN được thi hành (2026-08-27, ADR-060).
+ * GlobalOverlays — nơi LUẬT MỨC ĐỘ LÀM PHIỀN được thi hành (2026-08-27, ADR-060; sửa 2026-09-06, ADR-070).
  *
- * ⚠️ CHẶN MÀN HÌNH CHỈ DÀNH CHO BỐN VIỆC, và cả bốn đều buộc Đàm phải QUYẾT ĐỊNH
- * gì đó: lên kỷ · thăng hoa · khủng hoảng kỷ · thảm hoạ. Mọi phần thưởng còn lại
- * đi qua `RewardToastHost` — tự tắt sau 4 giây, bấm vào mới mở chi tiết.
+ * ⚠️ CHẶN MÀN HÌNH CHỈ DÀNH CHO VIỆC BUỘC PHẢI QUYẾT ĐỊNH (thăng hoa) và cho CÁI KẾT của một phiên:
+ * chuỗi thẻ thưởng (`SessionRewardStory`) chạy sau MỌI phiên — kể cả lên kỷ, thẻ cuối là «Kỷ nguyên
+ * mới» với nút xem thành phố. ADR-070 gỡ hộp thoại chi tiết (`LootDropModal`): một phiên có ĐÚNG MỘT
+ * cái kết, không còn "xem chi tiết", không còn nút "Nhận" nào bên trong. Mọi phần thưởng còn lại đi
+ * qua `RewardToastHost` — tự tắt sau 4 giây.
  *
- * ⚠️ CỔNG "LÊN KỶ" ĐỌC `pendingReward.eraChanged`, KHÔNG ĐỌC MỘT CỜ MỚI NÀO. Store
- * vẫn bật `lootModalOpen` ĐỒNG BỘ y như cũ (ba bài test ở `completeFocusSession.test.js`
- * khẳng định điều đó) — ta chỉ đổi phần HIỂN THỊ, đúng điểm cắm mà `RewardSequence`
- * (component đã gộp vào đây) chọn từ trước. Sửa store để hoãn/đổi luồng là cách chắc
- * chắn làm vỡ ba bài đó, và đụng vào đúng hàm dài nhất dự án.
+ * ⚠️ Store vẫn bật `lootModalOpen` ĐỒNG BỘ y như cũ (ba bài test ở `completeFocusSession.test.js`
+ * khẳng định điều đó) — cờ ấy nay nghĩa là "chuỗi thẻ thưởng đang chờ", và chuỗi thẻ đóng nó qua
+ * `closeLootModal` KHÔNG ĐIỀU KIỆN. Sửa store để hoãn/đổi luồng là cách chắc chắn làm vỡ ba bài đó.
  *
  * ⚠️ `detail` là trạng thái CỤC BỘ, không vào store: nó chỉ sống đúng một lượt xem,
  * không cần đồng bộ lên Supabase, và cho vào store là thêm một trường `ui` nữa mà
@@ -1357,9 +1356,9 @@ export default function App() {
 function GlobalOverlays(props) {
   const { lootModalOpen } = props;
   // ⚠️ MẸO VÒNG ĐỜI (kế thừa từ `RewardSequence`, component nay đã gộp vào
-  // `OverlayStack`), và vì đúng lý do cũ: `detail` ("Đàm đã bấm xem chi tiết") phải trở về `null` khi phần thưởng
-  // ĐỔI, nếu không phần thưởng KẾ TIẾP sẽ tự mở hộp thoại mà không ai bấm — tức
-  // luật "chỉ bốn việc được chặn màn hình" lặng lẽ hỏng sau đúng một lần bấm.
+  // `OverlayStack`), và vì đúng lý do cũ: `detail` ("Đàm đã bấm xem màn lên cấp") và `storyDone`
+  // phải trở về trạng thái đầu khi phần thưởng ĐỔI, nếu không phần thưởng KẾ TIẾP sẽ mở nhầm
+  // hoặc chuỗi thẻ không chạy — tức luật "chỉ việc phải quyết định mới chặn màn hình" lặng lẽ hỏng.
   // Đặt `key` để React dựng lại thì state tự sạch; một `useEffect` đi dọn state là
   // chỗ để quên dọn, và React cũng cấm gọi `setState` thẳng trong thân effect.
   const levelUpHead = useGameStore((s) => s.ui.levelUpQueue[0]?.newLevel ?? null);
@@ -1386,7 +1385,6 @@ function OverlayStack({
   const [momentSeen, setMomentSeen] = useState(false);
   // "Chuỗi thẻ thưởng đã xem xong chưa" — tự sạch nhờ `key` ở `GlobalOverlays`, như `momentSeen`.
   const [storyDone, setStoryDone] = useState(false);
-  const pendingEraChanged = useGameStore((s) => Boolean(s.ui.pendingReward?.eraChanged));
   const closeLootModal = useGameStore((s) => s.closeLootModal);
   const dismissMissionNotification = useGameStore((s) => s.dismissMissionNotification);
   const dismissLevelUp = useGameStore((s) => s.dismissLevelUp);
@@ -1443,62 +1441,45 @@ function OverlayStack({
     được bằng một chạm. Nó KHÔNG phải một việc phải quyết định — nó là phần thưởng, và phần thưởng
     thì phải được NHÌN THẤY. Luật "chỉ bốn việc được chặn màn hình" vẫn đúng cho mọi lớp phủ ĐÒI
     quyết định; toast vẫn là kênh cho di vật/thành tích/nhiệm vụ đến kèm.
-    Thứ tự giữ nguyên: lễ mừng thành phố (nếu có) → chuỗi thẻ → (lên kỷ) hộp thoại chi tiết.
+    Thứ tự: lễ mừng thành phố (nếu có) → chuỗi thẻ. Hết. (ADR-070: không còn hộp thoại chi tiết
+    đứng sau — kể cả khi lên kỷ, thẻ cuối «Kỷ nguyên mới» là cái kết, có nút xem thành phố.)
   */
   const showStory = lootModalOpen && !showMoment && !storyDone;
 
-  // Hộp thoại chi tiết mở THẲNG chỉ khi lên kỷ (sau chuỗi thẻ); ngoài ra phải do Đàm bấm.
-  // `!showMoment` giữ đúng thứ tự cũ: lễ mừng xong rồi mới tới phần thưởng.
-  const showLootModal = lootModalOpen && !showMoment && storyDone && (pendingEraChanged || detail === 'loot');
   const showLevelModal = hasLevelUp && detail === 'level';
 
   /**
-   * Kết thúc chuỗi thẻ. Ba lối ra:
-   *   · bấm "Xem chi tiết" → giữ `pendingReward`, mở hộp thoại chi tiết;
-   *   · lên kỷ → giữ `pendingReward`, cổng `showLootModal` tự mở hộp thoại;
-   *   · còn lại → đóng phần thưởng, và dọn những toast mà chuỗi thẻ ĐÃ nói thay (nhiệm vụ vừa xong,
-   *     lên cấp) — để chúng không kể lại lần thứ hai ở góc màn hình.
+   * Kết thúc chuỗi thẻ (ADR-070: MỘT lối ra). Đóng phần thưởng KHÔNG ĐIỀU KIỆN — không còn ai đọc
+   * `pendingReward` sau thẻ cuối — rồi dọn những toast mà chuỗi thẻ ĐÃ nói thay (nhiệm vụ vừa xong,
+   * lên cấp, di vật) để chúng không kể lại lần thứ hai ở góc màn hình. `navigate` là nút trên thẻ
+   * ("Chọn công trình ngay", "Xem thành phố mới").
    */
   const finishStory = useCallback(({
-    openDetail = false, shownMissionIds = [], levelShown = false, relicShown = false, navigate = null,
+    shownMissionIds = [], levelShown = false, relicShown = false, navigate = null,
   } = {}) => {
     setStoryDone(true);
-    if (openDetail) {
-      setDetail('loot');
-      return;
-    }
-    if (pendingEraChanged) return;
     closeLootModal();
     for (const id of shownMissionIds) dismissMissionNotification(id);
     if (levelShown) dismissLevelUp();
     // ADR-069: thẻ di vật đã kể thay toast di vật; thẻ "hàng chờ trống" có nút đi thẳng tới Công trình.
     if (relicShown) dismissRelicNotification();
     if (navigate) onNavigate?.(navigate);
-  }, [pendingEraChanged, closeLootModal, dismissMissionNotification, dismissLevelUp, dismissRelicNotification, onNavigate]);
+  }, [closeLootModal, dismissMissionNotification, dismissLevelUp, dismissRelicNotification, onNavigate]);
 
-  // ⚠️ NẠP TRƯỚC gói mã của màn phần thưởng ngay khi một phiên vừa xong. Đo bằng máy
-  // (bản Phase 4′): không có dòng này thì gói `loot-drop-modal` chỉ bắt đầu tải SAU
-  // khi khoảnh khắc kết thúc — trên mạng yếu đó là một khoảng trắng ngay sau 25 phút
-  // làm việc thật. Nay nó còn phục vụ thêm một đường nữa: Đàm bấm vào thẻ tổng kết
-  // thì hộp thoại phải bật ra ngay, không đợi tải.
-  useEffect(() => {
-    if (lootModalOpen) LootDropModal.preload?.();
-  }, [lootModalOpen]);
-
-  // Mọi thứ đang chặn màn hình. Sáu số hạng, nhưng chỉ BA trong số đó tự bật:
-  // lên kỷ (`showLootModal` khi `eraChanged`) · thảm hoạ · khủng hoảng kỷ. Thăng
-  // hoa do Đàm bấm ở Cài đặt, còn `detail === 'loot'|'level'` là do Đàm bấm vào thẻ —
-  // một hộp thoại Đàm tự mở thì không phải "làm phiền".
+  // Mọi thứ đang chặn màn hình. Chỉ HAI số hạng tự bật, và cả hai đều là cái KẾT của một phiên chứ
+  // không phải một việc phải làm: lễ mừng thành phố · chuỗi thẻ thưởng. Thăng hoa do Đàm bấm ở Cài
+  // đặt, còn `detail === 'level'` là do Đàm bấm vào thẻ — một hộp thoại Đàm tự mở thì không phải
+  // "làm phiền".
   // ⚠️ HẾT NGOẠI LỆ (2026-08-27, đóng `TECH_DEBT #87`). `weeklyReportOpen` từng TỰ bật sáng
   // thứ Hai, tức nó chặn màn hình mà không nằm trong bốn việc được phép. Nay `checkWeeklyReport`
   // chỉ bật một lời MỜI (`weeklyReportPending` → một thẻ toast); cờ này chỉ lên khi Đàm bấm —
   // nút ở thanh bên hoặc chính cái thẻ ấy — nên nó rơi vào đúng câu đã ghi ở trên: "một hộp
   // thoại Đàm tự mở thì không phải làm phiền".
-  const blocking = showMoment || showStory || showLootModal
+  const blocking = showMoment || showStory
     || prestigeModalOpen || weeklyReportOpen || showLevelModal;
 
   const hasToast = (
-    (lootModalOpen && !pendingEraChanged)
+    lootModalOpen
     || relicPending
     || hasLevelUp
     || achievementQueueLength > 0
@@ -1514,7 +1495,6 @@ function OverlayStack({
         <CityGrowthMoment moment={growth.moment} era={growth.era} onDone={() => setMomentSeen(true)} />
       )}
       {showStory && <SessionRewardStory onDone={finishStory} />}
-      {showLootModal && <LootDropModal />}
       {prestigeModalOpen && <PrestigeModal />}
       {showLevelModal && <LevelUpModal autoDismissMs={0} />}
       {weeklyReportOpen && <WeeklyReportModal />}
@@ -1524,9 +1504,8 @@ function OverlayStack({
         tiếng thẻ toast chồng lên tiếng mở rương của thẻ xp. Chuỗi thẻ xong thì chồng toast mọc ra
         với đúng những gì còn lại (di vật, thành tích…), vì thẻ tổng kết phiên đã bị `closeLootModal`
         rút đi và thẻ nhiệm vụ/lên cấp mà chuỗi thẻ đã nói thay cũng đã được dọn.
-        ⚠️ Giới hạn biết trước: bấm "Nhận thưởng trọn ngày" NGAY TRONG chuỗi thẻ mà cú nhận ấy làm
-        LÊN CẤP thì `levelUpHead` đổi ⇒ `key` của `GlobalOverlays` đổi ⇒ chuỗi thẻ dựng lại từ thẻ
-        đầu. Hiếm (cần vừa đủ 43 XP để qua ngưỡng cấp) và chỉ tốn một lượt xem lại; ghi ở `TECH_DEBT #98`.
+        ⚠️ ADR-070 đóng `TECH_DEBT #98`: không còn nút "Nhận" nào bên trong chuỗi thẻ, nên không còn
+        cú bấm nào đổi `levelUpHead` giữa chừng — thưởng trọn ngày đã vào XP phiên TRƯỚC khi thẻ dựng.
       */}
       {hasToast && !showStory && (
         <RewardToastHost

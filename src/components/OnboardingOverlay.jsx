@@ -12,7 +12,7 @@ import { SKILL_GLYPHS, FLAME_GLYPH } from './icons/glyphData';
 
 const STEPS = [
   { glyph: SKILL_GLYPHS.bac_thay_chien_luoc, title: 'Đặt mục tiêu rồi bấm Bắt đầu', body: 'Ghi đích đến cho phiên, chọn thời lượng (mặc định 25 phút) rồi tập trung tới khi hết giờ.' },
-  { glyph: SKILL_GLYPHS.kien_thuc_nen, title: 'Hoàn thành để lớn lên', body: 'Mỗi phiên xong cho XP và tài nguyên — lên cấp, mở kỹ năng và bước qua các thời đại mới.' },
+  { glyph: SKILL_GLYPHS.kien_thuc_nen, title: 'Hoàn thành để lớn lên', body: 'Mỗi phiên xong cho XP và điểm kỷ nguyên — lên cấp, mở kỹ năng, xây thành phố và bước qua các thời đại mới.' },
   { glyph: FLAME_GLYPH, title: 'Quay lại mỗi ngày', body: 'Hết giờ thì nghỉ ngắn rồi vào lại. Giữ chuỗi ngày liên tục để nhận thưởng lớn hơn.' },
 ];
 

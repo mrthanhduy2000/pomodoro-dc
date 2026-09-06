@@ -18,14 +18,15 @@
  */
 import { calculateStreakMilestoneProgress } from '../engine/gameMath';
 import { tierFromSessionMultiplier } from '../engine/rewardTiers';
-import { ERA_METADATA, STREAK_MILESTONES } from '../engine/constants';
+import { ERA_METADATA, RELIC_EVOLUTION, RELIC_EVOLVE_SESSIONS, STREAK_MILESTONES } from '../engine/constants';
+import { describeBuff } from '../engine/buffLabel';
 import { describeStreakTarget } from './todayHero';
 
 /** Mỗi thẻ tự lật sau chừng này (ms) nếu Đàm không chạm. Bốn thẻ ≈ 10 giây, ngắn hơn một hộp thoại cũ. */
 export const STORY_CARD_MS = 2600;
-/** Thẻ cuối đứng lâu hơn để còn bấm "Chi tiết"; hết giờ thì tự đóng — đừng giam màn hình. */
+/** Thẻ cuối đứng lâu hơn để còn bấm "Tiếp tục"/"Xem thành phố"; hết giờ thì tự đóng — đừng giam màn hình. */
 export const STORY_LAST_CARD_MS = 9000;
-/** Thẻ lên cấp / kỷ mới / lên bậc / di vật là tin hiếm, cho thêm nửa giây. */
+/** Thẻ lên cấp / kỷ mới / lên bậc / di vật / bước tuần / di vật lên bậc là tin hiếm, cho thêm nửa giây. */
 const STORY_BIG_CARD_MS = 3400;
 /**
  * Thẻ ĐỨNG YÊN chờ một quyết định — trả về giá trị này thay cho số mili-giây (ADR-069): thẻ lên cấp
@@ -40,6 +41,9 @@ function toNumber(value, fallback = 0) {
 
 function buildXpCard(reward) {
   const chips = [];
+  // ADR-070: EP là trục kỷ nguyên — buff EP của bậc/di vật/kỳ quan phải THẤY được ở đúng thẻ này,
+  // nếu không "+8% EP" chỉ là một dòng chữ trong bảng mà không ai kiểm được bằng mắt.
+  if (toNumber(reward.finalEP) > 0) chips.push({ id: 'ep', label: 'Kỷ nguyên', value: `+${Math.round(toNumber(reward.finalEP))} EP` });
   if (reward.largeChest) chips.push({ id: 'chest', label: 'Rương Lớn' });
   // ADR-069: chip "+N tinh luyện" ĐÃ BỎ — tinh luyện rời khỏi đường chơi (không còn cổng nào tiêu nó).
   if (toNumber(reward.streakDays) >= 2 && toNumber(reward.streakBonus) > 0) {
@@ -114,7 +118,7 @@ function buildTodayCard(todayGoal, delta) {
   };
 }
 
-function buildQuestsCard({ missions, completedMissionIds, missionXp, bonusXP }) {
+function buildQuestsCard({ missions, completedMissionIds, missionXp, bonusXP, bonusEarnedXP }) {
   const list = Array.isArray(missions?.list) ? missions.list : [];
   if (list.length === 0) return null;
   const justDone = new Set(completedMissionIds ?? []);
@@ -139,13 +143,17 @@ function buildQuestsCard({ missions, completedMissionIds, missionXp, bonusXP }) 
   // Không có gì nhúc nhích thì đừng chiếm một thẻ: ba dòng "0/30" sau một phiên là nhiễu.
   if (!rows.some((r) => r.progress > 0 || r.justDone)) return null;
   const allDone = rows.every((r) => r.done);
+  const earned = toNumber(bonusEarnedXP);
   return {
     id: 'quests',
     rows,
     doneCount: rows.filter((r) => r.done).length,
     allDone,
-    bonusReady: allDone && !missions.bonusClaimedToday,
-    bonusClaimed: Boolean(missions.bonusClaimedToday),
+    // ADR-070: thưởng trọn ngày TỰ VÀO ở phiên khép nốt nhiệm vụ cuối — thẻ kể "đã vào", không mời bấm.
+    bonusJustEarned: earned > 0,
+    bonusEarnedXP: earned,
+    bonusClaimed: Boolean(missions.bonusClaimedToday) && earned === 0,
+    // Còn dở thì nói trước phần thưởng đang chờ — anticipation, và nó tự vào, không phải đi lấy.
     bonusXP: toNumber(bonusXP),
   };
 }
@@ -213,6 +221,51 @@ function buildRelicCard(reward) {
 }
 
 /**
+ * Thẻ BƯỚC TUẦN (ADR-070): phiên này vừa tự chốt một hay nhiều bước của chuỗi tuần. `reward.weeklySteps`
+ * do store kể ra ({ index, total, label, xp, isLast, bonusSP }); rỗng thì không có thẻ.
+ */
+function buildChainCard(reward) {
+  const steps = Array.isArray(reward.weeklySteps) ? reward.weeklySteps : [];
+  if (steps.length === 0) return null;
+  const total = Math.max(1, ...steps.map((s) => toNumber(s.total, 1)));
+  const last = steps[steps.length - 1];
+  return {
+    id: 'chain',
+    title: reward.weeklyChainTitle ?? 'Nhiệm vụ tuần',
+    steps: steps.map((s) => ({ index: toNumber(s.index), label: s.label ?? '', xp: toNumber(s.xp), isLast: Boolean(s.isLast) })),
+    total,
+    doneCount: Math.min(total, toNumber(last.index) + 1),
+    xp: steps.reduce((sum, s) => sum + toNumber(s.xp), 0),
+    bonusSP: toNumber(reward.weeklyBonusSP),
+    finished: steps.some((s) => s.isLast),
+  };
+}
+
+/**
+ * Thẻ DI VẬT LÊN BẬC (ADR-070): số phiên ≥25′ kể từ lúc nhận vừa chạm mốc. `reward.relicsEvolved` do
+ * store kể ({ id, label, icon, stage, stageLabel, buff }); rỗng thì không có thẻ.
+ */
+function buildRelicEvolvedCard(reward) {
+  const list = Array.isArray(reward.relicsEvolved) ? reward.relicsEvolved : [];
+  if (list.length === 0) return null;
+  const relics = list.map((r) => {
+    const stage = toNumber(r.stage);
+    const maxStage = (RELIC_EVOLUTION[r.id]?.stages.length ?? 1) - 1;
+    return {
+      id: r.id,
+      label: r.label ?? r.id,
+      icon: r.icon ?? '✨',
+      stage,
+      stageLabel: r.stageLabel ?? '',
+      buffText: describeBuff(r.buff),
+      isMax: stage >= maxStage,
+      nextAt: stage < maxStage ? toNumber(RELIC_EVOLVE_SESSIONS[stage + 1]) : null,
+    };
+  });
+  return { id: 'evolve', relics };
+}
+
+/**
  * Thẻ THỬ THÁCH KỶ NGUYÊN (nhiệm vụ mềm): chỉ chen vào khi nó VỪA MỞ hoặc phiên này VỪA ĐƯỢC TÍNH
  * vào nó — không thì im, vì một thẻ "1/3" lặp lại mỗi phiên trong hai ngày là nhiễu.
  * `crisisQuest` = `describeCrisisQuest(...)` SAU phiên; `countedThisSession` do nơi gọi tính.
@@ -246,7 +299,7 @@ function buildQuestCard(reward, crisisQuest) {
  * @param {object} p.missions            `state.missions` SAU phiên
  * @param {string[]} p.completedMissionIds  `ui.missionCompletedIds` — nhiệm vụ phiên này vừa xong
  * @param {(xp:number)=>number} p.missionXp   phép nhân XP nhiệm vụ (đã gồm hệ số công trình)
- * @param {number} p.bonusXP             "thưởng trọn ngày", đã tính sẵn bằng `dailyAllBonusXP`
+ * @param {number} p.bonusXP             "thưởng trọn ngày" CÒN CHỜ, đã tính sẵn bằng `dailyAllBonusXP` (đã vào thì đọc `reward.dailyBonusXP`)
  * @param {object|null} p.project        công trình đầu hàng chờ SAU phiên (xem `buildProjectCard`)
  * @param {object|null} p.skills         kỹ năng mở được ngay + đích kế (xem `buildLevelCard`)
  * @param {object|null} p.crisisQuest    thử thách kỷ nguyên SAU phiên (xem `buildQuestCard`)
@@ -268,8 +321,9 @@ export function buildRewardStoryCards({
   if (!reward) return [];
   const cards = [buildXpCard(reward)];
 
-  // Thứ tự là một câu chuyện (ADR-069): xong rồi → THÀNH PHỐ nhích → chuỗi → hôm nay → nhiệm vụ →
-  // thử thách kỷ → (lên cấp + chọn kỹ năng) → (lên bậc) → (di vật) → (kỷ mới).
+  // Thứ tự là một câu chuyện (ADR-069/070): xong rồi → THÀNH PHỐ nhích → chuỗi → hôm nay → nhiệm vụ →
+  // (bước tuần vừa chốt) → thử thách kỷ → (lên cấp + chọn kỹ năng) → (lên bậc) → (di vật) →
+  // (di vật lên bậc) → (kỷ mới). Ba tin tự-vào của ADR-070 đứng ngay sau thứ chúng nói về.
   const projectCard = buildProjectCard(project);
   if (projectCard) cards.push(projectCard);
 
@@ -279,8 +333,11 @@ export function buildRewardStoryCards({
   const todayCard = buildTodayCard(todayGoal, todayDelta);
   if (todayCard) cards.push(todayCard);
 
-  const questsCard = buildQuestsCard({ missions, completedMissionIds, missionXp, bonusXP });
+  const questsCard = buildQuestsCard({ missions, completedMissionIds, missionXp, bonusXP, bonusEarnedXP: reward.dailyBonusXP });
   if (questsCard) cards.push(questsCard);
+
+  const chainCard = buildChainCard(reward);
+  if (chainCard) cards.push(chainCard);
 
   const questCard = buildQuestCard(reward, crisisQuest);
   if (questCard) cards.push(questCard);
@@ -292,6 +349,9 @@ export function buildRewardStoryCards({
 
   const relicCard = buildRelicCard(reward);
   if (relicCard) cards.push(relicCard);
+
+  const evolvedCard = buildRelicEvolvedCard(reward);
+  if (evolvedCard) cards.push(evolvedCard);
 
   if (reward.eraChanged) {
     const meta = ERA_METADATA[reward.newBook] ?? null;
@@ -311,6 +371,6 @@ export function buildRewardStoryCards({
 export function storyCardDurationMs(card, isLast) {
   if (card?.hold) return STORY_HOLD;
   if (isLast) return STORY_LAST_CARD_MS;
-  if (card?.id === 'level' || card?.id === 'era' || card?.id === 'rank' || card?.id === 'relic') return STORY_BIG_CARD_MS;
+  if (['level', 'era', 'rank', 'relic', 'chain', 'evolve'].includes(card?.id)) return STORY_BIG_CARD_MS;
   return STORY_CARD_MS;
 }

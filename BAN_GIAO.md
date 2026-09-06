@@ -1,3 +1,77 @@
+> Cập nhật lần cuối: **2026-09-06 (vòng 35)** — **MỘT CÁI KẾT DUY NHẤT, KHÔNG NÚT NHẬN, KHÔNG MÀN
+> CHẾT (ADR-070).** Lệnh Đàm: *"Tiếp tục làm như prompt trên mà không hỏi lại, cho phép bạn tự quyết
+> định mọi thứ và tech debt. Build lớn. Simplify mạnh. Làm game vui hơn. Tập trung nhiều hơn vào UX/UI."*
+> Không đụng Thành phố. Đóng `#96 · #98 · #100`, cập nhật `#99`.
+>
+> ### Năm chỗ đổi (chi tiết + lý do: ADR-070; tóm tắt: CHANGELOG 2026-09-06 vòng 35)
+> 1. **Tự chốt bước tuần · thưởng trọn ngày tự vào** — ngay trong `completeFocusSession`
+>    (`autoClaimWeeklySteps` + `getDailyMissionAllBonusXP`, cùng công thức nút cũ), cộng vào XP phiên,
+>    kể ở chuỗi thẻ (thẻ «Bước tuần» mới · thẻ Nhiệm vụ ghi «Trọn ngày +N XP — đã cộng»). Xoá
+>    `claimWeeklyStep` · `claimMissionAllBonus` và mọi nút Nhận/Chốt bước. ⚠️ Phép ĐỐI CHIẾU lịch sử
+>    mà nút «Nhận» cũ làm (`rebuildMissionsFromHistory`) đi theo về store — bài test cũ
+>    «reconciles stale completed missions» đổi thành bài đối chiếu TRONG phiên.
+> 2. **Di vật lớn theo PHIÊN** — `engine/relicGrowth.js`: mốc `[0, 20, 50]` phiên ≥25′ kể từ
+>    `relic.earnedAt` (phiên nhận không tính; save cũ đóng dấu lúc nạp ở `normalizePersistedGameState`).
+>    Chốt sau `newHistory`, kể ở thẻ «Di vật lên bậc». Xoá `evolveRelic` + `t2Cost/t3Cost` + hai hàm
+>    giá; `RelicInventory.jsx` hiện thanh «N/20 phiên ≥25′ · còn M». Kỳ quan kỷ 15 rút mốc 30%.
+> 3. **Đặc quyền công trình về trục sống** — `WONDER_EFFECT_REGISTRY` viết lại (11 kỳ quan → buff
+>    `passive` XP/EP/combo/XP phẳng có ngưỡng phút; 4 luật còn được đọc giữ id), `wonderEffects.js`
+>    là nguồn duy nhất (`wonderPassiveBuffs` → `activeBuffs`; `wonderCrisisWindowBonusHours`;
+>    `wonderRelicEvolveFactor`); gỡ 7 helper kỳ quan chép tay trong store + 3 hàm giá/phạt.
+>    `BUILDING_PERK_REGISTRY`: rương trả XP thay tinh luyện; `safety_net` → «phiên bù sau khi huỷ».
+>    `rewardAxes.test.js` khoá cả hai bảng. Thẻ +XP thêm chip «+N EP» (buff EP phải THẤY được).
+> 4. **Xoá `LootDropModal.jsx`** (1.057 dòng) + mọi cổng ở `OverlayStack` (`showLootModal` ·
+>    `detail === 'loot'` · `pendingEraChanged` · preload). `finishStory` đóng phần thưởng KHÔNG ĐIỀU
+>    KIỆN. Thẻ «Kỷ nguyên mới» có nút «Xem thành phố mới» + `playEraChange`; `notifyLevelUp` kêu một
+>    lần ở thẻ lên cấp. `previewStage.js` bỏ 3 trường không ai đọc, thêm 5 trường ADR-070; test của nó
+>    đọc HAI file chuỗi thẻ (bắt cả `reward?.x`).
+> 5. **Huy hiệu «Kế tiếp»** — 4 huy hiệu gần đạt nhất sau dải hero (thanh + «còn N»); dải hero nói
+>    «còn N phút/phiên»; bỏ bộ lọc BẬC; gỡ `AchievementCard` chết (~140 dòng). Dọn chữ đồng tiền ngủ:
+>    «Tinh luyện» → «Phiên sâu» (lịch sử Thống kê) · hàng «Tài nguyên» ở Thăng hoa · câu onboarding.
+>    `engine/buffLabel.js` dịch buff một chỗ.
+>
+> ### Đã trả giá / bắt được trong lúc làm
+> · **Bài test "cửa vẫn đóng" (eraLegacy) xanh nhờ một thứ chẳng liên quan**: nó đòi
+>   `startProject(era5[2]) === false` và đúng chỉ vì fixture KHÔNG có túi kỷ 5 — `startCrafting` từ
+>   chối vì thiếu tiền, không vì cửa đóng. ADR-069 gỡ cổng tiền thì nó đỏ trên mã đúng (bẫy Phase
+>   7D). Nay hỏi đúng luật còn sống: khe trùng tu có đúng MỘT (`LEGACY_QUEUE_SLOTS`).
+> · **Gỡ nút «Nhận» mà đánh rơi phép đối chiếu**: bản đầu `completeFocusSession` tick thẳng trên
+>   `prev.missions`, nên một "3/3" giả (không lịch sử) sẽ kéo theo thưởng trọn ngày thật. Bài cũ
+>   `claimMissionAllBonus reconciles…` bắt được — đổi nó thành bài đối chiếu trong phiên, và
+>   `rebuildMissionsFromHistory` (cùng hàm `refreshDailyMissions` dùng) nay chạy trước tick.
+>   *Bỏ một nút thì đi tìm mọi việc nút ấy làm NGOÀI việc trao thưởng.*
+> · **Bài test mới của tôi rơi đúng cái bẫy ấy**: «đã nhận hôm nay thì phiên sau KHÔNG cộng lần
+>   hai» khai `claimed: true` với lịch sử RỖNG ⇒ bị reset đúng luật ⇒ cộng lại. Sửa TIỀN ĐỀ (thêm một
+>   phiên thật hôm nay), không sửa luật.
+> · **Chú thích cũ khớp regex của cổng**: `DailyMissions.jsx` có dòng chú thích «hỏi `wonderEffect
+>   === '…'`» làm bài canh-cấu-trúc `wonderEffects.test` đỏ. Một bài đọc-mã-nguồn bắt cả LỜI KỂ về
+>   lỗi — viết lại chú thích cho khỏi giống lỗi nó kể.
+> · **ẢNH BẮT ĐƯỢC THỨ CỔNG SỐ KHÔNG BẮT (lần thứ hai trong hai vòng)**: kho di vật trên fixture in
+>   «Di vật Kỷ Băng Hà — tăng tài nguyên rớt» — `rewardAxes.test` xanh vì nó chấm BẢNG, còn chữ ấy nằm
+>   trong SAVE (bản chép label/description/buff từ lúc nhận). Vá gốc: `withCanonicalRelicText` đọc lại
+>   bốn trường từ `ERA_CRISES` lúc nạp (`normalizeStoredRelic`), có test rehydrate. *Một trường được
+>   chép vào save là một bản sao sẽ trôi khỏi bảng — đọc lại từ bảng ở cửa nạp, đừng tin bản chép.*
+> · **Hero huy hiệu in «còn còn 37 phiên»**: `cauConLai` đã mang sẵn chữ "còn", dải hero lại thêm một
+>   lần. Chỉ ảnh mới thấy; nay có test `inventoryHero` cấm "còn còn".
+> · **`no-use-before-define` bắt một hằng số module đặt sau component** (`RELIC_EVOLVE_SESSIONS_TEXT`)
+>   — đúng ca luật ấy sinh ra để bắt (app trắng lúc render).
+> · Phép so EP kỳ quan dùng TỈ SỐ (`epWith/epWithout ≈ 1,08 ± 0,03`) thay vì con số tuyệt đối — bậc 0
+>   kỷ 7 chỉ có `expBonus` nên tỉ số sạch; con số tuyệt đối sẽ trôi theo mọi lần chỉnh EP.
+> · Không đụng `engine/city3d/` · `components/city/` (kể cả chú thích lịch sử nhắc `LootDropModal`
+>   ở `CityGrowthMoment.jsx`) · `cityLayout` · địa hình. Hình dạng `craftingQueue`/`buildings`/
+>   `cityArchive` giữ nguyên; ADR-007 nguyên. Không migration.
+>
+> ### Cửa soi
+> `node scripts/shot.mjs --phone --fixture fx-sp.json --preview "loot-max&dc-preview-card=<thẻ>"` với
+> thẻ = `xp|project|streak|today|quests|chain|quest|level|rank|relic|evolve|era` (cảnh `era` cho thẻ kỷ
+> mới có nút «Xem thành phố mới»). Màn Tiến trình: `--click "Thêm" --click "Tiến trình"`; kho di vật:
+> `--tab "Hành trang" --click "Huy hiệu"`.
+>
+> > `npm run test:fast`: **1633 bài · 1632 pass · 0 fail · 1 skipped** (vòng 34: 1622). Lint sạch, build xanh. Test
+> mới: `gameStore.adr070.test.js` (9) · `relicGrowth.test.js` (7) · `buffLabel.test.js` (3) · `wonderEffects.test.js`
+> viết lại (5) · `rewardAxes` +2 · `sessionRewardStory` +2 · `inventoryHero` +1; gỡ 2 bài `evolveRelic`, 2 bài
+> đọc `LootDropModal`. Ảnh nghiệm thu 390px: `$SP/shots/v35-*.png` (huy hiệu · tiến trình · 5 thẻ · màn Tập trung).
+>
 > Cập nhật lần cuối: **2026-09-06 (vòng 34)** — **ĐỒNG TIỀN DUY NHẤT LÀ PHIÊN (ADR-069).** Lệnh Đàm:
 > *"SIMPLIFY. MINIMIZE. AMPLIFY FUN. … coi Upgrade + Progression + UX/UI như một sản phẩm cần redesign
 > từ đầu … cơ chế nào tồn tại chỉ vì được code ra thì xoá … TUYỆT ĐỐI KHÔNG ĐỤNG VÀO THÀNH PHỐ."*

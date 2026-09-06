@@ -169,7 +169,7 @@ export function getActiveResources(totalEP) {
   return ERA_METADATA[book]?.resources ?? ERA_1_RESOURCES;
 }
 
-export function getComboDecayMs(unlockedSkills = {}, relics = [], relicEvolutions = {}) {
+export function getComboDecayMs(unlockedSkills = {}, relics = [], relicEvolutions = {}, extraHours = 0) {
   const relicComboHoursRaw = (relics ?? []).reduce((acc, relic) => {
     const stage = relicEvolutions?.[relic.id] ?? 0;
     const evoDef = RELIC_EVOLUTION[relic.id];
@@ -179,12 +179,14 @@ export function getComboDecayMs(unlockedSkills = {}, relics = [], relicEvolution
   // D2: softcap giờ combo TỪ CỔ VẬT (clamp TRƯỚC khi cộng base skill, để hiệu ứng
   // skill bo_nho_co_bap không bao giờ bị thu nhỏ). No-op với loadout hiện tại (≤16h).
   const relicComboHours = Math.min(relicComboHoursRaw, RELIC_COMBO_WINDOW_CAP_HOURS);
+  // ADR-070: kỳ quan «Combo giữ thêm N giờ» — cộng NGOÀI trần di vật (nó là một nguồn khác, có trần riêng ở bảng).
+  const wonderComboMs = Math.max(0, Number(extraHours) || 0) * 3_600_000;
 
   const baseComboDecayMs = unlockedSkills.bo_nho_co_bap
     ? BO_NHO_CO_BAP_COMBO_HOURS * 3_600_000
     : COMBO_DECAY_MS;
 
-  return baseComboDecayMs + (relicComboHours * 3_600_000);
+  return (baseComboDecayMs + (relicComboHours * 3_600_000)) + wonderComboMs;
 }
 
 // ─── Helpers Bản Cập Nhật Cộng Hưởng ─────────────────────────────────────────

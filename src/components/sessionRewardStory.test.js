@@ -34,13 +34,18 @@ test('thẻ XP luôn đứng đầu và nói ĐÚNG con số toast đang nói (t
   assert.equal(xp.tier, 'thuong');
   assert.equal(xp.jackpot, false);
   assert.equal(xp.event, null);
-  // Phiên thường: chuỗi 4 ngày +10 XP và combo ×2 +5 XP là hai chip; không có Rương Lớn.
-  assert.deepEqual(xp.chips.map((c) => c.id), ['streak', 'combo']);
+  // Phiên thường: EP (ADR-070 — trục kỷ nguyên phải thấy được), chuỗi 4 ngày +10 XP, combo ×2 +5 XP;
+  // không có Rương Lớn.
+  assert.deepEqual(xp.chips.map((c) => c.id), ['ep', 'streak', 'combo']);
+  assert.equal(xp.chips[0].value, `+${REWARD.finalEP} EP`);
+  // Không có EP thì không có chip EP — một chip "+0 EP" là một con số chết.
+  const [khongEp] = buildRewardStoryCards({ reward: { ...REWARD, finalEP: 0 } });
+  assert.deepEqual(khongEp.chips.map((c) => c.id), ['streak', 'combo']);
 });
 
-test('ca đỉnh: Rương Lớn đứng TRƯỚC các chip khác, KHÔNG còn chip tinh luyện (ADR-069), sự kiện tích cực được kể, jackpot bật', () => {
+test('ca đỉnh: EP rồi Rương Lớn đứng TRƯỚC các chip khác, KHÔNG còn chip tinh luyện (ADR-069), sự kiện tích cực được kể, jackpot bật', () => {
   const [xp] = buildRewardStoryCards({ reward: REWARD_MAX });
-  assert.equal(xp.chips[0].id, 'chest');
+  assert.deepEqual(xp.chips.slice(0, 2).map((c) => c.id), ['ep', 'chest']);
   assert.ok(!xp.chips.some((c) => c.id === 'refined'), 'tinh luyện đã rời khỏi đường chơi — chip của nó không được quay lại');
   assert.equal(xp.jackpot, true);
   assert.equal(xp.tier, 'huyenThoai');
@@ -49,9 +54,10 @@ test('ca đỉnh: Rương Lớn đứng TRƯỚC các chip khác, KHÔNG còn ch
 });
 
 test('thứ tự câu chuyện: xp → chuỗi → hôm nay → nhiệm vụ → lên cấp → kỷ mới', () => {
-  // `REWARD_ERA` kế thừa ca đỉnh (có bậc + di vật); tắt hai tin ấy để bài này chỉ đo bộ khung cũ.
+  // `REWARD_ERA` kế thừa ca đỉnh (có bậc + di vật + bước tuần + di vật lên bậc); tắt bốn tin ấy để
+  // bài này chỉ đo bộ khung cũ.
   const cards = buildRewardStoryCards({
-    reward: { ...REWARD_ERA, levelsGained: 1, rankUp: null, relicEarned: null },
+    reward: { ...REWARD_ERA, levelsGained: 1, rankUp: null, relicEarned: null, weeklySteps: [], relicsEvolved: [] },
     streak: { currentStreak: 4 },
     todayGoal: todayGoal(2),
     missions: missions([{ id: 'm1', label: 'A', progress: 1, goal: 3, rewardXP: 10 }]),
@@ -96,7 +102,7 @@ test('thẻ hôm nay: chạy từ mức TRƯỚC phiên tới mức SAU phiên, 
   assert.ok(!buildRewardStoryCards({ reward: REWARD, todayGoal: { hasGoal: false } }).some((c) => c.id === 'today'));
 });
 
-test('thẻ nhiệm vụ: chỉ hiện khi có gì nhúc nhích; đánh dấu đúng nhiệm vụ VỪA xong; nút nhận trọn ngày', () => {
+test('thẻ nhiệm vụ: chỉ hiện khi có gì nhúc nhích; đánh dấu đúng nhiệm vụ VỪA xong; thưởng trọn ngày KỂ chứ không mời bấm (ADR-070)', () => {
   const yen = buildRewardStoryCards({
     reward: REWARD,
     missions: missions([{ id: 'a', label: 'A', progress: 0, goal: 2, rewardXP: 10 }]),
@@ -116,21 +122,27 @@ test('thẻ nhiệm vụ: chỉ hiện khi có gì nhúc nhích; đánh dấu đ
   const quests = cards.find((c) => c.id === 'quests');
   assert.deepEqual(quests.rows.map((r) => [r.id, r.done, r.justDone, r.xp]), [['a', true, true, 20], ['b', false, false, 40]]);
   assert.equal(quests.doneCount, 1);
-  assert.equal(quests.bonusReady, false);
+  assert.equal(quests.allDone, false);
+  assert.equal(quests.bonusJustEarned, false);
+  assert.equal(quests.bonusXP, 43, 'còn dở thì nói trước phần thưởng đang chờ — nó tự vào, không phải đi lấy');
+  assert.ok(!('bonusReady' in quests), '`bonusReady` quay lại ⇒ có ai đó đang dựng lại cái nút Nhận');
 
-  const xongHet = buildRewardStoryCards({
-    reward: REWARD,
-    missions: missions([{ id: 'a', label: 'A', progress: 2, goal: 2, claimed: true, rewardXP: 10 }]),
+  // Phiên này khép nốt nhiệm vụ cuối ⇒ store đã cộng `dailyBonusXP` ⇒ thẻ kể "đã cộng".
+  const vuaVao = buildRewardStoryCards({
+    reward: { ...REWARD, dailyBonusXP: 43 },
+    missions: missions([{ id: 'a', label: 'A', progress: 2, goal: 2, claimed: true, rewardXP: 10 }], true),
     bonusXP: 43,
   }).find((c) => c.id === 'quests');
-  assert.equal(xongHet.bonusReady, true);
-  assert.equal(xongHet.bonusXP, 43);
+  assert.equal(vuaVao.bonusJustEarned, true);
+  assert.equal(vuaVao.bonusEarnedXP, 43);
+  assert.equal(vuaVao.bonusClaimed, false, '"vừa cộng" và "đã cộng từ trước" là hai câu — không kể cả hai');
 
+  // Đã cộng từ phiên TRƯỚC trong ngày ⇒ chỉ một dòng xác nhận, không kể lại con số như tin mới.
   const daNhan = buildRewardStoryCards({
     reward: REWARD,
     missions: missions([{ id: 'a', label: 'A', progress: 2, goal: 2, claimed: true, rewardXP: 10 }], true),
   }).find((c) => c.id === 'quests');
-  assert.equal(daNhan.bonusReady, false);
+  assert.equal(daNhan.bonusJustEarned, false);
   assert.equal(daNhan.bonusClaimed, true);
 });
 
@@ -152,7 +164,7 @@ test('nhịp lật: thẻ thường ngắn, thẻ cuối đứng lâu hơn để
 
 // ─── ADR-069: bốn thẻ mới ────────────────────────────────────────────────────
 
-test('thứ tự đầy đủ: xp → công trình → chuỗi → hôm nay → nhiệm vụ → thử thách → lên cấp → bậc → di vật → kỷ', () => {
+test('thứ tự đầy đủ: xp → công trình → chuỗi → hôm nay → nhiệm vụ → BƯỚC TUẦN → thử thách → lên cấp → bậc → di vật → LÊN BẬC → kỷ', () => {
   const cards = buildRewardStoryCards({
     reward: { ...REWARD_ERA, levelsGained: 1, rankUp: { label: 'Thủy Thủ', icon: '⚓', buffLabel: '+12%' }, relicEarned: { label: 'La Bàn', icon: '🧭' }, crisisOpened: { name: 'Bão', icon: '🌊' } },
     streak: { currentStreak: 4 },
@@ -161,7 +173,59 @@ test('thứ tự đầy đủ: xp → công trình → chuỗi → hôm nay → 
     project: { label: 'Hải Đăng', icon: '🗼', total: 6, done: 3 },
     crisisQuest: { name: 'Bão', icon: '🌊', sessionsDone: 1, sessionsRequired: 3, minMinutes: 45, windowHours: 48, passed: false, countedThisSession: true, relic: { label: 'La Bàn' } },
   });
-  assert.deepEqual(cards.map((c) => c.id), ['xp', 'project', 'streak', 'today', 'quests', 'quest', 'level', 'rank', 'relic', 'era']);
+  // `REWARD_ERA` (kế thừa ca đỉnh) mang sẵn một bước tuần vừa chốt và một di vật vừa lên bậc (ADR-070).
+  assert.deepEqual(cards.map((c) => c.id), ['xp', 'project', 'streak', 'today', 'quests', 'chain', 'quest', 'level', 'rank', 'relic', 'evolve', 'era']);
+});
+
+// ─── ADR-070: hai thẻ tự-vào ─────────────────────────────────────────────────
+
+test('thẻ bước tuần: chỉ khi store vừa chốt bước; kể đủ bước, XP, SP chuỗi; đứng lâu như tin hiếm', () => {
+  assert.ok(!buildRewardStoryCards({ reward: { ...REWARD, weeklySteps: [] } }).some((c) => c.id === 'chain'));
+  const chain = buildRewardStoryCards({ reward: REWARD_MAX }).find((c) => c.id === 'chain');
+  assert.equal(chain.title, REWARD_MAX.weeklyChainTitle);
+  assert.equal(chain.steps.length, 1);
+  assert.equal(chain.steps[0].xp, REWARD_MAX.weeklySteps[0].xp);
+  assert.equal(chain.total, 4);
+  assert.equal(chain.doneCount, 1);
+  assert.equal(chain.finished, false);
+  assert.equal(chain.bonusSP, 0);
+  assert.ok(storyCardDurationMs(chain, false) > STORY_CARD_MS);
+
+  // Chốt liền nhiều bước (ảnh chụp tuần đã vượt vài mốc) — thẻ kể HẾT, và bước cuối mang SP chuỗi.
+  const het = buildRewardStoryCards({
+    reward: {
+      ...REWARD,
+      weeklyChainTitle: 'X',
+      weeklyBonusSP: 1,
+      weeklySteps: [
+        { index: 2, total: 4, label: 'C', xp: 56, isLast: false, bonusSP: 0 },
+        { index: 3, total: 4, label: 'D', xp: 360, isLast: true, bonusSP: 1 },
+      ],
+    },
+  }).find((c) => c.id === 'chain');
+  assert.equal(het.steps.length, 2);
+  assert.equal(het.doneCount, 4);
+  assert.equal(het.finished, true);
+  assert.equal(het.xp, 416);
+  assert.equal(het.bonusSP, 1);
+});
+
+test('thẻ di vật lên bậc: chỉ khi store vừa nâng bậc; dịch buff ra chữ; biết bậc cao nhất và mốc kế', () => {
+  assert.ok(!buildRewardStoryCards({ reward: { ...REWARD, relicsEvolved: [] } }).some((c) => c.id === 'evolve'));
+  const evolve = buildRewardStoryCards({ reward: REWARD_MAX }).find((c) => c.id === 'evolve');
+  const r = evolve.relics[0];
+  assert.equal(r.id, REWARD_MAX.relicsEvolved[0].id);
+  assert.equal(r.stageLabel, 'Tiến Hóa');
+  assert.match(r.buffText, /% EP/, 'buff phải được dịch ra chữ người đọc được');
+  assert.equal(r.isMax, false);
+  assert.equal(r.nextAt, 50, 'bậc kế ở mốc phiên thứ hai của bảng');
+  assert.ok(storyCardDurationMs(evolve, false) > STORY_CARD_MS);
+
+  const max = buildRewardStoryCards({
+    reward: { ...REWARD, relicsEvolved: [{ id: 'mam_song_bat_diet', label: 'M', icon: '🌱', stage: 2, stageLabel: 'Huyền Thoại', buff: { epBonus: 0.15, xpSeal: 0.02 } }] },
+  }).find((c) => c.id === 'evolve');
+  assert.equal(max.relics[0].isMax, true);
+  assert.equal(max.relics[0].nextAt, null);
 });
 
 test('thẻ công trình: chạy từ nấc TRƯỚC tới nấc SAU; tăng tốc thì nhảy hai nấc', () => {

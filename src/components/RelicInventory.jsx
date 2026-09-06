@@ -1,23 +1,24 @@
 /**
  * RelicInventory.jsx — Kho Di Vật
+ *
+ * ⚠️ ADR-070 (2026-09-06, đóng `TECH_DEBT #96`): KHÔNG CÒN NÚT "TIẾN HOÁ", KHÔNG CÒN GIÁ. Di vật lên
+ * bậc theo số PHIÊN ≥25′ đã hoàn thành kể từ lúc nhận (`engine/relicGrowth.js`, chốt ở
+ * `completeFocusSession`, kể ở chuỗi thẻ thưởng). Màn này chỉ trả lời "còn bao nhiêu phiên". Giá cũ
+ * (tinh luyện của kỷ ĐÃ QUA) là một cánh cửa khoá vĩnh viễn: tinh luyện chỉ rơi vào kỷ đang chơi, nên
+ * 14/15 di vật không bao giờ tiến hoá được — nút ấy đứng đó nói dối suốt nhiều tháng.
  */
 
 import React from 'react';
 import { motion } from 'framer-motion';
-import { useCustomMotion, useEnterMotion, usePressMotion } from '../lib/motionPresets';
+import { useEnterMotion } from '../lib/motionPresets';
 import useGameStore from '../store/gameStore';
 import { chiaNhomDiVat } from './relicReach';
 import useSettingsStore from '../store/settingsStore';
-import {
-  ERA_CRISES,
-  ERA_REFINED,
-  RELIC_EVOLUTION,
-  BUILDING_EFFECTS,
-  normalizeRefinedBag,
-  getRelicEvolutionRefinedCost,
-} from '../engine/constants';
+import { ERA_CRISES, RELIC_EVOLUTION, RELIC_EVOLVE_MIN_MINUTES } from '../engine/constants';
 import { getGlyph, hasGlyphIcon } from '../utils/labelMark';
-import { relicEvolutionCostOf } from '../engine/wonderEffects.js';
+import { describeBuffParts } from '../engine/buffLabel.js';
+import { describeRelicGrowth } from '../engine/relicGrowth.js';
+import { wonderRelicEvolveFactor } from '../engine/wonderEffects.js';
 
 const ALL_RELIC_DEFS = Object.entries(ERA_CRISES)
   .sort(([a], [b]) => Number(a) - Number(b))
@@ -59,13 +60,8 @@ const STAGE_TOKENS = [
   },
 ];
 
-// ⚠️ BẢN CHÉP TAY ĐÃ GỠ (2026-09-05). Nó hỏi `BUILDING_EFFECTS[bpId]?.wonderEffect === '…'` mà
-// KHÔNG kiểm `type === 'wonder'` — cùng lỗi với bản chép của giá RP, và cũng chỉ vô hại nhờ việc
-// hôm nay không có bản vẽ nào vừa khai `wonderEffect` vừa không phải kỳ quan. Nay cả store lẫn màn
-// hình đọc chung `engine/wonderEffects.js`.
-function getDisplayedRelicEvolutionCost(buildings = [], nextStageDef) {
-  return relicEvolutionCostOf(buildings, nextStageDef);
-}
+/** Dòng mở đầu nói mốc lên bậc bằng chữ — đọc từ bảng, không chép số. */
+const RELIC_EVOLVE_SESSIONS_TEXT = `${describeRelicGrowth({ relic: { id: 'mam_song_bat_diet', earnedAt: 0 } }).nextAt} phiên ≥${RELIC_EVOLVE_MIN_MINUTES}′`;
 
 function paperCardStyle(lightTheme, accentBorder = 'var(--line)', accentShadow = 'rgba(31, 30, 29, 0.05)') {
   if (!lightTheme) return null;
@@ -80,10 +76,20 @@ function paperCardStyle(lightTheme, accentBorder = 'var(--line)', accentShadow =
 export default function RelicInventory() {
   const relics = useGameStore((s) => s.relics);
   const relicEvolutions = useGameStore((s) => s.relicEvolutions ?? {});
+  const history = useGameStore((s) => s.history);
+  const buildings = useGameStore((s) => s.buildings);
   const totalEP = useGameStore((s) => s.progress?.totalEP ?? 0);
   const uiTheme = useSettingsStore((s) => s.uiTheme);
   const lightTheme = uiTheme === 'light';
   const collectedIds = new Set(relics.map((r) => r.id));
+  // Kỳ quan kỷ 15 rút ngắn mốc phiên — đọc qua `wonderEffects`, không chép tay (bài học 2026-09-05).
+  const factor = wonderRelicEvolveFactor(buildings);
+  // Đếm phiên trên toàn lịch sử cho từng di vật — khoá theo đúng ba lát state nó đọc, vì lịch sử có
+  // thể dài 2.000 dòng và màn này dựng lại mỗi lần đổi tab.
+  const growthById = React.useMemo(() => Object.fromEntries(relics.map((relic) => [
+    relic.id,
+    describeRelicGrowth({ relic, stage: relicEvolutions[relic.id] ?? 0, history, factor }),
+  ])), [relics, relicEvolutions, history, factor]);
 
   return (
     <div className="space-y-5">
@@ -92,37 +98,24 @@ export default function RelicInventory() {
           ⚠️ CHỮ "DI VẬT" TỪNG XUẤT HIỆN BA LẦN trong ba dòng liên tiếp (soi ảnh 390px,
           2026-08-29): nút tab con đang sáng · eyebrow `mono` · rồi `h2` cỡ 2rem. Ba lần cùng một
           chữ cách nhau vài chục điểm ảnh, tốn ~110px ở chỗ đắt nhất — trong khi nút tab đang sáng
-          đã trả lời xong câu "tôi đang ở đâu". Giữ lại đúng dòng MANG THÔNG TIN ("0/15 — chinh
-          phục Khủng Hoảng Kỷ Nguyên để nhận buff vĩnh viễn"), nâng nó lên cỡ đọc được.
-          Cùng luật đã áp cho `ShellPane` và màn Thành tích: *hai chỗ nói cùng một chuyện thì chỗ
-          nói ít hơn phải nhường.*
+          đã trả lời xong câu "tôi đang ở đâu". Giữ lại đúng dòng MANG THÔNG TIN, nâng nó lên cỡ
+          đọc được. Cùng luật đã áp cho `ShellPane` và màn Thành tích: *hai chỗ nói cùng một chuyện
+          thì chỗ nói ít hơn phải nhường.*
         */}
         <div className="flex flex-wrap items-end justify-between gap-3">
           <div>
             <p className="text-[13px] leading-snug" style={lightTheme ? { color: 'var(--muted)' } : { color: '#94a3b8' }}>
-              {relics.length}/{ALL_RELIC_DEFS.length} — chinh phục Khủng Hoảng Kỷ Nguyên để nhận buff vĩnh viễn.
+              {relics.length}/{ALL_RELIC_DEFS.length} — qua Thử thách kỷ nguyên là có; mỗi {RELIC_EVOLVE_SESSIONS_TEXT} lại lên bậc.
             </p>
           </div>
-          {/*
-            ⚠️ CHIP "kho lưu trữ · N" ĐÃ GỠ (2026-08-29). `N` chính là con số đứng đầu dòng ngay
-            bên trái ("0/15 — …"), cách chưa tới một đốt ngón tay — lần thứ tư cùng một thông tin
-            trên một màn hình, sau nút tab / eyebrow / tiêu đề đã gỡ ở trên. Một chip nhấn màu chỉ
-            đáng có khi nó nói điều gì khác.
-          */}
         </div>
       </div>
 
       {/*
         ⚠️ THẺ RỖNG "Chưa có di vật nào" ĐÃ GỠ (2026-08-30) — nó là lần nói thứ HAI trong ba lần.
-        Cùng một màn hình, khi chưa có di vật nào, từng nói điều đó ba chỗ: dòng ngay trên đầu
-        ("0/15 — chinh phục Khủng Hoảng Kỷ Nguyên để nhận buff vĩnh viễn"), thẻ rỗng này, rồi tiêu
-        đề của chính danh sách bên dưới ("Chưa thu thập"). Và câu hướng dẫn của thẻ này *"Chọn chế
-        độ Đương Đầu khi Khủng Hoảng xuất hiện…"* là bản viết lại của câu nằm cách nó chưa tới 60px.
-        Nó tốn ~500px — sau khi danh sách khoá được thu về một dòng mỗi cái (cùng ngày), thẻ rỗng
-        này thành thứ TO NHẤT màn hình, và thứ to nhất đang nói rằng bạn không có gì.
-        ⚠️ VÀ ĐÂY KHÔNG CHỈ LÀ CẮT CHO GỌN: bỏ nó đi thì thứ đầu tiên đập vào mắt là **danh sách
-        những gì LẤY ĐƯỢC** thay vì một lời nhắc rằng bạn chưa có gì. Cùng một sự thật, hai cách
-        mở màn hình, và chỉ một cách khiến người ta muốn đi lấy.
+        Bỏ nó đi thì thứ đầu tiên đập vào mắt là **danh sách những gì LẤY ĐƯỢC** thay vì một lời
+        nhắc rằng bạn chưa có gì. Cùng một sự thật, hai cách mở màn hình, và chỉ một cách khiến
+        người ta muốn đi lấy.
       */}
       {relics.length === 0 ? (
         <LockedRelics collectedIds={collectedIds} lightTheme={lightTheme} totalEP={totalEP} />
@@ -134,6 +127,8 @@ export default function RelicInventory() {
                 key={relic.id}
                 relic={relic}
                 stage={relicEvolutions[relic.id] ?? 0}
+                growth={growthById[relic.id]}
+                factor={factor}
                 lightTheme={lightTheme}
               />
             ))}
@@ -145,30 +140,20 @@ export default function RelicInventory() {
   );
 }
 
-function RelicCard({ relic, stage, lightTheme }) {
+function RelicCard({ relic, stage, growth, factor, lightTheme }) {
   const enterMotion = useEnterMotion();
-  const pressMotion = usePressMotion();
-  // Phóng to khi DI CHUỘT không thuộc ba nhịp — đi qua cái gác ngoại lệ.
-  const hoverGrow = useCustomMotion({ whileHover: { scale: 1.02 } });
-  const evolveRelic = useGameStore((s) => s.evolveRelic);
-  const resourcesRefined = useGameStore((s) => s.resourcesRefined);
-  const buildings = useGameStore((s) => s.buildings);
-  const tinhThe = useGameStore((s) => s.tinhThe);
-
-  const [useTinhThe, setUseTinhThe] = React.useState(false);
 
   const evoDef = RELIC_EVOLUTION[relic.id];
   const maxStage = evoDef ? evoDef.stages.length - 1 : 0;
   const isMaxStage = stage >= maxStage;
   const nextStageDef = evoDef?.stages[stage + 1];
-  const era = evoDef?.era ?? 1;
-  const refined = normalizeRefinedBag(resourcesRefined?.[era]);
-  const refinedDef = ERA_REFINED[era] ?? ERA_REFINED[1];
-  const refinedCost = getDisplayedRelicEvolutionCost(buildings, nextStageDef);
-  const canEvolve = !isMaxStage && refined.t2 >= refinedCost;
   const currentBuff = evoDef?.stages[stage]?.buff ?? relic.buff;
   const token = STAGE_TOKENS[stage] ?? STAGE_TOKENS[0];
-  const hasTinhThe = (tinhThe ?? 0) > 0;
+  const nextToken = STAGE_TOKENS[stage + 1] ?? token;
+  const sessions = growth?.sessions ?? 0;
+  const nextAt = Math.max(1, growth?.nextAt ?? 1);
+  const remaining = growth?.remaining ?? nextAt;
+  const pct = Math.max(2, Math.min(100, Math.floor((sessions / nextAt) * 100)));
 
   return (
     <motion.div
@@ -226,7 +211,7 @@ function RelicCard({ relic, stage, lightTheme }) {
               Tiến hóa
             </p>
             <span className="text-xs" style={lightTheme ? { color: 'var(--muted)' } : { color: '#64748b' }}>
-              {isMaxStage ? 'Tối đa' : `${token.label} → ${(STAGE_TOKENS[stage + 1] ?? token).label}`}
+              {isMaxStage ? 'Tối đa' : `${token.label} → ${nextToken.label}`}
             </span>
           </div>
 
@@ -278,68 +263,31 @@ function RelicCard({ relic, stage, lightTheme }) {
                 border: '1px solid rgba(255,255,255,0.08)',
               }}
             >
+              {/*
+                ⚠️ TIẾN ĐỘ, KHÔNG PHẢI GIÁ. Con số bên phải là phiên ≥25′ đã làm KỂ TỪ LÚC NHẬN —
+                phiên nhận không tính, và phiên trước khi có di vật cũng không (nếu không thì một
+                người chơi lâu năm nhận di vật là lên thẳng Huyền Thoại, tức chẳng có gì để chờ).
+              */}
               <div className="flex flex-wrap items-center justify-between gap-2">
                 <span className="mono text-[10px] uppercase tracking-[0.2em]" style={lightTheme ? { color: 'var(--muted)' } : { color: '#94a3b8' }}>
-                  Chi phí tiến hóa
+                  Phiên ≥{RELIC_EVOLVE_MIN_MINUTES}′ từ khi nhận
                 </span>
-                <span className="mono text-xs tabular-nums" style={lightTheme ? { color: refined.t2 >= refinedCost ? token.accent : '#9f4a3e' } : { color: refined.t2 >= refinedCost ? 'var(--accent-light)' : '#f87171' }}>
-                  {Math.floor(refined.t2)}/{refinedCost} {refinedDef.t2Label}
+                <span className="mono text-xs tabular-nums" style={lightTheme ? { color: token.accent } : { color: 'var(--accent-light)' }}>
+                  {sessions}/{nextAt}
                 </span>
               </div>
-              {refinedCost < getRelicEvolutionRefinedCost(nextStageDef) && (
+              <div className="mt-2 overflow-hidden rounded-full" style={{ background: lightTheme ? 'var(--line)' : 'rgba(255,255,255,0.1)' }}>
+                <div className="h-[3px] rounded-full" style={{ width: `${pct}%`, background: token.accent }} />
+              </div>
+              <p className="mt-2 text-[12px] leading-snug" style={lightTheme ? { color: 'var(--ink-2)' } : { color: '#cbd5e1' }}>
+                Còn {remaining} phiên nữa lên «{nextToken.label}»
+                {describeBuffParts(nextStageDef.buff).length > 0 ? ` — ${describeBuffParts(nextStageDef.buff).join(' · ')}` : ''}.
+              </p>
+              {factor < 1 && (
                 <p className="mt-1 text-[11px]" style={lightTheme ? { color: '#6f7b62' } : { color: 'var(--muted)' }}>
-                  Đã áp dụng giảm 30% từ kỳ quan hỗ trợ.
+                  Kỳ quan đang rút ngắn mốc {Math.round((1 - factor) * 100)}%.
                 </p>
               )}
-              {hasTinhThe && (
-                <label
-                  className="mt-2 flex cursor-pointer items-center justify-between gap-2"
-                  style={{ userSelect: 'none' }}
-                >
-                  <span className="flex items-center gap-2 text-[11px]" style={{ color: 'var(--muted)' }}>
-                    <input
-                      type="checkbox"
-                      checked={useTinhThe}
-                      onChange={(e) => setUseTinhThe(e.target.checked)}
-                      className="h-3.5 w-3.5"
-                      style={{ accentColor: 'var(--accent2)' }}
-                    />
-                    Dùng Tinh Thể (giảm tối đa 50%)
-                  </span>
-                  <span className="mono text-[10px] tabular-nums" style={{ color: 'var(--accent2)' }}>
-                    {tinhThe} TTCH
-                  </span>
-                </label>
-              )}
-              <motion.button
-                {...(canEvolve ? hoverGrow : {})}
-                {...(canEvolve ? pressMotion : {})}
-                onClick={() => canEvolve && evolveRelic(relic.id, useTinhThe && hasTinhThe ? { ttchToSpend: true } : undefined)}
-                disabled={!canEvolve}
-                className="mt-3 w-full rounded-[var(--skin-radius-control,16px)] py-2.5 text-sm font-semibold transition-colors"
-                style={canEvolve ? (
-                  lightTheme ? {
-                    background: 'var(--ink)',
-                    color: 'var(--card-bg-solid)',
-                    border: '1px solid rgba(31,30,29,0.12)',
-                    boxShadow: '0 10px 22px rgba(31, 30, 29, 0.10)',
-                  } : {
-                    background: 'rgba(255,255,255,0.08)',
-                    color: '#ffffff',
-                  }
-                ) : (
-                  lightTheme ? {
-                    background: 'rgba(31, 30, 29, 0.06)',
-                    color: '#8a8a86',
-                    border: '1px solid var(--line)',
-                  } : {
-                    background: 'rgba(255,255,255,0.03)',
-                    color: '#64748b',
-                  }
-                )}
-              >
-                {canEvolve ? 'Tiến hóa di vật' : 'Chưa đủ tài nguyên'}
-              </motion.button>
             </div>
           )}
 
@@ -366,18 +314,9 @@ function RelicCard({ relic, stage, lightTheme }) {
 }
 
 function BuffTagRow({ buff, lightTheme, token }) {
-  if (!buff) return null;
-
-  const parts = [];
-  if (buff.allBonus) parts.push(`+${(buff.allBonus * 100).toFixed(0)}% tất cả`);
-  if (buff.epBonus) parts.push(`+${(buff.epBonus * 100).toFixed(0)}% EP`);
-  if (buff.expBonus) parts.push(`+${(buff.expBonus * 100).toFixed(0)}% XP`);
-  if (buff.resourceBonus) parts.push(`+${(buff.resourceBonus * 100).toFixed(0)}% tài nguyên`);
-  if (buff.gachaBonus) parts.push(`+${buff.gachaBonus}% RP`);
-  if (buff.pitySeal) parts.push(`+${buff.pitySeal * 2}% RP`);
-  if (buff.disasterReduction) parts.push(`-${(buff.disasterReduction * 100).toFixed(0)}% thất thoát`);
-  if (buff.comboWindowHours) parts.push(`+${buff.comboWindowHours}h combo`);
-  if (buff.xpSeal) parts.push(`+${(buff.xpSeal * 100).toFixed(0)}% XP ★★★`);
+  // Cùng phép dịch với thẻ "di vật lên bậc" trong chuỗi thẻ thưởng (`engine/buffLabel.js`).
+  const parts = describeBuffParts(buff);
+  if (parts.length === 0) return null;
 
   return (
     <div className="mt-3 flex flex-wrap gap-1.5">
@@ -407,7 +346,7 @@ function LockedRelics({ collectedIds, lightTheme, totalEP }) {
   if (!locked.length) return null;
 
   // ⚠️ HAI NHÓM, VÌ CHÚNG LÀ HAI SỰ THẬT KHÁC HẲN NHAU. `detectEraCrisis`
-  // (`challengeEngine.js:187`) chỉ nổ đúng lúc `prevEP < triggerEP && newEP >= triggerEP` — tức
+  // (`challengeEngine.js`) chỉ nổ đúng lúc `prevEP < triggerEP && newEP >= triggerEP` — tức
   // mỗi khủng hoảng có ĐÚNG MỘT khoảnh khắc trong cả đời một ván. Đi qua mốc rồi thì di vật ấy
   // **không bao giờ lấy được nữa**. Đo trên một ván 23.553 EP: 5/12 dòng đang khoá là loại ấy,
   // mà màn hình vẫn gộp chung và mời "chinh phục Khủng Hoảng Kỷ Nguyên để nhận" — một lời hứa
@@ -426,7 +365,7 @@ function LockedRelics({ collectedIds, lightTheme, totalEP }) {
           }}
         >
           <p className="mono text-[10px] uppercase tracking-[0.2em]" style={lightTheme ? { color: 'var(--muted-2)' } : { color: '#64748b' }}>
-            Khủng hoảng kế tiếp
+            Thử thách kế tiếp
           </p>
           <p className="mt-1 text-[15px] font-semibold" style={lightTheme ? { color: 'var(--ink)' } : { color: '#e2e8f0' }}>
             {sapToi.crisisIcon} {sapToi.crisisName}
@@ -441,7 +380,7 @@ function LockedRelics({ collectedIds, lightTheme, totalEP }) {
             />
           </div>
           <p className="mono mt-1.5 text-[11px]" style={lightTheme ? { color: 'var(--muted)' } : { color: '#94a3b8' }}>
-            còn {conBaoNhieuEP.toLocaleString('vi-VN')} EP · thắng thì được{' '}
+            còn {conBaoNhieuEP.toLocaleString('vi-VN')} EP · qua thì được{' '}
             {sapToi.icon} {sapToi.label}
           </p>
         </div>

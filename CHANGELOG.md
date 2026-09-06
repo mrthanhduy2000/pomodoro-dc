@@ -12,6 +12,33 @@
 
 ---
 
+## 2026-09-06 (vòng 35) — Một cái kết duy nhất, không nút nhận, không màn chết (ADR-070)
+
+**Mục đích.** Lệnh Đàm *"Tiếp tục … tự quyết định mọi thứ và tech debt. Build lớn. Simplify mạnh.
+Làm game vui hơn. Tập trung nhiều hơn vào UX/UI."* Sau ADR-069 còn bốn chỗ phần thưởng ĐÃ ĐẠT mà vẫn
+cách người chơi một cái nút hoặc một cánh cửa khoá; vòng này xoá cả bốn.
+
+**Đã đổi.**
+1. **Tự chốt bước tuần · thưởng trọn ngày tự vào** ngay trong `completeFocusSession`, cộng vào XP
+   phiên, kể ở chuỗi thẻ (thẻ «Bước tuần» mới; thẻ Nhiệm vụ ghi «Trọn ngày +N XP — đã cộng»). Xoá
+   nút «Chốt bước»/«Nhận» và hai action. Phép đối chiếu nhiệm vụ với lịch sử đi theo về store.
+2. **Di vật lớn theo PHIÊN**: mỗi 20 rồi 50 phiên ≥25′ kể từ lúc nhận là lên một bậc — không còn giá
+   tinh luyện của kỷ đã qua (cơ chế từng chết vĩnh viễn, `#96`). Kho di vật hiện thanh «N/20 · còn
+   M»; chuỗi thẻ thêm thẻ «Di vật lên bậc». Save cũ được đóng dấu `earnedAt` lúc nạp.
+3. **Đặc quyền công trình về trục sống**: 11/15 kỳ quan thôi hứa RP/tinh luyện/thảm hoạ/tài nguyên,
+   nay là +XP/+EP/+giờ combo/+XP phẳng (có ngưỡng phút); rương ngày/rương sâu trả XP; `safety_net`
+   thành «phiên bù sau khi huỷ». Chip «+N EP» ở thẻ +XP để buff EP nhìn thấy được.
+4. **Xoá `LootDropModal`** (1.057 dòng): chuỗi thẻ là cái kết duy nhất, kể cả khi lên kỷ — thẻ «Kỷ
+   nguyên mới» có nút «Xem thành phố mới». Không còn «Xem chi tiết», tiếng chỉ kêu một lần.
+5. **Huy hiệu**: khối «Kế tiếp» (4 huy hiệu gần đạt nhất, thanh + «còn N»), dải hero nói «còn N»;
+   bỏ bộ lọc bậc; gỡ thẻ-hàng chết. Dọn chữ đồng tiền ngủ ở Thống kê/Thăng hoa/Onboarding.
+
+**Ảnh hưởng / tương thích.** Không đụng Thành phố; không migration (một trường mới `relics[].earnedAt`
+được đóng dấu khi nạp). `pendingReward` +5 trường. Đóng `TECH_DEBT #96 · #98 · #100`, cập nhật `#99`.
+Chi tiết + lý do: `ARCHITECTURE_DECISIONS.md` ADR-070.
+
+---
+
 ## 2026-09-06 — Đồng tiền duy nhất là PHIÊN (ADR-069): công trình một nút, bậc và thử thách kỷ tự chạy, kỹ năng chọn ngay lúc lên cấp
 
 **Mục đích.** Lệnh Đàm *"SIMPLIFY. MINIMIZE. AMPLIFY FUN."*: coi Upgrade + Progression + UX/UI là

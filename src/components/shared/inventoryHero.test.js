@@ -109,3 +109,11 @@ test('CÔNG TRÌNH (ADR-069): không còn cổng nguyên liệu — có ô trố
   assert.equal(chua.gap, false, 'hàng chờ đầy mà chưa trọn ⇒ không có việc mới, không rực');
   assert.equal(chua.so, 2);
 });
+
+// ADR-070: dải hero nói "còn bao nhiêu" khi biết — và KHÔNG được nói "còn" hai lần (ảnh 390px từng in
+// "còn còn 37 phiên": `cauConLai` đã mang sẵn chữ "còn").
+test('hero HUY HIỆU nói "còn N" đúng một lần khi có con số', () => {
+  const sap = heroHuyHieu({ daMo: 157, tong: 360, ganDat: { ten: 'Dũng Sĩ', pct: 0.94, conLai: 'còn 37 phiên' } });
+  assert.equal(sap.caption, 'Dũng Sĩ — còn 37 phiên.');
+  assert.ok(!/còn còn/.test(sap.caption));
+});

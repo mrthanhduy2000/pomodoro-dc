@@ -30,34 +30,25 @@ function codeOnly(source) {
 const APP_CODE = codeOnly(APP);
 
 /**
- * ⚠️ ĐÂY LÀ ĐIỀU KIỆN NGHIỆM THU CỦA CẢ THAY ĐỔI: xong một phiên thường thì màn
- * hình KHÔNG bị chặn. Cổng cũ là `{lootModalOpen && <RewardSequence />}` — mở hộp
- * thoại toàn màn hình sau MỌI phiên.
+ * ⚠️ ĐÂY LÀ ĐIỀU KIỆN NGHIỆM THU CỦA CẢ THAY ĐỔI (ADR-060 → ADR-070): xong một phiên thì màn hình
+ * chỉ có MỘT cái kết — chuỗi thẻ thưởng. Cổng cũ `{lootModalOpen && <RewardSequence />}` mở hộp thoại
+ * 7 giai đoạn sau MỌI phiên; ADR-060 giữ nó cho riêng lúc lên kỷ + khi bấm "Xem chi tiết"; ADR-070
+ * (2026-09-06) gỡ hẳn: không còn `LootDropModal`, không còn `detail === 'loot'`, thẻ «Kỷ nguyên mới»
+ * là cái kết khi lên kỷ.
  */
-test('phiên thường KHÔNG mở hộp thoại phần thưởng — chỉ lên kỷ mới mở', () => {
+test('ADR-070: KHÔNG còn hộp thoại chi tiết — chuỗi thẻ là cái kết duy nhất, kể cả khi lên kỷ', () => {
+  assert.ok(!existsSync(join(HERE, 'LootDropModal.jsx')), 'LootDropModal.jsx vẫn còn — hai cái kết cho một phiên');
   assert.ok(
-    !/\{\s*lootModalOpen\s*&&\s*<(RewardSequence|LootDropModal)/.test(APP_CODE),
-    'hộp thoại phần thưởng lại đang mở thẳng theo `lootModalOpen` — tức mọi phiên đều chặn màn hình',
+    !/LootDropModal|RewardSequence|showLootModal/.test(APP_CODE),
+    'App.jsx vẫn tham chiếu hộp thoại chi tiết — một phiên lại có hai cái kết',
   );
-  assert.ok(
-    /\{\s*showLootModal\s*&&\s*<LootDropModal/.test(APP_CODE),
-    'không tìm thấy cổng `showLootModal` trước `<LootDropModal>`',
-  );
-
-  // Cổng ấy phải THẬT SỰ hỏi "có lên kỷ không". Không có vế này thì `showLootModal`
-  // có thể là bất cứ thứ gì, kể cả `lootModalOpen` đổi tên.
-  const gate = /const\s+showLootModal\s*=\s*([^;]+);/.exec(APP_CODE);
-  assert.ok(gate, 'không đọc được định nghĩa `showLootModal`');
-  assert.match(
-    gate[1],
-    /pendingEraChanged/,
-    '`showLootModal` không nhắc tới việc lên kỷ — cổng đang mở cho thứ khác',
-  );
-  assert.match(
-    gate[1],
-    /detail === 'loot'/,
-    'bấm vào thẻ phải mở được hộp thoại chi tiết, nếu không thì phần thưởng phiên không còn xem lại được',
-  );
+  assert.ok(!/detail === 'loot'/.test(APP_CODE), '`detail === "loot"` quay lại — một cửa thứ hai vào cùng phần thưởng');
+  // Lên kỷ được kể ở chuỗi thẻ, không ở một hộp thoại riêng.
+  const story = codeOnly(readFileSync(join(HERE, 'sessionRewardStory.js'), 'utf8'));
+  assert.match(story, /reward\.eraChanged/, 'bộ dựng thẻ không còn đọc `eraChanged` ⇒ lên kỷ không được kể ở đâu cả');
+  const storyJsx = codeOnly(readFileSync(join(HERE, 'SessionRewardStory.jsx'), 'utf8'));
+  assert.match(storyJsx, /card\.id === 'era'/, 'component không dựng thẻ kỷ mới');
+  assert.ok(!/Xem chi tiết/.test(storyJsx), 'nút "Xem chi tiết" quay lại — nó dẫn tới một hộp thoại không còn tồn tại');
 });
 
 /**
@@ -65,29 +56,26 @@ test('phiên thường KHÔNG mở hộp thoại phần thưởng — chỉ lên
  * ADR-060 đúng khi cấm hộp thoại 7 giai đoạn chặn màn hình sau mỗi phiên; nó sai ở chỗ thay bằng
  * một thẻ toast 4 giây ở góc: ~82% số phiên không còn lễ mừng nào (đo ở `timerSession.js`), nên
  * 25 phút làm việc thật kết thúc bằng thứ dễ bỏ lỡ nhất app. Chuỗi thẻ là cái KẾT — ngắn, mỗi thẻ
- * một con số, bỏ qua được bằng một chạm — và hộp thoại chi tiết vẫn chỉ mở khi lên kỷ hoặc khi bấm.
+ * một con số, bỏ qua được bằng một chạm.
  */
-test('chuỗi thẻ thưởng bám `lootModalOpen` (mọi phiên), đứng TRƯỚC hộp thoại chi tiết, và tính vào `blocking`', () => {
+test('chuỗi thẻ thưởng bám `lootModalOpen` (mọi phiên), sau lễ mừng thành phố, tính vào `blocking`, và ĐÓNG phần thưởng không điều kiện', () => {
   const gate = /const\s+showStory\s*=\s*([^;]+);/.exec(APP_CODE);
   assert.ok(gate, 'không đọc được `showStory` — chuỗi thẻ thưởng đã đi đâu?');
   assert.match(gate[1], /lootModalOpen/, 'chuỗi thẻ phải bám `lootModalOpen` — chạy sau MỌI phiên, không chỉ khi lên kỷ');
   assert.match(gate[1], /!showMoment/, 'lễ mừng thành phố phải xong trước rồi mới tới chuỗi thẻ');
-  assert.match(gate[1], /!storyDone/, 'thiếu cờ "đã xem xong" ⇒ chuỗi thẻ không bao giờ nhường chỗ cho hộp thoại chi tiết');
+  assert.match(gate[1], /!storyDone/, 'thiếu cờ "đã xem xong" ⇒ chuỗi thẻ dựng lại ngay sau khi đóng');
   assert.match(APP_CODE, /\{\s*showStory\s*&&\s*<SessionRewardStory/, 'chuỗi thẻ không được dựng');
-
-  // Hộp thoại chi tiết chỉ mở SAU khi chuỗi thẻ xong — nếu không hai lớp phủ chồng lên nhau.
-  const loot = /const\s+showLootModal\s*=\s*([^;]+);/.exec(APP_CODE);
-  assert.match(loot[1], /storyDone/, 'hộp thoại chi tiết phải chờ chuỗi thẻ xong');
 
   const blocking = /const\s+blocking\s*=\s*([\s\S]*?);/.exec(APP_CODE);
   assert.match(blocking[1], /showStory/, '`blocking` bỏ sót chuỗi thẻ ⇒ 4 giây của toast cháy sau lưng nó');
 
-  // Kết thúc chuỗi thẻ phải ĐÓNG phần thưởng (như toast từng làm) — trừ khi lên kỷ hoặc bấm xem chi tiết.
+  // ADR-070: kết thúc chuỗi thẻ phải ĐÓNG phần thưởng KHÔNG ĐIỀU KIỆN — không còn ai đọc `pendingReward`
+  // sau đó. Giữ lại cổng `pendingEraChanged` là để `lootModalOpen` treo mãi ở đúng lúc lên kỷ.
   const finish = /const\s+finishStory\s*=\s*useCallback\(([\s\S]*?)\}, \[/.exec(APP_CODE);
   assert.ok(finish, 'không đọc được `finishStory`');
   assert.match(finish[1], /closeLootModal\(\)/, 'chuỗi thẻ xong mà không đóng phần thưởng ⇒ `lootModalOpen` treo mãi');
-  assert.match(finish[1], /if \(pendingEraChanged\) return;/, 'lên kỷ thì phải GIỮ `pendingReward` cho hộp thoại chi tiết đọc');
-  assert.match(finish[1], /setDetail\('loot'\)/, 'bấm "Xem chi tiết" phải mở được hộp thoại đầy đủ');
+  assert.ok(!/pendingEraChanged|openDetail/.test(finish[1]), '`finishStory` còn giữ `pendingReward` lại cho một hộp thoại không còn tồn tại');
+  assert.match(finish[1], /if \(navigate\) onNavigate/, 'nút trên thẻ ("Chọn công trình ngay" · "Xem thành phố mới") không dẫn đi đâu');
 });
 
 test('lên cấp cũng không tự chặn màn hình nữa', () => {
@@ -166,8 +154,7 @@ test('những việc buộc phải quyết định VẪN chặn màn hình', () 
       `${component} không còn mở thẳng theo ${flag} — đây là việc buộc phải quyết định, nó PHẢI chặn màn hình`,
     );
   }
-  // Lên kỷ: cổng nằm trong `showLootModal`, đã kiểm ở bài đầu.
-  assert.match(APP_CODE, /pendingReward\?\.eraChanged/, 'không còn chỗ nào đọc `eraChanged` để biết đã lên kỷ');
+  // Lên kỷ (ADR-070): không còn hộp thoại — thẻ «Kỷ nguyên mới» của chuỗi thẻ là cái kết, kiểm ở bài đầu.
 });
 
 /**

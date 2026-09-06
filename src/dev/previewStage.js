@@ -24,18 +24,17 @@
  * bản không có hook rồi tưởng công cụ hỏng).
  *
  * ⚠️ ĐÂY LÀ MỘT BẢN GIẢ, NÊN NÓ CÓ THỂ TRÔI KHỎI BẢN THẬT. `previewStage.test.js` đọc THẲNG
- * `LootDropModal.jsx` để lấy danh sách trường mà hộp thoại thật sự đọc, rồi đòi bản giả phải phủ
- * đủ. Đổi tên một trường ở `completeFocusSession` mà quên ở đây ⇒ bài test đỏ, thay vì lặng lẽ
+ * `sessionRewardStory.js` + `SessionRewardStory.jsx` (ADR-070: chuỗi thẻ là người đọc DUY NHẤT của
+ * `pendingReward`) để lấy danh sách trường thật sự được đọc, rồi đòi bản giả phải phủ đủ. Đổi tên một trường ở `completeFocusSession` mà quên ở đây ⇒ bài test đỏ, thay vì lặng lẽ
  * dựng ra một màn thiếu một dòng và người soi tưởng app vốn thế.
  */
 
 export const PREVIEW_PARAM = 'dc-preview';
-/** Thẻ nào của chuỗi thẻ thưởng cần đứng yên để chụp (`xp` · `project` · `streak` · `today` · `quests` · `quest` · `level` · `rank` · `relic` · `era`). */
+/** Thẻ nào của chuỗi thẻ thưởng cần đứng yên để chụp (`xp` · `project` · `streak` · `today` · `quests` · `chain` · `quest` · `level` · `rank` · `relic` · `evolve` · `era`). */
 export const PREVIEW_CARD_PARAM = 'dc-preview-card';
 
 /** Một phiên 25 phút bình thường, không có gì đặc biệt — ca HAY GẶP NHẤT. */
 const PHIEN_THUONG = {
-  activeBook: 8,
   newBook: 8,
   tierLabel: 'Tiêu Chuẩn',
   multiplier: 1.0,
@@ -46,8 +45,6 @@ const PHIEN_THUONG = {
   totalSessionXP: 65,
   finalEP: 120,
   rpEarned: 18,
-  resources: { food: 12, wood: 8 },
-  t2Drop: 0,
   largeChest: false,
   jackpotApplied: false,
   luckyBurstApplied: false,
@@ -72,6 +69,13 @@ const PHIEN_THUONG = {
   // ADR-069: cú may của nhánh Vận May (0 = không trúng) — thẻ +XP đọc để hiện chip «🍀 Vận may».
   luckXpBonus: 0,
   luckEpBonus: 0,
+  // ADR-070: ba tin tự-vào — thưởng trọn ngày · bước tuần vừa chốt · di vật lên bậc. Phiên thường: không.
+  dailyBonusXP: 0,
+  weeklySteps: [],
+  weeklyChainTitle: 'Thuở Khai Thiên',
+  weeklyBonusSP: 0,
+  relicsEvolved: [],
+  acceleratedCraftingIds: [],
 };
 
 /** Ca ĐỈNH: jackpot + rương lớn + lên cấp + sự kiện tốt. Dùng để soi lúc màn đông nhất. */
@@ -86,8 +90,6 @@ const PHIEN_DINH = {
   totalSessionXP: 260,
   finalEP: 480,
   rpEarned: 64,
-  resources: { food: 40, wood: 32, stone: 18 },
-  t2Drop: 3,
   largeChest: true,
   jackpotApplied: true,
   luckyBurstApplied: true,
@@ -109,6 +111,11 @@ const PHIEN_DINH = {
   luckEpBonus: 0.1,
   relicEarned: { id: 'la_ban_da_vinci', label: 'La Bàn Da Vinci', icon: '🧭', description: 'Di vật Phục Hưng — tăng mạnh EP mỗi phiên.' },
   crisisOpened: null,
+  dailyBonusXP: 43,
+  weeklySteps: [{ index: 0, total: 4, label: 'Nhóm lửa — hoàn thành phiên đầu tiên', xp: 20, isLast: false, bonusSP: 0 }],
+  weeklyChainTitle: 'Thuở Khai Thiên',
+  weeklyBonusSP: 0,
+  relicsEvolved: [{ id: 'mam_song_bat_diet', label: 'Mầm Sống Bất Diệt', icon: '🌱', stage: 1, stageLabel: 'Tiến Hóa', buff: { epBonus: 0.11 } }],
 };
 
 /**
@@ -117,13 +124,13 @@ const PHIEN_DINH = {
  * không tồn tại).
  */
 export const PREVIEW_SCENES = {
-  /** Hộp phần thưởng, phiên thường. */
+  /** Chuỗi thẻ thưởng, phiên thường. */
   /** `missionCompletedIds`: chỉ có tác dụng khi bản lưu đang soi CÓ nhiệm vụ mang id ấy — để thẻ
    *  Nhiệm vụ trong chuỗi thẻ thưởng (ADR-068) hiện được trạng thái "vừa xong". */
   loot: { lootModalOpen: true, pendingReward: PHIEN_THUONG, missionCompletedIds: ['session_30min'] },
-  /** Hộp phần thưởng, ca đỉnh — nhiều dòng nhất. */
+  /** Chuỗi thẻ thưởng, ca đỉnh — nhiều thẻ nhất (ADR-070: có cả bước tuần + di vật lên bậc). */
   'loot-max': { lootModalOpen: true, pendingReward: PHIEN_DINH },
-  /** Lên kỷ nguyên: hộp phần thưởng TỰ bật (một trong ba thứ được phép chặn màn hình). */
+  /** Lên kỷ nguyên: thẻ cuối là «Kỷ nguyên mới» với nút xem thành phố (ADR-070: không còn hộp thoại chi tiết). */
   era: { lootModalOpen: true, pendingReward: { ...PHIEN_DINH, eraChanged: true, newBook: 9 } },
   /** Lên cấp. */
   level: { levelUpQueue: [{ levelsGained: 1, newLevel: 6, spGained: 1 }] },

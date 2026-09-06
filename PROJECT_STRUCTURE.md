@@ -737,6 +737,11 @@
 │   │   ├── buildChoices.js    # LUẬT màn Công trình (ADR-069): chọn được gì (chưa xây · chưa vào hàng
 │   │   │                     #   chờ · rẻ-phiên trước), ô còn trống, tiến độ hàng chờ (qua
 │   │   │                     #   craftProgress), trùng tu. Mẫu số "n/5" đếm từ catalog, không viết cứng.
+│   │   ├── relicGrowth.js     # DI VẬT LỚN THEO PHIÊN (ADR-070): mốc RELIC_EVOLVE_SESSIONS phiên ≥25′
+│   │   │                     #   kể từ `relic.earnedAt`; `evaluateRelicEvolutions` chốt trong store,
+│   │   │                     #   `describeRelicGrowth` cho kho di vật. Thuần, có test. Không còn giá.
+│   │   ├── buffLabel.js       # `describeBuff(Parts)` — MỘT cách dịch buff ra chữ, dùng chung cho kho
+│   │   │                     #   di vật + thẻ «di vật lên bậc». Chỉ dịch 5 trục sống (ADR-069).
 │   │   ├── rankLadder.js      # BẬC TỰ THĂNG + THỬ THÁCH KỶ = NHIỆM VỤ MỀM (ADR-069). Một phép đếm
 │   │   │                     #   duy nhất "phiên ≥M′ trong N giờ gần đây" đọc thẳng `history`; không
 │   │   │                     #   deadline, không phạt. ⚠️ `now` truyền vào phải KHÔNG SỚM HƠN mốc của

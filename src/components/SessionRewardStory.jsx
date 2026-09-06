@@ -1,13 +1,13 @@
 /**
  * SessionRewardStory.jsx — CHUỖI THẺ THƯỞNG toàn màn hình sau mỗi phiên (2026-09-05, ADR-068).
  *
- * Mỗi thẻ MỘT con số, chạm để lật, tự lật sau vài giây, thẻ cuối có "Tiếp tục" và "Chi tiết".
- * Luật chọn thẻ ở `sessionRewardStory.js` (thuần, có test); file này chỉ vẽ và giữ nhịp.
+ * Mỗi thẻ MỘT con số, chạm để lật, tự lật sau vài giây, thẻ cuối có "Tiếp tục" (lên kỷ: thêm "Xem
+ * thành phố"). Luật chọn thẻ ở `sessionRewardStory.js` (thuần, có test); file này chỉ vẽ và giữ nhịp.
  *
- * ⚠️ NÓ ĐỌC `ui.pendingReward` NHƯ HỘP THOẠI CŨ, VÀ CHỈ ĐÓNG QUA `onDone`. Store vẫn bật
- * `lootModalOpen` đồng bộ y như trước (ba bài test ở `completeFocusSession.test.js`); ai đóng, đóng
- * thế nào, có mở hộp thoại chi tiết hay không — là việc của `OverlayStack` (`App.jsx`), nơi mọi
- * lớp phủ được điều phối ở một chỗ.
+ * ⚠️ ADR-070 (2026-09-06): ĐÂY LÀ CÁI KẾT DUY NHẤT — hộp thoại chi tiết (`LootDropModal`) đã gỡ, không
+ * còn "Xem chi tiết", không còn nút "Nhận" nào bên trong. Thưởng trọn ngày · bước tuần · di vật lên
+ * bậc đều đã vào trước khi thẻ hiện; thẻ chỉ KỂ. Nó đọc `ui.pendingReward` và chỉ đóng qua `onDone`;
+ * ai đóng, đóng thế nào — là việc của `OverlayStack` (`App.jsx`), nơi mọi lớp phủ được điều phối.
  *
  * ⚠️ CỬA SOI: có `?dc-preview=` trên URL thì thẻ KHÔNG tự lật (đứng yên để chụp) và
  * `?dc-preview-card=<id>` nhảy thẳng tới một thẻ. Không có gì trong bản thật đọc hai tham số ấy.
@@ -61,7 +61,6 @@ export default function SessionRewardStory({ onDone }) {
   const dailyTracking = useGameStore((s) => s.dailyTracking);
   const buildings = useGameStore((s) => s.buildings);
   const strategist = useGameStore((s) => Boolean(s.player.unlockedSkills?.bac_thay_chien_luoc));
-  const claimMissionAllBonus = useGameStore((s) => s.claimMissionAllBonus);
   // ADR-069: ba nguồn mới cho ba thẻ mới — công trình đang xây, kỹ năng chọn được, thử thách kỷ.
   const craftingQueue = useGameStore((s) => s.craftingQueue);
   const activeBook = useGameStore((s) => s.progress.activeBook);
@@ -136,7 +135,6 @@ export default function SessionRewardStory({ onDone }) {
   const finish = useCallback((extra = {}) => {
     const quests = cards.find((c) => c.id === 'quests');
     onDone?.({
-      openDetail: false,
       shownMissionIds: quests ? quests.rows.filter((r) => r.justDone).map((r) => r.id) : [],
       levelShown: cards.some((c) => c.id === 'level'),
       relicShown: cards.some((c) => c.id === 'relic'),
@@ -172,12 +170,13 @@ export default function SessionRewardStory({ onDone }) {
       }
     }
     if (cardId === 'streak' && card.justHit) soundEngine.playMilestone();
-    if (cardId === 'rank') soundEngine.playMilestone();
-    if (cardId === 'relic') soundEngine.playChestOpen();
+    if (cardId === 'rank' || cardId === 'chain') soundEngine.playMilestone();
+    if (cardId === 'relic' || cardId === 'evolve') soundEngine.playChestOpen();
+    // ADR-070: thẻ kỷ mới là nơi DUY NHẤT còn kể chuyện lên kỷ — tiếng và thông báo đi theo nó.
+    if (cardId === 'era') soundEngine.playEraChange();
     if (cardId === 'level') {
       soundEngine.playLevelUp();
-      // Lên kỷ thì hộp thoại chi tiết mở ngay sau và tự báo — đừng báo hai lần.
-      if (!reward?.eraChanged) notificationManager.notifyLevelUp(card.newLevel);
+      notificationManager.notifyLevelUp(card.newLevel);
     }
     return undefined;
     // Chỉ theo ID thẻ: `card` là object mới ở mỗi lần store đổi, mà tiếng thì chỉ được kêu một lần.
@@ -239,12 +238,16 @@ export default function SessionRewardStory({ onDone }) {
               )}
               {card.id === 'streak' && <StreakCard card={card} />}
               {card.id === 'today' && <TodayCard card={card} />}
-              {card.id === 'quests' && <QuestsCard card={card} onClaim={claimMissionAllBonus} />}
+              {card.id === 'quests' && <QuestsCard card={card} />}
+              {card.id === 'chain' && <ChainCard card={card} />}
               {card.id === 'quest' && <QuestCard card={card} />}
               {card.id === 'level' && <LevelCard card={card} picked={pickedSkill} onPick={handlePickSkill} />}
               {card.id === 'rank' && <RankCard card={card} />}
               {card.id === 'relic' && <RelicCard card={card} />}
-              {card.id === 'era' && <EraCard card={card} />}
+              {card.id === 'evolve' && <RelicEvolvedCard card={card} />}
+              {card.id === 'era' && (
+                <EraCard card={card} onSeeCity={() => finish({ navigate: { tab: 'city' } })} />
+              )}
             </motion.div>
           </AnimatePresence>
         </div>
@@ -266,14 +269,6 @@ export default function SessionRewardStory({ onDone }) {
               >
                 Tiếp tục
               </motion.button>
-              <button
-                type="button"
-                onClick={(e) => { stop(e); finish({ openDetail: true }); }}
-                className="py-2 text-[12.5px] font-semibold"
-                style={{ color: 'var(--muted)' }}
-              >
-                Xem chi tiết phần thưởng
-              </button>
             </div>
           ) : holding ? (
             <button
@@ -482,10 +477,9 @@ function QuestCheck({ done, pop }) {
   );
 }
 
-function QuestsCard({ card, onClaim }) {
+function QuestsCard({ card }) {
   const enterMotion = useEnterMotion();
   const rewardMotion = useRewardMotion();
-  const pressMotion = usePressMotion();
   return (
     <div className="w-full">
       <p className={eyebrowClass} style={{ color: 'var(--muted)' }}>
@@ -525,27 +519,25 @@ function QuestsCard({ card, onClaim }) {
         ))}
       </div>
 
-      {card.bonusReady && (
-        <motion.button
-          type="button"
+      {/* ADR-070: không còn nút — thưởng trọn ngày đã vào ví trước khi thẻ này hiện. Thẻ chỉ KỂ. */}
+      {card.bonusJustEarned && (
+        <motion.p
           {...withDelay(rewardMotion, 0.5)}
-          {...pressMotion}
-          onClick={(e) => { stop(e); onClaim?.(); }}
-          className="mt-4 w-full max-w-[400px] py-3.5 text-[15px] font-semibold"
-          style={{
-            borderRadius: 'var(--skin-radius-control,14px)',
-            background: 'var(--accent)',
-            color: '#fff',
-            boxShadow: 'var(--skin-card-shadow)',
-          }}
+          className="mt-4 text-[17px] font-semibold"
+          style={{ color: 'var(--good)' }}
         >
-          🎯 Nhận thưởng trọn ngày +{card.bonusXP} XP
-        </motion.button>
+          🎯 Trọn ngày +{card.bonusEarnedXP} XP — đã cộng
+        </motion.p>
       )}
       {card.bonusClaimed && (
         <p className="mt-4 text-[13px] font-semibold" style={{ color: 'var(--good)' }}>
-          Đã nhận thưởng trọn ngày ✓
+          Thưởng trọn ngày đã cộng hôm nay ✓
         </p>
+      )}
+      {!card.allDone && !card.bonusJustEarned && !card.bonusClaimed && card.bonusXP > 0 && (
+        <motion.p {...withDelay(enterMotion, 0.5)} className="mt-4 text-[13px]" style={{ color: 'var(--muted)' }}>
+          Xong hết hôm nay → +{card.bonusXP} XP tự vào
+        </motion.p>
       )}
     </div>
   );
@@ -656,6 +648,80 @@ function ProjectCard({ card, onChoose }) {
       </div>
       <motion.p {...withDelay(enterMotion, 0.6)} className="mt-4 text-[15px] font-semibold" style={{ color: 'var(--ink-2)' }}>
         {card.remaining > 0 ? `Còn ${card.remaining} phiên nữa là mọc lên` : 'Phiên sau nó mọc lên!'}
+      </motion.p>
+    </div>
+  );
+}
+
+// ─── Thẻ bước tuần (ADR-070: tự chốt, không có nút) ──────────────────────────
+
+function ChainCard({ card }) {
+  const rewardMotion = useRewardMotion();
+  const enterMotion = useEnterMotion();
+  return (
+    <div className="w-full">
+      <p className={eyebrowClass} style={{ color: 'var(--muted)' }}>Nhiệm vụ tuần · {card.title}</p>
+      <motion.div {...rewardMotion} className="mt-3 text-[56px] leading-none" aria-hidden="true">🗓️</motion.div>
+      <p className="mt-3 text-[22px] font-semibold leading-tight" style={{ color: 'var(--ink)', fontFamily: DISPLAY_FONT }}>
+        {card.finished ? 'Chuỗi tuần hoàn tất!' : `Bước ${card.doneCount}/${card.total} đã chốt`}
+      </p>
+      <div className="mx-auto mt-4 max-w-[400px] space-y-2 text-left">
+        {card.steps.map((step, i) => (
+          <motion.div
+            key={step.index}
+            {...withDelay(enterMotion, 0.15 + i * 0.1)}
+            className="flex items-center gap-3 px-3.5 py-3"
+            style={{
+              borderRadius: 'var(--skin-radius-card,18px)',
+              background: 'var(--card-bg-solid)',
+              border: 'var(--skin-card-border-width,1px) solid color-mix(in srgb, var(--good) 45%, var(--line))',
+            }}
+          >
+            <QuestCheck done pop />
+            <div className="min-w-0 flex-1 text-[13px] leading-snug" style={{ color: 'var(--ink)' }}>{step.label}</div>
+            <div className="mono shrink-0 text-[11px] font-semibold tabular-nums" style={{ color: 'var(--accent2)' }}>+{step.xp} XP</div>
+          </motion.div>
+        ))}
+      </div>
+      {card.bonusSP > 0 && (
+        <motion.p {...withDelay(rewardMotion, 0.5)} className="mt-4 text-[15px] font-semibold" style={{ color: 'var(--accent)' }}>
+          +{card.bonusSP} điểm kỹ năng — thưởng trọn chuỗi
+        </motion.p>
+      )}
+      <motion.p {...withDelay(enterMotion, 0.6)} className="mt-3 text-[12.5px]" style={{ color: 'var(--muted)' }}>
+        {card.finished ? 'Tuần sau có chuỗi mới.' : `Còn ${card.total - card.doneCount} bước — đủ là tự chốt, không có nút.`}
+      </motion.p>
+    </div>
+  );
+}
+
+// ─── Thẻ di vật lên bậc (ADR-070: theo phiên, không có giá) ──────────────────
+
+function RelicEvolvedCard({ card }) {
+  const rewardMotion = useRewardMotion();
+  const enterMotion = useEnterMotion();
+  const relic = card.relics[0];
+  return (
+    <div>
+      <p className={eyebrowClass} style={{ color: 'var(--accent2)' }}>Di vật lên bậc</p>
+      <motion.div {...rewardMotion} className="mt-3 text-[64px] leading-none" aria-hidden="true">{relic.icon}</motion.div>
+      <p className="mt-4 text-[30px] font-semibold leading-tight tracking-[-0.03em]" style={{ color: 'var(--ink)', fontFamily: DISPLAY_FONT }}>
+        {relic.label}
+      </p>
+      <motion.p
+        {...withDelay(enterMotion, 0.3)}
+        className="mono mt-3 inline-block rounded-full px-4 py-2 text-[13px] font-semibold"
+        style={{ background: 'rgba(var(--accent-rgb), 0.10)', color: 'var(--accent2)' }}
+      >
+        {relic.stageLabel}{relic.buffText ? ` · ${relic.buffText}` : ''}
+      </motion.p>
+      {card.relics.length > 1 && (
+        <p className="mt-2 text-[13px]" style={{ color: 'var(--muted)' }}>
+          +{card.relics.length - 1} di vật khác cũng lên bậc
+        </p>
+      )}
+      <motion.p {...withDelay(enterMotion, 0.5)} className="mt-3 text-[12.5px]" style={{ color: 'var(--muted)' }}>
+        {relic.isMax ? 'Đã tới bậc cao nhất.' : `Bậc kế ở mốc ${relic.nextAt} phiên kể từ khi nhận.`}
       </motion.p>
     </div>
   );
@@ -811,8 +877,10 @@ function RelicCard({ card }) {
   );
 }
 
-function EraCard({ card }) {
+function EraCard({ card, onSeeCity }) {
   const rewardMotion = useRewardMotion();
+  const enterMotion = useEnterMotion();
+  const pressMotion = usePressMotion();
   return (
     <div>
       <p className={eyebrowClass} style={{ color: card.accent }}>Kỷ nguyên mới</p>
@@ -830,6 +898,28 @@ function EraCard({ card }) {
         {card.label}
       </p>
       {card.subLabel && <p className="mt-2 text-[13px]" style={{ color: 'var(--muted)' }}>{card.subLabel}</p>}
+      {/*
+        ADR-070: hộp thoại chi tiết từng tự bật khi lên kỷ để "ăn mừng" — 3.384px chữ và số. Thứ đáng
+        nhìn lúc lên kỷ là THÀNH PHỐ đổi hình; nút này đưa thẳng tới đó, và không có gì phải đọc.
+      */}
+      <motion.button
+        type="button"
+        {...withDelay(rewardMotion, 0.4)}
+        {...pressMotion}
+        onClick={(e) => { stop(e); onSeeCity?.(); }}
+        className="mt-6 w-full max-w-[400px] py-3.5 text-[15px] font-semibold"
+        style={{
+          borderRadius: 'var(--skin-radius-control,14px)',
+          background: card.accent,
+          color: '#fff',
+          boxShadow: 'var(--skin-card-shadow)',
+        }}
+      >
+        Xem thành phố mới
+      </motion.button>
+      <motion.p {...withDelay(enterMotion, 0.6)} className="mt-3 text-[12.5px]" style={{ color: 'var(--muted)' }}>
+        Bản vẽ, đường sá và cư dân của kỷ mới đang chờ.
+      </motion.p>
     </div>
   );
 }

@@ -27,7 +27,7 @@ import { isCancelledHistoryEntry } from './gameMath.js';
 
 const HOUR_MS = 3_600_000;
 
-function entryTimestampMs(entry) {
+export function entryTimestampMs(entry) {
   const raw = entry?.timestamp ?? entry?.finishedAt ?? entry?.startedAt;
   const t = typeof raw === 'string' ? new Date(raw).getTime() : Number(raw);
   return Number.isFinite(t) ? t : null;
@@ -115,12 +115,13 @@ export function evaluateRankPromotion(input = {}) {
  * di vật. Không có hạn ⇒ không có "trễ". Trạng thái cũ còn `choiceMade: null` hay có `deadline`
  * được đọc y như một nhiệm vụ đang mở — không ai bị phạt vì dữ liệu đời trước.
  */
-export function describeCrisisQuest({ eraCrisis = null, history = [], now = 0 } = {}) {
+export function describeCrisisQuest({ eraCrisis = null, history = [], now = 0, extraWindowHours = 0 } = {}) {
   if (!eraCrisis?.active) return null;
   const option = eraCrisis.challengeOption ?? {};
   const sessionsRequired = Math.max(1, Math.floor(eraCrisis.challengeSessionsRequired ?? option.sessions ?? 1));
   const minMinutes = Math.max(0, Math.floor(eraCrisis.challengeMinMinutes ?? option.minMinutes ?? 0));
-  const windowHours = Math.max(1, Math.floor(option.windowHours ?? 48));
+  // ADR-070: kỳ quan `longer_crisis_window` nới cửa sổ — truyền từ ngoài vào, engine không đọc bảng công trình.
+  const windowHours = Math.max(1, Math.floor((option.windowHours ?? 48) + Math.max(0, extraWindowHours)));
   const sessionsDone = Math.min(
     sessionsRequired,
     countQualifyingSessions(history, { minMinutes, windowHours, now }),

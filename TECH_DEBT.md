@@ -13,7 +13,12 @@
 > mà không được refactor triệt để, phải CHỦ ĐỘNG đề xuất mở một "Maintenance Sprint" (nêu rõ mục
 > tiêu/phạm vi/lợi ích/rủi ro/tiêu chí hoàn thành) thay vì tiếp tục cộng thêm tính năng mới.
 >
-> **Trạng thái ngưỡng hiện tại (2026-08-27 tối, sau ADR-061 "tách đã-mời khỏi đã-xem")**:
+> **Trạng thái ngưỡng hiện tại (2026-09-06, sau ADR-070 "một cái kết duy nhất")**: đóng **#96 · #98 ·
+> #100**, cập nhật **#99** (phần nhìn thấy đã dọn, phần cộng vào store vẫn ngủ). **100 mục · 40 đã
+> đóng · 60 còn mở**. Vẫn **1 mục Priority High còn mở** (#53), **0 mục Critical** → xa ngưỡng
+> Maintenance Sprint.
+>
+> *(mốc trước)* **Trạng thái ngưỡng (2026-08-27 tối, sau ADR-061 "tách đã-mời khỏi đã-xem")**:
 > **#87 ĐÃ ĐÓNG cùng ngày mở** — báo cáo tuần thôi tự bật, và luật mức độ làm phiền của ADR-060 nay
 > **không còn ngoại lệ nào**. Vẫn **1 mục Priority High còn mở** (#53), **0 mục Critical** → xa
 > ngưỡng Maintenance Sprint.
@@ -5548,7 +5553,7 @@ trong chú thích thì đừng để `--selftest` của chính nó vẫn dùng �
   tới nguyên nhân, nên nó có thể mất đi vì một thay đổi chẳng dính gì tới bầu trời.
 - **Owner**: chưa giao · **Status**: MỞ — cổng đã qua (12,44 ✓) nhưng nguyên nhân chưa chữa; chờ quyết định
 
-## #96 — Tiến hoá di vật là một cơ chế CHẾT: nó đòi tinh luyện của kỷ ĐÃ QUA — ĐÀM CHỌN, tôi không tự chọn
+## #96 — ✅ **ĐÃ XỬ LÝ (2026-09-06, ADR-070)** — Tiến hoá di vật là một cơ chế CHẾT: nó đòi tinh luyện của kỷ ĐÃ QUA
 
 > Mở 2026-09-01 (vòng 24, lúc soi lại tab Hành trang). Đây là một NGÕ CỤT cấu trúc, không phải một
 > con số cần cân bằng lại — nên nó khác `#95`, và nó cũng không sửa được bằng cách chỉnh giá.
@@ -5573,9 +5578,14 @@ trong chú thích thì đừng để `--selftest` của chính nó vẫn dùng �
   làm màn hình hết nói dối nhưng cũng xoá luôn dấu vết của một cơ chế đã viết xong — và phiên sau
   sẽ không có cách nào biết nó tồn tại. Ghi ra một mục nợ đọc được thì hơn.
 - **Review Trigger**: khi Đàm hỏi "sao cái nút tiến hoá di vật không bấm được bao giờ".
-- **Owner**: Đàm quyết · **Status**: MỞ, chờ Đàm
+- **Owner**: Đàm quyết · **Status**: ✅ **ĐÓNG 2026-09-06 (ADR-070)** — lệnh mới uỷ quyền quyết
+  (*"cho phép bạn tự quyết định mọi thứ và tech debt"*). Chọn phương án KHÔNG nằm trong ba lối ra
+  kinh tế ở trên: bỏ hẳn cái GIÁ. Di vật lên bậc theo số phiên ≥25′ kể từ lúc nhận (`engine/
+  relicGrowth.js`, mốc `RELIC_EVOLVE_SESSIONS = [0, 20, 50]`), chốt ngay trong `completeFocusSession`,
+  kể ở chuỗi thẻ. `evolveRelic` + `t2Cost`/`t3Cost` + nút «Tiến hoá di vật» xoá; kho di vật hiện thanh
+  «N/20 phiên · còn M». Save cũ đóng dấu `earnedAt` lúc nạp (không nhảy bậc từ lịch sử cũ).
 
-## #98 — `LootDropModal` (7 giai đoạn) và `SessionRewardStory` cùng trình bày MỘT `pendingReward` — hai màn cho một phần thưởng
+## #98 — ✅ **ĐÃ XỬ LÝ (2026-09-06, ADR-070)** — `LootDropModal` (7 giai đoạn) và `SessionRewardStory` cùng trình bày MỘT `pendingReward`
 
 - **Tên**: hai bản trình bày của cùng một phần thưởng, sau ADR-068
 - **Module**: `src/components/LootDropModal.jsx` (1.078 dòng) · `src/components/SessionRewardStory.jsx` · `OverlayStack` trong `src/App.jsx`
@@ -5606,6 +5616,13 @@ trong chú thích thì đừng để `--selftest` của chính nó vẫn dùng �
   thử thách kỷ · bậc · di vật ⇒ nó đã là bản trình bày CHÍNH. `LootDropModal` chỉ còn hơn ở phần liệt
   kê tài nguyên/RP/tinh luyện — mà ba thứ ấy không còn cổng tiêu (`#99`). Lý do giữ nó teo lại; khi
   dọn `#99` thì gộp luôn (thẻ `era` làm màn cuối cho ca lên kỷ).
+- **✅ ĐÓNG 2026-09-06 (ADR-070)**: `LootDropModal.jsx` xoá hẳn cùng mọi cổng ở `OverlayStack`
+  (`showLootModal` · `detail === 'loot'` · `pendingEraChanged` · preload). Chuỗi thẻ là cái kết duy
+  nhất; thẻ «Kỷ nguyên mới» có nút «Xem thành phố mới» và phát `playEraChange` (tiếng kêu MỘT lần).
+  Ca "bấm Nhận trong chuỗi thẻ làm lên cấp ⇒ chuỗi thẻ dựng lại" hết theo cấu tạo: không còn nút
+  Nhận nào trong chuỗi thẻ. `previewStage.test.js` chỉ còn đọc hai file chuỗi thẻ. Không hỏi Đàm
+  "có bấm Xem chi tiết không" vì lệnh mới uỷ quyền quyết — và màn ấy chỉ còn hơn ở phần liệt kê ba
+  đồng tiền ngủ.
 
 ## #99 — DỮ LIỆU NGỦ sau ADR-069: tài nguyên · RP · tinh luyện vẫn được cộng, không còn cổng tiêu; 5 action + 1 hộp thoại còn nằm lại không ai gọi
 
@@ -5638,8 +5655,16 @@ trong chú thích thì đừng để `--selftest` của chính nó vẫn dùng �
 - **Blocking Conditions**: Đàm xác nhận không nhớ tiếc kho tài nguyên.
 - **Review Trigger**: lần tới ai thêm một loại phần thưởng "tài nguyên".
 - **Owner**: chưa ai · **Status**: MỞ (2026-09-06)
+- **Cập nhật 2026-09-06 (ADR-070, cùng ngày)**: đã dọn phần NHÌN THẤY và phần MÃ CHẾT của mục này —
+  xoá 5 action (`startCrafting` · `researchBlueprint` · `craftBuilding` · `upgradeBuilding` ·
+  `evolveRelic`) + `engine/craftReadiness.js` + `LootDropModal.jsx` (màn cuối liệt kê ba đồng tiền);
+  kỳ quan/đặc quyền công trình thôi trả bằng tinh luyện/RP; nhãn «Tinh luyện» ở lịch sử Thống kê,
+  hàng «Tài nguyên» ở Thăng hoa, câu onboarding đều đã đổi. **Còn ngủ**: phép cộng `resources` ·
+  `research.rp` · `resourcesRefined` ở `completeFocusSession`, `cancelCrafting` hoàn tài nguyên, phép
+  trừ tài nguyên khi huỷ phiên, `tinhThe` (không còn được cộng). Vẫn KHÔNG đụng state đồng bộ — phần
+  (1) của Recommended Solution (migration) vẫn chờ Đàm chơi vài tuần với luật mới.
 
-## #100 — Hai chỗ vẫn phải BẤM để nhận thứ đã đạt: "Chốt bước" chuỗi tuần, và lưới 360 huy hiệu dài ~5.350px
+## #100 — ✅ **ĐÃ XỬ LÝ (2026-09-06, ADR-070)** — Hai chỗ vẫn phải BẤM để nhận thứ đã đạt: "Chốt bước" chuỗi tuần, và lưới 360 huy hiệu dài ~5.350px
 
 > Mở 2026-09-06 (ADR-069). Hai việc vòng ấy KHÔNG làm vì phạm vi đã rộng; ghi để phiên sau khỏi
 > tưởng chúng là quyết định.
@@ -5656,4 +5681,10 @@ trong chú thích thì đừng để `--selftest` của chính nó vẫn dùng �
   đầy đủ nằm sau một nút gấp.
 - **Estimated Complexity**: Low.
 - **Review Trigger**: khi Đàm hỏi "sao phải bấm Chốt bước".
-- **Owner**: chưa ai · **Status**: MỞ (2026-09-06)
+- **Owner**: chưa ai · **Status**: ✅ **ĐÓNG 2026-09-06 (ADR-070)** — (1) `autoClaimWeeklySteps` chốt
+  liền mọi bước đủ ngay trong `completeFocusSession` (XP cùng công thức nút cũ, SP chuỗi, buff Cử Tri/
+  Kế Hoạch Hoàn Hảo), kể ở thẻ «Bước tuần»; thưởng trọn ngày cũng tự vào ở phiên khép nốt nhiệm vụ
+  cuối (kèm phép đối chiếu lịch sử mà nút cũ làm). Xoá `claimWeeklyStep` · `claimMissionAllBonus` và
+  mọi nút Nhận. (2) Huy hiệu: khối «Kế tiếp» (4 huy hiệu gần đạt nhất, thanh + «còn N») sau dải hero;
+  bỏ bộ lọc bậc; lưới vẫn là điểm chính (ADR-028: «không giấu, chỉ gấp» — phần "chưa chạm" đã gấp từ
+  2026-09-02). Không làm "đếm theo nhóm": nó là một bảng số nữa chứ không phải một việc.

@@ -2997,7 +2997,7 @@ function JournalTab({ history, sessionCategories }) {
                     <p className="text-[10px] font-semibold uppercase tracking-[0.16em]" style={{ color: TEXT_SOFT }}>Sự kiện</p>
                     <div className="mt-2 flex flex-wrap gap-1.5">
                       {h.jackpot && <span className="rounded-full px-2 py-0.5 text-[10px] font-semibold" style={{ background: 'rgba(var(--accent-rgb),0.12)', color: ACCENT2 }}>Thưởng lớn</span>}
-                      {!isCancelled && ((h.refinedEarned ?? 0) > 0 || (h.minutes ?? 0) >= 45) && <span className="rounded-full px-2 py-0.5 text-[10px] font-semibold" style={{ background: 'rgba(148,163,184,0.18)', color: TEXT_MUTED }}>Tinh luyện</span>}
+                      {!isCancelled && (h.minutes ?? 0) >= 45 && <span className="rounded-full px-2 py-0.5 text-[10px] font-semibold" style={{ background: 'rgba(148,163,184,0.18)', color: TEXT_MUTED }}>Phiên sâu</span>}
                       {hasEvent && <span className="rounded-full px-2 py-0.5 text-[10px] font-semibold" style={{ background: 'rgba(var(--accent-rgb), 0.14)', color: ACCENT2 }}>Mốc phụ</span>}
                       {comboVal >= 2 && <span className="rounded-full px-2 py-0.5 text-[10px] font-semibold" style={{ background: 'rgba(var(--accent2-rgb),0.12)', color: ACCENT2 }}>Chuỗi ×{comboVal}</span>}
                       {isCancelled && (
@@ -3005,7 +3005,7 @@ function JournalTab({ history, sessionCategories }) {
                           Dừng ở {Number.isFinite(h.cancelProgressRatio) ? `${Math.round(h.cancelProgressRatio * 100)}%` : 'giữa phiên'}
                         </span>
                       )}
-                      {!isCancelled && !h.jackpot && !((h.refinedEarned ?? 0) > 0 || (h.minutes ?? 0) >= 45) && !hasEvent && comboVal < 2 && (
+                      {!isCancelled && !h.jackpot && !((h.minutes ?? 0) >= 45) && !hasEvent && comboVal < 2 && (
                         <span className="text-[11px]" style={{ color: TEXT_MUTED }}>Phiên gọn, không có lớp thưởng phụ.</span>
                       )}
                     </div>

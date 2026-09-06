@@ -14,19 +14,20 @@
  * đo được bằng một phép so độ dài chạy trong `npm test` — đúng luật của dự án: *một bài học được
  * ghi ra KHÔNG chặn được gì; chỉ một bài TEST mới chặn được*.
  *
- * ⚠️ Ca `ready` cố ý nói VIỆC CẦN LÀM chứ không mô tả trạng thái ("Xong hết — bấm Nhận" thay vì
- * "Đã hoàn tất toàn bộ nhiệm vụ ngày"): đúng lúc câu này hiện ra thì có một nút "Nhận" vừa xuất
- * hiện ngay cạnh nó, mà câu cũ không hề nhắc tới nó.
+ * ⚠️ ADR-070 (2026-09-06): KHÔNG CÒN NÚT "NHẬN". Thưởng trọn ngày tự vào ngay phiên khép nốt nhiệm
+ * vụ cuối; ca `ready` chỉ còn xảy ra khi nhiệm vụ cuối xong NGOÀI phiên (kết thúc nghỉ đúng giờ) —
+ * lúc ấy câu phải nói KHI NÀO thưởng vào ("cộng ở phiên kế"), vì không có việc gì để bấm nữa. Một
+ * câu bảo "bấm Nhận" cạnh chỗ không còn nút là một lời hứa treo.
  */
 export const DAILY_BONUS_COPY = {
-  claimed: 'Đã nhận hôm nay.',
-  ready: 'Xong hết — bấm Nhận.',
+  claimed: 'Đã cộng hôm nay.',
+  ready: 'Xong — cộng ở phiên kế.',
   /**
    * ⚠️ Nhận `xp` để tự đếm được ca DÀI NHẤT. Bài test bơm một con số 5 chữ số vào đây; nếu chỉ
    * kiểm chuỗi mẫu ở giá trị nhỏ thì cái trần sẽ vỡ đúng vào ngày người chơi có nhiều XP nhất —
    * tức đúng lúc câu này đáng đọc nhất.
    */
-  pending: (xp) => `Còn ${Number(xp ?? 0).toLocaleString()} XP chưa lấy.`,
+  pending: (xp) => `Còn ${Number(xp ?? 0).toLocaleString()} XP nữa.`,
 };
 
 /**

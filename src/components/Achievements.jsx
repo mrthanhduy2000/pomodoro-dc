@@ -4,7 +4,6 @@ import React, {
   useMemo,
   useState,
 } from 'react';
-import { AnimatePresence, motion } from 'framer-motion';
 import BadgeGrid from './shared/BadgeGrid.jsx';
 import { splitLockedBadges } from './shared/badgeGroups.js';
 import InventoryHero from './shared/InventoryHero.jsx';
@@ -15,19 +14,14 @@ import {
   ACHIEVEMENT_CATEGORIES,
   ACHIEVEMENT_TIERS,
 } from '../engine/constants';
-import { formatVietnamDateTime } from '../engine/time';
 import { getGlyph, hasGlyphIcon } from '../utils/labelMark';
 import { thanhTichGanDat, tienDoThanhTich } from '../engine/achievementProgress';
 import { cauConLai } from './achievementUnit';
 import useGameStore from '../store/gameStore';
 
-const TIER_SEQUENCE = ['bronze', 'silver', 'gold', 'platinum', 'diamond'];
 const CATEGORY_KEYS = Object.keys(ACHIEVEMENT_CATEGORIES);
-const DEFAULT_UNLOCKED_BATCH = 24;
-const DEFAULT_LOCKED_BATCH = 24;
 const VI_COLLATOR = new Intl.Collator('vi-VN');
 const ACHIEVEMENT_LOOKUP = new Map(ACHIEVEMENTS.map((achievement) => [achievement.id, achievement]));
-const DISPLAY_FONT = 'var(--skin-font-display)';
 const MONO_FONT = '"JetBrains Mono", "SFMono-Regular", Menlo, monospace';
 const CARD_SURFACE = {
   background: 'var(--card-bg-solid)',
@@ -35,9 +29,6 @@ const CARD_SURFACE = {
   borderRadius: 'var(--skin-radius-card,18px)',
   boxShadow: 'var(--skin-card-shadow)',
 };
-const MotionSection = motion.section;
-const MotionAside = motion.aside;
-const MotionDiv = motion.div;
 
 const CATEGORY_REMARKS = {
   sessions: 'Nhịp phiên đang dựng nền rất rõ; đây thường là nhóm tạo đà cho toàn bộ chặng sau.',
@@ -54,34 +45,6 @@ const CATEGORY_REMARKS = {
   xp_level: 'XP và cấp độ đang tăng như hệ quả của thói quen, không phải chỉ số rời rạc.',
   special: 'Đây là nhóm hiếm hơn, thường chỉ tới khi một thói quen rất cụ thể lặp lại đủ lâu.',
   meta: 'Tổng số dấu đã đạt đang tự kể câu chuyện tiến bộ chung của tài khoản.',
-};
-
-const TIER_SURFACES = {
-  bronze: {
-    badge: 'border-[rgba(178,124,80,0.24)] bg-[rgba(246,237,226,0.92)] text-[#8f5b33]',
-    glow: 'from-[rgba(246,237,226,0.98)] via-[rgba(255,255,255,0.96)] to-[rgba(250,249,246,0.96)]',
-    line: '#b27c50',
-  },
-  silver: {
-    badge: 'border-[rgba(163,158,150,0.24)] bg-[rgba(243,241,236,0.92)] text-[#68645c]',
-    glow: 'from-[rgba(243,241,236,0.98)] via-[rgba(255,255,255,0.96)] to-[rgba(250,249,246,0.96)]',
-    line: '#a39e96',
-  },
-  gold: {
-    badge: 'border-[rgba(195,154,88,0.24)] bg-[rgba(247,240,221,0.92)] text-[#8b6a2d]',
-    glow: 'from-[rgba(247,240,221,0.98)] via-[rgba(255,255,255,0.96)] to-[rgba(250,249,246,0.96)]',
-    line: '#c39a58',
-  },
-  platinum: {
-    badge: 'border-[rgba(166,137,149,0.22)] bg-[rgba(243,236,239,0.92)] text-[#7b5c68]',
-    glow: 'from-[rgba(243,236,239,0.98)] via-[rgba(255,255,255,0.96)] to-[rgba(250,249,246,0.96)]',
-    line: '#a68995',
-  },
-  diamond: {
-    badge: 'border-[rgba(131,155,176,0.24)] bg-[rgba(236,241,245,0.92)] text-[#5f7386]',
-    glow: 'from-[rgba(236,241,245,0.98)] via-[rgba(255,255,255,0.96)] to-[rgba(250,249,246,0.96)]',
-    line: '#839bb0',
-  },
 };
 
 function hexToRgb(hex) {
@@ -109,25 +72,6 @@ function clampOrder(value) {
 function getUnlockTimestamp(value) {
   const ts = typeof value === 'string' ? new Date(value).getTime() : Number(value);
   return Number.isFinite(ts) ? ts : null;
-}
-
-function padOrder(value) {
-  return String(value ?? 0).padStart(2, '0');
-}
-
-function formatUnlockLabel(unlockedAt) {
-  if (!unlockedAt) return 'Chưa có dấu thời gian';
-  return formatVietnamDateTime(unlockedAt, {
-    day: '2-digit',
-    month: '2-digit',
-    year: 'numeric',
-    hour: '2-digit',
-    minute: '2-digit',
-  });
-}
-
-function getTierSurface(tier) {
-  return TIER_SURFACES[tier] ?? TIER_SURFACES.silver;
 }
 
 function sortUnlockedEntries(left, right) {
@@ -223,140 +167,38 @@ function FilterChip({
   );
 }
 
-function AchievementCard({
-  entry,
-  latestId,
-}) {
-  const tierInfo = ACHIEVEMENT_TIERS[entry.achievement.tier] ?? ACHIEVEMENT_TIERS.silver;
-  const categoryInfo = ACHIEVEMENT_CATEGORIES[entry.achievement.category] ?? ACHIEVEMENT_CATEGORIES.special;
-  const tierSurface = getTierSurface(entry.achievement.tier);
-  const unlockLabel = formatUnlockLabel(entry.unlockedAt);
-  const showOrder = entry.isUnlocked && clampOrder(entry.order);
-
+/*
+  ⚠️ `AchievementCard` (thẻ một hàng đầy đủ) ĐÃ GỠ (2026-09-06, ADR-070): lưới `BadgeGrid` thay nó từ
+  2026-09-02 mà hàm vẫn nằm đây ~140 dòng không ai gọi — lint không kêu vì tên viết hoa được miễn.
+  Bài học Phase 4H ở chiều ngược: một hàm không ai gọi thì xanh mãi.
+*/
+/** Một hàng "sắp đạt": icon · tên · % · thanh · "hiện tại/mốc · còn N". Chạm thì mở dải tên trên lưới. */
+function NearRow({ item, onSelect }) {
+  const a = item.achievement;
+  const pct = Math.max(2, Math.min(100, Math.floor(item.tiLe * 100)));
+  const conLai = cauConLai(item.con, item.dem);
   return (
-    <div
-      className="relative overflow-hidden px-5 py-5 transition"
-      style={{
-        background: entry.isUnlocked
-          ? 'var(--card-bg-solid)'
-          : 'var(--card-bg-solid2)',
-        border: `var(--skin-card-border-width,1px) solid ${entry.isUnlocked ? 'var(--line)' : 'var(--line-2)'}`,
-        borderRadius: 'var(--skin-radius-card,18px)',
-        boxShadow: entry.isUnlocked
-          ? 'var(--skin-card-shadow)'
-          : 'none',
-      }}
-    >
-      <div
+    <button type="button" onClick={onSelect} className="flex w-full items-center gap-3 py-2.5 text-left">
+      <span
         aria-hidden="true"
-        className="absolute inset-x-0 top-0 h-[2px]"
-        style={{ backgroundColor: entry.isUnlocked ? tierSurface.line : 'rgba(217,214,204,0.92)' }}
-      />
-
-      <div className="flex items-start gap-4">
-        <div
-          className={[
-            'mono flex h-14 w-14 shrink-0 items-center justify-center border font-semibold',
-            // Emoji cần TO mới đọc được trong ô 56px; ký hiệu 2 chữ cái thì cần nhỏ + giãn chữ.
-            hasGlyphIcon(entry.achievement.icon) ? 'text-[26px] leading-none' : 'text-[10px] uppercase tracking-[0.16em]',
-            entry.isUnlocked ? 'bg-[var(--card-bg-solid)] text-[var(--ink)]' : 'bg-[var(--card-bg-solid2)] text-[var(--muted-2)]',
-          ].join(' ')}
-          style={{
-            borderColor: entry.isUnlocked ? withAlpha(tierSurface.line, 0.26) : 'var(--line-2)',
-            borderRadius: 'var(--skin-radius-control,14px)',
-            boxShadow: entry.isUnlocked ? `0 12px 28px ${withAlpha(tierSurface.line, 0.1)}` : 'inset 0 1px 0 rgba(255,255,255,0.72)',
-            fontFamily: MONO_FONT,
-          }}
-        >
-          {getGlyph(entry.achievement.icon, entry.achievement.label, 'DG')}
-        </div>
-
-        <div className="min-w-0 flex-1">
-          <div className="flex flex-wrap items-center gap-2">
-            <h3
-              className="text-[25px] leading-tight tracking-[-0.03em] text-[var(--ink)]"
-              style={{ fontFamily: DISPLAY_FONT, fontWeight: 600 }}
-            >
-              {entry.achievement.label}
-            </h3>
-
-            <span className={`rounded-full border px-3 py-1 text-xs font-semibold ${tierSurface.badge}`}>
-              {tierInfo.label}
-            </span>
-
-            <span className="rounded-full border border-[var(--line)] bg-[rgba(255,255,255,0.82)] px-3 py-1 text-xs font-medium text-[var(--muted)]">
-              {categoryInfo.label}
-            </span>
-
-            {entry.id === latestId && entry.isUnlocked ? (
-              <span className="rounded-full border border-[rgba(var(--accent-rgb),0.18)] bg-[rgba(var(--accent-rgb),0.1)] px-3 py-1 text-xs font-semibold text-[var(--accent2)]">
-                Mới nhất
-              </span>
-            ) : null}
-          </div>
-
-          <p className="mt-1 text-[14px] leading-6 text-[var(--ink-2)]">
-            {entry.achievement.description}
-          </p>
-
-          {/*
-            ⚠️ THANH TIẾN ĐỘ CHỈ MỌC RA Ở THẺ CHƯA ĐẠT CÓ ĐO ĐƯỢC — không phải ở cả 360 thẻ.
-            Thẻ đã đạt không cần (100% là chuyện đã rồi), và 50/360 mục có điều kiện ghép trả về
-            `null` nên chúng CÂM chứ không hiện "0%": một con số 0% đọc lên như "bạn chưa làm gì",
-            còn sự thật là "chỗ này không đo được".
-            Nó THAY câu mô tả trả lời "cần gì" bằng câu trả lời "còn bao xa" — mô tả vẫn ở ngay
-            trên, nên đây là một dòng THÊM có mẫu số chứ không phải một dòng lặp lại.
-          */}
-          {entry.tienDo ? (
-            <div className="mt-2">
-              <div className="overflow-hidden rounded-full bg-[var(--line)]">
-                <div
-                  className="h-[3px] rounded-full transition-all"
-                  style={{
-                    width: `${Math.max(2, Math.floor(entry.tienDo.tiLe * 100))}%`,
-                    background: 'var(--accent)',
-                  }}
-                />
-              </div>
-              <div className="mono mt-1 text-[11px] text-[var(--muted)]">
-                {entry.tienDo.hienTai.toLocaleString('vi-VN')}/{entry.tienDo.moc.toLocaleString('vi-VN')}
-                {cauConLai(entry.tienDo.con, entry.tienDo.dem) ? ` · ${cauConLai(entry.tienDo.con, entry.tienDo.dem)}` : ''}
-              </div>
-            </div>
-          ) : null}
-
-          <div className="mt-3 flex flex-wrap items-center gap-2 text-[12px] font-medium text-[var(--muted)]">
-            {showOrder ? (
-              <span
-                className="rounded-full border border-[var(--line)] bg-[rgba(255,255,255,0.9)] px-3 py-1 text-[11px] text-[var(--ink-2)]"
-                style={{ fontFamily: MONO_FONT }}
-              >
-                #{padOrder(entry.order)}
-              </span>
-            ) : null}
-
-            {/* ⚠️ BỎ TIỀN TỐ, VÀ BỎ HẲN CHIP Ở NHÁNH CHƯA ĐẠT (vòng 20, 2026-08-30).
-                "Thời điểm đạt: " — trong một mục tên là "Đã đạt (146)" thì một con dấu thời gian
-                không cần được giới thiệu; bỏ tiền tố làm chip ngắn đi ~90px nên nó thôi phải
-                chiếm trọn một hàng riêng ở cột chữ 191px.
-                "Trạng thái: chưa đạt" — tiêu đề mục và kiểu vẽ mờ đã nói xong, mà nó lặp ở 24
-                thẻ. Bỏ đi thì phần "Chưa đạt" LIẾC được thay vì phải đọc. */}
-            {entry.isUnlocked ? (
-              <span className="rounded-full border border-[var(--line)] bg-[rgba(255,255,255,0.88)] px-3 py-1">
-                {unlockLabel}
-              </span>
-            ) : null}
-
-            {entry.timeSource === 'reconstructed' ? (
-              <span className="rounded-full border border-[rgba(131,155,176,0.22)] bg-[rgba(236,241,245,0.9)] px-3 py-1 text-[#5f7386]">
-                Suy từ nhật ký
-              </span>
-            ) : null}
-          </div>
-
-        </div>
-      </div>
-    </div>
+        className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-full ${hasGlyphIcon(a.icon) ? 'text-[18px] leading-none' : 'mono text-[9px] uppercase tracking-[0.12em]'}`}
+        style={{ background: 'rgba(var(--accent-rgb), 0.08)', color: 'var(--ink)' }}
+      >
+        {getGlyph(a.icon, a.label, 'DG')}
+      </span>
+      <span className="min-w-0 flex-1">
+        <span className="flex items-baseline justify-between gap-2">
+          <span className="truncate text-[13px] font-semibold" style={{ color: 'var(--ink)' }}>{a.label}</span>
+          <span className="mono shrink-0 text-[11px] font-semibold tabular-nums" style={{ color: 'var(--accent2)' }}>{pct}%</span>
+        </span>
+        <span className="mt-1.5 block h-[3px] overflow-hidden rounded-full" style={{ background: 'var(--line)' }}>
+          <span className="block h-full rounded-full" style={{ width: `${pct}%`, background: 'var(--accent)' }} />
+        </span>
+        <span className="mono mt-1 block text-[11px] tabular-nums" style={{ color: 'var(--muted)' }}>
+          {Number(item.hienTai ?? 0).toLocaleString('vi-VN')}/{Number(item.moc ?? 0).toLocaleString('vi-VN')}{conLai ? ` · ${conLai}` : ''}
+        </span>
+      </span>
+    </button>
   );
 }
 
@@ -378,24 +220,18 @@ export default function Achievements() {
     [history, progressSlice, streakSlice, playerSlice],
   );
   const sapDat = useMemo(
-    () => thanhTichGanDat(ACHIEVEMENTS, snapshot, unlockedIds, 3),
+    () => thanhTichGanDat(ACHIEVEMENTS, snapshot, unlockedIds, 5),
     [snapshot, unlockedIds],
   );
 
   const [filterOpen, setFilterOpen] = useState(false);
   const [showUntouched, setShowUntouched] = useState(false);
   const [selectedEntry, setSelectedEntry] = useState(null);
-  const [selectedTier, setSelectedTier] = useState('all');
+  // ⚠️ BỘ LỌC THEO BẬC ĐÃ GỠ (2026-09-06, ADR-070 — "simplify mạnh"). Sáu chip bậc + mười ba chip danh
+  // mục là hai trục lọc cho một bộ sưu tập mà Đàm liếc chứ không tra cứu; bậc đã có ngay trên từng ô
+  // (màu + nhãn), và một bộ lọc chẳng ai bật thì chỉ là chỗ cho mắt phải bỏ qua.
   const [selectedCategory, setSelectedCategory] = useState('all');
-
-  const deferredTier = useDeferredValue(selectedTier);
   const deferredCategory = useDeferredValue(selectedCategory);
-
-  const handleTierChange = (tier) => {
-    startTransition(() => {
-      setSelectedTier(tier);
-    });
-  };
 
   const handleCategoryChange = (category) => {
     startTransition(() => {
@@ -407,9 +243,6 @@ export default function Achievements() {
     const unlockedSet = new Set(unlockedIds);
     const unlockedOrder = new Map(unlockedIds.map((id, index) => [id, index + 1]));
 
-    const tierStats = Object.fromEntries(
-      TIER_SEQUENCE.map((key) => [key, { total: 0, unlocked: 0 }]),
-    );
     const categoryStats = Object.fromEntries(
       CATEGORY_KEYS.map((key) => [key, { total: 0, unlocked: 0 }]),
     );
@@ -430,11 +263,6 @@ export default function Achievements() {
           ? 'reconstructed'
           : 'stored'
         : 'missing';
-
-      if (tierStats[achievement.tier]) {
-        tierStats[achievement.tier].total += 1;
-        if (isUnlocked) tierStats[achievement.tier].unlocked += 1;
-      }
 
       if (categoryStats[achievement.category]) {
         categoryStats[achievement.category].total += 1;
@@ -487,7 +315,6 @@ export default function Achievements() {
       allEntries,
       categoryStats,
       latestEntry,
-      tierStats,
       totalAchievements: allEntries.length,
       totalUnlocked: unlockedEntries.length,
       unlockedEntries,
@@ -495,12 +322,8 @@ export default function Achievements() {
   }, [timeline, unlockedIds, snapshot]);
 
   const filteredEntries = useMemo(() => (
-    dataset.allEntries.filter((entry) => {
-      if (deferredTier !== 'all' && entry.achievement.tier !== deferredTier) return false;
-      if (deferredCategory !== 'all' && entry.achievement.category !== deferredCategory) return false;
-      return true;
-    })
-  ), [dataset.allEntries, deferredCategory, deferredTier]);
+    dataset.allEntries.filter((entry) => deferredCategory === 'all' || entry.achievement.category === deferredCategory)
+  ), [dataset.allEntries, deferredCategory]);
 
   const filteredUnlockedEntries = useMemo(() => (
     filteredEntries.filter((entry) => entry.isUnlocked).sort(sortUnlockedEntries)
@@ -528,8 +351,6 @@ export default function Achievements() {
 
 
 
-  const activeTierInfo = deferredTier === 'all' ? null : ACHIEVEMENT_TIERS[deferredTier];
-
   return (
     <div className="space-y-5 text-[var(--ink)]">
       {/* Dải mở đầu Hành trang — xem `shared/inventoryHero.js`. Dùng LẠI `sapDat` (đã tính ở trên
@@ -539,31 +360,42 @@ export default function Achievements() {
           daMo: unlockedIds.length,
           tong: ACHIEVEMENTS.length,
           ganDat: sapDat[0]
-            ? { ten: sapDat[0].achievement?.label ?? 'Huy hiệu', pct: sapDat[0].tiLe }
+            ? { ten: sapDat[0].achievement?.label ?? 'Huy hiệu', pct: sapDat[0].tiLe, conLai: cauConLai(sapDat[0].con, sapDat[0].dem) }
             : null,
         })}
         icon="🏅"
       />
 
-      <div className="grid gap-5 xl:grid-cols-[minmax(0,1.5fr)_minmax(320px,0.75fr)]">
-        {/*
-          ⚠️ THẺ TÓM TẮT ĐÃ GỠ (2026-09-02) — nó nói ĐÚNG hai điều mà dải hero ngay trên nó vừa
-          nói: tổng "157 / 360 dấu" và danh sách "SẮP ĐẠT". Hai chỗ nói cùng một chuyện, cách nhau
-          chưa tới một màn hình, và chỗ nói SAU lại nói ÍT hơn (không màu, không có câu "còn bao
-          xa"). Luật của dự án: *hai chỗ nói cùng một chuyện thì chỗ nói ít hơn phải nhường*.
-          ⚠️ VÀ ĐÂY CHÍNH LÀ LÝ DO ĐÀM NÓI BA LẦN RẰNG HÀNH TRANG "CHƯA THẤY THAY ĐỔI GÌ": vòng
-          trước tôi THÊM một dải mới lên trên một thẻ nói cùng nội dung, nên màn hình dài thêm mà
-          không mới thêm. **Thêm mà không bớt thì không phải thiết kế lại.**
-        */}
-
-        {/*
-          ⚠️ DANH SÁCH "MỚI ĐẠT GẦN ĐÂY" ĐÃ GỠ (2026-09-02). Đây là chỗ thứ TƯ trên cùng một màn
-          nói rằng Đàm có huy hiệu: dải hero · thẻ tóm tắt (cũng đã gỡ) · danh sách này · và lưới.
-          Lưới xếp ĐÃ ĐẠT LÊN TRƯỚC, nên "mới đạt gần đây" chính là góc trên bên trái của nó, và
-          chạm một ô là ra tên. Thứ duy nhất mất đi là số thứ tự + ngày giờ — dữ liệu để TRA CỨU,
-          không phải để liếc, và nó không xứng với ~1.400px ở màn hình chính.
-        */}
-      </div>
+      {/*
+        ⚠️ "KẾ TIẾP" (2026-09-06, ADR-070, đóng nửa sau `TECH_DEBT #100`): bốn huy hiệu GẦN ĐẠT NHẤT sau
+        cái đứng ở dải hero, mỗi cái một thanh + "còn N". Đây là thứ màn này thiếu suốt: một bộ sưu
+        tập 360 ô nói "bạn có bao nhiêu", nhưng không nói "cái nào SẮP tới" — mà chính khoảng cách
+        ngắn tới mốc kế mới là thứ kéo người ta làm thêm một phiên (goal-gradient). Dải hero giữ mục
+        số 1 (đã có bar riêng), khối này bắt đầu từ mục số 2 để không nói hai lần.
+        ⚠️ Thẻ tóm tắt và danh sách "mới đạt gần đây" từng ở chỗ này đã gỡ (2026-09-02) vì nói lại
+        điều dải hero và lưới vừa nói — khối này KHÔNG lặp lại lỗi ấy: lưới không có thanh tiến độ.
+      */}
+      {sapDat.length > 1 && (
+        <section className="p-5" style={CARD_SURFACE}>
+          <div className="flex items-baseline justify-between gap-3">
+            <h3 className="mono text-[10px] font-semibold uppercase tracking-[0.22em]" style={{ color: 'var(--muted)' }}>
+              Kế tiếp
+            </h3>
+            <span className="mono text-[11px] tabular-nums" style={{ color: 'var(--muted)' }}>
+              {sapDat.length - 1} gần nhất
+            </span>
+          </div>
+          <div className="mt-2 divide-y" style={{ borderColor: 'var(--line)' }}>
+            {sapDat.slice(1).map((item) => (
+              <NearRow
+                key={item.achievement.id}
+                item={item}
+                onSelect={() => setSelectedEntry({ id: item.achievement.id, achievement: item.achievement, isUnlocked: false, tienDo: item })}
+              />
+            ))}
+          </div>
+        </section>
+      )}
 
       {/*
         ⚠️ BỘ LỌC THU GỌN MẶC ĐỊNH (2026-09-02). Đo trước khi sửa: lưới huy hiệu bắt đầu ở **y=1398**
@@ -583,62 +415,28 @@ export default function Achievements() {
             Bộ lọc
           </span>
           <span className="flex items-center gap-2 text-[12px]" style={{ color: 'var(--muted)' }}>
-            {selectedTier === 'all' && selectedCategory === 'all'
+            {selectedCategory === 'all'
               ? 'Đang xem tất cả'
-              : 'Đang lọc'}
+              : `Đang lọc: ${ACHIEVEMENT_CATEGORIES[selectedCategory]?.label ?? selectedCategory}`}
             <span aria-hidden>{filterOpen ? '▲' : '▼'}</span>
           </span>
         </button>
 
         <div className="space-y-4" hidden={!filterOpen}>
-          <div>
-            <p className="mono text-[10px] uppercase tracking-[0.2em] text-[var(--muted-2)]">
-              Lọc theo tier
-            </p>
-            <div className="mt-3 flex flex-wrap gap-2">
-              <FilterChip
-                active={selectedTier === 'all'}
-                countLabel={`${dataset.totalUnlocked}/${dataset.totalAchievements}`}
-                    icon="✦"
-                    iconIsPicture
-                label="Tất cả"
-                onClick={() => handleTierChange('all')}
-              />
-              {TIER_SEQUENCE.map((tier) => {
-                const tierInfo = ACHIEVEMENT_TIERS[tier];
-                const stats = dataset.tierStats[tier];
-                return (
-                  <FilterChip
-                    key={tier}
-                    active={selectedTier === tier}
-                    countLabel={`${stats?.unlocked ?? 0}/${stats?.total ?? 0}`}
-                    icon={getGlyph(tierInfo.icon, tierInfo.label, 'TR')}
-                    iconIsPicture={hasGlyphIcon(tierInfo.icon)}
-                    label={tierInfo.label}
-                    onClick={() => handleTierChange(tier)}
-                    tone={tierInfo.color}
-                  />
-                );
-              })}
-            </div>
-          </div>
-
-          <div className="border-t pt-4" style={{ borderColor: 'var(--line)' }}>
+          <div className="pt-3">
             <p className="mono text-[10px] uppercase tracking-[0.2em] text-[var(--muted-2)]">
               Lọc theo danh mục
             </p>
             <div className="mt-3 flex flex-wrap gap-2">
               {/*
-                ⚠️ KHÔNG truyền `countLabel` ở đây (2026-09-01): viên này và viên "Tất cả" của
-                hàng HẠNG cách nhau ĐÚNG 282px và in ra CÙNG một chuỗi từng ký tự, vì cả hai
-                dùng chung biểu thức `totalUnlocked/totalAchievements` — một con số HẰNG, không
-                đổi theo bộ lọc nào. Hàng hạng nằm TRÊN nên nó giữ con số; hàng này nằm ngay dưới
-                một hàng vừa nói xong đúng con số ấy.
+                ⚠️ `countLabel` ở viên "Tất cả" là con số tổng — hàng bậc (đã gỡ, ADR-070) từng in nó
+                ở 282px phía trên; nay đây là chỗ DUY NHẤT nói tổng trong bộ lọc.
                 ⚠️ `FilterChip` phải bọc `{countLabel ? … : null}` — bản cũ dựng bong bóng đếm VÔ
                 ĐIỀU KIỆN, không truyền prop thì còn lại một bong bóng xám rỗng.
               */}
               <FilterChip
                 active={selectedCategory === 'all'}
+                countLabel={`${dataset.totalUnlocked}/${dataset.totalAchievements}`}
                 icon="✦"
                 iconIsPicture
                 label="Tất cả"
@@ -656,7 +454,7 @@ export default function Achievements() {
                     iconIsPicture={hasGlyphIcon(categoryInfo.icon)}
                     label={categoryInfo.label}
                     onClick={() => handleCategoryChange(categoryKey)}
-                    tone={ACHIEVEMENT_TIERS[activeTierInfo ? deferredTier : 'silver']?.color ?? '#94a3b8'}
+                    tone={ACHIEVEMENT_TIERS.silver?.color ?? '#94a3b8'}
                   />
                 );
               })}

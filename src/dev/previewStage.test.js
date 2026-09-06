@@ -6,9 +6,10 @@
  * THIẾU một dòng, người soi tưởng app vốn thế, rồi đi "sửa" một thứ không hỏng — hoặc tệ hơn, bỏ
  * qua một dòng đang hỏng thật.
  *
- * Nên bài này KHÔNG so bản giả với một danh sách chép tay. Nó đọc THẲNG `LootDropModal.jsx` để
- * lấy đúng những trường hộp thoại thật sự đọc, và đọc THẲNG `gameStore.js` để lấy đúng những
- * trường `completeFocusSession` thật sự ghi ra.
+ * Nên bài này KHÔNG so bản giả với một danh sách chép tay. Nó đọc THẲNG hai file của chuỗi thẻ
+ * thưởng (ADR-070: người đọc DUY NHẤT của `pendingReward` — hộp thoại chi tiết đã gỡ) để lấy đúng
+ * những trường thật sự được đọc, và đọc THẲNG `gameStore.js` để lấy đúng những trường
+ * `completeFocusSession` thật sự ghi ra.
  */
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
@@ -19,16 +20,17 @@ import { PREVIEW_SCENES, readPreviewScene, buildPreviewUi, PREVIEW_PARAM } from 
 const doc = (p) => readFileSync(new URL(p, import.meta.url), 'utf8');
 
 /**
- * Những trường mà HAI người đọc `pendingReward` thật sự đọc — lấy từ chính mã nguồn của chúng:
- * hộp thoại chi tiết (`LootDropModal.jsx`) và bộ dựng chuỗi thẻ thưởng (`sessionRewardStory.js`,
- * ADR-068). Quên một người đọc là để bản giả thiếu đúng trường người ấy cần, trong im lặng.
+ * Những trường mà chuỗi thẻ thưởng thật sự đọc — lấy từ chính mã nguồn của nó: bộ dựng thẻ
+ * (`sessionRewardStory.js`) và component (`SessionRewardStory.jsx`, đọc thêm vài trường lúc dựng
+ * đầu vào). Quên một người đọc là để bản giả thiếu đúng trường người ấy cần, trong im lặng.
+ * ⚠️ Bắt cả `reward?.x` (optional chaining) — bản cũ chỉ bắt `reward.x` nên mù với component.
  */
 function truongHopThoaiDoc() {
   const nguon = [
-    doc('../components/LootDropModal.jsx'),
     doc('../components/sessionRewardStory.js'),
+    doc('../components/SessionRewardStory.jsx'),
   ];
-  const ra = new Set(nguon.flatMap((src) => [...src.matchAll(/\breward\.([a-zA-Z0-9_]+)/g)].map((m) => m[1])));
+  const ra = new Set(nguon.flatMap((src) => [...src.matchAll(/\breward\??\.([a-zA-Z0-9_]+)/g)].map((m) => m[1])));
   assert.ok(ra.size >= 20, `mới thấy ${ra.size} trường — phép đo đang chạy rỗng`);
   return ra;
 }
@@ -42,7 +44,7 @@ test('mọi cảnh soi phải phủ ĐỦ những trường hộp thoại thật
     const thieu = [...can].filter((k) => !Object.hasOwn(patch.pendingReward, k)).sort();
     assert.deepEqual(
       thieu, [],
-      `cảnh "${ten}" thiếu ${thieu.length} trường mà LootDropModal đọc: ${thieu.join(', ')}.\n`
+      `cảnh "${ten}" thiếu ${thieu.length} trường mà chuỗi thẻ thưởng đọc: ${thieu.join(', ')}.\n`
       + 'Màn soi ra sẽ THIẾU dòng, và người soi sẽ tưởng app vốn thế.',
     );
   }
@@ -123,19 +125,20 @@ test('bản giả phải đúng KIỂU, suy từ chính cách hộp thoại DÙN
     (e.buildingPerkRewards ?? []).map is not a function" — bản giả khai `{}` trong khi bản thật là
     một MẢNG. Khoá có đủ, kiểu sai, và không cổng nào thấy.
     Nên bài này KHÔNG chép tay một bảng kiểu (bảng chép tay thì trôi y như bản giả). Nó đọc THẲNG
-    `LootDropModal.jsx` và suy kiểu từ CÁCH DÙNG: gọi `.map()` ⇒ phải là mảng; gọi
-    `.toLocaleString()` ⇒ phải là số.
+    hai file chuỗi thẻ và suy kiểu từ CÁCH DÙNG: hỏi `Array.isArray()` ⇒ phải là mảng; đi qua
+    `toNumber()` ⇒ phải là số.
   */
-  const src = doc('../components/LootDropModal.jsx');
+  const src = doc('../components/sessionRewardStory.js') + doc('../components/SessionRewardStory.jsx');
 
-  const canMang = new Set([
-    ...[...src.matchAll(/reward\.([a-zA-Z0-9_]+)\s*\?\?\s*\[\]\)\s*\.map/g)].map((m) => m[1]),
-    ...[...src.matchAll(/reward\.([a-zA-Z0-9_]+)\.map\(/g)].map((m) => m[1]),
-  ]);
-  const canSo = new Set(
-    [...src.matchAll(/reward\.([a-zA-Z0-9_]+)\.toLocaleString/g)].map((m) => m[1]),
+  // Mảng: chuỗi thẻ hỏi `Array.isArray(reward.x)` rồi mới `.map`/`.includes` — đó là dấu vân tay.
+  const canMang = new Set(
+    [...src.matchAll(/Array\.isArray\(reward\??\.([a-zA-Z0-9_]+)\)/g)].map((m) => m[1]),
   );
-  assert.ok(canMang.size >= 1 && canSo.size >= 2, 'phép suy kiểu không thấy gì — đang chạy rỗng');
+  // Số: mọi con số đi qua `toNumber(reward.x)` trước khi lên thẻ.
+  const canSo = new Set(
+    [...src.matchAll(/toNumber\(reward\.([a-zA-Z0-9_]+)\)/g)].map((m) => m[1]),
+  );
+  assert.ok(canMang.size >= 2 && canSo.size >= 8, `phép suy kiểu không thấy gì — đang chạy rỗng (mảng ${canMang.size}, số ${canSo.size})`);
 
   for (const [ten, patch] of Object.entries(PREVIEW_SCENES)) {
     const r = patch.pendingReward;
@@ -143,12 +146,12 @@ test('bản giả phải đúng KIỂU, suy từ chính cách hộp thoại DÙN
     for (const k of canMang) {
       assert.ok(
         Array.isArray(r[k]),
-        `cảnh "${ten}": "${k}" phải là MẢNG (hộp thoại gọi .map lên nó) — đang là `
+        `cảnh "${ten}": "${k}" phải là MẢNG (chuỗi thẻ gọi Array.isArray lên nó) — đang là `
         + `${Object.prototype.toString.call(r[k])}. Đây đúng là lỗi đã làm màn soi đầu tiên nổ.`,
       );
     }
     for (const k of canSo) {
-      assert.equal(typeof r[k], 'number', `cảnh "${ten}": "${k}" phải là SỐ (gọi .toLocaleString)`);
+      assert.equal(typeof r[k], 'number', `cảnh "${ten}": "${k}" phải là SỐ (đi qua toNumber)`);
     }
   }
 });

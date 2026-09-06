@@ -36,7 +36,20 @@ Thành phố 3D (`src/engine/city3d/` + `src/components/city/render3d/`) là H�
   Phase 21 (*"push nhánh phụ, không tự gộp `main`"*) đã bị lệnh này thay thế.
   ⚠️ **Phase 21 do đó lên production TRƯỚC khi Đàm nhìn ảnh nghiệm thu** — mục "chờ Đàm nhìn ảnh"
   ở phần dưới VẪN CÒN HIỆU LỰC, chỉ là nay nó nghiệm thu một thứ đang chạy thật.
-- **Trò chơi — VÒNG 34 (2026-09-06, MỚI NHẤT): ĐỒNG TIỀN DUY NHẤT LÀ PHIÊN (ADR-069), không đụng
+- **Trò chơi — VÒNG 35 (2026-09-06, MỚI NHẤT): MỘT CÁI KẾT DUY NHẤT, KHÔNG NÚT NHẬN, KHÔNG MÀN
+  CHẾT (ADR-070), không đụng Thành phố.** Lệnh *"tự quyết định mọi thứ và tech debt · build lớn ·
+  simplify mạnh · vui hơn · UX/UI"*. (1) Bước tuần + thưởng trọn ngày TỰ VÀO trong
+  `completeFocusSession`, kể ở chuỗi thẻ — xoá `claimWeeklyStep`/`claimMissionAllBonus` và mọi nút
+  Nhận; (2) **di vật lớn theo PHIÊN** (`engine/relicGrowth.js`, mốc 20/50 phiên ≥25′ kể từ
+  `earnedAt`; save cũ đóng dấu lúc nạp) — xoá `evolveRelic` và giá tinh luyện (`#96` đóng); (3) 11/15
+  kỳ quan + 2 đặc quyền công trình về trục sống (`WONDER_EFFECT_REGISTRY.passive`, `wonderEffects.js`
+  là nguồn duy nhất); (4) **xoá `LootDropModal`** — chuỗi thẻ là cái kết duy nhất, thẻ «Kỷ nguyên
+  mới» có nút «Xem thành phố mới» (`#98` đóng); (5) Huy hiệu có khối «Kế tiếp» (4 gần đạt nhất, thanh
+  + «còn N»), bỏ bộ lọc bậc (`#100` đóng). ⚠️ Bài học: *bỏ một nút thì đi tìm mọi việc nút ấy làm
+  NGOÀI việc trao thưởng* — nút «Nhận» cũ còn ĐỐI CHIẾU nhiệm vụ với lịch sử; phép ấy nay nằm trong
+  `completeFocusSession`. Cửa soi: `--preview "loot-max&dc-preview-card=quests|chain|evolve"` và
+  `--preview era` (thẻ kỷ mới). Test **1633 bài** (1632 pass · 0 fail · 1 skipped). Nợ: **100 mục · 40 đã đóng · 60 còn mở**.
+- **Trò chơi — VÒNG 34 (2026-09-06): ĐỒNG TIỀN DUY NHẤT LÀ PHIÊN (ADR-069), không đụng
   Thành phố.** Lệnh *"SIMPLIFY. MINIMIZE. AMPLIFY FUN."* (1) Công trình một màn, một nút
   (`BuildScreen.jsx`; store `startProject` không hỏi RP/nguyên liệu — cái giá = N phiên + ô hàng
   chờ); (2) bậc TỰ thăng theo lịch sử, khủng hoảng kỷ = nhiệm vụ mềm — không nút, không hạn, không

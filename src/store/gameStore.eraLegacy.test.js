@@ -37,7 +37,7 @@ globalThis.window = {
 
 const [
   { default: useGameStore },
-  { BLUEPRINT_CATALOG, ERA_THRESHOLDS },
+  { BLUEPRINT_CATALOG, ERA_THRESHOLDS, LEGACY_QUEUE_SLOTS },
 ] = await Promise.all([
   import('./gameStore.js'),
   import('../engine/constants.js'),
@@ -176,15 +176,21 @@ test('PHIÊN VỪA XÂY XONG VỪA LÊN KỶ — công trình vừa xong KHÔNG 
     'công trình kỷ 7 vừa xây xong đã BIẾN MẤT — cả hai lưới (di sản + niêm phong) đều thủng');
 });
 
-test('KHÔNG KHỞI CÔNG MỚI được bản vẽ của kỷ cũ — cửa vẫn đóng', () => {
-  // Cam kết chặn-trên của ADR-011: chỉ thứ ĐÃ bắt đầu mới được đi hết. Mất luật này thì "trọn vẹn
-  // kỷ" biến thành danh sách việc vặt 15 kỷ × 5 công trình — đúng thứ Đàm gọi là chán.
-  // ⚠️ Luật này KHÔNG do Phase 4D tạo ra — `startCrafting` đã chặn `isCurrentEraBlueprint` từ trước.
-  // Ghi lại ở đây vì ADR-011 nay ĐỰA VÀO nó: chính nó là thứ giữ cho số di sản bị chặn trên và
-  // giảm dần một chiều. Ai gỡ dòng chặn đó sẽ mở ra phương án (4) mà ADR-011 đã cân nhắc rồi loại.
+test('KHỞI CÔNG bản vẽ kỷ cũ CHỈ đi cửa TRÙNG TU — đúng MỘT khe (ADR-012), không phải cửa xây thường', () => {
+  // Cam kết chặn-trên của ADR-011: tập di sản bị chặn trên và giảm dần một chiều. ADR-012 mở cho
+  // nó ĐÚNG MỘT khe (`LEGACY_QUEUE_SLOTS = 1`, vào bảo tàng chứ không vào `buildings` — bài đầu
+  // file này). Mất khe-duy-nhất thì "trọn vẹn kỷ" biến thành danh sách việc vặt 15 kỷ × 5 công
+  // trình — đúng thứ Đàm gọi là chán, và đúng phương án (4) mà ADR-011 đã cân nhắc rồi loại.
+  // ⚠️ BÀI CŨ ("cửa vẫn đóng", đòi `startProject(era5[2]) === false`) XANH NHỜ MỘT THỨ CHẲNG LIÊN
+  // QUAN: fixture không có túi nguyên liệu kỷ 5, nên `startCrafting` từ chối vì THIẾU TIỀN chứ
+  // không vì cửa đóng. ADR-069 gỡ cổng nguyên liệu thì bài ấy đỏ trên mã hoàn toàn đúng (bẫy
+  // Phase 7D). Nay hỏi đúng cái luật còn sống: khe trùng tu có đúng MỘT.
   setup({ totalEP: 15_000, craftingQueue: [] });
-  useGameStore.setState({ research: { researched: [era5[2]], inProgress: null } });
+  assert.equal(LEGACY_QUEUE_SLOTS, 1, 'tiền đề: khe trùng tu là MỘT');
 
-  assert.equal(useGameStore.getState().startCrafting(era5[2]), false);
-  assert.equal(useGameStore.getState().craftingQueue.length, 0);
+  assert.equal(useGameStore.getState().startProject(era5[2]), true,
+    'bản vẽ kỷ đã niêm phong phải đi được vào khe trùng tu (ADR-012), không cần túi (ADR-069)');
+  assert.equal(useGameStore.getState().startProject(era5[3]), false,
+    'khe trùng tu đang bận mà vẫn nhận bản vẽ kỷ cũ thứ hai ⇒ chặn-trên của ADR-011 đã mất');
+  assert.deepEqual(useGameStore.getState().craftingQueue.map((q) => q.bpId), [era5[2]]);
 });

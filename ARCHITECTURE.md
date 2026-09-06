@@ -147,46 +147,49 @@ nói thì trả `null` và màn hình im lặng.
 `hidden … lg:flex` — chỉ hiện trên màn rộng. Mọi thứ Đàm cần thấy hằng ngày phải nằm ở **cột giữa**,
 vì anh làm việc chủ yếu trên iPhone.
 
-### 6.2 Luồng "phiên vừa xong" — vì sao có một màn chen giữa
+### 6.2 Luồng "phiên vừa xong" — MỘT cái kết (ADR-068 → ADR-070)
 
 ```
 useTimer.commitCompletedSession()
         │  (KHÔNG đổi — vẫn đồng bộ y như trước)
         ▼
-gameStore.completeFocusSession()  ── đặt ui.lootModalOpen = true NGAY LẬP TỨC
-        │                            (ba bài test khẳng định điều này)
+gameStore.completeFocusSession()  ── đặt ui.lootModalOpen = true NGAY LẬP TỨC  ("chuỗi thẻ đang chờ")
+        │   ADR-070: MỌI phần thưởng đã đạt TỰ VÀO ở đây, không còn nút nào ở tầng giao diện —
+        │     · rebuildMissionsFromHistory ⇒ tick nhiệm vụ ⇒ khép nốt ⇒ +dailyBonusXP (trọn ngày)
+        │     · autoClaimWeeklySteps       ⇒ mọi bước tuần đã đủ ⇒ +XP bước, +SP chuỗi ⇒ pendingReward.weeklySteps
+        │     · evaluateRelicEvolutions    ⇒ đủ 20/50 phiên ≥25′ kể từ earnedAt ⇒ relicEvolutions+1 ⇒ pendingReward.relicsEvolved
+        │     · wonderPassiveBuffs         ⇒ +XP/+EP/+combo/+XP phẳng của kỳ quan vào activeBuffs
         ▼
 App.jsx <OverlayStack>
         │
         ├─ useCityGrowthMoment → engine/cityMoment.buildGrowthMoment()
-        │        ├── có công trình vừa xong / giàn giáo vừa cao thêm ⇒ một khoảnh khắc
+        │        ├── có công trình vừa xong ⇒ một khoảnh khắc (chỉ `kind === 'built'`)
         │        └── thành phố KHÔNG đổi gì ⇒ `null`  (im lặng, không khen rỗng)
         │
         ├─ CÓ khoảnh khắc & không bật giảm chuyển động
         │        └→ <CityGrowthMoment> 3,2 giây → onDone
-        │           (song song: LootDropModal.preload() nạp sẵn gói mã)
         │
-        ├─ rồi <SessionRewardStory> — CHUỖI THẺ THƯỞNG sau MỌI phiên (ADR-068, mở rộng ADR-069):
-        │        xp → THÀNH PHỐ (công trình nhích một nấc / "hàng chờ trống — chọn ngay")
-        │           → chuỗi (dải bảy ngày) → nhịp hôm nay → nhiệm vụ → thử thách kỷ
-        │           → lên cấp (MỜI CHỌN ≤3 kỹ năng ngay tại chỗ — thẻ đứng yên chờ, "Để sau")
-        │           → bậc mới → di vật mới → kỷ mới
-        │        chạm để lật · tự lật 2,6 s · "Bỏ qua" một chạm · thẻ cuối: Tiếp tục / Xem chi tiết
-        │        luật thẻ: engine-thuần ở components/sessionRewardStory.js (không đọc store);
-        │        ba đầu vào mới dựng ở component từ engine/buildChoices · opportunities · rankLadder
-        │        └→ onDone (`finishStory`):
-        │             · lên kỷ            ⇒ giữ pendingReward, cổng dưới mở hộp thoại
-        │             · bấm Xem chi tiết  ⇒ detail = 'loot'
-        │             · bấm "Chọn công trình ngay" ⇒ closeLootModal() + điều hướng Hành trang › Công trình
-        │             · còn lại           ⇒ closeLootModal() + dọn toast chuỗi thẻ đã nói thay
-        │                                    (nhiệm vụ vừa xong · lên cấp · di vật)
-        │
-        └─ rồi PHÂN TẦNG theo mức độ làm phiền (ADR-060, sửa một nửa ở ADR-068):
-                 ├─ pendingReward.eraChanged  ⇒ <LootDropModal> — LÊN KỶ được chặn màn hình
-                 ├─ detail === 'loot'         ⇒ <LootDropModal> — chi tiết đầy đủ, do Đàm bấm
-                 └─ di vật · thành tích · nhiệm vụ · lên cấp đến KÈM ⇒ THẺ trong <RewardToastHost>
-                                                 (đồng hồ toast DỪNG trong lúc chuỗi thẻ chạy)
+        └─ rồi <SessionRewardStory> — CHUỖI THẺ THƯỞNG sau MỌI phiên, và là CÁI KẾT DUY NHẤT:
+                 xp (+chip «+N EP») → THÀNH PHỐ (công trình nhích / "hàng chờ trống — chọn ngay")
+                    → chuỗi (dải bảy ngày) → nhịp hôm nay → nhiệm vụ («Trọn ngày +N XP — đã cộng»)
+                    → BƯỚC TUẦN vừa chốt → thử thách kỷ
+                    → lên cấp (MỜI CHỌN ≤3 kỹ năng ngay tại chỗ — thẻ đứng yên chờ, "Để sau")
+                    → bậc mới → di vật mới → DI VẬT LÊN BẬC → kỷ mới («Xem thành phố mới»)
+                 chạm để lật · tự lật 2,6 s · "Bỏ qua" một chạm · thẻ cuối: Tiếp tục
+                 luật thẻ: engine-thuần ở components/sessionRewardStory.js (không đọc store);
+                 đầu vào dựng ở component từ engine/buildChoices · opportunities · rankLadder
+                 └→ onDone (`finishStory`): closeLootModal() KHÔNG ĐIỀU KIỆN + dọn toast chuỗi thẻ đã
+                    nói thay (nhiệm vụ vừa xong · lên cấp · di vật) + điều hướng nếu bấm nút trên thẻ
+                    ("Chọn công trình ngay" → Hành trang › Công trình · "Xem thành phố mới" → Thành phố)
+
+        Sau đó: di vật · thành tích · báo cáo tuần đến KÈM ⇒ THẺ trong <RewardToastHost>
+                (đồng hồ toast DỪNG trong lúc chuỗi thẻ chạy)
 ```
+
+⚠️ **ADR-070 (2026-09-06) gỡ `LootDropModal`** — không còn hộp thoại chi tiết, không còn `detail === 'loot'`,
+không còn cổng `pendingEraChanged` giữ `pendingReward` lại. Chuỗi thẻ là người đọc DUY NHẤT của
+`pendingReward` (`previewStage.test.js` đọc hai file chuỗi thẻ để canh bản giả). Một phiên có ĐÚNG MỘT
+cái kết; tiếng mở rương / lên cấp / lên kỷ kêu MỘT lần.
 
 **Luật của tầng này (ADR-010)**: trạng thái của một hoạt hoạ 3 giây **không phải dữ liệu** — nó là
 vòng đời của một component. Store không biết gì về khoảnh khắc này, nên không có cờ nào có thể kẹt
@@ -210,8 +213,11 @@ phiên xong ──► completeFocusSession
                  ├─ craftingQueue[*].sessionsRemaining −1   (KHÔNG đổi — tầng thành phố đọc y như cũ)
                  ├─ evaluateRankPromotion(history SAU phiên) ⇒ rankSystem[book]+1 · pendingReward.rankUp
                  ├─ describeCrisisQuest(history SAU phiên)   ⇒ qua ⇒ relics += successRelic · pendingReward.relicEarned
-                 ├─ detectEraCrisis(EP) ⇒ openCrisisQuest(...)  (mở ở dạng MỀM: không deadline, không hộp thoại)
-                 └─ levelsGained ⇒ chuỗi thẻ MỜI CHỌN kỹ năng ⇒ unlockSkill ngay trong thẻ
+                 ├─ detectEraCrisis(EP) ⇒ openCrisisQuest(...)  (mở ở dạng MỀM: không deadline, không hộp thoại;
+                 │                                               kỳ quan `longer_crisis_window` cộng giờ vào cửa sổ)
+                 ├─ levelsGained ⇒ chuỗi thẻ MỜI CHỌN kỹ năng ⇒ unlockSkill ngay trong thẻ
+                 ├─ ADR-070: autoClaimWeeklySteps · thưởng trọn ngày · evaluateRelicEvolutions — tự vào, kể ở thẻ
+                 └─ ADR-070: kỳ quan = buff trục sống (`wonderPassiveBuffs`), không còn giá RP/tinh luyện/phạt
 
 Hành trang › Công trình (BuildScreen)
    listNextProjects(era, buildings, queue) ─► "Khởi công" ─► startProject(bpId)
@@ -221,7 +227,10 @@ Hành trang › Công trình (BuildScreen)
 ```
 
 **Luật**: mọi hệ thăng tiến ĐỌC LỊCH SỬ thay vì đòi bấm nút — `engine/rankLadder.countQualifyingSessions`
-là phép đếm DUY NHẤT cho "phiên ≥M′ trong N giờ gần đây" (bậc, thử thách kỷ, màn Tiến trình). Không có
+là phép đếm DUY NHẤT cho "phiên ≥M′ trong N giờ gần đây" (bậc, thử thách kỷ, màn Tiến trình);
+`engine/relicGrowth.countSessionsSince` là phép đếm DUY NHẤT cho "phiên ≥25′ kể từ lúc nhận di vật"
+(ADR-070). Không còn nút Nhận/Chốt/Tiến hoá nào ở tầng giao diện: `DailyMissions` · `RelicInventory`
+chỉ trả lời "còn bao xa". Không có
 hạn ⇒ không có "trễ" ⇒ không có phạt; chưa đủ thì đợi phiên sau. ⚠️ Tài nguyên · RP · tinh luyện VẪN được
 cộng vào store (không đổi state đồng bộ, không xoá thứ đã kiếm) nhưng **không còn cổng tiêu** — dữ liệu
 ngủ, xem `TECH_DEBT #99`. ⚠️ Thành phố không biết có thay đổi nào: hình dạng `craftingQueue`/`buildings`/

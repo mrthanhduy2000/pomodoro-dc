@@ -71,6 +71,26 @@ export const VI_PARAGRAPH_LIMIT = 0.08
 export const MIN_PASSAGE_CHARS = 200
 
 /**
+ * Rotation limits for ACTIVE journals (ADR-075). These two grow by design — `BAN_GIAO.md` gains
+ * ~17,700 chars/day — and `PHASE_RULES.md` §5 already required rotating the old part into
+ * `docs/archive/`. That rule existed for weeks while the files reached 70-78% of a context window,
+ * because nothing enforced it. These limits are deliberately generous (roughly 2x their size after
+ * the 2026-09-06 rotation): crossing one means ROTATE the oldest entries into `docs/archive/`,
+ * never raise the limit.
+ */
+export const ACTIVE_DOC_LIMITS = {
+  'BAN_GIAO.md': 120000,
+  'CHANGELOG.md': 120000,
+}
+
+/** Active journals that have grown past their rotation limit. Empty = gate green. */
+export function needsRotation() {
+  return Object.entries(ACTIVE_DOC_LIMITS)
+    .map(([file, limit]) => ({ file, limit, size: chars(file) }))
+    .filter((r) => r.size !== null && r.size > r.limit)
+}
+
+/**
  * Hard ceiling for ANY reference doc, active or archived: it must fit inside one context window.
  * A file larger than the window cannot be read in a session at all — `docs/archive/BAN_GIAO_ARCHIVE
  * _2026-08-24.md` was 141% of a 200k window until 2026-09-06 and nobody could have opened it safely.
@@ -296,7 +316,8 @@ function report() {
   const dup = duplicatedRules()
   const broken = brokenPointers()
   const huge = oversizedReferences()
-  if (over.length || wrong.length || dup.length || broken.length || huge.length) {
+  const rot = needsRotation()
+  if (over.length || wrong.length || dup.length || broken.length || huge.length || rot.length) {
     if (over.length) {
       console.error('❌ OVER LIMIT: ' + over.map((r) => `${r.file} (${fmt(r.size)}/${fmt(r.limit)})`).join(' · '))
       console.error('   Fix: SPLIT into a docs/ topic file and leave one pointer line. Do not raise the limit, do not delete knowledge.')
@@ -314,6 +335,10 @@ function report() {
     }
     if (broken.length) {
       for (const b of broken) console.error(`❌ BROKEN POINTER: ${b.file} → ${b.target} does not exist`)
+    }
+    if (rot.length) {
+      for (const r of rot) console.error(`❌ NEEDS ROTATION: ${r.file} ${fmt(r.size)} chars > ${fmt(r.limit)} limit`)
+      console.error('   Fix: move the oldest entries into docs/archive/ (PHASE_RULES §5). Do not raise the limit.')
     }
     if (huge.length) {
       for (const h of huge) console.error(`❌ LARGER THAN A CONTEXT WINDOW: ${h.file} ≈ ${fmt(h.tok)} tokens`)

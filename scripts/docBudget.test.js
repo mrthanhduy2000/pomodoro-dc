@@ -4,7 +4,7 @@ import { readFileSync, existsSync } from 'node:fs'
 import { fileURLToPath } from 'node:url'
 import { dirname, resolve } from 'node:path'
 import { BUDGETS, VI_PARAGRAPH_LIMIT, CANONICAL_RULES, chars, viParagraphs, tokens, overBudget,
-  wrongLanguage, duplicatedRules, brokenPointers, oversizedReferences,
+  wrongLanguage, duplicatedRules, brokenPointers, oversizedReferences, needsRotation, ACTIVE_DOC_LIMITS,
   REFERENCE_CEILING_TOKENS } from './doc-budget.mjs'
 
 const ROOT = resolve(dirname(fileURLToPath(import.meta.url)), '..')
@@ -170,4 +170,16 @@ test('doc-budget: no reference doc is larger than one context window', () => {
   const msg = huge.map((h) => `${h.file} ≈ ${h.tok.toLocaleString()} tokens`).join(' · ')
   assert.equal(huge.length, 0, `Split these — they cannot be read in one session: ${msg}`)
   assert.equal(REFERENCE_CEILING_TOKENS, 200000, 'the ceiling is one 200k context window, by definition')
+})
+
+/**
+ * ROTATION GATE (ADR-075). `BAN_GIAO.md` and `CHANGELOG.md` grow by design; `PHASE_RULES.md` §5 has
+ * always required rotating old entries into `docs/archive/`. Unenforced, they reached 70% and 78% of
+ * a context window. Crossing the limit means ROTATE, never raise it.
+ */
+test('doc-budget: active journals stay under their rotation limit', () => {
+  const rot = needsRotation()
+  const msg = rot.map((r) => `${r.file}: ${r.size}/${r.limit}`).join(' · ')
+  assert.equal(rot.length, 0, `Rotate the oldest entries into docs/archive/: ${msg}`)
+  assert.ok(Object.keys(ACTIVE_DOC_LIMITS).length >= 2, 'the rotation gate must guard the growing journals')
 })

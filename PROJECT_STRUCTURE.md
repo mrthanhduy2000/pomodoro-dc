@@ -1067,7 +1067,7 @@ tới **190.700 token = 95% cửa sổ 200k**. Cách chữa **duy nhất** là t
 | `docs/AI_COACH.md` | Chi tiết Gemini · chuỗi model · `tier:'deep'` · lưới chống-bịa · CoachChat/Offline/Nudge · `coach-digest` | `grep` khi sửa AI Coach |
 | **`docs/GOVERNANCE.md`** | *(ADR-073; tiếng Anh từ ADR-074)* Nguyên văn PROJECT GOVERNANCE PROTOCOL + AI ENGINEERING PLAYBOOK: bảng "loại thay đổi → tài liệu phải sửa" · Definition of Done · quy trình 7 giai đoạn · **mẫu TECHNICAL ADVISOR REPORT 11 mục** | mở khi làm task đáng kể / cần mẫu báo cáo |
 | **`docs/OPERATIONS.md`** | *(ADR-073; tiếng Anh từ ADR-074)* Nguyên văn hạ tầng: Vercel 12 Serverless Functions · sync CAS/`version` + bản vá C1 · Web Push iPhone · 4 cái bẫy Electron tray · quy trình deploy · MCP giữ cái nào | mở khi đụng sync/deploy/`api/`/push/tray |
-| `docs/archive/` | *(expanded 2026-09-06, ADR-075)* Frozen history — `BAN_GIAO_ARCHIVE_2026-08-24.md` **+ `_part2.md`** (split: the single file was 141% of a 200k window) · `START_HERE_LOG_2026-09-06.md` (rounds 20–33 + 3D city detail) · **`TECH_DEBT_CLOSED_2026-09-06.md`** (40 closed entries, verbatim) · **`ADR_ARCHIVE_001-050.md`** (50 oldest ADRs, verbatim) | history lookup only — `grep` / `--map`, never `cat` |
+| `docs/archive/` | *(expanded 2026-09-06, ADR-075)* Frozen history — **`CHANGELOG_upto_2026-08.md`** · **`BAN_GIAO_2026-09.md`** · `BAN_GIAO_ARCHIVE_2026-08-24.md` **+ `_part2.md`** (split: the single file was 141% of a 200k window) · `START_HERE_LOG_2026-09-06.md` (rounds 20–33 + 3D city detail) · **`TECH_DEBT_CLOSED_2026-09-06.md`** (40 closed entries, verbatim) · **`ADR_ARCHIVE_001-050.md`** (50 oldest ADRs, verbatim) | history lookup only — `grep` / `--map`, never `cat` |
 
 ⚠️ **Archive rule (ADR-075)**: closed knowledge is FROZEN into `docs/archive/`, never deleted, and the
 active file keeps a one-line index (number + title) pointing at it. A closed `TECH_DEBT` entry or a
@@ -1083,7 +1083,7 @@ Reopening something means moving it back out of the archive — never duplicatin
    `AGENTS.md` · `docs/GOVERNANCE.md` · `docs/OPERATIONS.md` viết **TIẾNG ANH** (tiếng Việt tốn
    ~2,3 lần token cho cùng một ý). Kho tra cứu: phần cũ giữ tiếng Việt, phần **MỚI viết tiếng Anh**.
    **Báo cáo cho Đàm: tiếng Việt.** Bảng ranh giới đầy đủ ở `CLAUDE.md` §LANGUAGE RULE.
-6. **NĂM CỔNG CANH THẬT** (`scripts/docBudget.test.js`, chạy trong `npm test`; mỗi cổng đều đã qua
+6. **SÁU CỔNG CANH THẬT** (`scripts/docBudget.test.js`, chạy trong `npm test`; mỗi cổng đều đã qua
    phép phá — không cổng nào là lời hứa):
    · **Trần ký tự** file tự-nạp: `CLAUDE.md` ≤ 16.000 · `START_HERE.md` ≤ 16.000 ·
      `PHASE_RULES.md` ≤ 8.000 · `AGENTS.md` ≤ 3.500.
@@ -1095,6 +1095,8 @@ Reopening something means moving it back out of the archive — never duplicatin
      ở thư mục memory trên máy Đàm, đã khai trong `EXTERNAL_DOCS`).
    · **Trần cửa sổ ngữ cảnh** *(ADR-075)*: không file tra cứu nào được vượt 200.000 token ước tính.
      Vượt = phải TÁCH, không được nới trần.
+   · **Xoay vòng nhật ký** *(ADR-075)*: `BAN_GIAO.md` · `CHANGELOG.md` ≤ 120.000 ký tự. Vượt = phải
+     chuyển mục cũ nhất sang `docs/archive/` (đúng `PHASE_RULES.md` §5), không được nới trần.
    Kiểm: **`node scripts/doc-budget.mjs`**. ⚠️ Đo bằng **ký tự Unicode (JS `String.length`)**, KHÔNG
    bằng `wc -c` (thổi phồng ~21%) và không bằng `len()` của Python (emoji ngoài BMP lệch). Hệ số:
    VI **1,723** ký tự/token (đo được) · EN **4,0** (ước lượng, chưa đo).

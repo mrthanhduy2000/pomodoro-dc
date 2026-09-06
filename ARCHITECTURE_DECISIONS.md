@@ -127,6 +127,11 @@ roughly 44%. Titles below are the lookup key; read one with
   **2,132 chars, −99.5%.** This is the highest-ROI change of the day and it was invisible while only
   documents were being audited — token efficiency is a property of the whole operating model
   (tool output, command choice, reporters), not just of markdown.
+- **Second pass, same day**: `CHANGELOG.md` 266,956 → 56,535 chars (78% → 16% of a window; 80% of its
+  bulk was one past month) and `BAN_GIAO.md` 240,561 → 58,013 chars / 3,109 → 711 lines — the latter
+  simply enforcing `PHASE_RULES.md` §5, a rule that had existed unenforced while the file tripled.
+  A sixth guard (**rotation**) now fails `npm test` if either grows past 120,000 chars, so the rule
+  no longer depends on someone remembering it.
 - **Impact**: largest single file 486,294 → 266,956 chars. No file exceeds a context window.
   Always-loaded: 10,171 → 9,942 tokens/session. `npm test` 1,605 → 1,609 tests.
 - **Review conditions**: when an active reference doc passes ~50% of a window again (the warning

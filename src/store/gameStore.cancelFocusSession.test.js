@@ -1,16 +1,10 @@
 /**
  * gameStore.cancelFocusSession.test.js — CHARACTERIZATION TESTS
  * ─────────────────────────────────────────────────────────────────────────────
- * KHÓA hành vi thật của cancelFocusSession() (phạt/rollback khi hủy phiên). Đây là
- * "lưới an toàn" TRƯỚC khi refactor: cancel đụng tài sản thật (trừ tài nguyên,
- * tiêu than lượng tha thứ, mất EP giam khi overclock, reset streak-flag). Mọi giá
- * trị dưới đây quan sát từ code đang chạy rồi chốt, không suy đoán.
- *
- * Determinism: applyDisasterPenalty có thể dùng Math.random để chọn "thảm hoạ" →
- * stub bằng withRandom() cho tất định. Số liệu phạt độc-lập-ngày (không dính bộ
- * nhiệm vụ hằng ngày) nên chốt trực tiếp.
- *
- * KHÔNG sửa implementation.
+ * KHÓA hành vi thật của cancelFocusSession(). ADR-071 (đóng #99, 2026-09-06): huỷ phiên KHÔNG còn
+ * trừ tài nguyên, KHÔNG còn tiêu lượt «Sự Tha Thứ» (`forgiveness`), KHÔNG còn ghi chi tiết phạt —
+ * ba đồng tiền ngủ đã rời khỏi trò chơi (ADR-069). Còn lại: ghi phiên huỷ vào lịch sử, mất EP giam
+ * khi overclock, reset cờ huỷ. `withRandom` giữ lại để chứng minh kết quả KHÔNG còn phụ thuộc RNG.
  */
 import test from 'node:test';
 import assert from 'node:assert/strict';
@@ -56,19 +50,19 @@ function setupCancellable(charges = 0) {
 function history0() { return useGameStore.getState().history[0] ?? {}; }
 const OPTS = { elapsedMinutes: 12, elapsedSeconds: 720, targetMinutes: 25 };
 
-// ═══════════════════════════════════════════════════════════════════════════════
-// 1) Hủy KHÔNG phạt (applyDisaster:false) — không mất tài nguyên, vẫn ghi phiên hủy
-// ═══════════════════════════════════════════════════════════════════════════════
-test('cancelFocusSession: non-strict (applyDisaster:false) không trừ tài nguyên, ghi phiên hủy', () => {
+// ═════════════════════════════════════════════════
+// 1) Huỷ phiên: KHÔNG trừ tài nguyên, KHÔNG chi tiết phạt, KHÔNG tiêu lượt tha thứ — vẫn ghi phiên huỷ
+// ═════════════════════════════════════════════════
+test('cancelFocusSession: không trừ tài nguyên, cancelPenalty = null, forgiveness đứng yên, ghi phiên hủy', () => {
   setupCancellable(0);
   const before = { ...useGameStore.getState().resources.book1 };
-  withRandom(0.5, () => useGameStore.getState().cancelFocusSession(0.5, { applyDisaster: false, ...OPTS }));
+  const forgivenessBefore = { ...useGameStore.getState().forgiveness };
+  withRandom(0.5, () => useGameStore.getState().cancelFocusSession(0.5, { ...OPTS }));
   const s = useGameStore.getState();
   const h = history0();
 
-  // Tài nguyên KHÔNG đổi
-  assert.deepEqual(s.resources.book1, before);
-  // Bản ghi phiên hủy
+  assert.deepEqual(s.resources.book1, before, 'huỷ phiên lại trừ tài nguyên');
+  assert.deepEqual(s.forgiveness, forgivenessBefore, 'huỷ phiên lại tiêu lượt tha thứ');
   assert.equal(h.status, 'cancelled');
   assert.equal(h.tier, 'Phiên bị hủy');
   assert.equal(h.cancelled, true);
@@ -78,38 +72,31 @@ test('cancelFocusSession: non-strict (applyDisaster:false) không trừ tài ngu
   assert.equal(h.epEarned, 0);
   assert.equal(h.multiplier, 0);
   assert.equal(h.cancelProgressRatio, 0.5);
-  assert.equal(h.cancelPenalty.waived, true);
-  assert.equal(h.cancelPenalty.appliedPenaltyRate, 0);
-  assert.deepEqual(h.cancelPenalty.deducted, {});
-  // Thống kê + cờ
+  assert.equal(h.cancelPenalty, null, 'không còn gì để phạt thì không có chi tiết phạt');
+  assert.equal(h.rpEarned, undefined);
+  assert.equal(h.refinedEarned, undefined);
+  assert.equal(h.resources, undefined);
   assert.equal(s.historyStats.cancelledSessions, 1);
   assert.equal(s.historyStats.cancelledMinutes, 12);
   assert.equal(s.sessionMeta.lastSessionCancelled, true);
   assert.equal(s.staking.active, false);
+  assert.equal(s.ui.disasterModalOpen, undefined, 'ADR-069: cờ hộp thoại "mất N% tài nguyên" đã gỡ hẳn khỏi store');
 });
 
-// ═══════════════════════════════════════════════════════════════════════════════
-// 2) Hủy CÓ phạt (strict, 0 than lượng) — trừ tài nguyên theo trần; KHÔNG còn mở hộp thoại thảm hoạ
-//    (ADR-069: tài nguyên đã rời đường chơi, câu "mất N% tài nguyên" chỉ còn là một lời trách —
-//    chi tiết vẫn ghi ở `pendingDisaster` + lịch sử để thống kê đọc)
-// ═══════════════════════════════════════════════════════════════════════════════
-test('cancelFocusSession: strict (0 than lượng) trừ tài nguyên theo trần, ghi chi tiết, KHÔNG mở hộp thoại', () => {
+// ═════════════════════════════════════════════════
+// 2) Tuỳ chọn `applyDisaster` đời cũ bị BỎ QUA — truyền true hay false, RNG nào cũng cùng một kết quả
+// ═════════════════════════════════════════════════
+test('cancelFocusSession: applyDisaster (đời cũ) không còn tác dụng — kết quả y hệt', () => {
   setupCancellable(0);
   withRandom(0.5, () => useGameStore.getState().cancelFocusSession(0.5, { applyDisaster: true, ...OPTS }));
-  const s = useGameStore.getState();
-  const h = history0();
-
-  // Bị trừ 12 mỗi loại (trần theo elapsedMinutes=12), 1000 → 988
-  assert.equal(s.resources.book1.da_silex, 988);
-  assert.equal(s.resources.book1.xuong, 988);
-  assert.equal(h.cancelPenalty.waived, false);
-  assert.equal(h.cancelPenalty.appliedPenaltyRate, 0.015);
-  assert.deepEqual(h.cancelPenalty.deducted.book1, { da_silex: 12, xuong: 12 });
-  // Phiên hủy vẫn xp/ep = 0; hộp thoại KHÔNG mở nhưng chi tiết phạt vẫn được giữ lại
-  assert.equal(h.xpEarned, 0);
-  assert.equal(h.epEarned, 0);
-  assert.equal(s.ui.disasterModalOpen, undefined, 'ADR-069: cờ hộp thoại "mất N% tài nguyên" đã gỡ hẳn khỏi store');
-  assert.equal(s.historyStats.cancelledSessions, 1);
+  const a = useGameStore.getState();
+  const ha = { ...history0(), id: 0, timestamp: 0, cancelledAt: 0, finishedAt: 0 };
+  setupCancellable(3);
+  withRandom(0.1, () => useGameStore.getState().cancelFocusSession(0.5, { applyDisaster: false, ...OPTS }));
+  const b = useGameStore.getState();
+  const hb = { ...history0(), id: 0, timestamp: 0, cancelledAt: 0, finishedAt: 0 };
+  assert.deepEqual(a.resources.book1, b.resources.book1);
+  assert.deepEqual(ha, hb, 'hai đường huỷ phải cho cùng một bản ghi (trừ mốc thời gian)');
 });
 
 // ═══════════════════════════════════════════════════════════════════════════════
@@ -152,31 +139,3 @@ test('cancelFocusSession: progressRatio ngoài [0,1] bị kẹp lại', () => {
   withRandom(0.5, () => useGameStore.getState().cancelFocusSession(-3, { applyDisaster: false, ...OPTS }));
   assert.equal(history0().cancelProgressRatio, 0);
 });
-
-// ═══════════════════════════════════════════════════════════════════════════════
-// 6) Tất định: cùng đầu vào + cùng seed ⇒ cùng mức phạt
-// ═══════════════════════════════════════════════════════════════════════════════
-test('cancelFocusSession: phạt tất định với RNG cố định (2 lần giống hệt)', () => {
-  setupCancellable(0);
-  withRandom(0.5, () => useGameStore.getState().cancelFocusSession(0.5, { applyDisaster: true, ...OPTS }));
-  const a = { ...useGameStore.getState().resources.book1 };
-  setupCancellable(0);
-  withRandom(0.5, () => useGameStore.getState().cancelFocusSession(0.5, { applyDisaster: true, ...OPTS }));
-  const b = { ...useGameStore.getState().resources.book1 };
-  assert.deepEqual(a, b);
-});
-
-/**
- * ─────────────────────────────────────────────────────────────────────────────
- * NOTE (chưa khóa trong phiên này — CÓ CHỦ ĐÍCH):
- * • Nhánh safeCancelPerk (getSafeCancelPerk, gameStore.js:4754): miễn phạt nếu có
- *   công trình đặc quyền phù hợp + lịch sử phù hợp trong ngày. Dựng đúng trạng thái
- *   cần building cụ thể → để dành, không bịa.
- * • Đường "than lượng tha thứ tự động miễn phạt" (chargeConsumed): quan sát cho
- *   thấy với progressRatio=0.5 + elapsed=12, penalty KHÔNG bị waive dù còn than
- *   lượng (đây là hành vi thật đã khóa gián tiếp ở test #2 qua waived=false); điều
- *   kiện kích hoạt waive-bằng-charge nằm trong applyDisasterPenalty và cần một
- *   phiên phân tích riêng để khóa đầy đủ ma trận rate×charge.
- * • Không phát hiện bug mới. Không sửa gì.
- * ─────────────────────────────────────────────────────────────────────────────
- */

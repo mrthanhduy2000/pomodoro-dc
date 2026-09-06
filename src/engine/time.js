@@ -205,3 +205,35 @@ export function formatVietnamOffsetISOString(date = new Date()) {
   const { year, month, day, hour, minute, second, millisecond } = getVietnamDateParts(date);
   return `${year}-${pad2(month)}-${pad2(day)}T${pad2(hour)}:${pad2(minute)}:${pad2(second)}.${String(millisecond).padStart(3, '0')}+07:00`;
 }
+
+/**
+ * vietnamHistoryTimeOpts — BỘ GETTER GIỜ VIỆT NAM cho mọi phép phân tích lịch sử phiên
+ * (`coachIntel` · `coachContext` · `statsAnswers`). Engine là THUẦN — không gọi Date — nên mọi
+ * hàm phân tích nhận giờ/ngày/tuần qua `opts`; đây là nơi DUY NHẤT dựng bộ `opts` ấy.
+ *
+ * ⚠️ Trước 2026-09-06 khối này được chép tay ở `hooks/useCoachContext.js`; màn Thống kê cần đúng
+ * bộ ấy lần thứ hai, và hai bản chép cùng một luật thì sớm muộn cũng lệch nhau (một bên đổi cửa sổ
+ * 28 ngày, bên kia không). Nên nó thành một hàm, và cả hai nơi gọi về đây.
+ *
+ * @param {Date|number} [now]
+ */
+export function vietnamHistoryTimeOpts(now = new Date()) {
+  const entryDate = (e) => new Date(e?.timestamp ?? 0);
+  const nowTs = now instanceof Date ? now.getTime() : Number(now);
+  return {
+    nowHour: getVietnamHour(nowTs),
+    getEntryHour: (e) => getVietnamHour(entryDate(e)),
+    getEntryWeekday: (e) => getVietnamDayOfWeek(entryDate(e)),
+    getEntryWeekKey: (e) => localWeekMondayStr(entryDate(e)),
+    nowWeekKey: localWeekMondayStr(nowTs),
+    prevWeekKey: localPrevWeekMondayStr(nowTs),
+    // 4 key tuần GẦN→XA ([0] = tuần hiện tại) cho xu hướng dài hạn.
+    weekKeysDesc: [0, 1, 2, 3].map((i) => localWeekMondayStr(nowTs - i * 7 * 86_400_000)),
+    getEntryDayKey: (e) => localDateStr(entryDate(e)),
+    todayKey: localDateStr(nowTs),
+    minDayKey: localDateStrDaysAgo(28, nowTs),
+    getEntryDayNumber: (e) => vietnamDayNumber(entryDate(e)),
+    nowDayNumber: vietnamDayNumber(nowTs),
+    todayWeekday: getVietnamDayOfWeek(nowTs),
+  };
+}

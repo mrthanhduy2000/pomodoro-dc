@@ -781,8 +781,6 @@ test('Vận May: Bàn Tay Vàng quay trúng ⇒ +20% XP (phiên ≥45′), trư�
   assert.equal(ngan.luckXpBonus, 0, 'dưới 45′ thì không quay');
   assert.equal(trung.luckXpBonus, BAN_TAY_VANG_XP_BONUS);
   assert.ok(Math.abs(trung.finalXP / truot.finalXP - (1 + BAN_TAY_VANG_XP_BONUS)) < 0.02, `XP ${trung.finalXP} / ${truot.finalXP}`);
-  // Cùng một hạt ngẫu nhiên, có hay không có kỹ năng thì tài nguyên rớt phải y hệt — kỹ năng không còn chạm vào túi.
-  assert.deepEqual(trung.resources, withRand(0.001, () => calculateRewards(45, {}, 0, {}, {})).resources, 'không còn +1 nguyên liệu thô');
 });
 
 test('Vận May: Nhãn Quan ⇒ +10% EP khi trúng; Linh Cảm cộng dồn cú thường và cú lớn', () => {
@@ -792,7 +790,6 @@ test('Vận May: Nhãn Quan ⇒ +10% EP khi trúng; Linh Cảm cộng dồn cú 
   assert.equal(nqTrung.luckEpBonus, NHAN_QUAN_EP_BONUS);
   // EP là số nhỏ (≈50) nên phép làm tròn hai lần có thể lệch một đơn vị — dung sai 5% đủ phân biệt +10% với 0%.
   assert.ok(Math.abs(nqTrung.finalEP / nqTruot.finalEP - (1 + NHAN_QUAN_EP_BONUS)) < 0.05, `EP ${nqTrung.finalEP} / ${nqTruot.finalEP}`);
-  assert.equal(nqTrung.t2Drop, nqTruot.t2Drop, 'không còn +1 tinh luyện');
 
   const lc = { linh_cam: true };
   assert.equal(withRand(0.001, () => calculateRewards(45, lc, 0, {}, {})).luckXpBonus, LINH_CAM_XP_BONUS + LINH_CAM_BIG_XP_BONUS, 'cả hai cú');

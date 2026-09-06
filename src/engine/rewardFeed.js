@@ -98,28 +98,9 @@ function buildLootToast(pendingReward, stageHint = null, buildHint = null) {
   if (!pendingReward || pendingReward.eraChanged) return null;
 
   const xp = Number(pendingReward.totalSessionXP ?? pendingReward.finalXP ?? 0);
-  const resourceUnits = Object.values(pendingReward.resources ?? {})
-    .reduce((sum, value) => sum + (Number(value) || 0), 0);
-  /*
-    ⚠️ XẾP HIẾM TRƯỚC, THƯỜNG SAU — dòng này chỉ được MỘT dòng, dài hơn là bị cắt "…", nên thứ
-    tự ở đây quyết định cái gì sống sót. Đo trên fixture 624 phiên (ngưỡng lấy thẳng từ
-    `constants.js`, không chép tay):
-      · Rương Lớn (phiên ≥60 phút)      —  63/624 =  10,1%
-      · Tinh luyện T2 (phiên ≥45 phút)  — 180/624 =  28,8%
-      · tài nguyên / RP                  — gần như MỌI phiên
-    Hai thứ đầu là phần thưởng cho việc KHÓ NHẤT Đàm làm, và chúng đã được tính từ lâu mà chưa
-    bao giờ được GỌI TÊN trên thẻ: "Rương Lớn" trước nay chỉ là chữ "lớn" viết thường bé xíu
-    trên huy hiệu hệ số, còn tinh luyện thì không hiện ở đâu cả. Để "+18 tài nguyên" — con số
-    có ở mọi phiên nên chẳng phân biệt được phiên nào — đứng trước chúng là đẩy phần thưởng
-    hiếm nhất ra khỏi dòng.
-  */
-  const bits = [];
-  if (pendingReward.largeChest) bits.push('Rương Lớn');
-  const tinhLuyen = Number(pendingReward.t2Drop ?? 0);
-  if (tinhLuyen > 0) bits.push(`+${tinhLuyen} tinh luyện`);
-  if (resourceUnits > 0) bits.push(`+${resourceUnits} tài nguyên`);
-  if ((pendingReward.rpEarned ?? 0) > 0) bits.push(`+${pendingReward.rpEarned} RP`);
-
+  // ADR-071 (đóng #99): «Rương Lớn» · «+N tinh luyện» · «+N tài nguyên» · «+N RP» đã thôi lên thẻ —
+  // ba đồng tiền ấy không còn được tính, và một cái rương không còn gì để đựng chỉ là một cái nhãn.
+  // Phiên thường không có mốc thì thẻ nói BẬC của phiên (thứ Đàm chủ động quyết được).
   // ⚠️ SẮP TỚI MỐC THÌ NÓI VỀ MỐC, KHÔNG ĐẾM TÀI NGUYÊN. `description` chỉ được ĐÚNG MỘT DÒNG
   // (dài hơn bị cắt "…"), nên đây là THAY chứ không nối thêm — và cái được thay là con số Đàm
   // không dùng để quyết gì ("+18 tài nguyên"), còn thứ thay vào ("một phiên nữa là tới «…»") là
@@ -154,11 +135,8 @@ function buildLootToast(pendingReward, stageHint = null, buildHint = null) {
   const event = pendingReward.positiveEvent;
   const eventBonus = Number(pendingReward.positiveEventBonus ?? 0);
   if (event?.label) {
-    // ⚠️ Nhánh CÓ sự kiện cũng phải khoe hai thứ hiếm: chúng không tranh chỗ với câu chuyện
-    // (đây là phần đuôi nối sau `event.desc`), và bỏ chúng ở đây nghĩa là 63% số phiên — đúng
-    // những phiên VUI NHẤT — lại là những phiên giấu mất Rương Lớn.
+    // Nhánh CÓ sự kiện nối phần XP thưởng của chính sự kiện sau câu chuyện của nó.
     const khoe = [
-      pendingReward.largeChest ? 'Rương Lớn' : null,
       eventBonus > 0 ? `+${eventBonus.toLocaleString('vi-VN')} XP thưởng` : null,
     ].filter(Boolean).join(' · ') || null;
     return {
@@ -192,7 +170,7 @@ function buildLootToast(pendingReward, stageHint = null, buildHint = null) {
       ⚠️ Thứ tự nhường: `stageHint` (hiếm nhất, "còn 1 phiên nữa là tới …") > `buildHint` >
       danh sách tài nguyên. KHÔNG đổi một luật tính thưởng nào — thuần khâu hiển thị.
     */
-    description: stageHint ?? buildHint ?? (bits.length > 0 ? bits.join(' · ') : (pendingReward.tierLabel ?? 'Phần thưởng đã được cộng.')),
+    description: stageHint ?? buildHint ?? (pendingReward.tierLabel ?? 'Phần thưởng đã được cộng.'),
     amount: xp > 0 ? `+${xp.toLocaleString('vi-VN')} XP` : null,
     action: { detail: 'loot' },
   };

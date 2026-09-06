@@ -43,9 +43,10 @@ test('thẻ XP luôn đứng đầu và nói ĐÚNG con số toast đang nói (t
   assert.deepEqual(khongEp.chips.map((c) => c.id), ['streak', 'combo']);
 });
 
-test('ca đỉnh: EP rồi Rương Lớn đứng TRƯỚC các chip khác, KHÔNG còn chip tinh luyện (ADR-069), sự kiện tích cực được kể, jackpot bật', () => {
+test('ca đỉnh: EP đứng ĐẦU, KHÔNG còn chip Rương Lớn lẫn tinh luyện (ADR-069/071), sự kiện tích cực được kể, jackpot bật', () => {
   const [xp] = buildRewardStoryCards({ reward: REWARD_MAX });
-  assert.deepEqual(xp.chips.slice(0, 2).map((c) => c.id), ['ep', 'chest']);
+  assert.equal(xp.chips[0].id, 'ep');
+  assert.ok(!xp.chips.some((c) => c.id === 'chest'), 'Rương Lớn không còn gì để đựng — chip của nó không được quay lại');
   assert.ok(!xp.chips.some((c) => c.id === 'refined'), 'tinh luyện đã rời khỏi đường chơi — chip của nó không được quay lại');
   assert.equal(xp.jackpot, true);
   assert.equal(xp.tier, 'huyenThoai');

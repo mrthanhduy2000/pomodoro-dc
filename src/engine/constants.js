@@ -1897,9 +1897,6 @@ export const MISSION_CATALOG = [
   { id: 'session_120min',       label: 'Hoàn thành 1 phiên ≥120 phút',              type: 'singleSession',   family: 'singleSession',    bucket: 'stretch', weight: 0.35, goal: 120, rewardXP: 200 },
   // Deep work
   { id: 'deep_2_sessions',      label: 'Hoàn thành 2 phiên ≥45 phút',               type: 'deepSessions',    family: 'deepSessions',     bucket: 'stretch', weight: 0.75, goal: 2,   rewardXP: 80  },
-  // Research points
-  { id: 'earn_80_rp',           label: 'Kiếm 80 RP trong ngày',                     type: 'researchPoints',  family: 'researchPoints',   bucket: 'stretch', weight: 0.45, goal: 80,  rewardXP: 55  },
-  { id: 'earn_160_rp',          label: 'Kiếm 160 RP trong ngày',                    type: 'researchPoints',  family: 'researchPoints',   bucket: 'rare',    weight: 0.18, goal: 160, rewardXP: 95  },
   // Variety
   { id: 'use_2_categories',     label: 'Dùng 2 danh mục khác nhau trong ngày',      type: 'uniqueCategories', family: 'uniqueCategories', bucket: 'variety', weight: 1.0,  goal: 2,   rewardXP: 30  },
   { id: 'use_3_categories',     label: 'Dùng 3 danh mục khác nhau trong ngày',      type: 'uniqueCategories', family: 'uniqueCategories', bucket: 'variety', weight: 0.7,  goal: 3,   rewardXP: 75  },

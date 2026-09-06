@@ -11,10 +11,7 @@ import {
   loadAdviceMemory, saveAdviceMemory, recordGoalAdvice, pickGoalFollowup,
   buildAdviceMemoryLine, parseGoalAdviceFromContext,
 } from '../engine/coach/coachAdviceMemory';
-import {
-  getVietnamHour, getVietnamDayOfWeek, localWeekMondayStr, localPrevWeekMondayStr,
-  vietnamDayNumber, localDateStr, localDateStrDaysAgo,
-} from '../engine/time';
+import { vietnamHistoryTimeOpts } from '../engine/time';
 
 export function useAnalystContext({
   sessionsCompletedToday = 0,
@@ -28,32 +25,17 @@ export function useAnalystContext({
   const sessionCategories = useGameStore((s) => s.sessionCategories);
 
   return useCallback(() => {
-    const entryDate = (e) => new Date(e?.timestamp ?? 0);
     const useMinutes = dailyGoalType === 'minutes';
     const goalValue = useMinutes ? dailyGoalMinutes : dailyGoalSessions;
     const cats = sessionCategories ?? [];
-    // 4 key tuần GẦN→XA (tuần hiện tại trước) cho xu hướng dài hạn. Date ở hook (gọi
-    // lúc gửi) là an toàn — engine getMultiWeekTrend vẫn thuần.
-    const weekKeysDesc = [0, 1, 2, 3].map((i) => localWeekMondayStr(new Date(Date.now() - (i * 7 * 86400000))));
     // [Bộ nhớ lời khuyên] đọc bản ghi cũ → dòng "Ghi nhớ" nhắc lời khuyên ĐỦ CŨ (cá nhân hoá).
     const now = Date.now();
     const adviceRecords = loadAdviceMemory();
     const adviceMemoryLine = buildAdviceMemoryLine(pickGoalFollowup(adviceRecords, now), now);
     const ctx = buildAnalystContext(history ?? [], {
       adviceMemoryLine,
-      nowHour: getVietnamHour(),
-      getEntryHour: (e) => getVietnamHour(entryDate(e)),
-      getEntryWeekday: (e) => getVietnamDayOfWeek(entryDate(e)),
-      getEntryWeekKey: (e) => localWeekMondayStr(entryDate(e)),
-      nowWeekKey: localWeekMondayStr(),
-      prevWeekKey: localPrevWeekMondayStr(),
-      weekKeysDesc,
-      getEntryDayKey: (e) => localDateStr(entryDate(e)),
-      todayKey: localDateStr(),
-      minDayKey: localDateStrDaysAgo(28),
-      getEntryDayNumber: (e) => vietnamDayNumber(entryDate(e)),
-      nowDayNumber: vietnamDayNumber(),
-      todayWeekday: getVietnamDayOfWeek(),
+      // Bộ getter giờ VN dùng CHUNG với màn Thống kê (`engine/time.js`) — một luật một công thức.
+      ...vietnamHistoryTimeOpts(now),
       hasSessionToday: sessionsCompletedToday > 0,
       dailyGoalMetric: useMinutes ? 'minutes' : 'sessions',
       dailyGoal: goalValue,

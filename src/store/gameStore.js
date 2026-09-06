@@ -58,8 +58,6 @@ import {
   GOAL_ACHIEVED_BONUS_RATE,
   FORGIVENESS_CANCELS_PER_WEEK,
   SIEU_TAP_TRUNG_CHARGES,
-  SIEU_TAP_TRUNG_MIN_MIN,
-  NGHI_NGOI_HOAN_HAO_EXTRA_CHARGES,
   SO_DO_MIN_MINUTES,
   RANK_SYSTEM,
   ACHIEVEMENTS,
@@ -98,39 +96,24 @@ import {
   PRESTIGE_MAX_STACKS,
   SP_PER_LEVEL,
   STREAK_BONUS_PER_DAY,
-  STREAK_MAX_BONUS_DAYS,
   CRAFT_QUEUE_SLOTS,
   LEGACY_QUEUE_SLOTS,
   RELIC_EVOLUTION,
-  T2_CRAFT_COST,
   getBuildingLevelMultiplier,
-  normalizeRawCost,
   normalizeRefinedBag,
-  getUnifiedRefinedCost,
   normalizeRawResourceId,
-  STORAGE_VAULT_XP_PER_MINUTE,
-  STORAGE_VAULT_XP_PER_MINUTE_ENHANCED,
   // Bản Cập Nhật Cộng Hưởng — Tinh Thể (TTCH)
   SKILL_TREE,
   TINH_THE_HARD_CAP,
-  TTCH_PER_DAILY_SWEEP,
-  TTCH_PER_CHAIN_STEP,
-  TTCH_PER_CHAIN_FINALE,
-  TTCH_PER_STREAK_MISSION,
-  TTCH_PER_REFINED,
-  TTCH_RELIC_SUBSIDY_CAP_PCT,
 } from '../engine/constants';
 import {
   calculateRewards,
-  calculateSessionResourceFloor,
-  applyDisasterPenalty,
   computeLevelUps,
   getActiveBook,
   getComboDecayMs,
   HISTORY_ENTRY_STATUS,
   isCancelledHistoryEntry,
   // Bản Cập Nhật Cộng Hưởng
-  clampRelicDisasterReduction,
   getEffectiveSkillCost,
 } from '../engine/gameMath';
 import { inferAchievementUnlockTimes } from '../engine/achievementTimeline';
@@ -140,6 +123,7 @@ import notificationManager from '../engine/notifications';
 import {
   detectEraCrisis,
   createEraCrisisState,
+  withCanonicalCrisisText,
   aggregateActiveBuffs,
 } from '../engine/challengeEngine';
 // ADR-069: bậc tự thăng + thử thách kỷ nguyên thành nhiệm vụ mềm — cùng một phép đếm lịch sử.
@@ -919,14 +903,6 @@ function applyOverclockRewardBonus(baseReward = {}, rewardMultiplier = 1) {
     finalEP: Math.round((baseReward.finalEP ?? 0) * rewardMultiplier),
     finalEXP: Math.round((baseReward.finalEXP ?? baseReward.finalXP ?? 0) * rewardMultiplier),
     multiplier: (baseReward.multiplier ?? 1) * rewardMultiplier,
-    resources: Object.fromEntries(
-      Object.entries(baseReward.resources ?? {}).map(([resourceId, amount]) => ([
-        resourceId,
-        Math.max(0, Math.round((amount ?? 0) * rewardMultiplier)),
-      ])),
-    ),
-    rpEarned: Math.round((baseReward.rpEarned ?? 0) * rewardMultiplier),
-    t2Drop: Math.round((baseReward.t2Drop ?? 0) * rewardMultiplier * 100) / 100,
   };
 }
 
@@ -1396,39 +1372,7 @@ function normalizeStoredRefined(resourcesRefined = {}) {
 
 
 
-function getEconomyRewardModifiers(buildings, buildingLevels = {}) {
-  let rawBonus = 0;
-  let refinedBonus = 0;
 
-  for (const bpId of buildings) {
-    const eff = BUILDING_EFFECTS[bpId];
-    if (eff?.type !== 'economy') continue;
-
-    const levelMultiplier = getBuildingLevelMultiplier(buildingLevels?.[bpId] ?? 1);
-    rawBonus += (eff.t1DropBonus ?? 0) * levelMultiplier;
-    refinedBonus += (eff.t2DropBonus ?? 0) * levelMultiplier;
-  }
-
-  return {
-    rawMultiplier: 1 + rawBonus,
-    refinedMultiplier: 1 + refinedBonus,
-  };
-}
-
-function getBuildingCancelPenaltyMultiplier(buildings, buildingLevels = {}) {
-  let reduction = 0;
-
-  for (const bpId of buildings) {
-    const eff = BUILDING_EFFECTS[bpId];
-    if (eff?.type !== 'defense') continue;
-
-    const levelMultiplier = getBuildingLevelMultiplier(buildingLevels?.[bpId] ?? 1);
-    reduction += (eff.cancelLossReductionPct ?? 0) * levelMultiplier;
-  }
-
-  const cappedReduction = Math.min(reduction, 0.6);
-  return 1 - cappedReduction;
-}
 
 // ⚠️ `getWonderCancelPenaltyMultiplier` · `getWonderStreakBonusCap` ·
 // `getDailyMissionXPBonusMultiplier` ĐÃ CHUYỂN sang `engine/wonderEffects.js` (2026-09-05) —
@@ -1493,14 +1437,13 @@ function getBuildingPerkSessionRewards(prev, {
 } = {}) {
   const rewards = [];
 
-  const addReward = (perk, reason, xp = 0, refined = 0) => {
+  const addReward = (perk, reason, xp = 0) => {
     rewards.push({
       id: `${perk.id}_${reason}`,
       label: perk.label,
       family: perk.family,
       reason,
       xp: Math.max(0, Math.round(xp ?? 0)),
-      refined: Math.max(0, Math.round(refined ?? 0)),
     });
   };
 
@@ -1510,17 +1453,17 @@ function getBuildingPerkSessionRewards(prev, {
     && newSessionsCompletedToday > 0
     && newSessionsCompletedToday % (dailyChest.everySessions ?? 3) === 0
   ) {
-    addReward(dailyChest, 'Phiên thứ 3 trong ngày', dailyChest.xp, dailyChest.refined);
+    addReward(dailyChest, 'Phiên thứ 3 trong ngày', dailyChest.xp);
   }
 
   const deepChest = findBuiltPerk(prev.buildings, 'deep_chest');
   if (deepChest && minutesFocused >= (deepChest.minMinutes ?? 60)) {
-    addReward(deepChest, 'Phiên dài', deepChest.xp, deepChest.refined);
+    addReward(deepChest, 'Phiên dài', deepChest.xp);
   }
 
   const safetyNet = findBuiltPerk(prev.buildings, 'recovery_bonus');
   if (safetyNet && prev.sessionMeta?.lastSessionCancelled && minutesFocused >= (safetyNet.minMinutes ?? 15)) {
-    addReward(safetyNet, 'Phiên bù sau khi hủy', safetyNet.xp, safetyNet.refined);
+    addReward(safetyNet, 'Phiên bù sau khi hủy', safetyNet.xp);
   }
 
   const sameCategory = findBuiltPerk(prev.buildings, 'same_category_combo');
@@ -1529,7 +1472,7 @@ function getBuildingPerkSessionRewards(prev, {
     && categoryId
     && consecutiveSameCat >= (sameCategory.minStreak ?? 3)
   ) {
-    addReward(sameCategory, 'Chuỗi cùng danh mục', sameCategory.xp, sameCategory.refined);
+    addReward(sameCategory, 'Chuỗi cùng danh mục', sameCategory.xp);
   }
 
   const varietyDay = findBuiltPerk(prev.buildings, 'variety_day');
@@ -1539,21 +1482,20 @@ function getBuildingPerkSessionRewards(prev, {
     && (catsToday?.length ?? 0) < requiredCategories
     && uniqueCatsToday.size >= requiredCategories
   ) {
-    addReward(varietyDay, 'Đủ 3 danh mục hôm nay', varietyDay.xp, varietyDay.refined);
+    addReward(varietyDay, 'Đủ 3 danh mục hôm nay', varietyDay.xp);
   }
 
   return rewards.reduce((summary, reward) => ({
     xp: summary.xp + reward.xp,
-    refined: summary.refined + reward.refined,
     rewards: [...summary.rewards, reward],
-  }), { xp: 0, refined: 0, rewards: [] });
+  }), { xp: 0, rewards: [] });
 }
 
 function makeBuildingPerkRewardNotification(reward) {
   return {
     title: reward.family ?? 'Đặc quyền công trình',
-    body: `${reward.label}: ${reward.reason}${reward.xp > 0 ? `, +${reward.xp} XP` : ''}${reward.refined > 0 ? `, +${reward.refined} tinh luyện` : ''}.`,
-    icon: reward.refined > 0 ? '🎁' : '⚡',
+    body: `${reward.label}: ${reward.reason}${reward.xp > 0 ? `, +${reward.xp} XP` : ''}`,
+    icon: '⚡',
     category: 'workshop',
     action: { tab: 'collection', collectionTab: 'workshop' },
   };
@@ -2031,7 +1973,7 @@ function normalizePersistedGameState(persistedState, currentState, options = {})
       : current.rankSystem,
     rankChallenge: persisted.rankChallenge ?? current.rankChallenge,
     eraCrisis: hasPersistedKey('eraCrisis')
-      ? { ...makeDefaultEraCrisis(), ...(isRecord(persisted.eraCrisis) ? persisted.eraCrisis : {}) }
+      ? withCanonicalCrisisText({ ...makeDefaultEraCrisis(), ...(isRecord(persisted.eraCrisis) ? persisted.eraCrisis : {}) })
       : current.eraCrisis,
     relics: Array.isArray(persisted.relics) ? persisted.relics.map((r) => normalizeStoredRelic(r)) : current.relics,
     blueprints: Array.isArray(persisted.blueprints) ? persisted.blueprints : current.blueprints,
@@ -2566,67 +2508,9 @@ function checkAchievements(currentUnlocked, snapshot) {
     .map((a) => a.id);
 }
 
-// ─── HELPER: Gộp tài nguyên vào đúng túi quyển ───────────────────────────────
-function mergeResources(allResources, gains, activeBook) {
-  const bookKey     = `book${activeBook}`;
-  const updatedBook = { ...allResources[bookKey] };
-  for (const [id, amount] of Object.entries(gains)) {
-    updatedBook[id] = (updatedBook[id] ?? 0) + amount;
-  }
-  return { ...allResources, [bookKey]: updatedBook };
-}
-
 function getSessionRewardNumber(entry, key) {
   const value = entry?.[key];
   return Number.isFinite(value) ? Math.max(0, value) : 0;
-}
-
-function getSessionBook(entry) {
-  return Number.isFinite(entry?.book) ? entry.book : null;
-}
-
-function subtractSessionRawResources(allResources, sessionEntry) {
-  const book = getSessionBook(sessionEntry);
-  const gains = isRecord(sessionEntry?.resources) ? sessionEntry.resources : {};
-  if (!book || Object.keys(gains).length === 0) return allResources;
-
-  const bookKey = `book${book}`;
-  const updatedBook = { ...(allResources?.[bookKey] ?? {}) };
-
-  for (const [rawId, rawAmount] of Object.entries(gains)) {
-    const amount = Number.isFinite(rawAmount) ? Math.max(0, rawAmount) : 0;
-    if (amount <= 0) continue;
-
-    const resourceId = normalizeRawResourceId(rawId);
-    updatedBook[resourceId] = Math.max(0, (updatedBook[resourceId] ?? 0) - amount);
-  }
-
-  return { ...allResources, [bookKey]: updatedBook };
-}
-
-function subtractSessionRefinedReward(resourcesRefined, sessionEntry) {
-  const eraKey = getSessionBook(sessionEntry);
-  const refinedEarned = getSessionRewardNumber(sessionEntry, 'refinedEarned');
-  if (!eraKey || refinedEarned <= 0) return resourcesRefined;
-
-  const prevRefined = normalizeRefinedBag(resourcesRefined?.[eraKey]);
-  return {
-    ...resourcesRefined,
-    [eraKey]: {
-      ...prevRefined,
-      t2: Math.max(0, prevRefined.t2 - refinedEarned),
-    },
-  };
-}
-
-function subtractSessionResearchReward(research, sessionEntry) {
-  const rpEarned = getSessionRewardNumber(sessionEntry, 'rpEarned');
-  if (rpEarned <= 0) return research;
-
-  return {
-    ...normalizeStoredResearch(research),
-    rp: Math.max(0, (research?.rp ?? 0) - rpEarned),
-  };
 }
 
 function subtractPlayerXP(player, xpAmount) {
@@ -2863,7 +2747,6 @@ function buildDailyProgressSnapshotFromHistory(history = [], dayKey = localDateS
     sessions: dayEntries.length,
     focusMinutes: minutes,
     maxSessionMinutes: dayEntries.reduce((max, entry) => Math.max(max, entry.minutes ?? 0), 0),
-    researchPoints: dayEntries.reduce((sum, entry) => sum + (Number(entry.rpEarned) || 0), 0),
     uniqueCategories: categorySet.size,
     deepSessions: dayEntries.filter((entry) => (entry.minutes ?? 0) >= 45).length,
     notes,
@@ -2881,8 +2764,6 @@ function getDailyMissionProgressFromSnapshot(mission, snapshot) {
       return Math.min(mission.goal, snapshot.focusMinutes);
     case 'singleSession':
       return Math.min(mission.goal, snapshot.maxSessionMinutes);
-    case 'researchPoints':
-      return Math.min(mission.goal, snapshot.researchPoints);
     case 'uniqueCategories':
       return Math.min(mission.goal, snapshot.uniqueCategories);
     case 'deepSessions':
@@ -3657,11 +3538,9 @@ const useGameStore = create(
           const breakBelongsToDeletedSession =
             prev.breakSession?.sourceSessionId === sessionId
             || prev.ui?.activeBreakSessionId === sessionId;
-          const rolledBackResearch = subtractSessionResearchReward(prev.research, deletedSession);
           const rebuiltCraftingQueue = rebuildCraftingQueueAfterSessionDelete(prev.craftingQueue, deletedSession);
           const eraScopedRollback = pickEraScopedBlueprintPatch({
             ...prev,
-            research: rolledBackResearch,
             craftingQueue: rebuiltCraftingQueue,
           }, rewardRollback.progress.activeBook);
           const timeSensitiveRollback = buildTimeSensitiveProgressState({
@@ -3676,8 +3555,6 @@ const useGameStore = create(
             history: nextHistory,
             historyStats: buildHistoryStatsFromHistory(nextHistory),
             savedNotes: (prev.savedNotes ?? []).filter((entry) => entry.sourceSessionId !== sessionId),
-            resources: subtractSessionRawResources(prev.resources, deletedSession),
-            resourcesRefined: subtractSessionRefinedReward(prev.resourcesRefined, deletedSession),
             ...eraScopedRollback,
             dailyTracking: timeSensitiveRollback.dailyTracking,
             streak: timeSensitiveRollback.streak,
@@ -4031,19 +3908,8 @@ const useGameStore = create(
           ? (state.staking.rewardMultiplier ?? OVERCLOCK_REWARD_MULTIPLIER)
           : 1;
         const boostedReward = applyOverclockRewardBonus(baseReward, overclockRewardMultiplier);
-        const economyRewardModifiers = getEconomyRewardModifiers(state.buildings, state.buildingLevels);
-        const rawRewardMultiplier = economyRewardModifiers.rawMultiplier;
-        const extraRefinedReward = 0; // ADR-070: kỳ quan không còn cộng tinh luyện
-        const reward = {
-          ...boostedReward,
-          resources: Object.fromEntries(
-            Object.entries(boostedReward.resources ?? {}).map(([resId, amount]) => ([
-              resId,
-              Math.max(0, Math.round((amount ?? 0) * rawRewardMultiplier)),
-            ])),
-          ),
-          t2Drop: Math.round((((boostedReward.t2Drop ?? 0) * economyRewardModifiers.refinedMultiplier) + extraRefinedReward) * 100) / 100,
-        };
+        // ADR-071 (đóng #99): không còn hệ số tài nguyên/tinh luyện của công trình kinh tế.
+        const reward = boostedReward;
 
         // ─── Sự kiện tích cực ngẫu nhiên (ưu tiên era-specific) ─────────
         const eraSpecific = ERA_MINI_EVENTS[activeBook] ?? [];
@@ -4055,9 +3921,6 @@ const useGameStore = create(
         }
         const positiveEventBonus = positiveEvent
           ? Math.round(reward.finalXP * positiveEvent.bonusPct * POSITIVE_EVENT_XP_SCALE) : 0;
-        const positiveEventRPBonus = positiveEvent
-          ? Math.round((reward.rpEarned ?? 0) * (positiveEvent.rpBonusPct ?? positiveEvent.bonusPct ?? 0))
-          : 0;
         const comboBonus = Math.round(reward.finalXP * comboBonusPct);
 
         // Kiểm tra cập nhật Thử Thách Thăng Cấp đang active
@@ -4067,13 +3930,6 @@ const useGameStore = create(
         let newRankChallenge = null;
         let newRankSystem     = { ...state.rankSystem };
         let rankPromotion     = null;
-
-        // Gộp tài nguyên
-        const newResources = mergeResources(
-          state.resources,
-          reward.resources,
-          reward.activeBook,
-        );
 
         // Streak advancement — V2: dùng skill check cho Lá Chắn Streak
         const newStreak = advanceStreak(activeStreak, unlockedSkills);
@@ -4132,20 +3988,7 @@ const useGameStore = create(
           : refreshedChain.stepProgress;
         const newWeeklyChain = { ...refreshedChain, stepProgress: newChainStepProgress };
 
-        // ── RP cộng dồn ───────────────────────────────────────────────────
-        const finalSessionRP = (reward.rpEarned ?? 0) + positiveEventRPBonus;
-        const newResearchRP = (state.research?.rp ?? 0) + finalSessionRP;
-
-        // ── Nguyên liệu tinh luyện rớt tự nhiên ──────────────────────────
-        const eraKey = reward.activeBook;
-        const prevRefined = normalizeRefinedBag(state.resourcesRefined?.[eraKey]);
-        const newRefined  = {
-          ...state.resourcesRefined,
-          [eraKey]: {
-            t2: prevRefined.t2 + (reward.t2Drop ?? 0),
-            t3: 0,
-          },
-        };
+        // ADR-071 (đóng #99): RP · tinh luyện · tài nguyên KHÔNG còn được cộng — đồng tiền duy nhất là phiên.
 
         // ── Crafting queue: mỗi phiên tiến 1 bước, đặc quyền có thể đẩy nhanh thêm ─
         const craftingAccelerationMode = getCraftingAccelerationMode(state.buildings, minutesFocused);
@@ -4222,7 +4065,6 @@ const useGameStore = create(
             // ⚠️ Và nó đổi một số 0 chết thành một con số biết nói: "22/30" bảo Đàm còn thiếu 8
             // phút, còn "0/30" nói rằng anh chưa làm gì — trong khi anh vừa tập trung 22 phút.
             if (m.type === 'singleSession') progress = Math.max(progress, Math.min(m.goal, minutesFocused));
-            if (m.type === 'researchPoints') progress = Math.min(m.goal, progress + finalSessionRP);
             if (m.type === 'uniqueCategories') progress = Math.min(m.goal, uniqueCatsToday.size);
             if (m.type === 'deepSessions') progress = Math.min(m.goal, deepSessionsToday);
             if (m.type === 'notes' && qualifiesMissionNote) progress = Math.min(m.goal, progress + 1);
@@ -4323,9 +4165,6 @@ const useGameStore = create(
             tier:             reward.tierLabel,
             multiplier:       reward.multiplier,
             jackpot:          reward.jackpotApplied,
-            resources:        reward.resources,
-            rpEarned:         finalSessionRP,
-            refinedEarned:    (reward.t2Drop ?? 0) + buildingPerkReward.refined,
             blueprint:        null,
             categoryId:       categoryId ?? null,
             categorySnapshot: sessionSnapshot?.categorySnapshot ?? null,
@@ -4337,7 +4176,6 @@ const useGameStore = create(
             targetMinutes:    minutesFocused,
             comboCount:       newComboCount,
             positiveEvent:    positiveEvent,
-            positiveEventRPBonus,
             note:             trimmedNote || null,
             breakNote:        null,
             goal:             trimmedGoal || null,
@@ -4391,7 +4229,7 @@ const useGameStore = create(
           }
           const newSavedNotes = upsertSavedNoteEntry(prev.savedNotes ?? [], sessionEntry);
           const currentHistoryStats = normalizeStoredHistoryStats(prev.historyStats, prev.history);
-          const sessionWasBlueprint = (reward.t2Drop ?? 0) > 0 || buildingPerkReward.refined > 0 || minutesFocused >= 45;
+          const sessionWasBlueprint = minutesFocused >= 45;
           const nextHistoryStats = {
             bestSessionMinutes: currentHistoryStats.bestSessionMinutes,
             bestSessionXP: currentHistoryStats.bestSessionXP,
@@ -4436,13 +4274,11 @@ const useGameStore = create(
           // V2: Lộc Ban Tặng — đếm phiên ≥30, mỗi 7 lần thưởng bonus
           let nextLocBanTangCounter = prev.player.locBanTangCounter ?? 0;
           let locBanTangBonusXP = 0;
-          let locBanTangBonusRefined = 0;
           if (unlockedSkills.loc_ban_tang && minutesFocused >= 30) {
             nextLocBanTangCounter += 1;
             if (nextLocBanTangCounter >= 7) {
               nextLocBanTangCounter = 0;
               locBanTangBonusXP = 200;
-              locBanTangBonusRefined = 1;
             }
           }
 
@@ -4472,21 +4308,6 @@ const useGameStore = create(
             .map((b) => ({ ...b, sessionsRemaining: b.sessionsRemaining - 1 }))
             .filter((b) => b.sessionsRemaining > 0);
 
-          // V2: Lộc Ban Tặng + đặc quyền công trình → cộng vào kho refined của era hiện tại
-          let refinedAfterLBT = newRefined;
-          const bonusRefinedGain = locBanTangBonusRefined + buildingPerkReward.refined;
-          if (bonusRefinedGain > 0) {
-            const eraKey = reward.activeBook;
-            const prevRefined2 = normalizeRefinedBag(refinedAfterLBT[eraKey]);
-            refinedAfterLBT = {
-              ...refinedAfterLBT,
-              [eraKey]: {
-                t2: prevRefined2.t2 + bonusRefinedGain,
-                t3: 0,
-              },
-            };
-          }
-
           // ADR-070: các buff kỹ năng mà nút "Nhận thưởng" cũ từng đẩy vào hàng — nay đẩy ở đây.
           const autoClaimBuffPushes = [
             ...(dailyBonusXP > 0 && prev.player.unlockedSkills.nguoi_lap_ke ? [{ type: 'nguoi_lap_ke', sessionsRemaining: 1 }] : []),
@@ -4506,11 +4327,6 @@ const useGameStore = create(
             nhipHoanHaoBonusDay: nextNhipHoanHaoBonusDay,
             skillBuffQueue: autoClaimBuffPushes.length > 0 ? [...decrementedBuffQueue, ...autoClaimBuffPushes] : decrementedBuffQueue,
           };
-
-          const resourcesAfterCarry = newResources;
-          // V2: Bắt đầu từ refinedAfterLBT (đã cộng Lộc Ban Tặng nếu có)
-          // ADR-070: hai đặc quyền «mang tài nguyên/tinh luyện sang kỷ mới» đã gỡ cùng ba đồng tiền ngủ.
-          const refinedAfterCarry = refinedAfterLBT;
 
           // ĐƯỜNG LÊN KỶ THẬT — chỗ DUY NHẤT được niêm phong thành phố kỷ cũ vào bảo tàng.
           // `sessionCount` phải chụp lại ở đây vì `eraTracking` chỉ giữ số liệu kỷ ĐANG chơi:
@@ -4538,7 +4354,7 @@ const useGameStore = create(
 
           const eraScopedState = pruneEraScopedBlueprintState({
             blueprints: newBlueprints,
-            research: { ...prev.research, rp: newResearchRP },
+            research: prev.research,
             craftingQueue: nextQueue,
             buildings: newBuildings,
             buildingHP: prev.buildingHP,
@@ -4609,7 +4425,6 @@ const useGameStore = create(
               longBreakGraceDeadlineAt: null,
               longBreakPreviewSession: false,
             },
-            resources:     resourcesAfterCarry,
             rankSystem:    newRankSystem,
             rankChallenge: newRankChallenge,
             eraCrisis:     newEraCrisis,
@@ -4639,7 +4454,6 @@ const useGameStore = create(
             sessionMeta:      { lastSessionCancelled: false, breakCompletedOnTime: false },
             research:         eraScopedState.research,
             craftingQueue:    eraScopedState.craftingQueue,
-            resourcesRefined: refinedAfterCarry,
             latestSessionUndo: prev.latestSessionUndo
               ? { ...prev.latestSessionUndo, sessionId }
               : null,
@@ -4667,14 +4481,11 @@ const useGameStore = create(
                 missionBonusXP,
                 buildingPerkRewards: buildingPerkReward.rewards,
                 buildingPerkBonusXP: buildingPerkReward.xp,
-                buildingPerkBonusRefined: buildingPerkReward.refined,
                 acceleratedCraftingIds,
                 // ⚠️ CHỈ để KHOẢNH KHẮC THÀNH PHỐ (`engine/cityMoment.js`) biết công trình nào vừa
                 // xong. `ui` KHÔNG nằm trong `partialize` nên trường này không lên Supabase, tức
                 // không thêm một byte nào vào JSONB đang tranh chấp CAS.
                 newlyBuiltIds: activeNewlyBuilt,
-                positiveEventRPBonus,
-                rpEarned: finalSessionRP,
                 // ADR-069: ba tin mới cho chuỗi thẻ thưởng — bậc vừa lên, di vật vừa nhận, thử thách
                 // kỷ vừa mở. `ui` không nằm trong `partialize` nên không lên Supabase.
                 rankUp: rankPromotion
@@ -4717,7 +4528,6 @@ const useGameStore = create(
       cancelFocusSession: (progressRatio = 0, options = {}) => {
         const state = get();
         const {
-          applyDisaster = true,
           recordSession = true,
           mode = state.timerConfig.mode,
           elapsedMinutes: optionElapsedMinutes = null,
@@ -4731,8 +4541,6 @@ const useGameStore = create(
           goal: optionGoal = undefined,
           nextNote: optionNextNote = undefined,
         } = options;
-        const { unlockedSkills } = state.player;
-        const { chargesRemaining, weekStartTimestamp } = state.forgiveness;
 
         // Giam Cầm Năng Lượng — thất bại: mất hoàn toàn số EP đã giam
         // (EP đã bị trừ khi activateOverclock, chỉ cần xóa state)
@@ -4740,14 +4548,8 @@ const useGameStore = create(
 
         const now     = Date.now();
         const sessionId = now;
-        const oneWeek = 7 * 24 * 60 * 60 * 1000;
-        const forgivenessCapacity = FORGIVENESS_CANCELS_PER_WEEK;
-        const freshCharges = now - weekStartTimestamp >= oneWeek
-          ? forgivenessCapacity
-          : chargesRemaining;
         const normalizedProgressRatio = Math.max(0, Math.min(1, progressRatio));
         const activeBook = getActiveBook(state.progress.totalEP);
-        const penaltyBookKey = `book${activeBook}`;
         const timerSession = state.timerSession ?? {};
         const totalSeconds = Number.isFinite(timerSession.totalSeconds)
           ? Math.max(0, timerSession.totalSeconds)
@@ -4764,11 +4566,6 @@ const useGameStore = create(
         const targetMinutes = Number.isFinite(optionTargetMinutes)
           ? Math.max(0, Math.round(optionTargetMinutes))
           : Math.max(0, Math.round(totalSeconds / 60));
-        const today = localDateStr();
-        const currentWeekKey = localWeekMondayStr();
-        const dt = state.dailyTracking;
-        const isToday = dt.date === today;
-        const catsToday = isToday ? (dt.categoriesUsed ?? []) : [];
         const sessionCategoryId = optionCategoryId !== undefined
           ? optionCategoryId
           : (timerSession.categoryId ?? state.pendingCategoryId ?? null);
@@ -4792,38 +4589,7 @@ const useGameStore = create(
           : (resolvedStartedAt
             ? Math.max(0, new Date(resolvedFinishedAt).getTime() - new Date(resolvedStartedAt).getTime())
             : null);
-        const uniqueCatsToday = new Set([
-          ...catsToday,
-          ...(sessionCategoryId ? [sessionCategoryId] : []),
-        ]);
-        const activeBuffs = aggregateActiveBuffs(
-          activeBook,
-          state.rankSystem,
-          state.relics,
-          state.prestige.permanentBonus,
-          state.relicEvolutions ?? {},
-        );
-        const resourceFloor = calculateSessionResourceFloor(
-          elapsedMinutes,
-          unlockedSkills,
-          state.progress.totalEP,
-          activeBuffs,
-          {
-            diverseCategoriesBonus: uniqueCatsToday.size >= 3,
-            balancedDayBonus: elapsedMinutes > 0 && isToday && (
-              (dt.hasShortSession && elapsedMinutes >= 60)
-              || (dt.hasLongSession && elapsedMinutes <= 25)
-            ),
-            benVungActive: !!state.player.benVungUnlocked,
-            hasSession45Today: isToday && !!dt.hasSession45,
-            hasSession60Today: isToday && !!dt.hasSession60,
-            keHoachWeeklyBuffActive: state.player.keHoachWeeklyBuffWeekKey === currentWeekKey,
-          },
-        );
-        const resourceLossCap = {
-          [penaltyBookKey]: resourceFloor.resources,
-        };
-        const appendCancelledSession = (prev, penaltyDetails = null) => {
+        const appendCancelledSession = (prev) => {
           if (!recordSession) {
             return {
               history: prev.history,
@@ -4850,9 +4616,6 @@ const useGameStore = create(
             tier: 'Phiên bị hủy',
             multiplier: 0,
             jackpot: false,
-            resources: {},
-            rpEarned: 0,
-            refinedEarned: 0,
             blueprint: null,
             categoryId: sessionCategoryId ?? null,
             categorySnapshot: sessionCategorySnapshot,
@@ -4860,10 +4623,10 @@ const useGameStore = create(
             completed: false,
             cancelled: true,
             cancelProgressRatio: normalizedProgressRatio,
-            cancelPenalty: penaltyDetails,
+            // ADR-071 (đóng #99): huỷ phiên không còn trừ tài nguyên — không có gì để phạt.
+            cancelPenalty: null,
             comboCount: 1,
             positiveEvent: null,
-            positiveEventRPBonus: 0,
             note: trimmedNote || null,
             breakNote: null,
             goal: trimmedGoal || null,
@@ -4886,91 +4649,17 @@ const useGameStore = create(
           };
         };
 
-        if (!applyDisaster) {
-          set((prev) => {
-            const cancelledHistoryPatch = appendCancelledSession(prev, {
-              waived: true,
-              chargeConsumed: false,
-              progressRatio: normalizedProgressRatio,
-              appliedPenaltyRate: 0,
-              deducted: {},
-            });
-
-            return {
-              ...cancelledHistoryPatch,
-              staking: makeDefaultStaking(),
-              progress: mode === 'pomodoro'
-                ? markLongBreakCycleBreakEnded(prev.progress, now)
-                : syncLongBreakCycleProgress(prev.progress, now),
-              sessionMeta: { ...prev.sessionMeta, lastSessionCancelled: true, breakCompletedOnTime: false },
-              latestSessionUndo: null,
-            };
-          });
-          return;
-        }
-
-        // Tổng hợp disasterReduction từ di vật tiến hóa (D2: clamp tổng)
-        const _cancelEvos     = state.relicEvolutions ?? {};
-        const disasterRedBuff = clampRelicDisasterReduction(state.relics.reduce((acc, r) => {
-          const stage = _cancelEvos[r.id] ?? 0;
-          const evoDef = RELIC_EVOLUTION[r.id];
-          const buff   = evoDef?.stages[stage]?.buff ?? r.buff ?? {};
-          return acc + (buff.disasterReduction ?? 0);
-        }, 0));
-
-        const result = applyDisasterPenalty(
-          state.resources,
-          unlockedSkills,
-          freshCharges,
-          disasterRedBuff,
-          normalizedProgressRatio,
-          getBuildingCancelPenaltyMultiplier(state.buildings, state.buildingLevels),
-          {
-            scopeBookKey: penaltyBookKey,
-            resourceLossCap,
-          },
-        );
-
-        const newCharges = result.chargeConsumed
-          ? Math.max(0, freshCharges - 1)
-          : freshCharges;
-
-        const buildingDamage = null;
-
         set((prev) => {
-          const penaltyDetails = {
-            disaster:       result.disaster,
-            deducted:       result.deducted,
-            waived:         result.waived,
-            chargeConsumed: result.chargeConsumed,
-            progressRatio:  result.progressRatio,
-            basePenaltyRate: result.basePenaltyRate,
-            adjustedPenaltyRate: result.adjustedPenaltyRate,
-            appliedPenaltyRate: result.appliedPenaltyRate,
-            skillPenaltyMultiplier: result.skillPenaltyMultiplier,
-            skillMode: result.skillMode,
-            buildingDamage,
-          };
-          const cancelledHistoryPatch = appendCancelledSession(prev, penaltyDetails);
+          const cancelledHistoryPatch = appendCancelledSession(prev);
 
           return {
             ...cancelledHistoryPatch,
-            resources: result.newResources,
-            staking:   makeDefaultStaking(),
+            staking: makeDefaultStaking(),
             progress: mode === 'pomodoro'
               ? markLongBreakCycleBreakEnded(prev.progress, now)
               : syncLongBreakCycleProgress(prev.progress, now),
-            forgiveness: {
-              chargesRemaining:  newCharges,
-              weekStartTimestamp: now - prev.forgiveness.weekStartTimestamp >= oneWeek
-                ? now
-                : prev.forgiveness.weekStartTimestamp,
-            },
             sessionMeta: { ...prev.sessionMeta, lastSessionCancelled: true, breakCompletedOnTime: false },
             latestSessionUndo: null,
-            // ADR-069: KHÔNG còn hộp thoại "mất N% tài nguyên" sau khi huỷ (`DisasterModal` đã gỡ hẳn) —
-            // tài nguyên đã rời khỏi đường chơi, nên câu ấy chỉ còn là một lời trách. Chi tiết phạt vẫn
-            // nằm ở bản ghi lịch sử (`cancelPenalty`) cho Thống kê đọc.
           };
         });
       },
@@ -5374,37 +5063,17 @@ const useGameStore = create(
        */
       /**
        * cancelCrafting
-       * Hủy bỏ công trình đang xây, hoàn lại 50% nguyên liệu.
+       * Hủy bỏ công trình đang xây. ADR-071 (đóng #99): không còn hoàn nguyên liệu — dự án không tốn
+       * nguyên liệu để bắt đầu (ADR-069), nên cũng không có gì để trả lại.
        */
       cancelCrafting: (bpId) => {
         const state = get();
         const item  = (state.craftingQueue ?? []).find((q) => q.bpId === bpId);
         if (!item) return false;
-        const spec    = BUILDING_SPECS[bpId];
-        const meta    = BLUEPRINT_META[bpId];
-        if (!spec || !meta) return false;
-        const refinedRefund = Math.floor(getUnifiedRefinedCost(spec.refinedCost) * 0.5);
-
-        set((prev) => {
-          const bookKey     = `book${meta.era}`;
-          const updatedBook = { ...prev.resources[bookKey] };
-          const prevRefined = normalizeRefinedBag(prev.resourcesRefined?.[meta.era]);
-          for (const [resId, amt] of Object.entries(normalizeRawCost(spec.cost ?? {}))) {
-            updatedBook[resId] = (updatedBook[resId] ?? 0) + Math.floor(amt * 0.5);
-          }
-          return {
-            resources:    { ...prev.resources, [bookKey]: updatedBook },
-            resourcesRefined: {
-              ...prev.resourcesRefined,
-              [meta.era]: {
-                t2: prevRefined.t2 + refinedRefund,
-                t3: 0,
-              },
-            },
-            craftingQueue: prev.craftingQueue.filter((q) => q.bpId !== bpId),
-            latestSessionUndo: null,
-          };
-        });
+        set((prev) => ({
+          craftingQueue: prev.craftingQueue.filter((q) => q.bpId !== bpId),
+          latestSessionUndo: null,
+        }));
         return true;
       },
 

@@ -48,31 +48,18 @@ item below is still live, it just now reviews something already running.
   ⚠️ Lesson: *the three "strongest" lines only have numbers when sessions SET A GOAL* — the 599-session
   fixture has no goals so all three were empty; the screen now says what to do instead of going quiet.
   Inspect: `node scripts/shot.mjs --phone --fixture <fx> --tab "Thống kê" --full`.
-- **Game — ROUND 35 (2026-09-06): ONE ENDING, NO CLAIM BUTTONS, NO DEAD SCREENS (ADR-070).**
-  (1) Weekly step + full-day bonus land automatically inside `completeFocusSession` and are narrated
-  in the card chain — `claimWeeklyStep`/`claimMissionAllBonus` and every Claim button deleted;
-  (2) **relics grow by SESSION** (`engine/relicGrowth.js`, thresholds 20/50 sessions ≥25′ since
-  `earnedAt`; old saves stamped on load) — `evolveRelic` and refining costs gone (`#96` closed);
-  (3) 11/15 wonders + 2 building perks moved onto the living axis (`WONDER_EFFECT_REGISTRY.passive`,
-  `wonderEffects.js` is the single source); (4) **`LootDropModal` deleted** — the card chain is the
-  only ending; the «Kỷ nguyên mới» card carries a «Xem thành phố mới» button (`#98` closed);
-  (5) Badges gained a «Kế tiếp» block (4 closest, bar + «còn N»), tier filter removed (`#100` closed).
-  ⚠️ Lesson: *when you remove a button, hunt down everything it did BESIDES granting the reward* —
-  the old «Nhận» button also reconciled quests against history; that now lives in
-  `completeFocusSession`. Inspect: `--preview "loot-max&dc-preview-card=quests|chain|evolve"` and
-  `--preview era`.
-- **Game — ROUND 34 (2026-09-06): THE ONLY CURRENCY IS A SESSION (ADR-069).**
-  Order: *"SIMPLIFY. MINIMIZE. AMPLIFY FUN."* (1) Building is one screen, one button
-  (`BuildScreen.jsx`; `startProject` asks for no RP or materials — the price is N sessions + a queue
-  slot); (2) ranks self-promote from history, era crises became soft quests — no button, no deadline,
-  no penalty, no blocking of Start (`engine/rankLadder.js`; deleted `EraCrisisModal` · `DisasterModal`
-  · `StakePanel` · `ResourceDisplay`); (3) the reward chain gained a City card · level-up offers ≤3
-  skills inline · era challenge · rank · relic; (4) **every reward sits on the living axis** — odd
-  ranks → EP, 12/15 relics → EP/XP/combo, Luck → +XP/+EP, Forgiveness → +6% XP after a cancel
-  (`rewardAxes.test.js`). Resources/RP/refining became DORMANT DATA (`TECH_DEBT #99`, deliberate — do
-  not delete what Đàm earned, do not touch synced state). ⚠️ Lesson: a Rank card printed «+12% Tài
-  Nguyên» — *a valid reward table with green tests can still grant something nobody can see; only a
-  SCREENSHOT catches it.*
+- **Game — ROUNDS 34 & 35 (2026-09-06, ADR-069/070): the only currency is a SESSION, and there is ONE
+  ending.** Building costs N sessions + a queue slot, not RP/materials; ranks self-promote from
+  history; era crises are soft quests; relics grow by session count (`engine/relicGrowth.js`); every
+  reward sits on the living axis (`rewardAxes.test.js`); the reward card chain is the only ending —
+  no Claim buttons, no `LootDropModal`. Resources/RP/refining are DORMANT DATA on purpose
+  (`TECH_DEBT #99` — do not delete what Đàm earned, do not touch synced state).
+  ⚠️ Two lessons worth more than the changes: *a valid reward table with green tests can still grant
+  something nobody can see — only a SCREENSHOT catches it* (a Rank card printed «+12% Tài Nguyên»),
+  and *when you remove a button, hunt down everything it did BESIDES granting the reward* (the old
+  «Nhận» also reconciled quests against history).
+  Full text: `grep -n 'ROUND 3[45]' docs/archive/START_HERE_LOG_2026-09-06.md`.
+
 - 📚 **Rounds 20 → 33 moved to `docs/archive/START_HERE_LOG_2026-09-06.md`** (verbatim), together
   with the 3D city details (BSP skeleton · `reach` 0.8 · two-layer shadows · 15 eras/`country` ·
   12×12 grid · 3.2× perf headroom) — a finished black box is not worth paying tokens for every

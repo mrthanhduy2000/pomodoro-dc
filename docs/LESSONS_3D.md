@@ -321,3 +321,17 @@ grep -n 'GÁNH HAI VIỆC' docs/LESSONS_3D.md        # 7 lần một trường g
   - ⚠️ **KÈM THEO — MỘT CÔNG CỤ ĐO PHẢI CÓ ĐỐI CHỨNG TRÊN DỮ LIỆU THẬT, KHÔNG CHỈ TRÊN DỮ LIỆU BỊA.** `road-bend.mjs` có 5 mục tự kiểm thuần (đường thẳng ra 1,000, zigzag 45° ra đúng √2…) và **cả 5 đều xanh trong khi công cụ đang đo sai**. Thứ bắt được là mục thứ 6: *"kỷ 4 (khai thẳng tuyệt đối) phải đo ra đúng 1,0000"* — nó đỏ, và nó chỉ đúng chỗ hỏng: bản đầu lấy **trọng tâm mọi tam giác trong một ô** làm tim đường, mà ở ngã ba thì cái cánh tay cụt KÉO trọng tâm về phía nó, nên con số phản ánh *hình dạng ngã ba* chứ không phải *tim đường*. Đo ở **RANH GIỚI** (nơi chỉ có đúng một cánh tay đi qua) thì hết. ⇒ **Mỗi công cụ đo phải có ít nhất một ca đối chứng chạy trên DỮ LIỆU THẬT mà ta biết trước đáp án** — dữ liệu bịa chỉ kiểm được công thức, không kiểm được việc nó có nhìn đúng chỗ không.
   - ⚠️ **KÈM THEO — CON SỐ "CẢ KHUNG HÌNH ĐỔI 0,67%" SUÝT LÀM TÔI KẾT LUẬN BẢN VÁ VÔ DỤNG.** Mặt đường chỉ chiếm **1,38% khung hình** ở góc nhìn mặc định, nên lấy cả khung làm mẫu số là pha loãng tín hiệu gần 70 lần. Đo trong **vùng mặt đường** (mặt nạ `--mask road`, tức do bên DỰNG khai chứ không đoán bằng màu): **≈47% diện tích mặt đường đã đổi chỗ**. ⇒ *Trước khi đọc một tỉ lệ, hỏi mẫu số có lẫn thứ không thuộc câu hỏi không* — và với mọi phase chỉ đụng MỘT lớp của cảnh, con số đáng đọc gần như luôn là con số đo TRONG lớp ấy.
   - ⚠️ **KÈM THEO — HAI CON SỐ ĐỨNG YÊN VÌ HAI LÝ DO KHÁC HẲN NHAU.** Sau khi thêm hạng đường thứ ba, `city-preview` in ra **đúng cùng một số tam giác** như trước. Suýt kết luận *"hạng thứ ba không có tác dụng"*. Sự thật: mặt đường là một khối RIÊNG (`road`), không nằm trong con số "tam giác thành phố" (khối `city`) cũng không nằm trong con số nền (44.126 = vòm trời + rặng núi). Đếm riêng bằng `buildRoadSurface(...).kinds` thì thấy **+52% ở kỷ 6**. ⇒ **Trước khi đọc một con số tổng, hỏi *"thứ tôi vừa sửa có nằm TRONG con số này không?"*** — cùng họ với bài học "một phần con số KHÔNG ĐỔI qua mọi trường hợp thì phải tách ra", nhưng ở dạng khó thấy hơn: thứ mình sửa **chưa bao giờ** nằm trong đó.
+
+---
+
+## PHASE_RULES §10 — three shapes of failure (full text, moved 2026-09-06)
+
+1. **`TECH_DEBT #41`** — Phase 11 roof detail: built, beautiful, and **90/90 tiles below the eye
+   threshold**. ⇒ Before spending budget on small detail, ask: *at Đàm's viewing distance, how many
+   pixels does this occupy?* Under ~12px nobody sees it.
+2. **Phase 8D shrubbery** — the mechanism ran, the screenshot convinced, measurement showed it had
+   **never done anything**. ⇒ Human eyes are excellent at finding clusters in noise. Toggle it off
+   and compare images.
+3. **A gate passed by building something that should not exist** — houses on a skyline ridge, square
+   paddies in the neolithic era. ⇒ Every 15-era identity number must be tied to the `country` declared
+   in `eraStyle.js`, and must answer *"what real place looks like this?"*

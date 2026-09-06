@@ -1,3 +1,24 @@
+> Last update: **2026-09-06 (night, fourth pass)** — **STARTUP CONTEXT DOWN TO 8,606 TOKENS.**
+>
+> `START_HERE.md` 11,030 → 9,764 chars: rounds 34 and 35 compressed to the two lessons that outlive
+> them (*a valid reward table with green tests can still grant something nobody can see* · *removing
+> a button means hunting everything it did besides granting the reward*), full text in
+> `docs/archive/START_HERE_LOG_2026-09-06.md`.
+> `PHASE_RULES.md` 7,106 → 6,599 chars: its measuring-tool table duplicated `PROJECT_STRUCTURE.md`
+> (which documents each tool 4–9× more thoroughly), and its §10 failure shapes are 3D lessons that
+> belong in `docs/LESSONS_3D.md`. Both replaced by the rule plus a pointer.
+> `CLAUDE.md` 15,780 → 15,183: sync/tray implementation detail moved behind an imperative pointer,
+> which only became possible after the knowledge gate was made owner-based.
+>
+> ⚠️ **The guard was inflating what it protected.** The anti-knowledge-loss gate demanded every core
+> law appear in `CLAUDE.md`, so the always-loaded file was forced to keep implementation detail.
+> `CORE_LAWS` is now (owner, phrase, why): startup-critical laws owned by `CLAUDE.md`, subsystem
+> detail owned by the topic file a session opens before touching that subsystem. Break-tested.
+>
+> **Startup context across the day: 38,258 → 8,606 tokens/session (−77%).**
+
+---
+
 > Last update: **2026-09-06 (night, third pass)** — **TECH_DEBT SPLIT BY SUBSYSTEM (ADR-075).**
 >
 > Classifying the 63 "open" debts showed only **7 are actionable**. **52 belong to the frozen 3D city**

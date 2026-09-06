@@ -285,3 +285,32 @@
 - Hiệu năng: đã đo dứt điểm trên Apple M3 — **dư 3,2 lần**, hình học gần như miễn phí.
   **KHÔNG đo lại** trừ khi Đàm thấy khung hình giật trên máy thật.
 
+---
+
+## Rounds 34 and 35 — full text (moved from START_HERE.md 2026-09-06 night)
+
+- **Game — ROUND 35 (2026-09-06): ONE ENDING, NO CLAIM BUTTONS, NO DEAD SCREENS (ADR-070).**
+  (1) Weekly step + full-day bonus land automatically inside `completeFocusSession` and are narrated
+  in the card chain — `claimWeeklyStep`/`claimMissionAllBonus` and every Claim button deleted;
+  (2) **relics grow by SESSION** (`engine/relicGrowth.js`, thresholds 20/50 sessions ≥25′ since
+  `earnedAt`; old saves stamped on load) — `evolveRelic` and refining costs gone (`#96` closed);
+  (3) 11/15 wonders + 2 building perks moved onto the living axis (`WONDER_EFFECT_REGISTRY.passive`,
+  `wonderEffects.js` is the single source); (4) **`LootDropModal` deleted** — the card chain is the
+  only ending; the «Kỷ nguyên mới» card carries a «Xem thành phố mới» button (`#98` closed);
+  (5) Badges gained a «Kế tiếp» block (4 closest, bar + «còn N»), tier filter removed (`#100` closed).
+  ⚠️ Lesson: *when you remove a button, hunt down everything it did BESIDES granting the reward* —
+  the old «Nhận» button also reconciled quests against history; that now lives in
+  `completeFocusSession`. Inspect: `--preview "loot-max&dc-preview-card=quests|chain|evolve"` and
+  `--preview era`.
+- **Game — ROUND 34 (2026-09-06): THE ONLY CURRENCY IS A SESSION (ADR-069).**
+  Order: *"SIMPLIFY. MINIMIZE. AMPLIFY FUN."* (1) Building is one screen, one button
+  (`BuildScreen.jsx`; `startProject` asks for no RP or materials — the price is N sessions + a queue
+  slot); (2) ranks self-promote from history, era crises became soft quests — no button, no deadline,
+  no penalty, no blocking of Start (`engine/rankLadder.js`; deleted `EraCrisisModal` · `DisasterModal`
+  · `StakePanel` · `ResourceDisplay`); (3) the reward chain gained a City card · level-up offers ≤3
+  skills inline · era challenge · rank · relic; (4) **every reward sits on the living axis** — odd
+  ranks → EP, 12/15 relics → EP/XP/combo, Luck → +XP/+EP, Forgiveness → +6% XP after a cancel
+  (`rewardAxes.test.js`). Resources/RP/refining became DORMANT DATA (`TECH_DEBT #99`, deliberate — do
+  not delete what Đàm earned, do not touch synced state). ⚠️ Lesson: a Rank card printed «+12% Tài
+  Nguyên» — *a valid reward table with green tests can still grant something nobody can see; only a
+  SCREENSHOT catches it.*

@@ -1049,3 +1049,23 @@ mươi file — đo được **năm** thời lượng khác nhau (0,18 · 0,22 �
 - **Hằng số cấp module** → SCREAMING_SNAKE_CASE (`XP_FACTOR_HARD_CAP`, `COACH_MIN_SAMPLE`).
 - **Route API** → tên file = tên endpoint, camelCase hoặc kebab-case ngắn gọn khớp URL
   (`coach-digest.js` → `/api/coach-digest`).
+
+## `docs/` — kho tri thức TÁCH KHỎI `CLAUDE.md` (quy ước 2026-09-06)
+
+⚠️ **Vì sao có thư mục này.** `CLAUDE.md` được harness **TỰ NẠP 100%** vào mỗi phiên AI, nên mọi
+chữ nằm trong đó bị nhân với số phiên — kể cả phiên chẳng liên quan. Ngày 2026-09-06 nó đã phình
+tới **190.700 token = 95% cửa sổ 200k**. Cách chữa **duy nhất** là tách file; một câu quy tắc
+("chỉ `grep`, đừng đọc trọn") thì không thi hành được vì AI không kịp quyết định gì.
+
+| File | Nội dung | Cách dùng |
+|---|---|---|
+| `docs/LESSONS_3D.md` | 89 bài học cấp 1 + 96 mục "KÈM THEO" về mỹ thuật thành phố 3D (~146.700 token) | **`grep`, KHÔNG đọc trọn**; có mục lục 89 dòng ở đầu |
+| `docs/AI_COACH.md` | Chi tiết Gemini · chuỗi model · `tier:'deep'` · lưới chống-bịa · CoachChat/Offline/Nudge · `coach-digest` | `grep` khi sửa AI Coach |
+| `docs/archive/` | Nhật ký đã đóng băng (`BAN_GIAO_ARCHIVE_2026-08-24.md`, `START_HERE_LOG_2026-09-06.md`) | chỉ tra cứu lịch sử |
+
+**Quy tắc thêm tri thức mới (bắt buộc):**
+1. Bài học về mỹ thuật 3D → viết vào `docs/LESSONS_3D.md`, **không** viết vào `CLAUDE.md`.
+2. Chi tiết AI Coach → `docs/AI_COACH.md`.
+3. Chỉ khi tri thức ấy **đổi một QUY TẮC** thì mới thêm MỘT DÒNG trỏ ở `CLAUDE.md`.
+4. **Trần đếm được**: `CLAUDE.md` ≤ ~32.000 ký tự · `START_HERE.md` ≤ ~250 dòng. Kiểm nhanh:
+   `node -e "console.log(require('fs').readFileSync('CLAUDE.md','utf8').length)"`

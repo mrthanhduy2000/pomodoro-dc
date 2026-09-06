@@ -10,6 +10,25 @@
 > **Muốn hiểu VÌ SAO một quyết định được chọn** → `ARCHITECTURE_DECISIONS.md`. **Muốn biết migration
 > cụ thể nào cần chạy** → `MIGRATION.md`.
 
+## 2026-09-06 — Tối ưu context window: `CLAUDE.md` 190.700 → 22.567 token (−88,2%)
+
+**Mục đích.** Mỗi phiên AI phải gánh một sàn tài liệu cố định 214.824 token (≈107% cửa sổ 200k)
+trước khi đọc dòng code đầu tiên. Nguyên nhân: quy tắc 2026-08-24 xếp `CLAUDE.md` vào diện "chỉ
+`grep`, không đọc trọn", nhưng harness **tự nạp 100%** file này — câu quy tắc ấy không thi hành
+được, nên file phình tới 190.700 token mà không cổng nào canh.
+
+**Phạm vi.** Chỉ tài liệu, **không một dòng mã nguồn nào**. Tách file, **không xoá chữ nào**:
+`docs/LESSONS_3D.md` (89 bài học mỹ thuật 3D + 96 mục kèm theo, có mục lục `grep` được) ·
+`docs/AI_COACH.md` (chi tiết Gemini + lưới chống-bịa) · `docs/archive/START_HERE_LOG_2026-09-06.md`
+(nhật ký VÒNG 20→32). `CLAUDE.md` giữ nguyên văn mọi QUY TẮC + thêm mục «BẢN ĐỒ TÀI LIỆU».
+
+**Ảnh hưởng.** Sàn cố định mỗi phiên **214.824 → 34.139 token (−84,1%)**. Bù lại: phiên làm mỹ
+thuật 3D phải `grep` thêm một file (lệnh sẵn trong `CLAUDE.md`). Hai cái **trần đếm được** được
+đặt ra để file không phình lại.
+
+**Tương thích.** Không đổi hành vi app. `test:fast` 1633 bài / 0 fail / `# skipped 1` ·
+`test:cross` 3/3 · lint sạch · build thành công.
+
 ---
 
 ## 2026-09-06 (vòng 35) — Một cái kết duy nhất, không nút nhận, không màn chết (ADR-070)

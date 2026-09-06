@@ -5688,3 +5688,27 @@ trong chú thích thì đừng để `--selftest` của chính nó vẫn dùng �
   mọi nút Nhận. (2) Huy hiệu: khối «Kế tiếp» (4 huy hiệu gần đạt nhất, thanh + «còn N») sau dải hero;
   bỏ bộ lọc bậc; lưới vẫn là điểm chính (ADR-028: «không giấu, chỉ gấp» — phần "chưa chạm" đã gấp từ
   2026-09-02). Không làm "đếm theo nhóm": nó là một bảng số nữa chứ không phải một việc.
+
+## #101 — 47 lời trỏ "xem `CLAUDE.md`" trong 38 file mã nguồn nay trỏ tới file KHÔNG CÒN chứa bài học 3D
+
+- **Tên**: Con trỏ chú thích trỏ một cấp thiếu sau khi tách `docs/LESSONS_3D.md`
+- **Module**: `src/engine/city3d/**` · `src/components/city/**` · `scripts/**` (38 file)
+- **Priority**: Low · **Severity**: Low
+- **Impact**: Một phiên sau đọc chú thích *"xem `CLAUDE.md`"* rồi `grep` `CLAUDE.md` sẽ **không
+  thấy** bài học được nhắc tới, vì nó đã sang `docs/LESSONS_3D.md`. Chuỗi KHÔNG đứt (mở
+  `CLAUDE.md` là gặp ngay mục «🎨 Bài học mỹ thuật 3D → `docs/LESSONS_3D.md`» kèm lệnh `grep`),
+  nhưng nó tốn thêm một nhịp và có thể bị đọc thành *"bài học ấy đã bị xoá"*.
+- **Root Cause**: Tách file ngày 2026-09-06 để cắt 88,2% `CLAUDE.md`. Cái tên `CLAUDE.md` trong 47
+  chú thích là một **địa chỉ cứng** — đúng họ với bài học *"một luật một công thức"*: địa chỉ của
+  một tri thức được chép ra 47 chỗ thì đổi chỗ tri thức ấy là 47 chỗ cùng lạc hậu.
+- **Current Risk**: Thấp — con trỏ trung gian đã có và nằm ở đúng chỗ người ta mở đầu tiên.
+- **Future Risk**: Trung bình nếu sau này `CLAUDE.md` bỏ mục con trỏ ấy đi. **Mục con trỏ 🎨 trong
+  `CLAUDE.md` vì vậy KHÔNG được xoá** chừng nào 47 lời trỏ này còn.
+- **Recommended Solution**: KHÔNG sửa hàng loạt 38 file. Sửa hàng loạt chú thích là thay đổi rủi ro
+  cao (dễ trượt regex, dễ đụng chuỗi trong template literal — cái bẫy nháy ngược đã cắn 4 lần) đổi
+  lấy lợi ích bằng không. Khi nào chạm vào một file vì lý do khác thì sửa luôn con trỏ của file đó.
+- **Estimated Complexity**: Thấp nhưng rải rác.
+- **Blocking Conditions**: Không có.
+- **Review Trigger**: Khi có ai định xoá/đổi tên mục «🎨 Bài học mỹ thuật thành phố 3D» trong
+  `CLAUDE.md`, hoặc khi đổi tên `docs/LESSONS_3D.md`.
+- **Owner**: chưa ai · **Status**: MỞ (chấp nhận có chủ đích)

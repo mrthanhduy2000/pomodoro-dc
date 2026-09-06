@@ -1,3 +1,61 @@
+> Cập nhật lần cuối: **2026-09-06 (tối ưu context window)** — **CẮT 89% `CLAUDE.md`, KHÔNG XOÁ
+> MỘT CHỮ NÀO.** Lệnh Đàm: *"Tìm hiểu và tối ưu token giúp tôi trong context window của các phiên
+> sau"* + *"Tối ưu MCP, nên giữ lại MCP nào... và tối ưu file memory CLAUDE.md - token 190.7k"*.
+>
+> ### Vì sao: một quy tắc ĐÚNG VỀ Ý ĐỊNH nhưng BẤT KHẢ THI VỀ CƠ CHẾ
+> Quy tắc 2026-08-24 viết: *"CLAUDE.md là KHO TRA CỨU: chỉ mở phần `grep` trúng, KHÔNG đọc trọn"*.
+> Đo ra thì harness **TỰ NẠP 100% `CLAUDE.md`** vào đầu mỗi phiên, **trước khi AI kịp quyết định
+> gì** — nên câu ấy không AI nào thi hành được, và file đã âm thầm phình tới **190.700 token =
+> 95% cửa sổ 200k**. Cuộc cải cách 2026-08-24 cứu được `BAN_GIAO.md` (610 KB sang `docs/archive/`)
+> **chỉ vì đó là việc TÁCH FILE**; với `CLAUDE.md` nó chỉ là một câu chữ, và một câu chữ thì không
+> đỏ lên được. Cùng họ bài học *"một bài học được ghi ra KHÔNG chặn được gì; chỉ một bài TEST
+> mới chặn được"* — ở đây thứ chặn được là **cái trần ghi trong chính file**.
+>
+> ### Số đo (hiệu chuẩn bằng con số THẬT Claude Code báo: 301.940 ký tự = 190.700 token
+> ⇒ **1,583 ký tự/token**; ước lượng ban đầu của tôi là 2,4 — **sai 1,5 lần**, tiếng Việt tốn hơn nhiều)
+>
+> | | trước | sau | giảm |
+> |---|---:|---:|---:|
+> | `CLAUDE.md` | 190.700 tok | **22.567 tok** | **−88,2%** |
+> | `START_HERE.md` | 24.124 tok | **11.572 tok** | −52,0% |
+> | **Sàn cố định mỗi phiên** | **214.824 tok** | **34.139 tok** | **−84,1%** |
+>
+> ### Đã làm
+> 1. **`docs/LESSONS_3D.md`** (mới) — 89 bài học cấp 1 + 96 mục "KÈM THEO" về mỹ thuật thành phố
+>    3D, **nguyên văn**, kèm mục lục 89 dòng để `grep` trúng. 146.727 token.
+> 2. **`docs/AI_COACH.md`** (mới) — toàn bộ chi tiết Gemini/chống-bịa/CoachChat/CoachOffline/
+>    CoachNudge/coach-digest, **nguyên văn**. 15.494 token.
+> 3. **`docs/archive/START_HERE_LOG_2026-09-06.md`** (mới) — nhật ký VÒNG 20 → 32, nguyên văn.
+> 4. **`CLAUDE.md`** giữ nguyên văn toàn bộ QUY TẮC (HỎI TRƯỚC KHI LÀM · Governance · Playbook ·
+>    Vercel 12 Functions · Sync CAS + bản vá C1 · Web Push · Electron tray · deploy · KHÔNG làm),
+>    thêm **mục «🗺️ BẢN ĐỒ TÀI LIỆU»** + hai mục con trỏ có sẵn lệnh `grep`, và **5 luật phương
+>    pháp cô đọng** giữ lại vì chúng áp cho mọi loại task chứ không riêng 3D.
+> 5. **Hai cái TRẦN mới, đếm được** — `CLAUDE.md` ~32.000 ký tự, `START_HERE.md` ~250 dòng/20.000
+>    ký tự (giữ tối đa 3 vòng gần nhất). Không có trần thì file sẽ phình lại y như lần trước.
+> 6. **Đính chính điểm 1 của NGUYÊN TẮC SỐ 1** — nó đang kể một cơ chế không tồn tại.
+>
+> ### Bảo toàn nội dung (đối chiếu chéo)
+> Nguyên bản 301.940 ký tự = giữ 32.221 + chuyển đi 269.715 = **301.936**, chênh **+4** = đúng 4
+> dấu xuống dòng ở bốn mối nối. **Không một chữ nào bị xoá.**
+>
+> ### Cổng nghiệm thu
+> `npm run test:fast` **1633 bài · 1632 pass · 0 fail · `# skipped 1`** (đúng con số quy tắc đòi) ·
+> `test:cross` 3/3 xanh (40,3 giây) · `npm run lint` sạch · `npm run build` thành công.
+> Không một dòng mã nguồn nào bị đổi — `git status` chỉ có `.md`.
+>
+> ### Còn lại / chưa làm
+> - **47 lời trỏ "xem `CLAUDE.md`" trong 38 file mã nguồn** nay trỏ tới một file không còn chứa
+>   bài học 3D. **Chuỗi vẫn liền** (mở `CLAUDE.md` là thấy ngay mục 🎨 trỏ tiếp sang
+>   `docs/LESSONS_3D.md`), nên KHÔNG sửa 38 file — sửa hàng loạt chú thích là rủi ro cao mà lợi
+>   ích bằng không. Ghi ở `TECH_DEBT #101`.
+> - **MCP**: đo ra 5 server không liên quan (TickTick · Notion · Canva · Gmail · Google Calendar =
+>   162 tool) chỉ tốn **≈1.780 token** vì harness đã "hoãn nạp" (chỉ giữ tên, bỏ mô tả) ⇒ **1% vấn
+>   đề**. Vẫn nên tắt để đỡ nhiễu chọn tool. Cấu hình nằm ở tài khoản claude.ai, **không nằm trong
+>   repo** (không có `.mcp.json`) nên AI không tắt hộ được — Đàm tự tắt bằng `/mcp` hoặc
+>   claude.ai → Settings → Connectors.
+
+---
+
 > Cập nhật lần cuối: **2026-09-06 (vòng 35)** — **MỘT CÁI KẾT DUY NHẤT, KHÔNG NÚT NHẬN, KHÔNG MÀN
 > CHẾT (ADR-070).** Lệnh Đàm: *"Tiếp tục làm như prompt trên mà không hỏi lại, cho phép bạn tự quyết
 > định mọi thứ và tech debt. Build lớn. Simplify mạnh. Làm game vui hơn. Tập trung nhiều hơn vào UX/UI."*

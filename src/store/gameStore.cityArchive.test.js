@@ -116,7 +116,6 @@ test('lên kỷ: XP/EP/tiến trình KHÔNG đổi so với khi chưa có bảo 
   assert.equal(archiveState.player.level, plainState.player.level);
   assert.equal(archiveState.player.totalEXP, plainState.player.totalEXP);
   assert.deepEqual(archiveState.resources, plainState.resources);
-  assert.equal(archiveState.forgiveness.chargesRemaining, plainState.forgiveness.chargesRemaining);
 });
 
 // ═══════════════════════════════════════════════════════════════════════════════

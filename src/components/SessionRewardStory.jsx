@@ -42,7 +42,7 @@ import { useCountUp } from '../lib/useCountUp';
 import { readPreviewCard, readPreviewScene } from '../dev/previewStage';
 import WeekStrip from './WeekStrip';
 import { buildWeekStrip } from './todayHero';
-import { dailyAllBonusXP, scaleMissionXP } from './missionXp';
+import { dailyAllBonusXP, scaleMissionXP } from '../engine/missions';
 import { STORY_LAST_CARD_MS, buildRewardStoryCards, storyCardDurationMs } from './sessionRewardStory';
 
 const DISPLAY_FONT = 'var(--skin-font-display)';

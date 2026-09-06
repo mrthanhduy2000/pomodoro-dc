@@ -161,6 +161,7 @@ export default function StatsDashboard({ onNavigate }) {
       }));
   }, [savedNotes, history]);
   const lookupCount = { journal: (history ?? []).length, notes: effectiveSavedNotes.length };
+  const hasSessions = (answers.totals?.completed ?? 0) > 0;
 
   // Sổ tra cứu GẤP mặc định: mở màn là thấy ba câu trả lời, không phải một danh sách 600 dòng.
   const [lookup, setLookup] = useState(null);
@@ -198,41 +199,38 @@ export default function StatsDashboard({ onNavigate }) {
         <p className="mt-2 text-[13px] leading-6" style={{ color: TEXT_MUTED }}>Ba câu trả lời trước, sổ tra cứu sau.</p>
       </div>
 
-      {/* (1) Tôi có đang khá lên không? */}
-      <AnswerCard index={0} question="Tôi có đang khá lên không?">
-        <p className="mt-2 text-[17px] font-semibold leading-snug" style={{ color: TEXT_PRIMARY, fontFamily: DISPLAY_FONT, textWrap: 'balance' }}>
-          {answers.week.headline}
-        </p>
-        <p className="mt-1 text-[12.5px] leading-relaxed" style={{ color: TEXT_MUTED }}>{answers.week.detail}</p>
-        <WeekBars days={answers.week.days} />
-      </AnswerCard>
-
-      {/* (2) Khi nào tôi mạnh nhất? */}
-      <AnswerCard index={1} question="Khi nào tôi mạnh nhất?">
-        {answers.best.every((b) => !b.ready) && (
-          // Ba dòng đều trống thì lý do gần như luôn là: phiên chưa được ĐẶT MỤC TIÊU — nói thẳng việc cần làm.
-          <p className="mt-2 text-[12.5px] leading-relaxed" style={{ color: TEXT_MUTED }}>
-            Ba dòng này tính trên phiên có đặt mục tiêu. Ghi một mục tiêu trước khi bắt đầu phiên là chúng bắt đầu có số.
+      {/* (1) Tôi có đang khá lên không? — hidden before the first session: at zero history the only
+          honest answer is the Start button in card (3), not two cards saying "nothing yet". */}
+      {hasSessions && (
+        <AnswerCard index={0} question="Tôi có đang khá lên không?">
+          <p className="mt-2 text-[17px] font-semibold leading-snug" style={{ color: TEXT_PRIMARY, fontFamily: DISPLAY_FONT, textWrap: 'balance' }}>
+            {answers.week.headline}
           </p>
-        )}
-        <ul className="mt-2">
-          {answers.best.map((b) => (
-            <li key={b.id} className="flex items-baseline justify-between gap-3 border-t py-2.5 first:border-t-0" style={{ borderColor: PANEL_BORDER }}>
-              <span className="w-[76px] shrink-0 text-[11px] font-semibold uppercase tracking-[0.14em]" style={{ color: TEXT_SOFT }}>{b.label}</span>
-              <div className="min-w-0 flex-1 text-right">
-                {b.ready ? (
-                  <>
-                    <p className="text-[14px] font-semibold leading-snug" style={{ color: TEXT_PRIMARY }}>{b.value}</p>
-                    <p className="text-[11.5px] leading-snug" style={{ color: TEXT_MUTED }}>{b.note} · trên {b.sample}</p>
-                  </>
-                ) : (
-                  <p className="text-[12px] leading-snug" style={{ color: TEXT_SOFT }}>{b.note}</p>
-                )}
-              </div>
-            </li>
-          ))}
-        </ul>
-      </AnswerCard>
+          <p className="mt-1 text-[12.5px] leading-relaxed" style={{ color: TEXT_MUTED }}>{answers.week.detail}</p>
+          <WeekBars days={answers.week.days} />
+        </AnswerCard>
+      )}
+
+      {/* (2) Khi nào tôi mạnh nhất? — whole-session basis (ADR-076): the card never asks for homework.
+          A line with nothing to rank (no session carries a category yet) is DROPPED, not captioned. */}
+      {hasSessions && (
+        <AnswerCard index={1} question="Khi nào tôi mạnh nhất?">
+          <ul className="mt-2">
+            {answers.best.filter((b) => b.ready).map((b) => (
+              <li key={b.id} className="flex items-baseline justify-between gap-3 border-t py-2.5 first:border-t-0" style={{ borderColor: PANEL_BORDER }}>
+                <span className="w-[76px] shrink-0 text-[11px] font-semibold uppercase tracking-[0.14em]" style={{ color: TEXT_SOFT }}>{b.label}</span>
+                <div className="min-w-0 flex-1 text-right">
+                  <p className="text-[14px] font-semibold leading-snug" style={{ color: TEXT_PRIMARY }}>{b.value}</p>
+                  <p className="text-[11.5px] leading-snug" style={{ color: TEXT_MUTED }}>{b.note} · trên {b.sample}</p>
+                </div>
+              </li>
+            ))}
+          </ul>
+          <p className="mt-2 text-[11px] leading-relaxed" style={{ color: TEXT_SOFT }}>
+            Phiên trọn vẹn = bắt đầu rồi đi tới cùng, không huỷ, không tự chấm «Chưa đạt».
+          </p>
+        </AnswerCard>
+      )}
 
       {/* (3) Làm gì tiếp? — đúng MỘT gợi ý, và nó là một nút */}
       <AnswerCard index={2} question="Làm gì tiếp?">

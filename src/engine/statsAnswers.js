@@ -5,7 +5,7 @@
  * thật sự hỏi được trả lời ở nếp gấp đầu. File này chỉ GHÉP những phép phân tích ĐÃ CÓ, ĐÃ TEST, ĐÃ
  * GÁC CỠ MẪU (`coach/coachIntel.js` · `gameMath.js`) thành ba câu trả lời:
  *   (1) Tôi có đang khá lên không?  — tuần này so với CÙNG QUÃNG của tuần trước, kèm 7 cặp cột.
- *   (2) Khi nào tôi mạnh nhất?      — giờ · độ dài · loại việc, mỗi thứ kèm cỡ mẫu.
+ *   (2) Khi nào tôi mạnh nhất?      — giờ · độ dài · loại việc trên PHIÊN TRỌN VẸN, mỗi thứ kèm cỡ mẫu.
  *   (3) Làm gì tiếp?                — ĐÚNG MỘT gợi ý (phút + loại việc), đủ để bấm là chạy.
  *
  * ⚠️ HAI LUẬT, cùng luật với AI Coach và dải "Điều đáng chú ý" (`statsInsights.js`):
@@ -19,7 +19,7 @@
  * màn. Ngưỡng "giữ nhịp" thì dùng CHUNG (`WEEK_TREND_THRESHOLD_PCT`), để hai nơi không nói lệch.
  */
 import {
-  buildFocusProfile, recommendNextSession, wilsonLowerBound, observedRate, GOAL_RANK_MIN_SAMPLE,
+  buildFocusProfile, recommendNextSession, wilsonLowerBound, observedRate, COACH_BUCKET_MIN_SAMPLE, BAND_LABEL,
 } from './coach/coachIntel';
 import { coachCompletedSessions, COACH_MIN_SAMPLE, WEEK_TREND_THRESHOLD_PCT } from './gameMath';
 import { startOfVietnamWeekTs, vietnamHistoryTimeOpts } from './time';
@@ -91,31 +91,56 @@ export function buildWeekComparison(history = [], { now = new Date() } = {}) {
 }
 
 /**
- * (2) Khi nào tôi mạnh nhất — ba dòng: giờ · độ dài · loại việc. Đọc thẳng hồ sơ `buildFocusProfile`
- * (cùng số với thẻ Coach), KHÔNG tính lại. Dòng chưa đủ mẫu thì nói rõ CẦN GÌ, không để trống.
- * @returns {Array<{id,label,ready,value?,note,sample?,categoryId?}>}
+ * (2) When am I strongest — hour · length · task type, ranked on the WHOLE-SESSION rate (ADR-076).
+ *
+ * A whole session = started, not cancelled, not self-rated "Chưa đạt". Round 36 ranked these three
+ * lines on goal reviews only, so the heart of the screen stayed empty for the one player who rarely
+ * types a goal. The counters live in `buildFocusProfile` (`started`/`whole` per cell, band and
+ * category) — a goal review still counts, it lowers `whole` for a miss; it just no longer gates.
+ * Wilson lower bound (same brake as the Coach) ranks buckets with ≥ COACH_BUCKET_MIN_SAMPLE sessions;
+ * below that the line still ANSWERS with the busiest bucket and its raw fraction (`thin: true`), because
+ * a screen that asks the player to do more work first is an empty box with a caption.
  */
+const rankByWhole = (rows) => rows.slice().sort((a, b) => (
+  (wilsonLowerBound(b.whole, b.started) - wilsonLowerBound(a.whole, a.started)) || (b.started - a.started)
+));
+
+function bestRow(rows) {
+  const eligible = rows.filter((r) => r.started >= COACH_BUCKET_MIN_SAMPLE);
+  if (eligible.length) return { row: rankByWhole(eligible)[0], thin: false };
+  if (rows.length) return { row: rows.slice().sort((a, b) => (b.started - a.started) || (b.whole - a.whole))[0], thin: true };
+  return null;
+}
+
+function bestLine(id, label, rows, describe) {
+  const pick = bestRow(rows);
+  if (!pick) return { id, label, ready: false, note: 'Chưa có phiên nào.' };
+  const { row, thin } = pick;
+  return {
+    id, label, ready: true, thin, ...describe(row),
+    note: thin ? `${row.whole}/${row.started} phiên trọn vẹn` : `trọn vẹn ${pct(observedRate(row.whole, row.started))}%`,
+    sample: `${row.started} phiên`,
+  };
+}
+
 export function buildBestWindow(profile) {
-  const need = (note) => ({ ready: false, note });
-  const hour = profile?.chronotype;
-  const length = profile?.idealLength;
-  const items = [];
-  items.push(hour && hour.status !== 'insufficient'
-    ? { id: 'hour', label: 'Giờ', ready: true, value: capitalize(hour.value.bucketLabel), note: `đạt mục tiêu ${pct(hour.value.rate)}%`, sample: `${hour.sampleSize} phiên có mục tiêu` }
-    : { id: 'hour', label: 'Giờ', ...need('Cần phiên có đặt mục tiêu ở ít nhất hai buổi khác nhau để so.') });
-  items.push(length && length.status !== 'insufficient'
-    ? { id: 'length', label: 'Độ dài', ready: true, value: `Phiên ${length.value.label}`, note: `đạt mục tiêu ${pct(length.value.rate)}%`, sample: `${length.sampleSize} phiên có mục tiêu` }
-    : { id: 'length', label: 'Độ dài', ...need('Cần phiên có đặt mục tiêu ở ít nhất hai độ dài khác nhau để so.') });
-  const cats = [...(profile?._cats?.values() ?? [])].filter((c) => c.label && c.goalTotal >= GOAL_RANK_MIN_SAMPLE);
-  if (cats.length) {
-    // Wilson lower bound: 3/3 KHÔNG thắng 18/24 — cùng phanh lạc quan với Coach.
-    cats.sort((a, b) => wilsonLowerBound(b.goalHit, b.goalTotal) - wilsonLowerBound(a.goalHit, a.goalTotal));
-    const top = cats[0];
-    items.push({ id: 'category', label: 'Loại việc', ready: true, categoryId: top.categoryId, value: `"${top.label}"`, note: `đạt mục tiêu ${pct(observedRate(top.goalHit, top.goalTotal))}%`, sample: `${top.goalTotal} phiên có mục tiêu` });
-  } else {
-    items.push({ id: 'category', label: 'Loại việc', ...need(`Cần ít nhất ${GOAL_RANK_MIN_SAMPLE} phiên có đặt mục tiêu cho một loại việc.`) });
+  const byBucket = new Map();
+  const byBand = new Map();
+  const add = (map, key, init, cell) => {
+    const cur = map.get(key) ?? init();
+    cur.started += cell.started ?? 0; cur.whole += cell.whole ?? 0;
+    map.set(key, cur);
+  };
+  for (const c of profile?._cells?.values() ?? []) {
+    add(byBucket, c.bucketId, () => ({ bucketId: c.bucketId, bucketLabel: c.bucketLabel, started: 0, whole: 0 }), c);
+    add(byBand, c.band, () => ({ band: c.band, started: 0, whole: 0 }), c);
   }
-  return items;
+  const cats = [...(profile?._cats?.values() ?? [])].filter((c) => c.label);
+  return [
+    bestLine('hour', 'Giờ', [...byBucket.values()], (r) => ({ value: capitalize(r.bucketLabel) })),
+    bestLine('length', 'Độ dài', [...byBand.values()], (r) => ({ value: `Phiên ${BAND_LABEL[r.band]}` })),
+    bestLine('category', 'Loại việc', cats, (r) => ({ value: `"${r.label}"`, categoryId: r.categoryId })),
+  ];
 }
 
 /**

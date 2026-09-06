@@ -50,7 +50,6 @@ export default function ExportImport() {
       progress:     state.progress,
       resources:    state.resources,
       timerConfig:  state.timerConfig,
-      forgiveness:  state.forgiveness,
       rankSystem:   state.rankSystem,
       rankChallenge: state.rankChallenge,
       eraCrisis:    state.eraCrisis,

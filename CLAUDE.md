@@ -133,17 +133,11 @@ any of them before reading it**:
 3. ⚠️ **Vercel Hobby: max 12 Serverless Functions.** Every `.js` directly under `api/` (recursive)
    counts as one, **except** names starting with `_`. **API tests always go in `api/_tests/`.**
    Currently **10 real functions** — recount: `find api -type f -name "*.js" ! -path "api/_*"`.
-4. ⚠️ **Sync stopped → check the Supabase project FIRST, not the code** (Free tier auto-pauses on
-   0.5 GB or ~7 days idle; a log-cleanup cron + `api/keepalive.js` guard both).
-5. ⚠️ **Cloud writes are compare-and-swap on a `version` column bumped by a SERVER trigger**
-   ("first action wins"). A rejected write means that machine LOST — it must `pullFromCloud()` and
-   **never force-overwrite**. Deploying new code requires running `supabase/game_state_version.sql`
-   first.
-6. ⚠️ **Four safety nets around CAS (patch C1)** — flush on app hide · `hasMeaningfulState()` ·
-   the `known < 0` branch reads cloud first · error `42703` handling. **Do not remove any without
-   reading `docs/OPERATIONS.md`.**
-7. ⚠️ **Electron tray has 4 traps** (legacy AppleScript applet · launchd cannot run paths with
-   Vietnamese characters · no single-instance lock → 2 icons · "transparent image" ≠ "no image").
+4. ⚠️ **Touching Supabase sync, or the Electron tray, means reading `docs/OPERATIONS.md` FIRST.**
+   It owns four data-safety laws that are easy to undo by accident: Free-tier auto-pause · writes are
+   **compare-and-swap** on a server-bumped `version` ("first action wins" — a rejected write means
+   that machine LOST and must re-pull, never force-overwrite) · the four safety nets of patch C1 ·
+   the four Electron tray traps. Removing one of these has already cost real user data once.
 8. ⚠️ **No `GEMINI_API_KEY` in Vercel env ⇒ AI Coach does not run** (the on-device engine is gone).
 
 ## 🗺️ DOC MAP — what auto-loads, what you must open

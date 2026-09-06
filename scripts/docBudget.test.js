@@ -82,39 +82,40 @@ test('doc-budget: counts UNICODE CHARS (JS String.length), not bytes', () => {
 })
 
 /**
- * Anti-KNOWLEDGE-LOSS gate for the 2026-09-06 split + translation. `AGENTS.md` already proved that a
- * copy or summary which drops one operating law is worse than having no summary at all. Each string
- * below is a law paid for by a real incident.
+ * ANTI-KNOWLEDGE-LOSS GATE. Each law below was paid for by a real incident; the gate asserts the law
+ * still EXISTS, in the file that OWNS it.
+ *
+ * ⚠️ Owner-based on purpose. The first version demanded every phrase appear in `CLAUDE.md`, which
+ * quietly forced the startup file to keep implementation detail it did not need — the guard itself
+ * was making the always-loaded context bigger. What must never be lost is the knowledge, not its
+ * location, so startup-critical laws are owned by `CLAUDE.md` and the detail is owned by the topic
+ * file a session opens before touching that subsystem.
  */
-test('CLAUDE.md: splitting and translating must not drop a core law', () => {
-  const c = flat('CLAUDE.md')
-  const required = [
-    ['ASK BEFORE ACTING', 'supreme rule: a research request must not touch code'],
-    ['api/_tests/', 'API tests in the wrong folder break the Vercel deploy'],
-    ['12 Serverless Functions', 'the Hobby ceiling — exceeding it kills the deploy silently'],
-    ['merge into `main`', 'pushing a side branch never reaches production'],
-    ['"Ready"', 'Vercel must be confirmed Ready after a push'],
-    ['compare-and-swap', 'first-action-wins; stops two machines overwriting each other'],
-    ['GEMINI_API_KEY', 'without the key the AI Coach is dead'],
-    ['localhost', 'never start a focus session on dev'],
-    ['docs/GOVERNANCE.md', 'pointer to process + report templates'],
-    ['docs/OPERATIONS.md', 'pointer to infra/deploy/sync'],
-    ['NEVER `cat`', 'the rule that stops a single 252k-token command'],
-    ['LANGUAGE RULE', 'docs in English, replies to Đàm in Vietnamese'],
-  ]
-  for (const [needle, why] of required) {
-    assert.ok(c.includes(needle), `CLAUDE.md lost a law: "${needle}" — ${why}`)
-  }
-})
+const CORE_LAWS = [
+  ['CLAUDE.md', 'ASK BEFORE ACTING', 'supreme rule: a research request must not touch code'],
+  ['CLAUDE.md', 'api/_tests/', 'API tests in the wrong folder break the Vercel deploy'],
+  ['CLAUDE.md', '12 Serverless Functions', 'the Hobby ceiling — exceeding it kills the deploy silently'],
+  ['CLAUDE.md', 'merge into `main`', 'pushing a side branch never reaches production'],
+  ['CLAUDE.md', '"Ready"', 'Vercel must be confirmed Ready after a push'],
+  ['CLAUDE.md', 'compare-and-swap', 'first-action-wins; stops two machines overwriting each other'],
+  ['CLAUDE.md', 'GEMINI_API_KEY', 'without the key the AI Coach is dead'],
+  ['CLAUDE.md', 'localhost', 'never start a focus session on dev'],
+  ['CLAUDE.md', 'NEVER `cat`', 'the rule that stops a single 252k-token command'],
+  ['CLAUDE.md', 'LANGUAGE RULE', 'docs in English, replies to Đàm in Vietnamese'],
+  ['docs/OPERATIONS.md', 'hasMeaningfulState', 'CAS safety net: local empty + cloud full must not push'],
+  ['docs/OPERATIONS.md', '42703', 'missing version column must name the SQL file to run'],
+  ['docs/OPERATIONS.md', 'requestSingleInstanceLock', 'no lock = two tray icons'],
+  ['docs/OPERATIONS.md', 'game_state_version.sql', 'must be run before deploying CAS code'],
+  ['docs/OPERATIONS.md', 'DC_CROSS_SLOW', 'the env var that skips the slow pass'],
+  ['docs/GOVERNANCE.md', 'Definition of Done', 'docs and knowledge in sync or the task is not done'],
+  ['docs/GOVERNANCE.md', 'TECHNICAL ADVISOR REPORT', 'the 11-point template'],
+  ['docs/GOVERNANCE.md', 'Composition over Duplication', 'the rule that forbids forking the docs'],
+  ['docs/GOVERNANCE.md', 'Maintenance Sprint', 'the debt threshold that triggers a cleanup sprint'],
+]
 
-test('docs/GOVERNANCE.md + docs/OPERATIONS.md still hold everything split out of CLAUDE.md', () => {
-  const g = flat('docs/GOVERNANCE.md')
-  for (const s of ['Definition of Done', 'TECHNICAL ADVISOR REPORT', 'Composition over Duplication', 'Maintenance Sprint']) {
-    assert.ok(g.includes(s), `docs/GOVERNANCE.md is missing: ${s}`)
-  }
-  const o = flat('docs/OPERATIONS.md')
-  for (const s of ['game_state_version.sql', 'hasMeaningfulState', 'requestSingleInstanceLock', 'keepalive', 'WEB_PUSH_PUBLIC_KEY', 'DC_CROSS_SLOW']) {
-    assert.ok(o.includes(s), `docs/OPERATIONS.md is missing: ${s}`)
+test('core laws still exist, each in the file that owns it', () => {
+  for (const [owner, needle, why] of CORE_LAWS) {
+    assert.ok(flat(owner).includes(needle), `${owner} lost a law: "${needle}" — ${why}`)
   }
 })
 

@@ -73,6 +73,77 @@ roughly 44%. Titles below are the lookup key; read one with
 
 ---
 
+## ADR-077 — Round 37: a session always lays a brick; Stats answers on whole sessions; the goal is optional; missions and the weekly chain leave the store; the weekly report folds into Stats
+
+- **Date**: 2026-09-06 (late night). Branch `claude/game-development-engagement-xvqc2h`, merged into `main`.
+- **Context**: Rounds 33–36 removed tabs, currencies, "Claim" buttons, six Stats tabs and the sleeping
+  economy. Đàm's round-37 order: *"Build lớn. Simplify mạnh. Làm game vui hơn. Tập trung nhiều hơn vào
+  UX/UI"* — seven streams, full autonomy, "thà xong bốn mạch trọn vẹn còn hơn bảy mạch dở dang".
+  Audits (six read-only sweeps) found: the heart of the new Stats screen depended on goal reviews that
+  its only player rarely gives; the ending was an auto-advancing chain of number cards preceded by a
+  separate 3.2-second "city moment" overlay; a session with an empty build queue built nothing;
+  `PomodoroEngine.jsx` was 2,958 lines and `gameStore.js` 5,413; the weekly report dialog (916 lines)
+  answered the same question the Stats screen now answers; `forgiveness` was a write-only key;
+  `playTick` and `tickSoundEnabled` had no caller; "last minute" had no sound of its own.
+- **Problem**: the loop had become thin and quiet, and its most-watched screens still carried empty
+  boxes and gates that only existed because they had been coded.
+- **Options weighed**
+  1. *Stats "strongest" lines* — (A) keep the goal basis and make goals mandatory with one-tap chips
+     (rejected: the gate had nobody behind it); (B) switch the AI Coach to the same new basis
+     (rejected: the anti-hallucination guard has scored fixtures on goal-rate wording, and goal-rate is
+     the sharper instrument where it exists); **(C) chosen**: `buildFocusProfile` counts
+     `started`/`whole` per bucket next to the goal counters; Stats ranks on the whole-session rate
+     (started · not cancelled · not self-rated "Chưa đạt") with the same Wilson brake; the Coach is
+     untouched. Below the sample floor the line still answers with the busiest bucket (`thin`).
+  2. *The one new thing* — (A) animate the 3D city during the session (rejected: black box, second WebGL
+     context on iPhone); (B) a day strip of sessions (rejected: another statistic); **(C) chosen**:
+     "this session's brick" — `engine/sessionBrick.js` describes which building the session pushes,
+     the strip above the ring fills the current brick with the timer, and the ending's project card
+     lands it (`BrickRow`, `playBrickLaid`). It replaces the milestone toast + combo/multiplier badges
+     (same height budget) and the one-line city tease.
+  3. *Empty build queue* — (A) leave it (a session builds nothing); (B) block Start until a project is
+     chosen (a gate); **(C) chosen**: `autoQueueSessionProject` queues the first of `listNextProjects`
+     right before the queue advances — the same pick the strip showed before Start; changeable on the
+     Build screen. The City empty state and the first ending now name that project.
+  4. *Weekly report* — (A) keep the modal; **(B) chosen**: delete it. Monday still invites (toast), a
+     missed toast still leaves the never-expiring dot — now on the Thống kê tab — and "seeing" is
+     `markWeeklyReportSeen()` + the Stats tab. The interruption law of ADR-060/061 holds unchanged.
+  5. *`forgiveness`* (round-36 question 2) — (A) remove it with the sleeping-money migration;
+     **(B) chosen**: remove now. It was a weekly-reset counter with no consumer and no granter since
+     ADR-069/071; unlike resources/RP it never held anything Đàm earned, so no confirmation is needed.
+     Resources · research · refining · tinhThe · staking stay dormant until Đàm confirms (#99).
+  6. *Week comparison* (round-36 question 1) — one law: compare equal windows. When BOTH same-span
+     windows are empty (Monday 04:00), the window moves back one week: last full week vs the week
+     before, labelled by the engine (`WEEK_SCOPE`). A "Sunday-evening full-week variant" was rejected:
+     a second formula for a four-hour window.
+  7. *Haptics* — none. iOS Safari has no Vibration API; the checkbox-`switch` trick is undocumented
+     behaviour. A code path a Mac + iPhone user can never feel is dead code.
+  8. *Sound* — three signatures: start (unchanged rising pair) · last minute (`playLastMinute`, one
+     bell at 60 s; countdown ticks only in the last 3 s) · finish (unchanged); break-over gets its own
+     `playBreakOver`; the ending's brick gets `playBrickLaid`; the XP card is silent; `playTick`,
+     `tickSoundEnabled` and `playExtensionReady` (a copy of the milestone chime) are deleted.
+- **Decision**: all of the above, plus: the session goal is optional (Start never blocks; recent goals
+  are one-tap chips in the goal card, same task type first); daily missions and the weekly chain become
+  pure modules (`engine/missions.js`, `engine/weeklyChain.js`, `engine/seededRng.js`) — the store's
+  hand-written live tick is replaced by `tickDailyMissions`, which rebuilds from history WITH the
+  finished session (live = reload, one formula); `ActionButton` moves to `shared/ActionButton.jsx` as
+  the single door for #86 (sizes `sm`/`md` added); seven leaf controls move to `components/focus/`;
+  `OnboardingOverlay` (three static cards) is deleted because the Focus strip already tells the first
+  session what it builds.
+- **Trade-offs / what was lost**: the weekly report's charts and "best day/block" lines; the combo and
+  multiplier chips on the Focus screen (they still show on the ending); the 5-minute "extension ready"
+  chime; the 25/50/75% milestone toast; the choice to leave the build queue empty; the mandatory goal.
+- **Impact**: `gameStore.js` 5,413 → 4,696 lines; `PomodoroEngine.jsx` 2,958 → 1,922; deleted
+  `WeeklyReportModal.jsx` (916), `CityGrowthMoment.jsx`, `FocusCityTease.jsx`, `cityMoment.js`,
+  `useCityMoment.js`, `OnboardingOverlay.jsx`, `focusGoalJump.js`, `missionXp.js`, `weeklyXpNote.js`;
+  new `engine/{missions,weeklyChain,seededRng,sessionBrick}.js`, `components/focus/*`,
+  `shared/ActionButton.jsx`, `lib/keyboard.js`, `hooks/useMinWidth.js`; 37 new tests. Synced JSONB
+  shape: `forgiveness` no longer written (old rows keep it harmlessly); nothing else changed.
+- **Review conditions**: if Đàm wants to choose every project himself → make auto-queue a setting; if
+  the last-minute bell annoys → drop it, keep the three ticks; if the whole-session rate reads 100%
+  in every bucket on the real save → add average length as the tiebreak (still one law); #86 is
+  "door built, tenants not moved" — migrate the remaining hand-drawn buttons through `ActionButton`
+  next.
 ## ADR-076 — Document governance runs on DISCOVERY, not on a hand-written list
 
 - **Date**: 2026-09-06 (night, after ADR-075)

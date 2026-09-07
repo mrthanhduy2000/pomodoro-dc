@@ -689,6 +689,20 @@ export function isCancelledHistoryEntry(entry) {
     || (entry?.completed === false && Boolean(entry?.cancelledAt));
 }
 
+/** Timestamp of a history entry in ms, or null when it has none the app can read. */
+export function getHistoryEntryTimestampMs(entry) {
+  const raw = entry?.timestamp ?? entry?.finishedAt ?? entry?.startedAt;
+  const timestamp = typeof raw === 'string' ? new Date(raw).getTime() : Number(raw);
+  return Number.isFinite(timestamp) ? timestamp : null;
+}
+
+/** Completed entries only, newest first — the list every "rebuild from history" path starts from. */
+export function getCompletedHistoryEntries(history = []) {
+  return (history ?? [])
+    .filter((entry) => getHistoryEntryTimestampMs(entry) !== null && !isCancelledHistoryEntry(entry) && entry.completed !== false)
+    .sort((left, right) => getHistoryEntryTimestampMs(right) - getHistoryEntryTimestampMs(left));
+}
+
 // ─────────────────────────────────────────────────────────────────────────────
 // TIẾN ĐỘ HÔM NAY — NGUỒN SỰ THẬT DUY NHẤT
 // ─────────────────────────────────────────────────────────────────────────────

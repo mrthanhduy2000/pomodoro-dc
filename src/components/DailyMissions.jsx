@@ -5,7 +5,7 @@ import { motion } from 'framer-motion';
 import useGameStore from '../store/gameStore';
 import useSettingsStore from '../store/settingsStore';
 import { missionXpMultiplier } from '../engine/wonderEffects.js';
-import { dailyAllBonusXP, scaleMissionXP } from './missionXp';
+import { dailyAllBonusXP, scaleMissionXP } from '../engine/missions';
 import RewardCard from './shared/RewardCard';
 import { DAILY_BONUS_COPY } from './dailyBonusCopy';
 import { useSnapMotion } from '../lib/motionPresets';
@@ -22,8 +22,8 @@ import {
 
 // ⚠️ HAI BẢN CHÉP TAY ĐÃ GỠ (2026-09-05) — `getStreakBonusCapDays` và hệ số thưởng nhiệm vụ.
 // Cả hai từng hỏi thẳng TÊN đặc quyền kỳ quan mà KHÔNG kiểm `type`; xem `engine/wonderEffects.js`.
-// `scaleMissionXP` cũng đã dời sang `missionXp.js` vì chuỗi thẻ thưởng sau phiên (ADR-068) in cùng
-// con số — hai bản chép là hai con số sớm muộn lệch nhau.
+// `scaleMissionXP` / `dailyAllBonusXP` live in `engine/missions.js` (ADR-077) — the store GRANTS and this
+// screen SHOWS with the same function; two copies were two numbers that drifted apart.
 //
 // ⚠️ KHÔNG CÒN NÚT "NHẬN" / "CHỐT BƯỚC" (2026-09-06, ADR-070, đóng `TECH_DEBT #100`). Thưởng trọn
 // ngày tự vào ngay phiên khép nốt nhiệm vụ cuối; bước tuần tự chốt ngay phiên đủ điều kiện — cả hai

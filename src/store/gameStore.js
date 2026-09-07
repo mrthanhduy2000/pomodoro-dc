@@ -14,7 +14,6 @@
  *  progress      — tổng EP, chuyển quyển
  *  resources     — túi tài nguyên theo từng quyển
  *  timer         — cấu hình focus/break + trạng thái runtime
- *  forgiveness   — theo dõi miễn phạt hàng tuần
  *  rankSystem    — bậc danh xưng hiện tại theo quyển + thử thách đang active
  *  eraCrisis     — trạng thái khủng hoảng kỷ nguyên
  *  relics        — di vật đã nhận (buff vĩnh viễn)
@@ -26,10 +25,11 @@
 import { create } from 'zustand';
 import { tinhGiuLai, heSoXpSieuViet } from '../engine/prestigeCarryover';
 import {
-  missionXpMultiplier, streakBonusCapDays,
+  streakBonusCapDays,
   wonderCrisisWindowBonusHours, wonderPassiveBuffs, wonderRelicEvolveFactor,
 } from '../engine/wonderEffects.js';
 import { applyRelicEvolutions, evaluateRelicEvolutions, withCanonicalRelicText } from '../engine/relicGrowth';
+import { autoQueueSessionProject } from '../engine/sessionBrick';
 import { persist } from 'zustand/middleware';
 import {
   GAME_STORE_STORAGE_KEY,
@@ -56,25 +56,11 @@ import {
 } from '../engine/eraLegacy';
 import {
   GOAL_ACHIEVED_BONUS_RATE,
-  FORGIVENESS_CANCELS_PER_WEEK,
   SIEU_TAP_TRUNG_CHARGES,
   SO_DO_MIN_MINUTES,
   RANK_SYSTEM,
   ACHIEVEMENTS,
-  MISSION_CATALOG,
-  MISSIONS_PER_DAY,
-  MISSION_ALL_BONUS_XP,
-  DAILY_MISSION_XP_SCALE,
-  MISSION_NOTE_MIN_WORDS,
-  DAILY_RARE_BUCKET_CHANCE_MIN,
-  DAILY_RARE_BUCKET_CHANCE_MAX,
   WEEKLY_CHAINS,
-  WEEKLY_CHAIN_XP_SCALE,
-  PERFECT_PLAN_WEEKLY_MULTIPLIER,
-  STREAK_MISSION_MIN_STREAK,
-  STREAK_MISSION_BASE_XP,
-  STREAK_MISSION_XP_PER_DAY,
-  STREAK_MISSION_MAX_XP,
   BUILDING_SPECS,
   BUILDING_EFFECTS,
   BLUEPRINT_CATALOG,
@@ -115,9 +101,18 @@ import {
   isCancelledHistoryEntry,
   // Bản Cập Nhật Cộng Hưởng
   getEffectiveSkillCost,
+  getCompletedHistoryEntries,
+  getHistoryEntryTimestampMs,
 } from '../engine/gameMath';
 import { inferAchievementUnlockTimes } from '../engine/achievementTimeline';
-import { countRichTextWords } from '../utils/richText';
+import {
+  applyDailyMissionXPBonus, getDailyMissionAllBonusXP, makeDefaultMissions,
+  rebuildMissionsFromHistory, refreshMissionsIfStale, tickDailyMissions,
+} from '../engine/missions';
+import {
+  autoClaimWeeklySteps, getWeekMonday, getWeeklyStepProgress, makeDefaultWeeklyChain,
+  rebuildWeeklyChainFromHistory, refreshWeeklyChain, weeklySnapshotWithSession,
+} from '../engine/weeklyChain';
 import soundEngine from '../engine/soundEngine';
 import notificationManager from '../engine/notifications';
 import {
@@ -405,11 +400,6 @@ function normalizeStoredTimerConfig(timerConfig = {}) {
   };
 }
 
-const makeDefaultForgiveness = (referenceTs = Date.now()) => ({
-  chargesRemaining: FORGIVENESS_CANCELS_PER_WEEK,
-  weekStartTimestamp: referenceTs,
-});
-
 const makeDefaultRankSystem = () => ({
   book1:  0,  // rank index in era 1 (0–7)
   book2:  0,
@@ -638,254 +628,6 @@ function advanceStreak(streak, unlockedSkills = null) {
   };
 }
 
-// ─── FACTORY: MISSIONS ────────────────────────────────────────────────────────
-const makeDefaultMissions = () => ({
-  date:                       null,
-  list:                       [],
-  bonusClaimedToday:          false,
-  bonusClaimedXP:             0,
-  streakMissionClaimedToday:  false,
-  recentHistory:              [],
-});
-
-const DAILY_MISSION_HISTORY_LIMIT = 8;
-const DAILY_MISSION_VARIANT_COUNT = 10;
-const WEEKLY_CHAIN_HISTORY_LIMIT = 10;
-
-function createSeededRng(seedKey) {
-  let seed = 1779033703 ^ seedKey.length;
-  for (let i = 0; i < seedKey.length; i += 1) {
-    seed = Math.imul(seed ^ seedKey.charCodeAt(i), 3432918353);
-    seed = (seed << 13) | (seed >>> 19);
-  }
-  seed = Math.imul(seed ^ (seed >>> 16), 2246822507);
-  seed = Math.imul(seed ^ (seed >>> 13), 3266489909);
-  seed = (seed ^ (seed >>> 16)) >>> 0;
-  return () => {
-    seed = (seed + 0x6D2B79F5) >>> 0;
-    let t = seed;
-    t = Math.imul(t ^ (t >>> 15), t | 1);
-    t ^= t + Math.imul(t ^ (t >>> 7), t | 61);
-    return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
-  };
-}
-
-function countWords(text = '') {
-  return countRichTextWords(text);
-}
-
-function getMissionRewardTotalXP(list = []) {
-  return list.reduce((sum, mission) => sum + (mission?.rewardXP ?? 0), 0);
-}
-
-function getDailyMissionAllBonusXP(missions, buildings = [], unlockedSkills = {}) {
-  const strategyBonusXP = unlockedSkills.bac_thay_chien_luoc
-    ? applyDailyMissionXPBonus(buildings, getMissionRewardTotalXP(missions?.list ?? []))
-    : 0;
-  return applyDailyMissionXPBonus(buildings, MISSION_ALL_BONUS_XP) + strategyBonusXP;
-}
-
-function normalizeMissionTemplate(mission) {
-  if (!mission?.id) return mission ?? null;
-  const template = MISSION_CATALOG.find((entry) => entry.id === mission.id);
-  if (!template) return mission;
-  return {
-    ...mission,
-    ...template,
-    progress: Number.isFinite(mission.progress) ? mission.progress : 0,
-    claimed: Boolean(mission.claimed),
-    family: template.family ?? mission.family,
-    bucket: template.bucket ?? mission.bucket,
-    weight: template.weight ?? mission.weight ?? 1,
-  };
-}
-
-function normalizeStoredMissions(missions) {
-  const list = Array.isArray(missions?.list)
-    ? missions.list.map(normalizeMissionTemplate).filter((mission) => mission?.id)
-    : [];
-  const recentHistory = Array.isArray(missions?.recentHistory)
-    ? missions.recentHistory.filter((entry) => entry?.date)
-    : [];
-  return {
-    ...makeDefaultMissions(),
-    ...missions,
-    date: typeof missions?.date === 'string' ? missions.date : null,
-    list,
-    recentHistory,
-    bonusClaimedToday: Boolean(missions?.bonusClaimedToday),
-    bonusClaimedXP: Number.isFinite(missions?.bonusClaimedXP)
-      ? Math.max(0, Math.round(missions.bonusClaimedXP))
-      : 0,
-    streakMissionClaimedToday: Boolean(missions?.streakMissionClaimedToday),
-  };
-}
-
-function weightedPick(list, rng) {
-  if (list.length === 0) return null;
-  const totalWeight = list.reduce((sum, mission) => sum + Math.max(0.01, mission.weight ?? 1), 0);
-  let roll = rng() * totalWeight;
-  for (const mission of list) {
-    roll -= Math.max(0.01, mission.weight ?? 1);
-    if (roll <= 0) return mission;
-  }
-  return list[list.length - 1];
-}
-
-function createMissionHistoryEntry(date, list = []) {
-  const normalized = list
-    .map(normalizeMissionTemplate)
-    .filter(Boolean);
-  if (!date || normalized.length === 0) return null;
-  return {
-    date,
-    ids: normalized.map((mission) => mission.id),
-    families: [...new Set(normalized.map((mission) => mission.family).filter(Boolean))],
-  };
-}
-
-function historyEntryHasRareMission(entry) {
-  const ids = Array.isArray(entry?.ids) ? entry.ids : [];
-  return ids.some((missionId) =>
-    MISSION_CATALOG.some((mission) => mission.id === missionId && mission.bucket === 'rare')
-  );
-}
-
-function rollMissionHistory(missions, nextDate) {
-  let recentHistory = Array.isArray(missions?.recentHistory)
-    ? missions.recentHistory.filter((entry) => entry?.date && entry.date !== nextDate)
-    : [];
-
-  if (missions?.date && missions.date !== nextDate) {
-    const todayEntry = createMissionHistoryEntry(missions.date, missions.list);
-    if (todayEntry && !recentHistory.some((entry) => entry.date === todayEntry.date)) {
-      recentHistory = [todayEntry, ...recentHistory];
-    }
-  }
-
-  return recentHistory.slice(0, DAILY_MISSION_HISTORY_LIMIT);
-}
-
-function scoreMissionCandidate(candidate, recentHistory = []) {
-  const candidateIds = candidate.map((mission) => mission.id);
-  const candidateIdSet = new Set(candidateIds);
-  const candidateFamilies = candidate.map((mission) => mission.family).filter(Boolean);
-  const candidateFamilySet = new Set(candidateFamilies);
-  const candidateSignature = [...candidateIds].sort().join('|');
-
-  let score = candidate.reduce((sum, mission) => {
-    let nextScore = sum + (mission.weight ?? 1);
-    if (mission.family === 'blueprints') nextScore -= 0.5;
-    if (mission.family === 'deepSessions' || mission.family === 'balancedSessions') nextScore += 0.4;
-    return nextScore;
-  }, 0);
-
-  recentHistory.forEach((entry, index) => {
-    const recencyWeight = Math.max(0.35, 1 - index * 0.15);
-    const entryIds = new Set(Array.isArray(entry?.ids) ? entry.ids : []);
-    const entryFamilies = new Set(Array.isArray(entry?.families) ? entry.families : []);
-    const entrySignature = [...entryIds].sort().join('|');
-
-    if (entrySignature && entrySignature === candidateSignature) {
-      score -= 12 * recencyWeight;
-    }
-
-    candidateIdSet.forEach((missionId) => {
-      score += entryIds.has(missionId) ? -4.5 * recencyWeight : 1.1 * recencyWeight;
-    });
-
-    candidateFamilySet.forEach((family) => {
-      score += entryFamilies.has(family) ? -0.4 * recencyWeight : 0.25 * recencyWeight;
-    });
-  });
-
-  return score;
-}
-
-function pickMissionForBucket(bucket, rng, usedIds, usedFamilies) {
-  const basePool = MISSION_CATALOG.filter((mission) =>
-    mission.bucket === bucket && !usedIds.has(mission.id)
-  );
-  const distinctFamilyPool = basePool.filter((mission) => !usedFamilies.has(mission.family));
-  const fallbackPool = distinctFamilyPool.length > 0
-    ? distinctFamilyPool
-    : (basePool.length > 0 ? basePool : MISSION_CATALOG.filter((mission) => !usedIds.has(mission.id)));
-  return weightedPick(fallbackPool, rng);
-}
-
-function shouldIncludeRareMission(dateStr, recentHistory = []) {
-  if (!MISSION_CATALOG.some((mission) => mission.bucket === 'rare')) return false;
-  if (recentHistory.slice(0, 2).some(historyEntryHasRareMission)) return false;
-  const rareChance =
-    DAILY_RARE_BUCKET_CHANCE_MIN
-    + createSeededRng(`daily-rare-chance:${dateStr}`)()
-      * (DAILY_RARE_BUCKET_CHANCE_MAX - DAILY_RARE_BUCKET_CHANCE_MIN);
-  const rareRoll = createSeededRng(`daily-rare-roll:${dateStr}`)();
-  return rareRoll < rareChance;
-}
-
-function buildDailyMissionVariant(dateStr, variant, { includeRare = false } = {}) {
-  const rng = createSeededRng(`daily:${dateStr}:${includeRare ? 'rare' : 'normal'}:${variant}`);
-  const buckets = ['core', includeRare ? 'rare' : 'stretch', 'variety'];
-  const usedIds = new Set();
-  const usedFamilies = new Set();
-  const selected = [];
-
-  for (const bucket of buckets.slice(0, MISSIONS_PER_DAY)) {
-    const mission = pickMissionForBucket(bucket, rng, usedIds, usedFamilies)
-      ?? (bucket === 'rare' ? pickMissionForBucket('stretch', rng, usedIds, usedFamilies) : null);
-    if (!mission) continue;
-    usedIds.add(mission.id);
-    usedFamilies.add(mission.family);
-    selected.push({
-      ...mission,
-      progress: 0,
-      claimed:  false,
-    });
-  }
-
-  return selected;
-}
-
-function pickDailyMissions(dateStr, previousList = []) {
-  const includeRare = shouldIncludeRareMission(dateStr, previousList);
-  const variants = Array.from({ length: DAILY_MISSION_VARIANT_COUNT }, (_, variant) =>
-    buildDailyMissionVariant(dateStr, variant, { includeRare })
-  ).filter((candidate) => candidate.length > 0);
-
-  if (variants.length === 0) return [];
-
-  let bestCandidate = variants[0];
-  let bestScore = scoreMissionCandidate(bestCandidate, previousList);
-  for (const candidate of variants.slice(1)) {
-    const score = scoreMissionCandidate(candidate, previousList);
-    if (score > bestScore) {
-      bestCandidate = candidate;
-      bestScore = score;
-    }
-  }
-
-  return bestCandidate;
-}
-
-function refreshMissionsIfStale(missions) {
-  const today = localDateStr();
-  const normalizedMissions = normalizeStoredMissions(missions);
-  if (normalizedMissions.date === today && normalizedMissions.list.length > 0) {
-    return normalizedMissions;
-  }
-  const recentHistory = rollMissionHistory(normalizedMissions, today);
-  return {
-    ...normalizedMissions,
-    date: today,
-    list: pickDailyMissions(today, recentHistory),
-    bonusClaimedToday: false,
-    bonusClaimedXP: 0,
-    streakMissionClaimedToday: false,
-    recentHistory,
-  };
-}
-
 // ─── FACTORY: STAKING ─────────────────────────────────────────────────────────
 const makeDefaultStaking = () => ({
   active:          false,
@@ -904,260 +646,6 @@ function applyOverclockRewardBonus(baseReward = {}, rewardMultiplier = 1) {
     finalEXP: Math.round((baseReward.finalEXP ?? baseReward.finalXP ?? 0) * rewardMultiplier),
     multiplier: (baseReward.multiplier ?? 1) * rewardMultiplier,
   };
-}
-
-// ─── HELPER: Tuần hiện tại (key = ngày thứ Hai) ──────────────────────────────
-function getWeekMonday(ts = Date.now()) {
-  return localWeekMondayStr(ts);
-}
-
-function normalizeWeeklyChainHistoryEntry(entry) {
-  if (!entry?.weekKey || !entry?.chainId) return null;
-  return {
-    weekKey: entry.weekKey,
-    chainId: entry.chainId,
-    stepTypes: Array.isArray(entry.stepTypes) ? entry.stepTypes : [],
-  };
-}
-
-function createWeeklyChainHistoryEntry(weekKey, chainIndex) {
-  if (!weekKey || !Number.isFinite(chainIndex) || !WEEKLY_CHAINS[chainIndex]) return null;
-  return {
-    weekKey,
-    chainId: WEEKLY_CHAINS[chainIndex].id,
-    stepTypes: [...new Set(WEEKLY_CHAINS[chainIndex].steps.map((step) => step.type))],
-  };
-}
-
-function rollWeeklyChainHistory(wc, nextWeekKey) {
-  let recentHistory = Array.isArray(wc?.recentHistory)
-    ? wc.recentHistory
-      .map(normalizeWeeklyChainHistoryEntry)
-      .filter((entry) => entry?.weekKey && entry.weekKey !== nextWeekKey)
-    : [];
-
-  if (wc?.weekKey && wc.weekKey !== nextWeekKey) {
-    const currentEntry = createWeeklyChainHistoryEntry(wc.weekKey, wc.chainIndex);
-    if (currentEntry && !recentHistory.some((entry) => entry.weekKey === currentEntry.weekKey)) {
-      recentHistory = [currentEntry, ...recentHistory];
-    }
-  }
-
-  return recentHistory.slice(0, WEEKLY_CHAIN_HISTORY_LIMIT);
-}
-
-function scoreWeeklyChainCandidate(chainIndex, recentHistory = []) {
-  const chain = WEEKLY_CHAINS[chainIndex];
-  if (!chain) return Number.NEGATIVE_INFINITY;
-
-  const chainId = chain.id;
-  const stepTypes = [...new Set(chain.steps.map((step) => step.type))];
-  const stepTypeSet = new Set(stepTypes);
-  const recentUses = recentHistory.filter((entry) => entry.chainId === chainId).length;
-  let score = 0;
-
-  stepTypes.forEach((type) => {
-    if (type === 'perfectBreaks' || type === 'balancedDays' || type === 'deepSessions') score += 0.45;
-    if (type === 'sessions' || type === 'focusMinutes') score -= 0.1;
-  });
-  score -= recentUses * 2.4;
-
-  recentHistory.forEach((entry, index) => {
-    const recencyWeight = Math.max(0.4, 1 - index * 0.18);
-    const priorTypes = new Set(entry.stepTypes ?? []);
-    if (entry.chainId === chainId) score -= 10 * recencyWeight;
-    stepTypeSet.forEach((type) => {
-      score += priorTypes.has(type) ? -0.45 * recencyWeight : 0.12 * recencyWeight;
-    });
-  });
-
-  return score;
-}
-
-function pickChainForWeek(weekKey, recentHistory = []) {
-  const rng = createSeededRng(`weekly:${weekKey}`);
-  const allChainIndexes = WEEKLY_CHAINS.map((_, chainIndex) => chainIndex);
-  const recentWindow = Math.min(WEEKLY_CHAINS.length - 2, recentHistory.length);
-  const blockedIds = new Set(
-    recentHistory.slice(0, recentWindow).map((entry) => entry.chainId)
-  );
-  const candidateIndexes = allChainIndexes.filter((chainIndex) =>
-    !blockedIds.has(WEEKLY_CHAINS[chainIndex].id)
-  );
-  const pool = candidateIndexes.length > 0 ? candidateIndexes : allChainIndexes;
-  const candidates = pool.map((chainIndex) => ({
-    chainIndex,
-    score: scoreWeeklyChainCandidate(chainIndex, recentHistory) + rng() * 0.35,
-  }));
-  candidates.sort((a, b) => b.score - a.score);
-  return candidates[0]?.chainIndex ?? 0;
-}
-
-// ─── FACTORY: WEEKLY CHAIN ────────────────────────────────────────────────────
-const makeDefaultWeeklyChain = () => ({
-  weekKey:      null,
-  chainIndex:   0,
-  currentStep:  0,
-  stepProgress: 0,     // tích lũy cho bước hiện tại
-  bonusClaimed: false,
-  recentHistory: [],
-});
-
-function refreshWeeklyChain(wc) {
-  const monday = getWeekMonday();
-  if (wc.weekKey === monday) return wc;
-  const recentHistory = rollWeeklyChainHistory(wc, monday);
-  return {
-    weekKey:      monday,
-    chainIndex:   pickChainForWeek(monday, recentHistory),
-    currentStep:  0,
-    stepProgress: 0,
-    bonusClaimed: false,
-    recentHistory,
-  };
-}
-
-function getHistoryWeekEntries(history, weekKey) {
-  return history.filter((entry) => {
-    if (isCancelledHistoryEntry(entry)) return false;
-    const sessionTs = new Date(entry.timestamp).getTime();
-    const breakTs = entry.breakCompletedAt
-      ? new Date(entry.breakCompletedAt).getTime()
-      : NaN;
-    const sessionMatches = Number.isFinite(sessionTs) && getWeekMonday(sessionTs) === weekKey;
-    const breakMatches = Number.isFinite(breakTs) && getWeekMonday(breakTs) === weekKey;
-    return sessionMatches || breakMatches;
-  });
-}
-
-function buildWeeklyProgressSnapshot(weekEntries = [], weekKey = null) {
-  const categorySet = new Set();
-  const activeDays = new Set();
-  const balancedDayMap = {};
-  let sessions = 0;
-  let focusMinutes = 0;
-  let notes = 0;
-  let deepSessions = 0;
-  let perfectBreaks = 0;
-  let maxSessionMinutes = 0;
-
-  weekEntries.forEach((entry) => {
-    if (!entry) return;
-    if (isCancelledHistoryEntry(entry)) return;
-    const sessionTs = new Date(entry.timestamp).getTime();
-    const sessionInWeek = Number.isFinite(sessionTs) && (!weekKey || getWeekMonday(sessionTs) === weekKey);
-    const breakTs = entry.breakCompletedAt
-      ? new Date(entry.breakCompletedAt).getTime()
-      : (entry.breakCompletedOnTime ? sessionTs : NaN);
-    const breakInWeek = Number.isFinite(breakTs) && (!weekKey || getWeekMonday(breakTs) === weekKey);
-    const minutes = Number(entry.minutes) || 0;
-
-    if (sessionInWeek) {
-      sessions += 1;
-      focusMinutes += minutes;
-      maxSessionMinutes = Math.max(maxSessionMinutes, minutes);
-      if (entry.categoryId) categorySet.add(entry.categoryId);
-      if (countWords(entry.note ?? '') >= MISSION_NOTE_MIN_WORDS) notes += 1;
-      if (minutes >= 45) deepSessions += 1;
-
-      const dayKey = localDateStr(new Date(sessionTs));
-      activeDays.add(dayKey);
-      const day = balancedDayMap[dayKey] ?? { hasShort: false, hasLong: false };
-      day.hasShort = day.hasShort || minutes <= 25;
-      day.hasLong = day.hasLong || minutes >= 60;
-      balancedDayMap[dayKey] = day;
-    }
-
-    if (entry.breakCompletedOnTime && breakInWeek) perfectBreaks += 1;
-  });
-
-  const balancedDays = Object.values(balancedDayMap)
-    .filter((day) => day.hasShort && day.hasLong)
-    .length;
-
-  return {
-    sessions,
-    focusMinutes,
-    uniqueCategories: categorySet.size,
-    notes,
-    daysActive: activeDays.size,
-    deepSessions,
-    balancedDays,
-    perfectBreaks,
-    maxSessionMinutes,
-  };
-}
-
-function getWeeklyStepProgress(step, snapshot) {
-  if (!step) return 0;
-  switch (step.type) {
-    case 'sessions':
-      return Math.min(step.goal, snapshot.sessions);
-    case 'focusMinutes':
-      return Math.min(step.goal, snapshot.focusMinutes);
-    case 'singleSession':
-      return Math.min(step.goal, snapshot.maxSessionMinutes);
-    case 'uniqueCategories':
-      return Math.min(step.goal, snapshot.uniqueCategories);
-    case 'notes':
-      return Math.min(step.goal, snapshot.notes);
-    case 'daysActive':
-      return Math.min(step.goal, snapshot.daysActive);
-    case 'deepSessions':
-      return Math.min(step.goal, snapshot.deepSessions);
-    case 'balancedDays':
-      return Math.min(step.goal, snapshot.balancedDays);
-    case 'perfectBreaks':
-      return Math.min(step.goal, snapshot.perfectBreaks);
-    default:
-      return 0;
-  }
-}
-
-/**
- * ADR-070 — TỰ CHỐT BƯỚC TUẦN. Đóng nửa đầu `TECH_DEBT #100`: bước đủ điều kiện từng đứng đó chờ bấm
- * "Chốt bước"; nay `completeFocusSession` chốt ngay khi đủ, có thể chốt liền nhiều bước nếu ảnh chụp
- * tuần đã vượt qua vài mốc, và kể ở chuỗi thẻ thưởng. XP của bước cộng vào XP phiên (lên cấp tính
- * MỘT lần), SP thưởng chuỗi cộng vào `player.sp`, các buff kỹ năng (Cử Tri · Kế Hoạch Hoàn Hảo) do
- * nơi gọi đẩy vào hàng. Cùng công thức XP với nút cũ — chỉ bỏ vế RP/TTCH (đồng tiền ngủ).
- */
-function autoClaimWeeklySteps({ weeklyChain, weeklySnapshot, unlockedSkills = {} } = {}) {
-  const chainMeta = WEEKLY_CHAINS[weeklyChain?.chainIndex];
-  const idle = { weeklyChain, steps: [], xp: 0, bonusSP: 0, cuTriPushes: 0, keHoachNextWeekKey: null, finished: false, title: chainMeta?.title ?? null };
-  if (!chainMeta) return idle;
-  const perfectPlan = !!unlockedSkills.ke_hoach_hoan_hao;
-  let chain = { ...weeklyChain };
-  const steps = [];
-  let xp = 0;
-  let bonusSP = 0;
-  let cuTriPushes = 0;
-  let keHoachNextWeekKey = null;
-  while (chain.currentStep < chainMeta.steps.length) {
-    const step = chainMeta.steps[chain.currentStep];
-    const progress = getWeeklyStepProgress(step, weeklySnapshot);
-    if (progress < step.goal) {
-      chain = { ...chain, stepProgress: progress };
-      break;
-    }
-    const isLast = chain.currentStep >= chainMeta.steps.length - 1;
-    const bonusXP = isLast && !chain.bonusClaimed ? chainMeta.bonusXP : 0;
-    const stepSP = isLast && !chain.bonusClaimed ? chainMeta.bonusSP : 0;
-    const base = perfectPlan ? (step.rewardXP + bonusXP) * PERFECT_PLAN_WEEKLY_MULTIPLIER : step.rewardXP + bonusXP;
-    const stepXP = Math.round(base * WEEKLY_CHAIN_XP_SCALE);
-    xp += stepXP;
-    bonusSP += stepSP;
-    if (unlockedSkills.cu_tri) cuTriPushes += 1;
-    if (isLast && perfectPlan) keHoachNextWeekKey = localWeekMondayStr(Date.now() + 7 * 86_400_000);
-    steps.push({ index: chain.currentStep, total: chainMeta.steps.length, label: step.label, xp: stepXP, isLast, bonusSP: stepSP });
-    const nextIndex = chain.currentStep + 1;
-    chain = {
-      ...chain,
-      currentStep: nextIndex,
-      bonusClaimed: isLast ? true : chain.bonusClaimed,
-      stepProgress: nextIndex < chainMeta.steps.length ? getWeeklyStepProgress(chainMeta.steps[nextIndex], weeklySnapshot) : 0,
-    };
-  }
-  return { weeklyChain: chain, steps, xp, bonusSP, cuTriPushes, keHoachNextWeekKey, finished: chain.currentStep >= chainMeta.steps.length, title: chainMeta.title };
 }
 
 // ─── FACTORY: DAILY TRACKING ─────────────────────────────────────────────────
@@ -1378,11 +866,6 @@ function normalizeStoredRefined(resourcesRefined = {}) {
 // `getDailyMissionXPBonusMultiplier` ĐÃ CHUYỂN sang `engine/wonderEffects.js` (2026-09-05) —
 // cả ba đều có một bản chép tay ở tầng giao diện, và cả ba bản ấy thiếu phép kiểm
 // `type === 'wonder'`. Xem khối chú thích cuối file đó.
-
-function applyDailyMissionXPBonus(buildings, xpAmount) {
-  const normalizedXP = Math.max(0, xpAmount ?? 0);
-  return Math.round(normalizedXP * DAILY_MISSION_XP_SCALE * missionXpMultiplier(buildings));
-}
 
 function getBuildingPerkEffects(perk) {
   return Array.isArray(perk?.effects) ? perk.effects : [];
@@ -1855,21 +1338,6 @@ function normalizeStoredRelic(relic, now = Date.now()) {
   return fresh.earnedAt ? fresh : { ...fresh, earnedAt: new Date(now).toISOString() };
 }
 
-function normalizeStoredForgiveness(forgiveness = {}, referenceTs = Date.now()) {
-  const defaults = makeDefaultForgiveness(referenceTs);
-  const safeForgiveness = isRecord(forgiveness) ? forgiveness : {};
-  return {
-    ...defaults,
-    ...safeForgiveness,
-    chargesRemaining: Number.isFinite(safeForgiveness.chargesRemaining)
-      ? Math.max(0, safeForgiveness.chargesRemaining)
-      : defaults.chargesRemaining,
-    weekStartTimestamp: Number.isFinite(safeForgiveness.weekStartTimestamp)
-      ? safeForgiveness.weekStartTimestamp
-      : defaults.weekStartTimestamp,
-  };
-}
-
 // ─── FACTORY: PRESTIGE ────────────────────────────────────────────────────────
 const makeDefaultPrestige = () => ({
   count:          0,
@@ -1930,8 +1398,6 @@ const makeDefaultUiState = () => ({
   breakTotalSeconds: 0,
   breakIsLong: false,
   activeBreakSessionId: null,
-  weeklyReportOpen: false,
-  weeklyReportMode: 'current',
   // Có một lời mời xem tổng kết tuần đang treo (thẻ toast). KHÔNG phải "đã xem".
   weeklyReportPending: false,
 });
@@ -1965,9 +1431,6 @@ function normalizePersistedGameState(persistedState, currentState, options = {})
     timerConfig: hasPersistedKey('timerConfig')
       ? normalizeStoredTimerConfig(persisted.timerConfig)
       : current.timerConfig,
-    forgiveness: hasPersistedKey('forgiveness')
-      ? normalizeStoredForgiveness(persisted.forgiveness)
-      : current.forgiveness,
     rankSystem: hasPersistedKey('rankSystem')
       ? { ...makeDefaultRankSystem(), ...(isRecord(persisted.rankSystem) ? persisted.rankSystem : {}) }
       : current.rankSystem,
@@ -2080,7 +1543,6 @@ function migratePersistedGameState(persistedState, fromVersion) {
     next = {
       ...next,
       timerConfig: normalizeStoredTimerConfig(next.timerConfig),
-      forgiveness: normalizeStoredForgiveness(next.forgiveness),
     };
   }
 
@@ -2125,7 +1587,6 @@ function createLatestSessionUndoSnapshot(state) {
       player: state.player,
       progress: state.progress,
       resources: state.resources,
-      forgiveness: state.forgiveness,
       rankSystem: state.rankSystem,
       rankChallenge: state.rankChallenge,
       eraCrisis: state.eraCrisis,
@@ -2167,7 +1628,6 @@ function makeProgressionResetState() {
     progress: makeDefaultProgress(),
     historyStats: makeDefaultHistoryStats(),
     resources: makeEmptyResources(),
-    forgiveness: makeDefaultForgiveness(),
     rankSystem: makeDefaultRankSystem(),
     rankChallenge: null,
     eraCrisis: makeDefaultEraCrisis(),
@@ -2598,7 +2058,7 @@ function buildTimeSensitiveProgressState(state, referenceTs = Date.now()) {
     state.streak,
     state.player.unlockedSkills,
   );
-  const missions = rebuildMissionsFromHistory(state.missions, state.history, streak);
+  const missions = rebuildMissionsFromHistory(state.missions, state.history, streak, { today: localDateStr(referenceTs) });
   const missionDateUnchanged = state.missions?.date && state.missions.date === missions.date;
   const shouldRevokeAllBonus = Boolean(
     missionDateUnchanged
@@ -2617,7 +2077,7 @@ function buildTimeSensitiveProgressState(state, referenceTs = Date.now()) {
     missions: shouldRevokeAllBonus
       ? { ...missions, bonusClaimedXP: 0 }
       : missions,
-    weeklyChain: rebuildWeeklyChainFromHistory(state.weeklyChain, state.history),
+    weeklyChain: rebuildWeeklyChainFromHistory(state.weeklyChain, state.history, { now: referenceTs }),
     dailyTracking: rebuildCurrentDailyTrackingFromHistory(state.dailyTracking, state.history, referenceTs),
   };
 }
@@ -2713,119 +2173,6 @@ function rebuildComboFromHistory(history, state, referenceTs = Date.now()) {
   return {
     count,
     lastSessionTs: latestTs,
-  };
-}
-
-function getHistoryEntryTimestampMs(entry) {
-  const raw = entry?.timestamp ?? entry?.finishedAt ?? entry?.startedAt;
-  const timestamp = typeof raw === 'string' ? new Date(raw).getTime() : Number(raw);
-  return Number.isFinite(timestamp) ? timestamp : null;
-}
-
-function getCompletedHistoryEntries(history = []) {
-  return (history ?? [])
-    .filter((entry) => getHistoryEntryTimestampMs(entry) !== null && !isCancelledHistoryEntry(entry) && entry.completed !== false)
-    .sort((left, right) => getHistoryEntryTimestampMs(right) - getHistoryEntryTimestampMs(left));
-}
-
-function buildDailyProgressSnapshotFromHistory(history = [], dayKey = localDateStr()) {
-  const completedEntries = getCompletedHistoryEntries(history);
-  const dayEntries = completedEntries
-    .filter((entry) => localDateStr(entry.timestamp) === dayKey);
-  const categorySet = new Set(dayEntries.map((entry) => entry.categoryId).filter(Boolean));
-  const minutes = dayEntries.reduce((sum, entry) => sum + (Number(entry.minutes) || 0), 0);
-  const notes = dayEntries.filter((entry) => countWords(entry.note ?? '') >= MISSION_NOTE_MIN_WORDS).length;
-  const hasShortSession = dayEntries.some((entry) => (entry.minutes ?? 0) <= 25);
-  const hasLongSession = dayEntries.some((entry) => (entry.minutes ?? 0) >= 60);
-  const perfectBreaks = completedEntries.filter((entry) => {
-    if (!entry?.breakCompletedOnTime) return false;
-    const breakDateSource = entry.breakCompletedAt ?? entry.timestamp;
-    return localDateStr(breakDateSource) === dayKey;
-  }).length;
-
-  return {
-    sessions: dayEntries.length,
-    focusMinutes: minutes,
-    maxSessionMinutes: dayEntries.reduce((max, entry) => Math.max(max, entry.minutes ?? 0), 0),
-    uniqueCategories: categorySet.size,
-    deepSessions: dayEntries.filter((entry) => (entry.minutes ?? 0) >= 45).length,
-    notes,
-    balancedSessions: hasShortSession && hasLongSession ? 1 : 0,
-    perfectBreaks,
-  };
-}
-
-function getDailyMissionProgressFromSnapshot(mission, snapshot) {
-  if (!mission) return 0;
-  switch (mission.type) {
-    case 'sessions':
-      return Math.min(mission.goal, snapshot.sessions);
-    case 'focusMinutes':
-      return Math.min(mission.goal, snapshot.focusMinutes);
-    case 'singleSession':
-      return Math.min(mission.goal, snapshot.maxSessionMinutes);
-    case 'uniqueCategories':
-      return Math.min(mission.goal, snapshot.uniqueCategories);
-    case 'deepSessions':
-      return Math.min(mission.goal, snapshot.deepSessions);
-    case 'notes':
-      return Math.min(mission.goal, snapshot.notes);
-    case 'balancedSessions':
-      return Math.min(mission.goal, snapshot.balancedSessions);
-    case 'perfectBreaks':
-      return Math.min(mission.goal, snapshot.perfectBreaks);
-    default:
-      return Number.isFinite(mission.progress) ? Math.max(0, mission.progress) : 0;
-  }
-}
-
-function rebuildMissionsFromHistory(missions, history, nextStreak) {
-  const refreshed = refreshMissionsIfStale(missions);
-  const dayKey = refreshed.date ?? localDateStr();
-  const snapshot = buildDailyProgressSnapshotFromHistory(history, dayKey);
-  const list = (refreshed.list ?? []).map((mission) => {
-    const progress = getDailyMissionProgressFromSnapshot(mission, snapshot);
-    return {
-      ...mission,
-      progress,
-      claimed: progress >= mission.goal,
-    };
-  });
-  const allClaimed = list.length > 0 && list.every((mission) => mission.claimed);
-  const streakEligible = (nextStreak?.currentStreak ?? 0) >= STREAK_MISSION_MIN_STREAK;
-
-  return {
-    ...refreshed,
-    list,
-    bonusClaimedToday: allClaimed ? refreshed.bonusClaimedToday : false,
-    bonusClaimedXP: allClaimed && refreshed.bonusClaimedToday ? refreshed.bonusClaimedXP : 0,
-    streakMissionClaimedToday: streakEligible ? refreshed.streakMissionClaimedToday : false,
-  };
-}
-
-function rebuildWeeklyChainFromHistory(weeklyChain, history) {
-  const activeChain = refreshWeeklyChain(weeklyChain);
-  const chain = WEEKLY_CHAINS[activeChain.chainIndex];
-  if (!chain) return activeChain;
-
-  const weekEntries = getHistoryWeekEntries(history, activeChain.weekKey);
-  const snapshot = buildWeeklyProgressSnapshot(weekEntries, activeChain.weekKey);
-  const previouslyClaimedSteps = Math.max(0, Math.min(activeChain.currentStep ?? 0, chain.steps.length));
-  let currentStep = 0;
-
-  while (currentStep < previouslyClaimedSteps && currentStep < chain.steps.length) {
-    const step = chain.steps[currentStep];
-    const progress = getWeeklyStepProgress(step, snapshot);
-    if (progress < step.goal) break;
-    currentStep += 1;
-  }
-
-  const activeStep = chain.steps[currentStep];
-  return {
-    ...activeChain,
-    currentStep,
-    stepProgress: activeStep ? getWeeklyStepProgress(activeStep, snapshot) : 0,
-    bonusClaimed: currentStep >= chain.steps.length ? activeChain.bonusClaimed : false,
   };
 }
 
@@ -3086,7 +2433,6 @@ const useGameStore = create(
       timerConfig: makeDefaultTimerConfig(),
 
       // ── Theo dõi Sự Tha Thứ hàng tuần ────────────────────────────────────
-      forgiveness: makeDefaultForgiveness(),
 
       // ── Hệ thống Danh Xưng ───────────────────────────────────────────────
       rankSystem: makeDefaultRankSystem(),
@@ -3344,7 +2690,7 @@ const useGameStore = create(
           && quaHanMs >= 0
           && quaHanMs <= BREAK_OVER_ANNOUNCE_MS
         ) {
-          soundEngine.playTimerFinish();
+          soundEngine.playBreakOver();
           notificationManager.notifyBreakOver();
         }
 
@@ -3819,8 +3165,6 @@ const useGameStore = create(
         const trimmedNote       = note?.trim() || '';
         const trimmedGoal       = sessionSnapshot?.goal?.trim() || '';
         const trimmedNextNote   = sessionSnapshot?.nextNote?.trim() || '';
-        const noteWordCount     = countWords(trimmedNote);
-        const qualifiesMissionNote = noteWordCount >= MISSION_NOTE_MIN_WORDS;
         const cat               = state.categoryTracking;
         const consecutiveSameCat = (categoryId && cat.lastCategoryId === categoryId)
           ? cat.consecutiveCount + 1
@@ -3970,18 +3314,13 @@ const useGameStore = create(
         // Weekly chain progress
         const refreshedChain = refreshWeeklyChain(state.weeklyChain);
         const chain = WEEKLY_CHAINS[refreshedChain.chainIndex];
-        const currentWeekHistory = getHistoryWeekEntries(state.history, refreshedChain.weekKey);
-        const weeklySnapshot = buildWeeklyProgressSnapshot([
-          ...currentWeekHistory,
-          {
-            timestamp: resolvedFinishedAt,
-            minutes: minutesFocused,
-            categoryId: categoryId ?? null,
-            note: trimmedNote || null,
-            breakCompletedOnTime: false,
-            breakCompletedAt: null,
-          },
-        ], refreshedChain.weekKey);
+        // The finished session in history-entry shape — feeds BOTH the week snapshot and the daily
+        // mission tick (ADR-077), so the two can never see a different session.
+        const sessionEntryDraft = {
+          timestamp: resolvedFinishedAt, minutes: minutesFocused, categoryId: categoryId ?? null,
+          note: trimmedNote || null, completed: true, breakCompletedOnTime: false, breakCompletedAt: null,
+        };
+        const weeklySnapshot = weeklySnapshotWithSession(state.history, refreshedChain.weekKey, sessionEntryDraft);
         const chainStep = chain?.steps[refreshedChain.currentStep];
         const newChainStepProgress = chainStep && refreshedChain.currentStep < chain.steps.length
           ? getWeeklyStepProgress(chainStep, weeklySnapshot)
@@ -3991,12 +3330,17 @@ const useGameStore = create(
         // ADR-071 (đóng #99): RP · tinh luyện · tài nguyên KHÔNG còn được cộng — đồng tiền duy nhất là phiên.
 
         // ── Crafting queue: mỗi phiên tiến 1 bước, đặc quyền có thể đẩy nhanh thêm ─
+        // ADR-077: a session always lays a brick somewhere. If nothing in this era is queued, the game
+        // queues the next project itself — the same pick the Focus strip showed before Start.
         const craftingAccelerationMode = getCraftingAccelerationMode(state.buildings, minutesFocused);
+        const { craftingQueue: queueBeforeAdvance, autoQueuedId } = autoQueueSessionProject({
+          craftingQueue: state.craftingQueue ?? [], activeBook, buildings: state.buildings, now: now_ts,
+        });
         const {
           nextQueue,
           newlyBuilt,
           acceleratedIds: acceleratedCraftingIds,
-        } = advanceCraftingQueueWithPerks(state.craftingQueue ?? [], craftingAccelerationMode);
+        } = advanceCraftingQueueWithPerks(queueBeforeAdvance, craftingAccelerationMode);
         const newBuildings = [...state.buildings, ...newlyBuilt];
 
         // ─── Cập nhật category tracking ──────────────────────────────────
@@ -4034,61 +3378,19 @@ const useGameStore = create(
           const newTotalMinutes = prev.progress.totalFocusMinutes + minutesFocused;
           const freshDt = isToday ? dt : makeDefaultDailyTracking();
           const deepSessionsToday = (freshDt.deepSessionsCompleted ?? 0) + (minutesFocused >= 45 ? 1 : 0);
-          const balancedSessionsToday = (
-            (freshDt.hasShortSession || minutesFocused <= 25)
-            && (freshDt.hasLongSession || minutesFocused >= 60)
-          );
           const catsUpdated = categoryId && !catsToday.includes(categoryId)
             ? [...catsToday, categoryId] : catsToday;
           const newSessionsCompletedToday = (freshDt.sessionsCompleted ?? 0) + 1;
 
-          // Mission progress tick. ADR-070: đối chiếu lại với LỊCH SỬ trước khi tick — cùng hàm mà
-          // `refreshDailyMissions`/`deleteSession` dùng (`rebuildMissionsFromHistory`), vì nay thưởng trọn
-          // ngày TỰ vào ngay tại đây: một nhiệm vụ "đã xong" mà lịch sử không đỡ (sync lệch máy, phiên đã
-          // xoá) không được phép kéo theo một khoản thưởng. Nút "Nhận" cũ từng làm đúng phép đối chiếu
-          // này; gỡ nút thì phép đối chiếu phải đi theo về đây, không được rơi mất.
-          const refreshedMissions = rebuildMissionsFromHistory(prev.missions, prev.history, newStreak);
-          const updatedMissionList = refreshedMissions.list.map((m) => {
-            if (m.claimed) return m;
-            let progress = m.progress;
-            if (m.type === 'sessions') progress = Math.min(m.goal, progress + 1);
-            if (m.type === 'focusMinutes') progress = Math.min(m.goal, progress + minutesFocused);
-            // ⚠️ PHẢI KHỚP `getDailyMissionProgressFromSnapshot` — CÙNG FILE, cách ~1.300 dòng.
-            // Bản cũ ở đây là ĂN CẢ HOẶC KHÔNG (`minutesFocused >= goal ? goal : progress`) trong
-            // khi bản dựng-lại-từ-lịch-sử dùng `min(goal, maxSessionMinutes)`, tức LIÊN TỤC. Hai
-            // công thức cho CÙNG một nhiệm vụ, CÙNG một ngày, CÙNG một dữ liệu ⇒ làm một phiên 22
-            // phút thì thanh ghi **0/30**, tải lại app thì chính nó ghi **22/30**. Không có gì đỏ
-            // lên; Đàm chỉ thấy một con số tự đổi khi mở lại. Đúng luật *một luật một công thức*.
-            // ⚠️ LUẬT HOÀN THÀNH KHÔNG ĐỔI: `progress` chỉ chạm `goal` khi có MỘT phiên đủ dài,
-            // vì đây là phép lấy MAX của độ dài từng phiên chứ không phải phép cộng dồn. Ba phiên
-            // 25 phút vẫn ra 25/30 — vẫn chưa xong, đúng như nhiệm vụ đòi.
-            // ⚠️ Và nó đổi một số 0 chết thành một con số biết nói: "22/30" bảo Đàm còn thiếu 8
-            // phút, còn "0/30" nói rằng anh chưa làm gì — trong khi anh vừa tập trung 22 phút.
-            if (m.type === 'singleSession') progress = Math.max(progress, Math.min(m.goal, minutesFocused));
-            if (m.type === 'uniqueCategories') progress = Math.min(m.goal, uniqueCatsToday.size);
-            if (m.type === 'deepSessions') progress = Math.min(m.goal, deepSessionsToday);
-            if (m.type === 'notes' && qualifiesMissionNote) progress = Math.min(m.goal, progress + 1);
-            if (m.type === 'balancedSessions') progress = balancedSessionsToday ? m.goal : progress;
-            return { ...m, progress };
+          // Mission tick — ADR-070 reconciliation, ADR-077 single formula: rebuild from history WITH
+          // the session that just ended, i.e. the very snapshot the reload path uses. The hand-written
+          // second copy of the progress rules that used to live here is gone (engine/missions.js).
+          const {
+            missions: newMissions, newlyCompletedMissionIds, missionBonusXP, streakMissionXP, dailyBonusXP,
+          } = tickDailyMissions({
+            missions: prev.missions, history: prev.history, streak: newStreak, buildings: prev.buildings,
+            unlockedSkills: prev.player.unlockedSkills, sessionEntry: sessionEntryDraft,
           });
-          const newlyCompletedMissionIds = updatedMissionList
-            .filter((m) => !m.claimed && m.progress >= m.goal)
-            .map((m) => m.id);
-          const missionBonusXPBase = newlyCompletedMissionIds.reduce((sum, id) => {
-            const m = updatedMissionList.find((x) => x.id === id);
-            return sum + (m?.rewardXP ?? 0);
-          }, 0);
-          const missionBonusXP = applyDailyMissionXPBonus(prev.buildings, missionBonusXPBase);
-
-          // Streak bonus mission: awarded each day streak ≥ 7, once per day
-          const streakMissionXPBase = (
-            !refreshedMissions.streakMissionClaimedToday &&
-            newStreak.currentStreak >= STREAK_MISSION_MIN_STREAK
-          ) ? Math.min(
-            STREAK_MISSION_BASE_XP + (newStreak.currentStreak - STREAK_MISSION_MIN_STREAK) * STREAK_MISSION_XP_PER_DAY,
-            STREAK_MISSION_MAX_XP,
-          ) : 0;
-          const streakMissionXP = applyDailyMissionXPBonus(prev.buildings, streakMissionXPBase);
           const buildingPerkReward = getBuildingPerkSessionRewards(prev, {
             minutesFocused,
             newSessionsCompletedToday,
@@ -4097,26 +3399,9 @@ const useGameStore = create(
             catsToday,
             uniqueCatsToday,
           });
-
-          const claimedMissionList = updatedMissionList.map((m) =>
-            newlyCompletedMissionIds.includes(m.id) ? { ...m, claimed: true } : m
-          );
-          // ADR-070: THƯỞNG TRỌN NGÀY tự vào ngay phiên khép nốt nhiệm vụ cuối — không còn nút "Nhận".
-          // Cùng công thức với nút cũ (`getDailyMissionAllBonusXP`), chỉ khác là không ai phải bấm.
-          const allDailyDoneNow = claimedMissionList.length > 0 && claimedMissionList.every((m) => m.claimed);
-          const dailyBonusXP = allDailyDoneNow && !refreshedMissions.bonusClaimedToday
-            ? getDailyMissionAllBonusXP({ list: claimedMissionList }, prev.buildings, prev.player.unlockedSkills)
-            : 0;
-          const newMissions = {
-            ...refreshedMissions,
-            list: claimedMissionList,
-            streakMissionClaimedToday: streakMissionXP > 0 ? true : refreshedMissions.streakMissionClaimedToday,
-            bonusClaimedToday: refreshedMissions.bonusClaimedToday || dailyBonusXP > 0,
-            bonusClaimedXP: dailyBonusXP > 0 ? dailyBonusXP : refreshedMissions.bonusClaimedXP,
-          };
           // ADR-070: BƯỚC TUẦN tự chốt khi đủ (có thể chốt liền nhiều bước) — XP vào cùng phiên này.
           const weeklyAuto = autoClaimWeeklySteps({
-            weeklyChain: newWeeklyChain, weeklySnapshot, unlockedSkills: prev.player.unlockedSkills,
+            weeklyChain: newWeeklyChain, weeklySnapshot, unlockedSkills: prev.player.unlockedSkills, now: now_ts,
           });
           const finalSessionXP = baseSessionXP + missionBonusXP + streakMissionXP + buildingPerkReward.xp
             + dailyBonusXP + weeklyAuto.xp + wonderBuffs.flatXp;
@@ -4380,9 +3665,6 @@ const useGameStore = create(
           sessionResult = { ...sessionResult, celebrates: activeNewlyBuilt.length > 0 || eraChanged };
           const activeAcceleratedCraftingIds = acceleratedCraftingIds.filter((bpId) => isCurrentEraBlueprint(bpId, finalBook));
 
-          // ADR-070: không còn kỳ quan nới số lần miễn phạt (`forgiveness` là trục ngủ sau ADR-069).
-          const forgivenessChargesRemaining = Math.min(FORGIVENESS_CANCELS_PER_WEEK, prev.forgiveness.chargesRemaining);
-
           // Kiểm tra thành tích mới mở khóa
           const achSnapshot   = buildAchievementSnapshot(
             { sessionsCompleted: newSessions, totalFocusMinutes: newTotalMinutes, totalEP: finalTotalEP, activeBook: finalBook },
@@ -4441,7 +3723,6 @@ const useGameStore = create(
             buildingLastUsed: eraScopedState.buildingLastUsed,
             buildingLevels: eraScopedState.buildingLevels,
             cityArchive:   eraScopedState.cityArchive,
-            forgiveness:   { ...prev.forgiveness, chargesRemaining: forgivenessChargesRemaining },
             staking:       makeDefaultStaking(),
             prestige:      prev.prestige,
             weeklyChain:   weeklyAuto.weeklyChain,
@@ -4482,6 +3763,7 @@ const useGameStore = create(
                 buildingPerkRewards: buildingPerkReward.rewards,
                 buildingPerkBonusXP: buildingPerkReward.xp,
                 acceleratedCraftingIds,
+                autoQueuedId,
                 // ⚠️ CHỈ để KHOẢNH KHẮC THÀNH PHỐ (`engine/cityMoment.js`) biết công trình nào vừa
                 // xong. `ui` KHÔNG nằm trong `partialize` nên trường này không lên Supabase, tức
                 // không thêm một byte nào vào JSONB đang tranh chấp CAS.
@@ -5201,9 +4483,8 @@ const useGameStore = create(
       // 4 giây mà giữ nguyên cách ghi thì lỡ một cái toast = mất báo cáo của cả tuần — đổi một
       // phiền toái nhỏ lấy một mất mát thật. Nay:
       //   · hết giờ toast  → chỉ tắt lời mời, KHÔNG ghi gì (`dismissWeeklyReportToast`)
-      //   · Đàm mở ra xem  → mới ghi "đã xem" (`openWeeklyReport`)
-      // ⇒ lỡ toast thì chấm ở nút "Báo cáo tuần" vẫn sáng, và cú bấm đầu tiên trong tuần vẫn
-      // mở đúng bản TUẦN TRƯỚC — đúng thứ hộp thoại tự bật ngày xưa đưa ra.
+      //   · Đàm mở Thống kê → mới ghi "đã xem" (`markWeeklyReportSeen`, ADR-077)
+      // ⇒ lỡ toast thì chấm ở tab Thống kê vẫn sáng.
       checkWeeklyReport: () => {
         const state = get();
         const monday = getWeekMonday();
@@ -5221,37 +4502,21 @@ const useGameStore = create(
       },
 
       /**
-       * Mở hộp thoại tổng kết. LUÔN do Đàm chủ động (nút ở thanh bên, hoặc bấm vào thẻ toast).
-       *
-       * ⚠️ Cú mở ĐẦU TIÊN trong tuần rơi vào chế độ `'previous'` — bản TUẦN TRƯỚC, đúng thứ hộp
-       * thoại tự bật ngày xưa đưa ra. Không có luật này thì đổi sang toast là âm thầm đổi luôn
-       * NỘI DUNG Đàm nhận được: nút thanh bên xưa nay mở `'current'` (tuần đang chạy dở).
+       * ADR-077: there is no weekly-report dialog any more — the Stats screen already answers "am I
+       * improving this week vs last". Seeing the summary = opening Stats; this only records "seen"
+       * for the week (the dot on the Thống kê tab goes out) and clears the Monday invitation.
        */
-      openWeeklyReport: () => {
-        const state = get();
+      markWeeklyReportSeen: () => {
         const monday = getWeekMonday();
-        const unseen = state.lastWeeklyReportSeenDate !== monday;
         set((prev) => ({
           lastWeeklyReportSeenDate: monday,
-          ui: {
-            ...prev.ui,
-            weeklyReportOpen: true,
-            weeklyReportMode: unseen ? 'previous' : 'current',
-            weeklyReportPending: false,
-          },
+          ui: { ...prev.ui, weeklyReportPending: false },
         }));
       },
 
       /** Thẻ toast hết 4 giây. CHỈ tắt lời mời — tuyệt đối không ghi "đã xem". */
       dismissWeeklyReportToast: () =>
         set((prev) => ({ ui: { ...prev.ui, weeklyReportPending: false } })),
-
-      /** Đóng hộp thoại. "Đã xem" đã được ghi lúc MỞ, nên ở đây không ghi ngày nào nữa. */
-      dismissWeeklyReport: () => {
-        set((prev) => ({
-          ui: { ...prev.ui, weeklyReportOpen: false, weeklyReportMode: 'current' },
-        }));
-      },
 
       // ─── Import / Export ─────────────────────────────────────────────────
       _importGameData: (data) => {
@@ -5350,7 +4615,6 @@ const useGameStore = create(
         progress:         state.progress,
         resources:        state.resources,
         timerConfig:      state.timerConfig,
-        forgiveness:      state.forgiveness,
         rankSystem:       state.rankSystem,
         rankChallenge:    state.rankChallenge,
         eraCrisis:        state.eraCrisis,

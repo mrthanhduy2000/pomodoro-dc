@@ -1,85 +1,47 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
+import { stripComments } from '../utils/sourceScan.js';
 
-const SRC = readFileSync(new URL('./gameStore.js', import.meta.url), 'utf8');
-
-// ⚠️ VÌ SAO BỘ NÀY TỒN TẠI. Tiến độ nhiệm vụ ngày được tính ở HAI đường trong CÙNG file
-// `gameStore.js`, cách nhau ~1.300 dòng:
-//   · đường SỐNG — ngay sau khi chốt một phiên (`completeFocusSession`);
-//   · đường DỰNG LẠI — `getDailyMissionProgressFromSnapshot`, chạy khi nạp app / đồng bộ về.
-// Trước 2026-09-05 hai đường ấy **lệch nhau ở loại `singleSession`**: đường sống ăn-cả-hoặc-không
-// (`minutesFocused >= goal ? goal : progress`), đường dựng lại thì liên tục
-// (`min(goal, maxSessionMinutes)`). Hậu quả trên máy Đàm: làm một phiên 22 phút thì thanh ghi
-// **0/30**, tải lại app thì chính nó ghi **22/30** — cùng một ngày, cùng một dữ liệu, hai con số.
-// Build xanh · lint sạch · test xanh; triệu chứng duy nhất là một con số tự đổi khi mở lại.
-// Đúng luật của dự án: *một luật một công thức*.
+const STORE = stripComments(readFileSync(new URL('./gameStore.js', import.meta.url), 'utf8'));
+const ENGINE = stripComments(readFileSync(new URL('../engine/missions.js', import.meta.url), 'utf8'));
 
 /**
- * Cắt thân một khối theo một mốc, và ĐÒI mốc ấy chỉ xuất hiện ĐÚNG MỘT LẦN.
- *
- * ⚠️ VẾ "ĐÚNG MỘT LẦN" LÀ VẾ CỨU BÀI TEST NÀY. Bản đầu neo vào
- * `const updatedMissionList = refreshedMissions.list.map` — chuỗi ấy có **HAI** chỗ trong
- * `gameStore.js`, và chỗ ĐẦU là một khối hẹp chỉ lo `perfectBreaks`. `indexOf` từ đầu file bắt
- * đúng khối sai, nên bài test đỏ với thông báo trỏ vào một loại nhiệm vụ hoàn toàn lành. Đây là
- * cùng cái bẫy đã cắn ở `App.jsx` (`<PomodoroEngine>` dựng ở hai nhánh) — nay nó tự kêu thay vì
- * lặng lẽ đo nhầm chỗ.
+ * WHY THIS FILE EXISTS. Daily-mission progress used to be computed on TWO paths ~1,300 lines apart in
+ * `gameStore.js`: the LIVE path right after a session and the REBUILD path on reload. They disagreed
+ * on `singleSession` (all-or-nothing vs. continuous): a 22-minute session printed 0/30, then 22/30
+ * after a reload. Build green, lint clean, tests green — the only symptom was a number that changed
+ * by itself. Round 37 (ADR-077) removed the second copy instead of keeping it in sync: the live path
+ * now calls `tickDailyMissions`, which rebuilds from history WITH the finished session. These tests
+ * guard that structure so nobody re-inlines a hand-written tick "just for this one field".
  */
-function block(anchor, len) {
-  const n = SRC.split(anchor).length - 1;
-  assert.equal(n, 1, `mốc "${anchor}" khớp ${n} chỗ — phải khớp đúng 1, nếu không đang cắt nhầm khối`);
-  return SRC.slice(SRC.indexOf(anchor), SRC.indexOf(anchor) + len);
-}
 
-/** Khối cập nhật tiến độ NGAY SAU KHI CHỐT PHIÊN. Neo vào dòng chỉ nó mới có. */
-const SONG = block("if (m.type === 'sessions') progress = Math.min(m.goal, progress + 1);", 2200);
-
-// ⚠️ Bài chính, và là bài bắt được lỗi thật. `singleSession` là loại DUY NHẤT mà "tiến độ" không
-// phải phép cộng dồn — nó là ĐỘ DÀI CỦA PHIÊN DÀI NHẤT trong ngày. Cả hai đường phải nói đúng
-// điều đó, tức phải là một phép LẤY MAX bị kẹp bởi `goal`.
-// THỬ-CHO-ĐỎ: trả nhánh ấy về `minutesFocused >= m.goal ? m.goal : progress` ⇒ bài này đỏ.
-test('singleSession: đường sống dùng phép LẤY MAX, không phải ăn-cả-hoặc-không', () => {
-  const dong = SONG.split('\n').find((l) => l.includes("m.type === 'singleSession'"));
-  assert.ok(dong, 'không còn nhánh singleSession ở đường sống');
-  assert.match(
-    dong,
-    /Math\.max\(progress, Math\.min\(m\.goal, minutesFocused\)\)/,
-    'đường sống phải lấy MAX độ dài phiên (kẹp bởi goal) để khớp `min(goal, maxSessionMinutes)` '
-    + 'của đường dựng lại — nếu không, thanh tiến độ nhảy số khi Đàm tải lại app',
-  );
-  assert.doesNotMatch(dong, /\?\s*m\.goal\s*:/, 'nhánh ăn-cả-hoặc-không đã quay lại');
+// BREAK-TEST: paste back `if (m.type === 'sessions') progress = Math.min(m.goal, progress + 1);` ⇒ red.
+test('the store has exactly ONE live tick, and it is the engine function', () => {
+  const calls = STORE.split('tickDailyMissions(').length - 1;
+  assert.equal(calls, 1, `tickDailyMissions( must be called exactly once in gameStore.js (found ${calls})`);
+  assert.doesNotMatch(STORE, /m\.type === 'singleSession'/, 'a hand-written singleSession branch is back in the store');
+  assert.doesNotMatch(STORE, /m\.type === 'sessions'\) progress =/, 'a hand-written sessions branch is back in the store');
+  assert.doesNotMatch(STORE, /function getDailyMissionProgressFromSnapshot/, 'the snapshot formula must live in engine/missions.js only');
 });
 
-// ⚠️ Gác luật HOÀN THÀNH: phép lấy max KHÔNG được biến thành phép cộng dồn. Ba phiên 25 phút phải
-// vẫn là 25/30 (chưa xong), chứ không phải 75/30 (xong) — cộng dồn là đổi hẳn độ khó nhiệm vụ.
-test('phép lấy MAX không được thoái hoá thành cộng dồn', () => {
-  const dong = SONG.split('\n').find((l) => l.includes("m.type === 'singleSession'"));
-  assert.doesNotMatch(dong, /progress \+ minutesFocused/,
-    'cộng dồn thì một nhiệm vụ "một phiên đủ dài" hoàn thành được bằng nhiều phiên ngắn');
+test('the live tick feeds the SAME draft entry to the week snapshot and the mission tick', () => {
+  assert.match(STORE, /weeklySnapshotWithSession\(state\.history, refreshedChain\.weekKey, sessionEntryDraft\)/);
+  assert.match(STORE, /sessionEntry: sessionEntryDraft/);
 });
 
-// ⚠️ Đường DỰNG LẠI phải giữ nguyên dạng liên tục — nó là bản mà đường sống vừa được kéo về khớp.
-// Không có bài này thì ai đó "thống nhất" hai bên bằng cách sửa đường dựng lại thành ăn-cả-hoặc-
-// không, và lỗi quay lại nguyên vẹn ở chiều ngược.
-test('đường dựng-lại-từ-lịch-sử vẫn liên tục', () => {
-  const duraLai = block('function getDailyMissionProgressFromSnapshot', 1400);
-  assert.match(duraLai, /case 'singleSession':\s*\n\s*return Math\.min\(mission\.goal, snapshot\.maxSessionMinutes\);/);
+// The rebuild path must stay continuous — it is the one the live path was pulled towards.
+test('the engine snapshot formula for singleSession is continuous (max of session lengths, clamped)', () => {
+  assert.match(ENGINE, /case 'singleSession': return Math\.min\(mission\.goal, snapshot\.maxSessionMinutes\);/);
+  assert.match(ENGINE, /const after = rebuildMissionsFromHistory\(before, \[sessionEntry, \.\.\.\(history \?\? \[\]\)\]/,
+    'tickDailyMissions must derive the live result by prepending the session to history');
 });
 
-// Mô phỏng thẳng cả hai công thức trên cùng một chuỗi phiên và đòi chúng ra CÙNG con số.
-// Đây là vế duy nhất không phụ thuộc cách viết mã, nên nó sống sót qua mọi lần đổi tên biến.
-test('hai công thức ra cùng kết quả trên mọi chuỗi phiên thử', () => {
+// Pure simulation of the completion law — survives any renaming.
+test('completion law: a "one session ≥ N" mission is done only by ONE long-enough session', () => {
   const goal = 30;
-  const song = (phien) => phien.reduce((p, m) => Math.max(p, Math.min(goal, m)), 0);
-  const dungLai = (phien) => Math.min(goal, Math.max(0, ...phien, 0));
-
-  const CA = [
-    [], [22], [22, 25], [25, 25, 25], [30], [22, 45], [45, 22], [10, 10, 10], [29], [31, 5],
-  ];
-  for (const phien of CA) {
-    assert.equal(song(phien), dungLai(phien), `lệch ở chuỗi ${JSON.stringify(phien)}`);
-  }
-  // Và luật hoàn thành phải giữ nguyên: chỉ xong khi CÓ MỘT phiên đủ dài.
-  assert.ok(song([25, 25, 25]) < goal, 'ba phiên 25 phút không được tính là xong');
-  assert.equal(song([30]), goal, 'một phiên 30 phút phải xong');
+  const progress = (sessions) => Math.min(goal, Math.max(0, ...sessions, 0));
+  assert.ok(progress([25, 25, 25]) < goal, 'three 25-minute sessions must not complete a 30-minute single-session mission');
+  assert.equal(progress([30]), goal);
+  assert.equal(progress([22]), 22);
 });

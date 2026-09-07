@@ -126,3 +126,17 @@ test('giữ đúng thứ tự mới-nhất-trước và tôn trọng giới hạ
   assert.deepEqual(pickRecentGoals(lichSu, 0), [], 'giới hạn 0 phải ra rỗng, không phải ra tất cả');
   assert.deepEqual(pickRecentGoals(null), [], 'lịch sử rỗng/rác ⇒ không gợi ý gì');
 });
+
+test('ADR-077: goals used for the SAME task type come first, newest first inside each group', () => {
+  const lichSu = [
+    { goal: 'Viết báo cáo tuần', categoryId: 'work' },
+    { goal: 'Ôn chương ba xác suất', categoryId: 'study' },
+    { goal: 'Đọc tài liệu dự án', categoryId: 'work' },
+    { goal: 'Giải đề toán số bốn', categoryId: 'study' },
+  ];
+  assert.deepEqual(pickRecentGoals(lichSu, 3, { preferCategoryId: 'study' }),
+    ['Ôn chương ba xác suất', 'Giải đề toán số bốn', 'Viết báo cáo tuần']);
+  assert.deepEqual(pickRecentGoals(lichSu, 3), ['Viết báo cáo tuần', 'Ôn chương ba xác suất', 'Đọc tài liệu dự án'],
+    'without a preference the order is plain recency');
+  assert.deepEqual(pickRecentGoals(lichSu, 2, { preferCategoryId: 'none' }), ['Viết báo cáo tuần', 'Ôn chương ba xác suất']);
+});

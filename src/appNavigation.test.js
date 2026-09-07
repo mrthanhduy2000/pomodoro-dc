@@ -126,9 +126,14 @@ test('chấm "có việc cần xem" được nối ở CẢ hai thanh điều h�
     /attentionTabIds\.has\(tab\.id\)/.test(APP_SOURCE),
     'Thanh dưới iPhone không hỏi `attentionTabIds` — chấm chú ý tắt câm trên điện thoại.',
   );
+  // ADR-077: the set now also carries the unseen-week dot for the Thống kê tab — both signals must stay.
   assert.ok(
-    /new Set\(inventoryNeedsAttention \? \['inventory'\] : \[\]\)/.test(APP_SOURCE),
+    /inventoryNeedsAttention \? \['inventory'\] : \[\]/.test(APP_SOURCE),
     'Tập tab có chấm không còn suy từ `inventoryNeedsAttention` — cái chấm mất nguồn tín hiệu.',
+  );
+  assert.ok(
+    /weeklyReportUnseen \? \['stats'\] : \[\]/.test(APP_SOURCE),
+    'the unseen-week dot lost its tab — a missed Monday toast then leaves no trace (TECH_DEBT #87 regresses)',
   );
 });
 

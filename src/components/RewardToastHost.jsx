@@ -104,7 +104,7 @@ export default function RewardToastHost({ paused = false, onNavigate, onOpenDeta
   const dismissAchievementNotification = useGameStore((s) => s.dismissAchievementNotification);
   const dismissMissionNotification = useGameStore((s) => s.dismissMissionNotification);
   const dismissWeeklyReportToast = useGameStore((s) => s.dismissWeeklyReportToast);
-  const openWeeklyReport = useGameStore((s) => s.openWeeklyReport);
+  const markWeeklyReportSeen = useGameStore((s) => s.markWeeklyReportSeen);
   const enterMotion = useEnterMotion();
 
   /*
@@ -170,8 +170,8 @@ export default function RewardToastHost({ paused = false, onNavigate, onOpenDeta
 
   const dismiss = (toast) => {
     switch (toast.source) {
-      // ⚠️ Hết 4 giây thì CHỈ tắt lời mời — không ghi "đã xem". Lỡ thẻ này thì chấm ở nút
-      // "Báo cáo tuần" vẫn sáng, đó là cả lý do `TECH_DEBT #87` bắt tách hai trạng thái.
+      // ⚠️ Hết 4 giây thì CHỈ tắt lời mời — không ghi "đã xem". Lỡ thẻ này thì chấm ở tab
+      // Thống kê vẫn sáng (ADR-077), đó là cả lý do `TECH_DEBT #87` bắt tách hai trạng thái.
       case 'weekly':      return dismissWeeklyReportToast();
       case 'loot':        return closeLootModal();
       case 'relic':       return dismissRelicNotification();
@@ -188,12 +188,9 @@ export default function RewardToastHost({ paused = false, onNavigate, onOpenDeta
   // ⚠️ Kiểu `detail` KHÔNG gọi `dismiss`: hộp thoại đọc chính trường store mà
   // `dismiss` sẽ xoá, nên xoá trước là mở ra một hộp thoại rỗng.
   const open = (toast) => {
-    // Bản tổng kết tuần đi qua chính hàm của store, nơi giữ luật "cú mở đầu tiên trong tuần là
-    // bản TUẦN TRƯỚC" + luật ghi "đã xem". Nó tự tắt lời mời nên không gọi `dismiss` ở đây.
-    if (toast.action?.weekly) {
-      openWeeklyReport();
-      return;
-    }
+    // ADR-077: the weekly summary lives on the Stats screen. Record "seen" (the store law that the
+    // toast timeout must NOT record), then fall through to the tab navigation the action carries.
+    if (toast.action?.weekly) markWeeklyReportSeen();
     if (toast.action?.detail) {
       onOpenDetail?.(toast.action.detail);
       return;

@@ -56,7 +56,6 @@ const useSettingsStore = create(
       // ── Sound ──────────────────────────────────────────────────────────
       soundEnabled:     true,
       masterVolume:     0.6,   // 0–1
-      tickSoundEnabled: false, // per-second tick is off by default (can get annoying)
 
       // ── Ambient Sound ──────────────────────────────────────────────────
       // 'none' | 'rain' | 'wind' | 'forest' | 'coffee' | 'waves' | 'fireplace'
@@ -115,7 +114,6 @@ const useSettingsStore = create(
       cityHomeBackdrop: true,
 
       // ── Onboarding ─────────────────────────────────────────────────────
-      hasViewedInitialOnboarding: false, // overlay 3 thẻ chỉ hiện 1 lần cho người mới
 
       // ── Actions ────────────────────────────────────────────────────────
 
@@ -130,7 +128,6 @@ const useSettingsStore = create(
         set({ masterVolume: clamped });
       },
 
-      setTickSoundEnabled: (enabled) => set({ tickSoundEnabled: enabled }),
 
       setAmbientSound: (sound) => {
         const { ambientVolume } = get();
@@ -242,7 +239,6 @@ const useSettingsStore = create(
       setAutoStartBreak:     (v) => set({ autoStartBreak: v }),
       setContinueTimingAfterPomodoro: (v) => set({ continueTimingAfterPomodoro: v }),
       setDisableBreak:       (v) => set({ disableBreak: v }),
-      setHasViewedInitialOnboarding: (v) => set({ hasViewedInitialOnboarding: v !== false }),
       setCityRenderMode: (mode) => set({ cityRenderMode: normalizeRenderMode(mode) }),
       setCityPerfHud:    (v) => set({ cityPerfHud: v === true }),
       setCityHomeBackdrop: (v) => set({ cityHomeBackdrop: v === true }),

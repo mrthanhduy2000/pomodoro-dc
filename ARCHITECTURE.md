@@ -135,18 +135,20 @@ nếu muốn làm tiếp, kèm điều kiện cần có trước khi làm an to�
 ### 6.1 Vòng lặp một phiên — hai đầu đều phải nói được "để làm gì"
 
 ```
-        ĐẦU PHIÊN                                    ĐUÔI PHIÊN
-   (màn Tập trung, trên đồng hồ)              (ngay khi chuông báo hết giờ)
-   useCityFocusTease                          useCityGrowthMoment
-        │                                            │
-   engine/cityMoment.buildFocusTease           engine/cityMoment.buildGrowthMoment
-        │                                            │
-   "Phiên tới hoàn thành X"                    lễ mừng 3,2 giây → phần thưởng
+        BEFORE / DURING                                AFTER (ending card)
+   <SessionBrickStrip> above the ring            ProjectCard in <SessionRewardStory>
+        │                                              │
+   engine/sessionBrick.describeSessionBrick     engine/sessionBrick.describeSessionBrick
+        (phase idle | running + progressRatio)         (phase landed + newlyBuiltIds/autoQueuedId)
+        │                                              │
+   "Phiên này đặt viên gạch 3/4 cho X"           "Viên gạch 3/4 đã đặt" / "X hoàn thành!"
 ```
 
-Cả hai đi qua **cùng một** `pickNearestScaffold`, nên hai đầu của một phiên luôn nói về **cùng một
-công trình** — có bài test khoá đúng điều đó. Cả hai theo cùng luật trung thực: không có gì thật để
-nói thì trả `null` và màn hình im lặng.
+(ADR-077) Both ends read the SAME `pickSessionProject` (queue head → auto-pick → none), so a session's
+strip and its ending card always name the same building — `gameStore.sessionBrick.test.js` runs a
+real `completeFocusSession` to prove it. There is no empty state: with an empty queue the store queues
+the next project itself right before the queue advances (`autoQueueSessionProject`), and a finished
+era says so in words.
 
 ⚠️ **Chỗ đặt là một quyết định kiến trúc, không phải chuyện thẩm mỹ**: `FocusRail` (cột phải) là
 `hidden … lg:flex` — chỉ hiện trên màn rộng. Mọi thứ Đàm cần thấy hằng ngày phải nằm ở **cột giữa**,
@@ -160,21 +162,17 @@ useTimer.commitCompletedSession()
         ▼
 gameStore.completeFocusSession()  ── đặt ui.lootModalOpen = true NGAY LẬP TỨC  ("chuỗi thẻ đang chờ")
         │   ADR-070: MỌI phần thưởng đã đạt TỰ VÀO ở đây, không còn nút nào ở tầng giao diện —
-        │     · rebuildMissionsFromHistory ⇒ tick nhiệm vụ ⇒ khép nốt ⇒ +dailyBonusXP (trọn ngày)
+        │     · autoQueueSessionProject ⇒ empty queue gets the next project (ADR-077) ⇒ queue advances one brick
+        │     · tickDailyMissions (engine/missions.js) ⇒ rebuild from history WITH this session ⇒ +dailyBonusXP (trọn ngày)
         │     · autoClaimWeeklySteps       ⇒ mọi bước tuần đã đủ ⇒ +XP bước, +SP chuỗi ⇒ pendingReward.weeklySteps
         │     · evaluateRelicEvolutions    ⇒ đủ 20/50 phiên ≥25′ kể từ earnedAt ⇒ relicEvolutions+1 ⇒ pendingReward.relicsEvolved
         │     · wonderPassiveBuffs         ⇒ +XP/+EP/+combo/+XP phẳng của kỳ quan vào activeBuffs
         ▼
 App.jsx <OverlayStack>
         │
-        ├─ useCityGrowthMoment → engine/cityMoment.buildGrowthMoment()
-        │        ├── có công trình vừa xong ⇒ một khoảnh khắc (chỉ `kind === 'built'`)
-        │        └── thành phố KHÔNG đổi gì ⇒ `null`  (im lặng, không khen rỗng)
-        │
-        ├─ CÓ khoảnh khắc & không bật giảm chuyển động
-        │        └→ <CityGrowthMoment> 3,2 giây → onDone
-        │
-        └─ rồi <SessionRewardStory> — CHUỖI THẺ THƯỞNG sau MỌI phiên, và là CÁI KẾT DUY NHẤT:
+        └─ <SessionRewardStory> — CHUỖI THẺ THƯỞNG sau MỌI phiên, và là CÁI KẾT DUY NHẤT
+           (ADR-077: the 3.2-second «city moment» overlay that used to stand before it is gone —
+            a finished building is the project card with every brick laid):
                  xp (+chip «+N EP») → THÀNH PHỐ (công trình nhích / "hàng chờ trống — chọn ngay")
                     → chuỗi (dải bảy ngày) → nhịp hôm nay → nhiệm vụ («Trọn ngày +N XP — đã cộng»)
                     → BƯỚC TUẦN vừa chốt → thử thách kỷ
@@ -276,19 +274,15 @@ sáng thứ Hai · chưa mời tuần này
 checkWeeklyReport()  ── ghi lastWeeklyReportDate = thứHai   (đã MỜI — mời đúng 1 lần/tuần)
         │              └─ bật ui.weeklyReportPending
         ▼
-  một THẺ trong <RewardToastHost>            ─── hết 4 giây ──→ dismissWeeklyReportToast()
-        │  (bấm vào)                                              KHÔNG ghi ngày nào
-        ▼                                                                │
-openWeeklyReport() ── ghi lastWeeklyReportSeenDate = thứHai  (đã XEM)     │
-        │              cú mở ĐẦU TIÊN trong tuần → tab "Tuần trước"       │
-        ▼                                                                ▼
-  <WeeklyReportModal>                                    lastWeeklyReportSeenDate KHÔNG đổi
-                                                                         │
-                                                      ⇒ weeklyReportUnseen vẫn TRUE
-                                                      ⇒ CHẤM vẫn sáng, KHÔNG hết hạn
-                                            ┌────────────────┴────────────────┐
-                                      thanh bên desktop        menu "Thêm" trên iPhone
-                                      "Báo cáo tuần" + chấm    "Báo cáo tuần" + chấm
+  một THẺ «Tuần mới» trong <RewardToastHost>   ─── hết 4 giây ──→ dismissWeeklyReportToast()
+        │  (bấm vào)                                                  KHÔNG ghi ngày nào
+        ▼                                                                    │
+markWeeklyReportSeen() ── ghi lastWeeklyReportSeenDate = thứHai (đã XEM)     │
+        │  + onNavigate({ tab: 'stats' })                                    ▼
+        ▼                                                    lastWeeklyReportSeenDate KHÔNG đổi
+  màn THỐNG KÊ — thẻ «Tôi có đang khá lên không?»              ⇒ weeklyReportUnseen vẫn TRUE
+  (ADR-077: WeeklyReportModal đã xoá; Stats trả lời câu ấy)  ⇒ CHẤM trên tab Thống kê, KHÔNG hết hạn
+                                                               (`attentionTabIds` — cả desktop lẫn iPhone)
 ```
 
 ⚠️ **CÁI CHẤM LÀ LƯỚI AN TOÀN, VÀ NÓ PHẢI CĂNG Ở CẢ HAI NỀN TẢNG.** Toast tự tắt sau 4 giây nên

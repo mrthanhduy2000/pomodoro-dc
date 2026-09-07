@@ -58,11 +58,11 @@ test('ADR-070: KHÔNG còn hộp thoại chi tiết — chuỗi thẻ là cái k
  * 25 phút làm việc thật kết thúc bằng thứ dễ bỏ lỡ nhất app. Chuỗi thẻ là cái KẾT — ngắn, mỗi thẻ
  * một con số, bỏ qua được bằng một chạm.
  */
-test('chuỗi thẻ thưởng bám `lootModalOpen` (mọi phiên), sau lễ mừng thành phố, tính vào `blocking`, và ĐÓNG phần thưởng không điều kiện', () => {
+test('chuỗi thẻ thưởng bám `lootModalOpen` (mọi phiên), là cái kết DUY NHẤT (ADR-077), tính vào `blocking`, và ĐÓNG phần thưởng không điều kiện', () => {
   const gate = /const\s+showStory\s*=\s*([^;]+);/.exec(APP_CODE);
   assert.ok(gate, 'không đọc được `showStory` — chuỗi thẻ thưởng đã đi đâu?');
   assert.match(gate[1], /lootModalOpen/, 'chuỗi thẻ phải bám `lootModalOpen` — chạy sau MỌI phiên, không chỉ khi lên kỷ');
-  assert.match(gate[1], /!showMoment/, 'lễ mừng thành phố phải xong trước rồi mới tới chuỗi thẻ');
+  assert.doesNotMatch(gate[1], /showMoment/, 'ADR-077: nothing stands before the story any more — no second gate');
   assert.match(gate[1], /!storyDone/, 'thiếu cờ "đã xem xong" ⇒ chuỗi thẻ dựng lại ngay sau khi đóng');
   assert.match(APP_CODE, /\{\s*showStory\s*&&\s*<SessionRewardStory/, 'chuỗi thẻ không được dựng');
 
@@ -158,87 +158,27 @@ test('những việc buộc phải quyết định VẪN chặn màn hình', () 
 });
 
 /**
- * ⚠️ BÀI NÀY CANH MỘT HỒI QUY ĐÃ THẬT SỰ XẢY RA TRONG CHÍNH PHIÊN VIẾT RA NÓ.
- * Lễ mừng thành phố xưa nay nằm TRONG `RewardSequence`, mà `RewardSequence` chỉ
- * dựng khi hộp thoại phần thưởng bật. Bản vá đầu tiên của luật "chỉ bốn việc được
- * chặn màn hình" siết đúng cái cổng ấy — và thế là lễ mừng "vừa xây xong một công
- * trình" biến mất ở MỌI phiên thường. Không có gì đỏ lên: build xanh, lint sạch,
- * mọi bài test khác xanh, chỉ có một tính năng lặng lẽ chết.
- * Lễ mừng là một đoạn chuyển cảnh TỰ KẾT THÚC, không đòi Đàm quyết định gì, nên
- * luật kia không áp cho nó — nó phải chạy theo `lootModalOpen`, không theo cổng
- * hộp thoại.
+ * ADR-077: the 3.2-second «city moment» overlay is gone — a finished building is told by the ending's
+ * project card (all bricks laid). The test that used to pin the overlay now pins its absence.
  */
-test('lễ mừng thành phố vẫn chạy sau MỌI phiên, không bị buộc vào hộp thoại', () => {
-  const gate = /const\s+showMoment\s*=\s*([^;]+);/.exec(APP_CODE);
-  assert.ok(gate, 'không đọc được `showMoment` — lễ mừng thành phố đã đi đâu?');
-  assert.match(gate[1], /lootModalOpen/, 'lễ mừng phải bám `lootModalOpen` (mọi phiên)');
-  assert.ok(
-    !/showLootModal/.test(gate[1]),
-    'lễ mừng đang bị buộc vào cổng hộp thoại — phiên thường sẽ mất lễ mừng trong im lặng',
-  );
-  assert.match(APP_CODE, /<CityGrowthMoment/, 'không còn chỗ nào dựng lễ mừng');
-
-  // Nó che màn hình lúc chạy ⇒ phải làm đồng hồ toast dừng, nếu không 4 giây của
-  // thẻ cháy hết sau lưng lễ mừng và Đàm không bao giờ thấy thẻ.
+test('no city-moment overlay stands before the reward story any more (ADR-077)', () => {
+  assert.doesNotMatch(APP_CODE, /<CityGrowthMoment/, 'the growth overlay is back — the project card already tells this');
+  assert.doesNotMatch(APP_CODE, /showMoment/, 'a second ending gate reappeared');
   const blocking = /const\s+blocking\s*=\s*([\s\S]*?);/.exec(APP_CODE);
   assert.ok(blocking, 'không đọc được `blocking`');
-  assert.match(blocking[1], /showMoment/, '`blocking` bỏ sót lễ mừng');
+  assert.match(blocking[1], /showStory/, '`blocking` must still hold the reward story');
 });
 
 /**
- * ⚠️ LỐI VÀO TRÊN ĐIỆN THOẠI LÀ ĐIỀU KIỆN AN TOÀN CỦA ADR-061, KHÔNG PHẢI MỘT TIỆN ÍCH.
- *
- * ADR-061 bỏ hộp thoại báo cáo tuần tự bật, thay bằng một thẻ toast 4 giây cộng một CHẤM "chưa
- * xem" làm lưới an toàn. Cái chấm ấy lúc đầu chỉ có ở thanh bên desktop — mà thanh bên là
- * `hidden md:flex`. Nghĩa là trên iPhone: toast lỡ là hết, vì **nút mở báo cáo tuần chưa từng
- * tồn tại ở đó**. Cái hộp thoại tự bật không chỉ là cách báo cáo XUẤT HIỆN trên điện thoại, nó
- * là cách báo cáo TỒN TẠI.
- *
- * Nên mục "Báo cáo tuần" trong menu "Thêm" chính là thứ làm cho việc bỏ chặn màn hình an toàn.
- * Gỡ nó đi thì ADR-061 quay lại thành một hồi quy — trên đúng thiết bị Đàm dùng nhiều nhất, và
- * hoàn toàn im lặng: build xanh, lint sạch, mọi bài test khác xanh.
+ * ADR-077: the weekly report dialog is gone — the Stats screen answers "this week vs last". What must
+ * survive from ADR-061/#87 is the SAFETY NET: a missed Monday toast still leaves a persistent dot,
+ * now on the Thống kê tab, until Đàm opens the summary (which is now just opening Stats).
  */
-test('báo cáo tuần có đường vào trên ĐIỆN THOẠI, không chỉ ở thanh bên desktop', () => {
-  const mobileMenu = APP_CODE.slice(APP_CODE.indexOf('MOBILE_SECONDARY_TABS.map'));
-  assert.ok(
-    /openWeeklyReport\(\)/.test(mobileMenu),
-    'menu "Thêm" trên điện thoại không còn mục mở báo cáo tuần — trên iPhone báo cáo tuần lại '
-    + 'không có đường vào nào.',
-  );
-  // Số cột của menu ấy phải đếm cả mục vừa thêm, nếu không nó tràn hàng.
-  assert.match(
-    APP_CODE,
-    /MOBILE_SECONDARY_TABS\.length \+ 1/,
-    'số cột menu "Thêm" chưa cộng thêm mục báo cáo tuần',
-  );
-  // Và chấm "chưa xem" phải có ở CẢ HAI nơi — nối một chỗ quên một chỗ là hình dạng lỗi đã cắn
-  // dự án nhiều lần, mà lần này chỗ bị quên lại đúng là điện thoại.
-  assert.ok(
-    /\{weeklyReportUnseen && \(/.test(mobileMenu),
-    'mục báo cáo tuần trên điện thoại không có chấm "chưa xem"',
-  );
-  assert.match(APP_CODE, /attention=\{weeklyReportUnseen\}/, 'thanh bên desktop mất chấm "chưa xem"');
-});
-
-// ─────────────────────────────────────────────────────────────────────────────
-// LỄ MỪNG THÀNH PHỐ CHỈ ĐƯỢC CHẶN MÀN HÌNH KHI CÔNG TRÌNH THẬT SỰ VỪA XONG (2026-08-30)
-//
-// ⚠️ VÌ SAO. `buildGrowthMoment` trả ba loại: `built` (công trình hoàn thành) · `scaffold` (giàn
-// giáo nhích một nấc) · `tick` (thành phố nhúc nhích). Cả ba từng dựng một lớp phủ TOÀN MÀN HÌNH
-// 3,2 giây, mà Đàm gần như luôn có công trình trong hàng chờ ⇒ nó nổ sau ~100% số phiên:
-// 3,2 s × 579 phiên = 1.853 giây = **30,9 PHÚT** trong 180 ngày, để nói lại đúng câu đang in
-// THƯỜNG TRỰC trên chính màn Tập trung ("Đang xây … · còn N phiên") — hai chỗ đọc CÙNG một nguồn.
-//
-// Đây là bài test đọc mã nguồn vì điều kiện sống ở `App.jsx`, không ở một hàm thuần nào.
-test('lớp phủ lễ mừng chỉ dựng cho `kind === "built"`', () => {
-  const app = readFileSync(new URL('../App.jsx', import.meta.url), 'utf8')
-    .replace(/\/\*[\s\S]*?\*\//g, '')
-    .split('\n').filter((l) => !/^\s*(\/\/|\*)/.test(l)).join('\n');
-  const dong = app.split('\n').find((l) => /const showMoment\s*=/.test(l));
-  assert.ok(dong, 'không còn `showMoment` — bố cục đã đổi, đọc lại');
-  assert.match(
-    dong,
-    /kind\s*===\s*'built'/,
-    'lễ mừng 3,2 giây lại chặn màn hình sau MỌI phiên; nó chỉ được dành cho công trình vừa xong',
-  );
+test('the unseen-week dot lives on the Thống kê tab, and the toast navigates there', () => {
+  assert.doesNotMatch(APP_CODE, /WeeklyReportModal|openWeeklyReport\(|weeklyReportOpen\b/, 'the dialog wiring is back');
+  const memo = /const attentionTabIds = useMemo\(([\s\S]*?)\);/.exec(APP_CODE);
+  assert.ok(memo, 'không đọc được `attentionTabIds`');
+  assert.match(memo[1], /weeklyReportUnseen \? \['stats'\]/, 'the unseen-week dot must land on the stats tab');
+  assert.match(APP_CODE, /markWeeklyReportSeen\(\);\s*selectTab\('stats'\)/, 'opening the summary must record "seen" and go to Stats');
+  assert.match(APP_CODE, /onOpenWeekly=\{openWeeklySummary\}/, 'the Focus line must use the same handler');
 });

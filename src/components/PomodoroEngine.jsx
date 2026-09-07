@@ -1,22 +1,16 @@
 import React, { useState, useCallback, useEffect, useMemo } from 'react';
 import { tomTatThietLap } from './pomodoroSetupSummary.js';
-import { AnimatePresence, motion, useReducedMotion } from 'framer-motion';
+import { AnimatePresence, motion } from 'framer-motion';
 
-import { SCRIM_FADE, useCustomMotion, useEnterMotion, usePressMotion, useRewardMotion, useSnapMotion } from '../lib/motionPresets';
+import { useCustomMotion, useEnterMotion, useSnapMotion } from '../lib/motionPresets';
 import useGameStore from '../store/gameStore';
 import { pushNow } from '../lib/syncService';
 import useSettingsStore from '../store/settingsStore';
 import { useTimer, formatTime, TIMER_MODES, TIMER_STATES } from '../hooks/useTimer';
-import { getComboDecayMs, getDailyGoalProgress, getMultiplierTier, nextMultiplierStep, suggestSessionLength } from '../engine/gameMath';
+import { getDailyGoalProgress, suggestSessionLength } from '../engine/gameMath';
 import { getVietnamHour, localDateStr } from '../engine/time';
 import { FLOWTIME_BREAK_RULES, QUICK_FOCUS_PRESETS, getBreakPlan } from '../engine/breaks';
 
-/**
- * Trục «cứ mấy phiên thì nghỉ dài» có THẬT SỰ phân biệt được các preset không?
- * Hỏi thẳng bảng thay vì viết cứng `!== 4`: hôm nay cả 4 preset đều khai 4, nhưng ngày nào có
- * một preset khai số khác thì viên «×N» phải tự hiện lại — mà không ai phải nhớ sửa chỗ này.
- */
-const CHU_KY_NGHI_CO_KHAC_NHAU = new Set(QUICK_FOCUS_PRESETS.map((p) => p.longBreakAfterN)).size > 1;
 import {
   DEFAULT_DEEP_FOCUS_THRESHOLD,
   WARMUP_REDUCED_THRESHOLD,
@@ -32,12 +26,23 @@ import {
 import { RichNoteEditor } from './RichText';
 import { countRichTextWords, trimRichTextToWordLimit } from '../utils/richText';
 import {
-  SESSION_GOAL_MIN_CHARS,
+  GOAL_SUGGESTION_LIMIT,
   deriveSessionGoalState,
   pickRecentGoals,
   sessionGoalHint,
 } from './sessionGoalState';
-import { jumpToSessionGoal } from './focusGoalJump';
+import SessionBrickStrip from './focus/SessionBrickStrip';
+import ActionButton from './shared/ActionButton';
+import { clampFocusMinutes, parseFocusMinutesInput, getSessionWorkedMinutes } from '../engine/timerSession';
+import ModeSwitch from './focus/ModeSwitch';
+import QuickPresets from './focus/QuickPresets';
+import StrictModeToggle from './focus/StrictModeToggle';
+import CategoryChip from './focus/CategoryChip';
+import SessionReviewCard from './focus/SessionReviewCard';
+import CancelConfirmDialog from './focus/CancelConfirmDialog';
+import CategoryManager from './focus/CategoryManager';
+import useMinWidth from '../hooks/useMinWidth';
+import { isEditableShortcutTarget, isSpaceKeyEvent } from '../lib/keyboard';
 
 const NOTE_WORD_LIMIT = 3000;
 const SESSION_EXTENSION_SECONDS = 60;
@@ -66,66 +71,6 @@ const RING_COLORS = {
 };
 const Motion = motion;
 
-function formatPreviewPercent(value) {
-  if (!Number.isFinite(value)) return '0';
-  if (value === 0) return '0';
-  if (value < 1) return value.toFixed(2).replace(/0+$/, '').replace(/\.$/, '');
-  return value.toFixed(1).replace(/\.0$/, '');
-}
-
-function clampFocusMinutes(value) {
-  return Math.min(180, Math.max(1, value));
-}
-
-function parseFocusMinutesInput(value) {
-  const digits = String(value ?? '').replace(/\D+/g, '').slice(0, 3);
-  if (!digits) return null;
-
-  const parsed = Number.parseInt(digits, 10);
-  if (!Number.isFinite(parsed)) return null;
-  return clampFocusMinutes(parsed);
-}
-
-function isEditableShortcutTarget(target) {
-  if (!(target instanceof HTMLElement)) return false;
-  if (target.isContentEditable) return true;
-  return Boolean(target.closest('input, textarea, select, [contenteditable="true"], [role="textbox"]'));
-}
-
-function isSpaceKeyEvent(event) {
-  return event.code === 'Space' || event.key === ' ' || event.keyCode === 32;
-}
-
-function getCompletedSessionWorkedMinutes(session) {
-  if (!session) return null;
-
-  if (Number.isFinite(session.wallClockDurationMs)) {
-    const effectiveMs = Math.max(0, session.wallClockDurationMs - (session.pausedTotalMs ?? 0));
-    return effectiveMs / 60_000;
-  }
-
-  return Number.isFinite(session.minutes) ? session.minutes : null;
-}
-
-function useMinWidth(minWidth) {
-  const [matches, setMatches] = useState(() => {
-    if (typeof window === 'undefined') return false;
-    return window.matchMedia(`(min-width: ${minWidth}px)`).matches;
-  });
-
-  useEffect(() => {
-    if (typeof window === 'undefined') return undefined;
-
-    const media = window.matchMedia(`(min-width: ${minWidth}px)`);
-    const update = (event) => setMatches(event.matches);
-
-    media.addEventListener('change', update);
-    return () => media.removeEventListener('change', update);
-  }, [minWidth]);
-
-  return matches;
-}
-
 export default function PomodoroEngine({
   fullScreenMode = false,
   immersiveMode = false,
@@ -136,8 +81,6 @@ export default function PomodoroEngine({
   const timerConfig = useGameStore((s) => s.timerConfig);
   const setTimerConfig = useGameStore((s) => s.setTimerConfig);
   const unlockedSkills = useGameStore((s) => s.player.unlockedSkills);
-  const relics = useGameStore((s) => s.relics);
-  const relicEvolutions = useGameStore((s) => s.relicEvolutions ?? {});
   const sessionCategories = useGameStore((s) => s.sessionCategories);
   const sessionHistory = useGameStore((s) => s.history);
   const pendingCategoryId = useGameStore((s) => s.pendingCategoryId);
@@ -150,7 +93,6 @@ export default function PomodoroEngine({
   const addCategory = useGameStore((s) => s.addCategory);
   const deleteCategory = useGameStore((s) => s.deleteCategory);
   const reviewCompletedSession = useGameStore((s) => s.reviewCompletedSession);
-  const combo = useGameStore((s) => s.combo);
   const sessionsCompleted = useGameStore((s) => s.progress.sessionsCompleted);
   const longBreakCycleStart = useGameStore((s) => s.progress.longBreakCycleStart ?? 0);
   const longBreakGraceDeadlineAt = useGameStore((s) => s.progress.longBreakGraceDeadlineAt ?? null);
@@ -229,7 +171,6 @@ export default function PomodoroEngine({
     totalSeconds,
     progressPct,
     timerState,
-    milestone,
     isContinuingAfterPomodoro,
     continuedPomodoroConfirmationPending,
     start,
@@ -257,7 +198,6 @@ export default function PomodoroEngine({
   const [showCatManager, setShowCatManager] = useState(false);
   const [noteExpanded, setNoteExpanded] = useState(false);
   const [showCancelConfirm, setShowCancelConfirm] = useState(false);
-  const [activeMilestone, setActiveMilestone] = useState(null);
   // Bảng thiết lập GẤP LẠI mặc định — xem chú thích ở `sessionSetupCard`.
   const [setupOpen, setSetupOpen] = useState(false);
   const [focusMinutesDraft, setFocusMinutesDraft] = useState(() => (
@@ -265,16 +205,6 @@ export default function PomodoroEngine({
   ));
   const [isEditingFocusMinutes, setIsEditingFocusMinutes] = useState(false);
   const [extendButtonGrace, setExtendButtonGrace] = useState(null);
-  useEffect(() => {
-    if (!milestone) return;
-    const activateId = window.setTimeout(() => setActiveMilestone(milestone), 0);
-    const timeoutId = window.setTimeout(() => setActiveMilestone(null), 2200);
-    return () => {
-      window.clearTimeout(activateId);
-      window.clearTimeout(timeoutId);
-    };
-  }, [milestone]);
-
   useEffect(() => {
     if (!isOnBreak) return;
     document.title = `${formatTime(breakSecsLeft)} · DC Pomodoro`;
@@ -300,10 +230,9 @@ export default function PomodoroEngine({
   // chuỗi thẻ thưởng và ở màn Tiến trình.
   const handleStartSession = useCallback(() => {
     if (isOnBreak || timerState !== TIMER_STATES.IDLE) return false;
-    if (pendingSessionGoal.trim().length < SESSION_GOAL_MIN_CHARS) return false;
     start();
     return true;
-  }, [isOnBreak, pendingSessionGoal, start, timerState]);
+  }, [isOnBreak, start, timerState]);
 
   useEffect(() => {
     if (isOnBreak || timerState !== TIMER_STATES.IDLE) return undefined;
@@ -349,70 +278,7 @@ export default function PomodoroEngine({
     };
   }, [autoStartNext, handleStartSession, isOnBreak, timerState]);
 
-  const comboDecayMs = useMemo(
-    () => getComboDecayMs(unlockedSkills, relics, relicEvolutions),
-    [unlockedSkills, relics, relicEvolutions],
-  );
-  const [comboActive, setComboActive] = useState(false);
-  useEffect(() => {
-    if (!combo.lastSessionTs) {
-      const resetId = window.setTimeout(() => setComboActive(false), 0);
-      return () => window.clearTimeout(resetId);
-    }
-
-    const syncId = window.setTimeout(() => {
-      setComboActive((Date.now() - combo.lastSessionTs) < comboDecayMs);
-    }, 0);
-
-    const expiresInMs = (combo.lastSessionTs + comboDecayMs) - Date.now();
-    if (expiresInMs <= 0) {
-      return () => window.clearTimeout(syncId);
-    }
-
-    const timeoutId = window.setTimeout(() => setComboActive(false), expiresInMs + 100);
-    return () => {
-      window.clearTimeout(syncId);
-      window.clearTimeout(timeoutId);
-    };
-  }, [combo.lastSessionTs, combo.count, comboDecayMs]);
-
-  // V2: khoi_dong_nhanh / lam_nong_nhanh đã loại bỏ — không còn warmup, dùng default 26' threshold
-  const warmupUnlocked = false;
-  const deepFocusThreshold = DEFAULT_DEEP_FOCUS_THRESHOLD;
   const currentSessionTargetMinutes = Math.max(1, Math.round(totalSeconds / 60));
-  const rewardReferenceMinutes = isStopwatchMode
-    ? Math.max(timerConfig.focusMinutes, Math.max(1, Math.floor(elapsedSeconds / 60)))
-    : ((timerState === TIMER_STATES.RUNNING || timerState === TIMER_STATES.PAUSED || timerState === TIMER_STATES.FINISHED)
-      ? currentSessionTargetMinutes
-      : timerConfig.focusMinutes);
-
-  const rawTier = getMultiplierTier(rewardReferenceMinutes, warmupUnlocked);
-  const tier = useMemo(() => {
-    if (!unlockedSkills.vung_dong_chay || rewardReferenceMinutes < VUNG_DONG_CHAY_MIN_MIN) {
-      return rawTier;
-    }
-
-    // Mirror gameMath: Vùng Dòng Chảy promotes the preview by one tier.
-    if (rawTier.multiplier < 1.3) {
-      return {
-        ...rawTier,
-        multiplier: 1.3,
-        tierLabel: 'Tập Trung Sâu ×1.3',
-      };
-    }
-
-    if (rawTier.multiplier < 2.0) {
-      return {
-        ...rawTier,
-        multiplier: 2.0,
-        chestGuaranteed: true,
-        tierLabel: 'Phiên Chuyên Sâu ×2.0',
-      };
-    }
-
-    return rawTier;
-  }, [rawTier, rewardReferenceMinutes, unlockedSkills.vung_dong_chay]);
-
   const isIdle = timerState === TIMER_STATES.IDLE;
   const isActive = timerState === TIMER_STATES.RUNNING || timerState === TIMER_STATES.PAUSED;
   const isBreakMode = isOnBreak;
@@ -461,9 +327,7 @@ export default function PomodoroEngine({
   // ô Đàm còn chưa chạm vào.
   const goalState = deriveSessionGoalState(pendingSessionGoal);
   const sessionGoalText = goalState.text;
-  const sessionGoalCharCount = goalState.charCount;
   const isSessionGoalValid = goalState.isReady;
-  const sessionGoalProgressPct = goalState.progressPct;
   const sessionPrepStatusLabel = goalState.badgeLabel;
   // Tông → class. Ô trống ở theme sáng nay dùng đúng màu chữ phụ như mọi dòng chỉ dẫn khác; ở theme
   // tối thì nhánh "chưa đủ" vốn đã trung tính sẵn, nên chỉ cần tách riêng nhánh sáng.
@@ -483,7 +347,8 @@ export default function PomodoroEngine({
   // ⚠️ KHÔNG bọc `useMemo`: React Compiler từ chối tối ưu cả component khi thấy memo hoá thủ công
   // mà nó không bảo toàn được ("Existing memoization could not be preserved") — đổi lấy một phép
   // tính vốn đã rẻ (duyệt lịch sử và DỪNG sau 3 kết quả) là một cái giá tệ. Để compiler tự lo.
-  const recentGoals = sessionGoalText.trim() ? [] : pickRecentGoals(sessionHistory);
+  // ADR-077: one-tap goals, same task type first. Shown in the goal card only while the box is empty.
+  const recentGoals = sessionGoalText.trim() ? [] : pickRecentGoals(sessionHistory, GOAL_SUGGESTION_LIMIT, { preferCategoryId: pendingCategoryId });
 
   const goalHintClass = goalState.tone === 'warn'
     ? lightTheme ? 'font-semibold text-[var(--accent2)]' : 'font-semibold text-red-300'
@@ -491,10 +356,7 @@ export default function PomodoroEngine({
   const showSessionReview = Boolean(lastCompletedSessionId && completedSessionReview && !isActive);
   const completedGoalAchieved = completedSessionReview?.goalAchieved ?? null;
   const reviewGoalText = completedSessionReview?.goal?.trim() || sessionGoalText;
-  const comboCount = comboActive ? combo.count : 0;
-  const comboStacks = Math.max(0, Math.min(comboCount - 1, COMBO_MAX_STACKS));
-  const comboBonusPercent = Math.round(comboStacks * COMBO_BONUS_PER_STACK * 100);
-  const completedSessionWorkedMinutes = getCompletedSessionWorkedMinutes(completedSessionReview);
+  const completedSessionWorkedMinutes = getSessionWorkedMinutes(completedSessionReview);
   const immersiveRootMaxWidth = immersiveMode
     ? isIdle && !isBreakMode
       ? 900
@@ -571,8 +433,6 @@ export default function PomodoroEngine({
   // Màn Focus "tĩnh": khi đang chạy/tạm dừng (không phải giải lao) cũng dùng
   // chế độ tối giản như fullscreen — ẩn huy hiệu game để 25 phút chỉ còn đồng hồ.
   const useMinimalFocusStage = fullScreenMode || (isActive && !isBreakMode);
-  const showComboBadge = !useMinimalFocusStage && !isBreakMode && comboCount >= 2;
-  const showMultiplierBadge = !useMinimalFocusStage && !isBreakMode;
   // Cỡ chữ đã tăng ~20% so với bản trước (2026-08-27) để con số thành trung tâm thị giác thật sự.
   // ⚠️ Mọi mốc đáp ứng đều phải nhân CÙNG hệ số — nới một mốc rồi bỏ quên mốc kia thì chữ nhảy cỡ
   // đúng lúc xoay ngang máy. Bảng cũ → mới: 4.8→5.75 · 5.6→6.7 · 6.4→7.7 · 7.05→8.45 ·
@@ -779,7 +639,6 @@ export default function PomodoroEngine({
   // Ba nhịp ở `src/lib/motionPresets.js`. Mỗi `useSnapMotion`/`useCustomMotion` bên dưới là một
   // ngoại lệ, và mỗi ngoại lệ phải tự khai lý do — không có dòng lý do thì nó đáng lẽ là `enter`.
   const enterMotion = useEnterMotion();
-  const rewardMotion = useRewardMotion();
 
   // NGOẠI LỆ (mang bố cục) — cỡ đồng hồ lúc vào/ra chế độ chuyên chú. `animate` KHAI ra tỉ lệ, bỏ
   // hẳn thì đồng hồ nhảy về cỡ mặc định và chế độ chuyên chú mất luôn ý nghĩa.
@@ -827,11 +686,6 @@ export default function PomodoroEngine({
   });
 
   // NGOẠI LỆ (mang bố cục) — thanh tiến độ ô mục tiêu: bề dài CHÍNH LÀ số ký tự đã gõ.
-  const goalProgressMotion = useSnapMotion({
-    initial: false,
-    animate: { width: `${sessionGoalCharCount > 0 ? Math.max(sessionGoalProgressPct, 8) : 0}%` },
-    transition: { duration: 0.24, ease: [0.22, 1, 0.36, 1] },
-  });
 
   // NGOẠI LỆ (mang bố cục) — bề ngang và khoảng cách của cả khối khi đổi bố cục chuyên chú.
   const rootLayoutMotion = useSnapMotion({
@@ -1168,72 +1022,15 @@ export default function PomodoroEngine({
   const timerStageVisual = (
     <>
       {/*
-        ⚠️ HUY HIỆU MỐC NÀY TỪNG KHÔNG BAO GIỜ HIỆN ĐƯỢC — hai điều kiện của nó loại trừ nhau.
-        `activeMilestone` CHỈ được đặt khi một phiên ĐANG CHẠY (`MILESTONE_PCTS = [25, 50, 75]`,
-        `useTimer.js`), còn `useMinimalFocusStage = fullScreenMode || (isActive && !isBreakMode)`
-        — tức nó LUÔN đúng trong lúc phiên chạy. `!useMinimalFocusStage && activeMilestone` vì vậy
-        là một điều kiện **bất khả thi theo cấu tạo**: mã tính ra mốc, giữ nó 2,2 giây, rồi vứt đi
-        mà không ai thấy. Hậu quả với người chơi: **suốt gần 25 phút không một tín hiệu nào** — màn
-        hình chỉ đếm ngược, không có một nhịp nào nói "đang đi được".
-        ⚠️ Gác nay là `!fullScreenMode`, KHÔNG phải bỏ hẳn: chế độ toàn màn hình sinh ra để trống
-        trơn, đó là chủ đích. Còn ở màn thường thì một huy hiệu sống 2,2 giây không phải "chrome" —
-        nó là phần thưởng, và nó là thứ duy nhất chia một quãng 25 phút thành bốn chặng.
-        ⚠️ Hai huy hiệu KIA (combo, hệ số) VẪN im trong lúc chạy — chúng là trạng thái thường trực,
-        đọc lúc nào cũng được, nên chúng đúng là thứ cần dẹp cho đỡ phân tâm. Khác nhau ở chỗ:
-        một cái ĐẾN RỒI ĐI, cái kia NẰM ĐÓ.
+        ADR-077 — "this session's brick" sits where the milestone toast and the combo/multiplier
+        badges used to: same height budget, one story instead of two numbers. Hidden on the break
+        stage and in full screen (that mode is empty by design).
       */}
-      <AnimatePresence>
-        {!fullScreenMode && activeMilestone && (
-          <motion.div
-            key={activeMilestone}
-            {...rewardMotion}
-            className={`flex items-center gap-2 rounded-2xl px-4 py-2 ${
-              lightTheme
-                ? 'border border-[rgba(91,122,82,0.18)] bg-[rgba(229,236,223,0.94)]'
-                : 'bg-white/[0.05] border-white/8'
-            }`}
-          >
-            <span className={`mono text-[10px] uppercase tracking-[0.18em] ${lightTheme ? 'text-[var(--good)]' : 'text-[var(--accent-light)]'}`}>
-              Mốc
-            </span>
-            <span className={`font-bold text-sm ${lightTheme ? 'text-[var(--good)]' : 'text-[var(--ink)]'}`}>
-              {activeMilestone}% hoàn thành
-            </span>
-          </motion.div>
-        )}
-      </AnimatePresence>
-
-      {(showComboBadge || showMultiplierBadge) && (
-        <div className="flex w-full justify-center px-2 sm:px-3">
-          <div className="flex flex-col items-center gap-2.5 sm:gap-3">
-            {showComboBadge && (
-              <motion.div
-                {...rewardMotion}
-                className={`inline-flex shrink-0 items-center rounded-full px-2.5 py-1.5 text-[11px] font-semibold tracking-[-0.02em] sm:px-4 sm:py-2 sm:text-sm sm:tracking-normal ${
-                  lightTheme
-                    ? 'border border-[rgba(245,158,11,0.18)] bg-[rgba(255,247,237,0.96)]'
-                    : 'bg-white/[0.05] border-white/8'
-                }`}
-              >
-                <div className="inline-flex items-center gap-1 whitespace-nowrap leading-none sm:gap-1.5">
-                  <span className={`font-bold ${lightTheme ? 'text-[var(--warn)]' : 'text-[var(--ink)]'}`}>Combo ×{comboCount}</span>
-                  <span className={`${lightTheme ? 'text-[var(--muted)]' : 'text-[var(--muted)]'}`}>+{comboBonusPercent}% XP</span>
-                </div>
-              </motion.div>
-            )}
-
-            {showMultiplierBadge && (
-              <MultiplierBadge
-                className="shrink-0"
-                deepFocusThreshold={deepFocusThreshold}
-                focusMinutes={timerConfig.focusMinutes}
-                isStopwatchMode={isStopwatchMode}
-                referenceMinutes={rewardReferenceMinutes}
-                tier={tier}
-              />
-            )}
-          </div>
-        </div>
+      {!fullScreenMode && !isBreakMode && (
+        <SessionBrickStrip
+          phase={isActive ? 'running' : 'idle'}
+          progressRatio={isActive ? (progressPct ?? 0) / 100 : 0}
+        />
       )}
 
       {!useMinimalFocusStage && isBreakMode && (
@@ -1369,7 +1166,7 @@ export default function PomodoroEngine({
               {!isBreakMode && timerState === TIMER_STATES.IDLE && (
                 isStopwatchMode
                   ? 'Sẵn sàng bấm giờ'
-                  : (isSessionGoalValid ? 'Sẵn sàng' : 'Chờ mục tiêu')
+                  : 'Sẵn sàng'
               )}
               {!isBreakMode && timerState === TIMER_STATES.RUNNING && (isStopwatchMode ? 'Đang bấm giờ' : 'Đang tập trung')}
               {!isBreakMode && timerState === TIMER_STATES.PAUSED && (
@@ -1494,88 +1291,19 @@ export default function PomodoroEngine({
                   Kiểm bằng: `node scripts/shot.mjs --phone --fit`
                   và `node scripts/shot.mjs --phone --fit --el "Cần điền mục tiêu"`. */}
               {/*
-                ⚠️ KHI CHƯA CÓ MỤC TIÊU, NÚT NÀY **DẪN ĐƯỜNG** CHỨ KHÔNG CÒN LÀ NGÕ CỤT (2026-08-30).
-                Bản cũ để nó `disabled` với nhãn "Cần điền mục tiêu". Một nút `disabled` không nhận
-                sự kiện bấm, nên nó nói ra điều đang thiếu mà **không nói thiếu ở đâu**, và bấm vào
-                thì không có gì xảy ra. Đo trên ảnh chụp 390px: ô mục tiêu nằm ở y≈1400 của một
-                trang cao 3035px — Đàm phải cuộn qua đồng hồ, qua "Chu kỳ nghỉ", qua "Ghi chú
-                phiên" mới thấy nó, rồi cuộn ngược lên mới bấm được. Mỗi phiên một lần, mãi mãi,
-                ngay tại hành động quan trọng nhất của cả app.
-                ⚠️ LUẬT KHÔNG BỊ NỚI: vẫn phải đủ `SESSION_GOAL_MIN_CHARS` ký tự mới bắt đầu được.
-                Thứ bị gỡ là ma sát ĐI LẠI, không phải cái cổng. Nhãn cũng đổi theo cho khỏi nói
-                dối: nút này giờ ĐƯA TỚI ô mục tiêu, nên nó nói "Điền mục tiêu →", không nói "Cần".
-                ⚠️ Vẫn `variant="soft"` chứ không "primary": bấm nó KHÔNG bắt đầu phiên, và một nút
-                trông như nút chính mà làm việc khác là cách nhanh nhất để mất lòng tin vào nút.
-                Ca khủng hoảng thì giữ nguyên `disabled` — ở đó thứ chặn không nằm trên màn này.
+                ADR-077: the goal is optional, so the idle row is ONE full-width primary button — no
+                "Điền mục tiêu →" detour, no chip row stealing the 3px above the tab bar. Recent goals
+                are one tap away in the goal card just below the fold.
               */}
-              {!isSessionGoalValid ? (
-                /*
-                  ⚠️ CHỖ NÀY TỪNG LÀ MỘT NÚT CHỈ-ĐỂ-CUỘN, VÀ ĐÓ LÀ MA SÁT LỚN NHẤT CỦA CẢ APP.
-                  Đo ở khung 390×844 thật (thanh điều hướng bắt đầu ở y=774): nút "Điền mục tiêu →"
-                  ở y=661 chỉ đưa người dùng tới ô nhập ở **y=934 — dưới nếp gấp 160px**. Nên mỗi
-                  phiên, việc quan trọng nhất của cả app tốn BỐN thao tác: bấm nút cuộn → gõ đủ 10
-                  ký tự → cuộn ngược lên → bấm Bắt đầu.
-                  `pickRecentGoals` vốn đã chỉ trả về mục tiêu ĐỦ DÀI (bấm cái nào cũng mở được nút
-                  ngay) nhưng chúng bị chôn cạnh ô nhập nên gần như không ai thấy. Nay chúng đứng
-                  ĐÚNG CHỖ cái nút cũ ⇒ đường ngắn nhất còn **hai cú chạm, không gõ, không cuộn**.
-                  ⚠️ THAY CHỖ, KHÔNG THÊM HÀNG. Bản đầu của bản vá này cho chip một hàng RIÊNG bên
-                  trên nút — nó chạy, nhưng tốn thêm **68px** và đẩy đáy nút xuống y=771 trong khi
-                  thanh tab bắt đầu ở y=774: **hở đúng 3px**. Màn này đã để nút chính chạm thanh tab
-                  hai lần trước đó (vòng 19, vòng 20); suýt là lần thứ ba, do chính tôi. Đứng thay
-                  chỗ nút cũ thì chiều cao không đổi một điểm ảnh nào.
-                  ⚠️ LUẬT KHÔNG BỊ NỚI: vẫn phải đủ `SESSION_GOAL_MIN_CHARS` ký tự mới bắt đầu được.
-                  ⚠️ VÀ KHÔNG TỰ ĐIỀN GIÙM — mục tiêu được chấm "đạt/không đạt" khi xong phiên và
-                  được AI Coach đọc, nên gán ngầm mục tiêu hôm qua là nói dối thay Đàm. Anh vẫn
-                  phải BẤM, và nhìn thấy mình vừa chọn cái gì.
-                  ⚠️ Chip "Tự viết →" là đường thoát BẮT BUỘC PHẢI CÓ: không có nó thì người muốn
-                  đặt một mục tiêu mới lại không có lối nào từ nếp gấp — tức bản vá vừa xoá một ngõ
-                  cụt vừa tạo ra một ngõ cụt khác.
-                  ⚠️ MỘT HÀNG, KHÔNG XUỐNG DÒNG. Bản đầu để `flex-wrap`, mà chip đầu tiên dài 23
-                  ký tự ("Hoàn thành phần đang dở") nên nó cùng nút "Tự viết →" tràn thành HAI
-                  dòng — cao 84px thay vì 43px, tức lại ăn mất 41px của đúng cái biên vừa cứu.
-                  Nay chip bị cắt bằng `truncate` trong một hộp co được (`min-w-0 flex-1`), còn
-                  nút thoát `shrink-0` để không bao giờ bị bóp mất chữ.
-                */
-                <div className="flex w-full items-center gap-1.5">
-                  {recentGoals.slice(0, 1).map((goal) => (
-                    <button
-                      key={goal}
-                      type="button"
-                      onClick={() => setPendingSessionGoal(goal)}
-                      className="min-w-0 flex-1 truncate rounded-full px-3 py-2 text-[12px] font-semibold transition-colors"
-                      style={{
-                        background: 'rgba(var(--accent-rgb), 0.10)',
-                        border: '1px solid rgba(var(--accent-rgb), 0.30)',
-                        color: 'var(--accent2)',
-                      }}
-                      title={`Dùng lại mục tiêu này rồi bắt đầu`}
-                    >
-                      {goal}
-                    </button>
-                  ))}
-                  <ActionButton
-                    onClick={() => jumpToSessionGoal()}
-                    variant="soft"
-                    size={recentGoals.length > 0 ? 'compactEscape' : 'compactPrimary'}
-                    className={recentGoals.length > 0 ? '' : compactTimerActionButtonClassName}
-                    title={`Đưa tới ô mục tiêu — cần ít nhất ${SESSION_GOAL_MIN_CHARS} ký tự`}
-                  >
-                    {recentGoals.length > 0 ? 'Tự viết →' : 'Điền mục tiêu →'}
-                  </ActionButton>
-                </div>
-              ) : (
-                <ActionButton
-                  onClick={handleStartSession}
-                  variant="primary"
-                  size="compactPrimary"
-                  className={compactTimerActionButtonClassName}
-                  title="Bắt đầu phiên tập trung"
-                >
-                  {/* "phiên" ở cuối là chữ thừa: cả màn hình này đang nói về một phiên, và ô nhập
-                      ngay bên dưới đã ghi rõ "MỤC TIÊU PHIÊN". Bỏ nó đi thì nhãn vừa khung 390px. */}
-                  Bắt đầu phiên
-                </ActionButton>
-              )}
+              <ActionButton
+                onClick={handleStartSession}
+                variant="primary"
+                size="compactPrimary"
+                className={compactTimerActionButtonClassName}
+                title="Bắt đầu phiên tập trung"
+              >
+                Bắt đầu phiên
+              </ActionButton>
               {/*
                 ⚠️ ĐÃ GỠ nút "Toàn màn hình" Ở NHÁNH CHỜ (2026-09-01) — hai bản lúc ĐANG CHẠY và
                 lúc TẠM DỪNG còn nguyên. Đo ở khung 390px: nó chiếm **112/308px = 36,4%** hàng nút
@@ -1796,7 +1524,7 @@ export default function PomodoroEngine({
                     ? 'bg-[rgba(var(--accent-rgb),0.1)] text-[var(--accent2)]'
                     : 'bg-white/[0.08] text-[var(--accent-light)]'
                 }`}>
-                  Bắt buộc
+                  Tuỳ chọn
                 </span>
                 <div className="flex min-w-0 flex-1 items-center justify-between gap-3">
                   <span className={`mono text-xs font-semibold uppercase tracking-wide ${
@@ -1807,39 +1535,10 @@ export default function PomodoroEngine({
                 </div>
               </div>
             </div>
-            <div className="shrink-0 text-right">
-              <p className={`mono text-[10px] ${lightTheme ? 'text-[var(--muted-2)]' : 'text-slate-500'}`}>
-                {sessionGoalCharCount}/{SESSION_GOAL_MIN_CHARS}
-              </p>
-              {/* ⚠️ Bộ đếm ngay trên là `sessionGoalCharCount` — KÝ TỰ, không phải TỪ. Nhãn cũ ghi
-                  "tối thiểu từ" nên "0/10" đọc thành "tối thiểu 10 TỪ", gấp nhiều lần luật thật và
-                  đủ để làm người ta nản trước khi gõ chữ đầu tiên. */}
-              <p className={`mt-1 text-[10px] ${lightTheme ? 'text-[var(--muted-2)]' : 'text-slate-600'}`}>
-                ký tự tối thiểu
-              </p>
-            </div>
-          </div>
-
-          <div className={`mt-3 h-1.5 overflow-hidden rounded-full ${
-            lightTheme ? 'bg-[rgba(var(--accent-rgb),0.08)]' : 'bg-white/8'
-          }`}>
-            <Motion.div
-              {...goalProgressMotion}
-              className={`h-full rounded-full ${
-                isSessionGoalValid
-                  ? lightTheme
-                    ? 'bg-[var(--good)]'
-                    : 'bg-emerald-300'
-                  : lightTheme
-                    ? 'bg-[var(--accent)]'
-                    : 'bg-amber-300'
-              }`}
-            />
           </div>
 
           <div id="session-goal-panel" className="mt-3">
             <textarea
-              data-session-goal-field
               value={pendingSessionGoal}
               onChange={(e) => setPendingSessionGoal(e.target.value)}
               rows={useImmersiveHeroLayout ? 2 : 2}
@@ -1850,21 +1549,27 @@ export default function PomodoroEngine({
                          focus:bg-white/[0.07] focus:border-amber-400/30"
               style={{ ...paperInputStyle, scrollbarWidth: 'none' }}
             />
-            {/*
-              ⚠️ LỐI TẮT, KHÔNG PHẢI NỚI LUẬT. Nút Bắt đầu vẫn bị khoá cho tới khi đủ
-              `SESSION_GOAL_MIN_CHARS` ký tự — đó là luật CÓ CHỦ ĐÍCH (mục tiêu làm phiên có nghĩa,
-              có thưởng khi đạt, AI Coach đọc nó). Nhưng phần lớn công việc là LẶP LẠI: "Hoàn thành
-              phần đang dở" hôm nay cũng đúng như hôm qua, mà app bắt gõ lại 10 ký tự ấy mỗi phiên
-              — ma sát đặt đúng vào hành động quan trọng nhất của cả app. Chip này bỏ việc GÕ LẠI,
-              không bỏ luật. `pickRecentGoals` chỉ trả mục tiêu ĐỦ DÀI, nên bấm cái nào cũng mở
-              được nút ngay — gợi ý một chuỗi bấm vào vẫn không dùng được là một cái bẫy.
-            */}
-            {/*
-              ⚠️ BẢN CHIP Ở ĐÂY ĐÃ GỠ (2026-09-01) — chúng nay nằm TRÊN NẾP GẤP, ngay trên nút
-              chính (xem chú thích ở hàng nút). Giữ cả hai là in cùng một hàng chip hai lần trên
-              một màn hình, mà bản ở đây thì chỉ thấy được sau khi đã cuộn xuống — tức nó chỉ hữu
-              ích cho người đã đi hết quãng đường mà bản kia sinh ra để xoá.
-            */}
+            {/* ADR-077: one-tap goals — same task type first (`pickRecentGoals`), tap to fill, never auto-filled. */}
+            {recentGoals.length > 0 && (
+              <div className="mt-2 flex flex-wrap gap-1.5">
+                {recentGoals.map((goal) => (
+                  <button
+                    key={goal}
+                    type="button"
+                    onClick={() => setPendingSessionGoal(goal)}
+                    className="max-w-full truncate rounded-full px-3 py-1.5 text-[12px] font-semibold transition-colors"
+                    style={{
+                      background: 'rgba(var(--accent-rgb), 0.10)',
+                      border: '1px solid rgba(var(--accent-rgb), 0.30)',
+                      color: 'var(--accent2)',
+                    }}
+                    title="Dùng lại mục tiêu này"
+                  >
+                    {goal}
+                  </button>
+                ))}
+              </div>
+            )}
             <div className="mt-2 flex items-start justify-between gap-3">
               <p className={`max-w-[32rem] text-[11px] leading-5 ${goalHintClass}`}>
                 {sessionGoalHint(goalState, 'compact')}
@@ -1984,7 +1689,6 @@ export default function PomodoroEngine({
         </div>
 
         <textarea
-          data-session-goal-field
           value={pendingSessionGoal}
           onChange={(e) => setPendingSessionGoal(e.target.value)}
           rows={3}
@@ -2214,745 +1918,5 @@ export default function PomodoroEngine({
           mang khung "thua thì mất" đặt ngay trước nút Bắt đầu, ở màn tồn tại để bấm Bắt đầu.
           Store `staking` giữ nguyên, chỉ không còn lối vào. */}
     </Motion.div>
-  );
-}
-
-function MultiplierBadge({
-  className = '',
-  tier,
-  focusMinutes,
-  deepFocusThreshold,
-  isStopwatchMode,
-  referenceMinutes,
-}) {
-  const uiTheme = useSettingsStore((s) => s.uiTheme);
-  const lightTheme = uiTheme === 'light';
-  const isHigh = tier.multiplier >= 2.0;
-  const isMid = tier.multiplier >= 1.3;
-  const nextStep = nextMultiplierStep(focusMinutes, deepFocusThreshold);
-
-  return (
-    <div
-      className={`inline-flex shrink-0 items-center gap-1 whitespace-nowrap rounded-full border px-2.5 py-1.5 text-[11px] font-semibold leading-none tracking-[-0.02em] sm:gap-2 sm:px-4 sm:py-2 sm:text-sm sm:tracking-normal ${
-        isHigh
-          ? lightTheme
-            ? 'bg-[rgba(255,247,237,0.98)] border-[rgba(245,158,11,0.22)] text-[var(--warn)]'
-            : 'bg-white/[0.05] border-[rgba(var(--accent-rgb),0.18)] text-[var(--accent-light)]'
-          : isMid
-            ? lightTheme
-              ? 'bg-white border-[var(--line)] text-[var(--ink)]'
-              : 'bg-white/[0.04] border-white/8 text-[var(--ink)]'
-            : lightTheme
-              ? 'bg-[rgba(244,242,236,0.96)] border-[var(--line)] text-[var(--muted)]'
-              : 'bg-white/[0.04] border-white/[0.08] text-slate-500'
-      } ${className}`}
-    >
-      <span>{tier.tierLabel}</span>
-      {tier.chestGuaranteed && <span className="mono text-[10px] uppercase tracking-[0.16em]" title="Rương Lớn đảm bảo">lớn</span>}
-      {isStopwatchMode && <span className="text-[10px] opacity-70 sm:text-xs">tham chiếu {referenceMinutes}'</span>}
-      {/*
-        ⚠️ HAI BẢN VÁ CỦA HAI PHIÊN, GHÉP LẠI — vì chúng chữa hai bệnh KHÁC NHAU của cùng một
-        dòng chữ, và chỉ một trong hai thì vẫn còn hỏng một nửa.
-
-        · **KHI NÀO NÓ NÓI (2026-09-01).** Bản cũ có thêm điều kiện `tier.multiplier < 1.3`, nên
-          nó chỉ biết nói "còn N phút để ×1.3" rồi CÂM ở mọi phiên đã qua vách ấy. Đo trên fixture
-          624 phiên: câm ở **75,2%** số phiên, mà im lặng đúng ở khúc đáng nói nhất — **117 phiên
-          dừng trong 45–59 phút**, tức chỉ còn 1–15 phút nữa là chạm ×2.0, bậc nhảy LỚN NHẤT của
-          cả thang (+54%). `nextMultiplierStep` (thuần, ở `gameMath.js`) trả về vách kế tiếp bất
-          kể đang ở bậc nào, và trả `null` khi đã kịch trần — lúc ấy KHÔNG hiện gì, vì một dòng
-          chữ báo rằng không còn việc gì để làm thì chỉ tốn chỗ.
-        · **NÓI TO CỠ NÀO (2026-09-05).** Nó vẫn được vẽ bằng `text-[10px] opacity-60` — mờ hơn cả
-          nhãn bậc nằm ngay bên cạnh — trong khi đây là móc dopamine TỨC THÌ mạnh nhất màn hình:
-          phần thưởng của CHÍNH phiên sắp bấm, thu được ngay trong ít phút tới, chứ không phải một
-          cái đích vài ngày nữa. Nay 11px, đậm, màu nhấn.
-
-        ⚠️ VÀ MỘT PHÁT HIỆN CÂN BẰNG GAME PHẢI ĐỂ ĐÀM QUYẾT, KHÔNG TỰ SỬA: preset "Chuẩn" dài **25
-        phút** trong khi `DEFAULT_DEEP_FOCUS_THRESHOLD = 26`, nên ở nhịp mặc định Đàm hụt ×1.3
-        **đúng một phút, mỗi phiên, mãi mãi**. Đổi preset là đổi nhịp làm việc của anh — việc của
-        dòng này chỉ là làm cho điều đó NHÌN THẤY ĐƯỢC.
-
-        ⚠️ Giữ nguyên từ vựng "×1.3 / ×2.0" vì đó chính là chữ mà nhãn bậc bên trái đang dùng; đổi
-        sang "+30%" là nói cùng một chuyện bằng một đơn vị thứ hai — đúng thứ "một luật một công
-        thức" cấm.
-      */}
-      {!isStopwatchMode && nextStep && (
-        <span
-          className="text-[11px] font-semibold sm:text-xs"
-          style={{ color: 'var(--accent2)' }}
-        >
-          +{nextStep.minutesLeft}′ nữa là ×{nextStep.targetMultiplier.toFixed(1)}
-        </span>
-      )}
-    </div>
-  );
-}
-
-function ModeSwitch({ disabled, mode, onChange }) {
-  // NGOẠI LỆ (mang bố cục) — viên nền trượt từ tab cũ sang tab mới bằng `layoutId`. Vị trí của
-  // nó CHÍNH LÀ tab đang chọn, nên bật Giảm chuyển động thì nó nhảy chứ không biến mất.
-  const pillMotion = useSnapMotion({ transition: { type: 'spring', stiffness: 320, damping: 28 } });
-  const uiTheme = useSettingsStore((s) => s.uiTheme);
-  const lightTheme = uiTheme === 'light';
-  return (
-    <div className={`inline-flex rounded-full border p-1 ${disabled ? 'opacity-45' : ''} ${
-      lightTheme
-        ? 'border-[var(--line)] bg-[rgba(244,242,236,0.96)]'
-        : 'border-white/10 bg-white/[0.04]'
-    }`}>
-      {[
-        { id: TIMER_MODES.POMODORO, label: 'Pomo' },
-        { id: TIMER_MODES.STOPWATCH, label: 'Bấm giờ' },
-      ].map((item) => {
-        const active = item.id === mode;
-        return (
-          <button
-            key={item.id}
-            type="button"
-            disabled={disabled}
-            onClick={() => onChange(item.id)}
-            className={`relative rounded-full px-3.5 py-2 text-[13px] font-semibold whitespace-nowrap transition-colors focus-visible:outline-none focus-visible:ring-2 md:px-4 ${
-              active
-                ? lightTheme
-                  ? 'text-[var(--canvas)] focus-visible:ring-[rgba(31,30,29,0.14)]'
-                  : 'text-white focus-visible:ring-white/30'
-                : lightTheme
-                  ? 'text-[var(--muted)] hover:text-[var(--ink)] focus-visible:ring-[rgba(31,30,29,0.14)]'
-                  : 'text-slate-500 hover:text-slate-200 focus-visible:ring-white/30'
-            }`}
-          >
-            {active && (
-              <motion.span
-                layoutId="focus-mode-indicator"
-                className={`absolute inset-0 rounded-full ${
-                  lightTheme
-                    ? 'bg-[var(--ink)] shadow-[0_10px_20px_rgba(31,30,29,0.14)]'
-                    : 'bg-white/[0.08] shadow-[inset_0_1px_0_rgba(255,255,255,0.08)]'
-                }`}
-                {...pillMotion}
-              />
-            )}
-            <span className="relative z-10">{item.label}</span>
-          </button>
-        );
-      })}
-    </div>
-  );
-}
-
-function QuickPresets({ className = '', activePresetId, disabled, mode, onSelect }) {
-  const uiTheme = useSettingsStore((s) => s.uiTheme);
-  const lightTheme = uiTheme === 'light';
-  const pressMotion = usePressMotion();
-  // NGOẠI LỆ (mang bố cục) — thẻ đang chọn được nhấc lên 1px; `y` chính là trạng thái "đang chọn".
-  const liftMotion = useSnapMotion({ transition: { type: 'spring', stiffness: 360, damping: 28 } });
-  // NGOẠI LỆ (mang bố cục) — vạch nhấn trượt sang thẻ mới bằng `layoutId`, cùng chuyện với ModeSwitch.
-  const activeLineMotion = useSnapMotion({ transition: { type: 'spring', stiffness: 420, damping: 34 } });
-
-  return (
-    <div className={`grid grid-cols-[repeat(auto-fit,minmax(120px,1fr))] gap-x-2.5 gap-y-3.5 sm:gap-2 ${className}`}>
-      {QUICK_FOCUS_PRESETS.map((preset) => {
-        const active = activePresetId === preset.id;
-
-        return (
-          <motion.button
-            key={preset.id}
-            layout
-            type="button"
-            disabled={disabled}
-            aria-label={`Chọn preset ${preset.label}: ${preset.focusMinutes} phút tập trung`}
-            onClick={() => onSelect(preset)}
-            initial={false}
-            // `animate` phải ở lại tại chỗ vì `active` chỉ có trong vòng lặp, không có ở tầng hook.
-            animate={{ y: active ? -1 : 0 }}
-            {...liftMotion}
-            {...(disabled ? {} : pressMotion)}
-            className={`relative min-w-0 overflow-hidden rounded-[20px] border px-3.5 py-4 text-left transition-colors touch-manipulation focus-visible:outline-none focus-visible:ring-2 disabled:cursor-not-allowed sm:rounded-[18px] sm:px-3 sm:py-2.5 ${
-              active
-                ? lightTheme
-                  ? 'border-[rgba(31,30,29,0.16)] bg-[rgba(238,234,227,0.99)] text-[var(--ink)] shadow-[0_10px_20px_rgba(31,30,29,0.05)] focus-visible:ring-[rgba(31,30,29,0.12)]'
-                  : 'border-[rgba(var(--accent-rgb),0.20)] bg-white/[0.08] text-[var(--ink)] focus-visible:ring-white/30'
-                : lightTheme
-                  ? 'border-[var(--line)] bg-white text-[var(--muted)] hover:border-[var(--line-2)] hover:bg-[rgba(250,249,246,0.98)] focus-visible:ring-[rgba(31,30,29,0.14)]'
-                  : 'border-white/8 bg-white/[0.03] text-slate-400 hover:border-white/16 hover:text-slate-100 focus-visible:ring-white/30'
-            }`}
-          >
-            {active && (
-              <motion.span
-                layoutId="quick-preset-active-line"
-                className={`absolute inset-x-3 top-0 h-0.5 rounded-full ${
-                  lightTheme ? 'bg-[var(--accent)]' : 'bg-[var(--accent-light)]'
-                }`}
-                {...activeLineMotion}
-              />
-            )}
-            {/*
-              ⚠️ XẾP DỌC Ở MỌI BỀ NGANG — ĐỪNG CHIA TRÁI–PHẢI. Bản trước chia đôi hàng ngang (số
-              phút bên trái, tên + mô tả bên phải). Đo thật: thẻ này KHÔNG BAO GIỜ rộng, vì lưới
-              là `minmax(120px,1fr)` và nó luôn nằm trong một cột hẹp — 390px cho thẻ ~131px, còn
-              1280px thì thẻ nằm trong bảng "Thời lượng countdown" chỉ ~130px. Trừ đệm còn ~103px,
-              số phút ăn ~33px + khoảng cách 8px ⇒ mô tả chỉ còn **60–65px**, trong khi "Vào việc
-              nhanh" cần 77px và "Nhịp hằng ngày" cần 79px ⇒ hiện ra "Vào việc …", "Nhịp hằn…" —
-              nhãn cố định viết sẵn trong mã bị cắt ngang từ, trông như app hỏng.
-              ⚠️ ĐÃ THỬ cách vá theo breakpoint (`sm:flex-row`) và nó SAI: `sm:` hỏi bề ngang MÀN
-              HÌNH, còn thứ quyết định ở đây là bề ngang CỦA THẺ. Hai đại lượng đó không liên quan
-              nhau ở chỗ này — máy bàn 1280 lại cho thẻ HẸP HƠN điện thoại. Nên xếp dọc luôn.
-              ⚠️ `truncate` KHÔNG được gỡ — nó vẫn là lưới an toàn cho những bề ngang chưa từng đo.
-              Đo lại bằng: `node scripts/shot.mjs --fit --phone` (các dòng bắt đầu bằng "…").
-            */}
-            <span className="flex min-w-0 flex-col gap-0.5">
-              <span className={`font-mono text-lg font-bold tabular-nums ${
-                active
-                  ? lightTheme
-                    ? 'text-[var(--ink)]'
-                    : 'text-white'
-                  : lightTheme
-                    ? 'text-slate-900'
-                    : 'text-slate-100'
-              }`}>
-                {preset.focusMinutes}'
-              </span>
-              <span className="min-w-0">
-                <span className={`block truncate text-[11px] font-semibold leading-4 ${
-                  active
-                    ? lightTheme ? 'text-[var(--ink)]' : 'text-white'
-                    : lightTheme ? 'text-[var(--ink)]' : 'text-slate-200'
-                }`}>
-                  {preset.label}
-                </span>
-                <span className={`block truncate text-[10px] leading-4 ${
-                  active
-                    ? lightTheme ? 'text-[var(--muted)]' : 'text-slate-300'
-                    : lightTheme ? 'text-[var(--muted)]' : 'text-slate-500'
-                }`}>
-                  {preset.description}
-                </span>
-              </span>
-            </span>
-            <span className="mt-3 flex flex-wrap gap-2 sm:mt-2.5 sm:gap-1.5">
-              {/*
-                ⚠️ VIÊN «×N» CHỈ HIỆN KHI NÓ THẬT SỰ KHÁC (2026-09-01). Cả 4 preset trong
-                `engine/breaks.js` đều khai `longBreakAfterN: 4`, nên bốn viên giống hệt nhau
-                đứng trong đúng cái lưới sinh ra để SO SÁNH — ba trục kia thì phân biệt được
-                (15/25/52/90 phút · nghỉ 3/5/17/20 · dài 12/15/30/45), riêng trục này thì không.
-                Cùng con số 4 còn được nói ở dòng "Phiên dài xuất hiện sau mỗi 4 lượt hoàn thành"
-                và ở chuỗi bốn cái chấm "Chu kỳ nghỉ ●●●●" — cả hai đều rõ hơn một viên "×4".
-                Viết thành ĐIỀU KIỆN chứ không xoá thẳng: ngày nào có một preset khai số khác thì
-                viên tự hiện lại, và lúc ấy nó mới thật sự nói được điều gì.
-              */}
-              {CHU_KY_NGHI_CO_KHAC_NHAU && (
-                <span className={`whitespace-nowrap rounded-full px-2 py-1 text-[10px] font-semibold tabular-nums ${
-                  active
-                    ? lightTheme
-                      ? 'bg-[rgba(255,255,255,0.54)] text-[var(--ink)]'
-                      : 'bg-white/[0.08] text-[var(--ink)]'
-                    : lightTheme
-                      ? 'bg-[rgba(244,242,236,0.96)] text-[var(--muted)]'
-                      : 'bg-white/[0.06] text-slate-500'
-                }`}>
-                  ×{preset.longBreakAfterN}
-                </span>
-              )}
-              {mode === TIMER_MODES.STOPWATCH ? (
-                <span className={`whitespace-nowrap rounded-full px-2 py-1 text-[10px] font-semibold ${
-                  active
-                    ? lightTheme
-                      ? 'bg-[rgba(255,255,255,0.54)] text-[var(--ink)]'
-                      : 'bg-white/[0.08] text-[var(--ink)]'
-                    : lightTheme
-                      ? 'bg-[rgba(244,242,236,0.96)] text-[var(--muted)]'
-                      : 'bg-white/[0.06] text-[var(--muted)]'
-                }`}>
-                  nghỉ theo phiên
-                </span>
-              ) : (
-                <>
-                  <span className={`whitespace-nowrap rounded-full px-2 py-1 text-[10px] font-semibold ${
-                    active
-                      ? lightTheme
-                        ? 'bg-[rgba(255,255,255,0.54)] text-[var(--ink)]'
-                        : 'bg-white/[0.08] text-[var(--ink)]'
-                      : lightTheme
-                        ? 'bg-[rgba(244,242,236,0.96)] text-[var(--muted)]'
-                        : 'bg-white/[0.05] text-slate-300'
-                  }`}>
-                    nghỉ {preset.shortBreakDuration}'
-                  </span>
-                  <span className={`whitespace-nowrap rounded-full px-2 py-1 text-[10px] font-semibold ${
-                    active
-                      ? lightTheme
-                        ? 'bg-[rgba(255,255,255,0.54)] text-[var(--ink)]'
-                        : 'bg-white/[0.08] text-[var(--ink)]'
-                      : lightTheme
-                        ? 'bg-[rgba(244,242,236,0.96)] text-[var(--muted)]'
-                        : 'bg-white/[0.05] text-slate-300'
-                  }`}>
-                    dài {preset.longBreakDuration}'
-                  </span>
-                </>
-              )}
-            </span>
-          </motion.button>
-        );
-      })}
-    </div>
-  );
-}
-
-function StrictModeToggle({ disabled, enabled, onChange }) {
-  // NGOẠI LỆ (mang bố cục) — vị trí núm gạt CHÍNH LÀ bật/tắt. Bỏ `animate` đi thì núm kẹt bên trái
-  // trong khi nền đã đổi màu sang "đang bật": người dùng đọc ra hai câu trả lời trái ngược nhau.
-  const knobMotion = useSnapMotion({
-    animate: { x: enabled ? 20 : 0 },
-    transition: { type: 'spring', stiffness: 380, damping: 28 },
-  });
-  const uiTheme = useSettingsStore((s) => s.uiTheme);
-  const lightTheme = uiTheme === 'light';
-
-  return (
-    <div className={`flex items-center justify-between gap-4 ${disabled ? 'opacity-45' : ''}`}>
-      <div>
-        <p className={`text-sm font-semibold ${lightTheme ? 'text-slate-900' : 'text-white'}`}>Kỷ luật phiên</p>
-        <p className="mt-1 text-xs leading-relaxed text-slate-500">
-          Bật nếu bạn muốn giữ luật phạt khi hủy giữa chừng.
-        </p>
-      </div>
-      <button
-        type="button"
-        role="switch"
-        aria-checked={enabled}
-        aria-label="Bật hoặc tắt kỷ luật phiên"
-        disabled={disabled}
-        onClick={() => onChange(!enabled)}
-        className={`relative h-7 w-12 flex-shrink-0 rounded-full transition-colors focus-visible:outline-none focus-visible:ring-2 ${
-          enabled
-            ? lightTheme
-              ? 'bg-rose-500/85 focus-visible:ring-rose-400/25'
-              : 'bg-rose-500/85 focus-visible:ring-white/30'
-            : lightTheme
-              ? 'bg-slate-300 focus-visible:ring-[rgba(31,30,29,0.14)]'
-              : 'bg-slate-700/90 focus-visible:ring-white/30'
-        }`}
-      >
-        <motion.span
-          {...knobMotion}
-          className="absolute left-1 top-1 size-5 rounded-full bg-white shadow"
-        />
-      </button>
-    </div>
-  );
-}
-
-function CategoryChip({ active, color, disabled, label, onClick }) {
-  const uiTheme = useSettingsStore((s) => s.uiTheme);
-  const lightTheme = uiTheme === 'light';
-  return (
-    <button
-      type="button"
-      disabled={disabled}
-      onClick={onClick}
-      className={`max-w-full rounded-full border px-3.5 py-2 text-[13px] font-semibold whitespace-nowrap transition-colors disabled:cursor-not-allowed truncate focus-visible:outline-none focus-visible:ring-2 ${
-        lightTheme ? 'focus-visible:ring-[rgba(31,30,29,0.14)]' : 'focus-visible:ring-white/30'
-      }`}
-      style={active
-        ? {
-            borderColor: lightTheme ? 'rgba(217,214,204,0.98)' : (color ? `${color}44` : 'rgba(129,140,248,0.6)'),
-            background: lightTheme ? 'rgba(255,255,255,0.98)' : (color ? `${color}20` : 'rgba(99,102,241,0.16)'),
-            color: lightTheme ? '#1f1e1d' : (color ?? '#c7d2fe'),
-            boxShadow: lightTheme ? '0 8px 14px rgba(31,30,29,0.04)' : 'none',
-          }
-        : {
-            borderColor: lightTheme ? 'rgba(217,214,204,0.95)' : 'rgba(255,255,255,0.08)',
-            background: lightTheme ? 'rgba(244,242,236,0.82)' : 'rgba(255,255,255,0.03)',
-            color: lightTheme ? '#6a6862' : 'rgb(148 163 184)',
-          }}
-    >
-      {label}
-    </button>
-  );
-}
-
-function SessionReviewCard({ completedGoalAchieved, goalText, goalBonusXP = 0, goalBonusEP = 0, onPick }) {
-  const uiTheme = useSettingsStore((s) => s.uiTheme);
-  const lightTheme = uiTheme === 'light';
-  const showGoalBonus = completedGoalAchieved === true && (goalBonusXP > 0 || goalBonusEP > 0);
-  const bonusParts = [
-    goalBonusXP > 0 ? `+${goalBonusXP} EXP` : null,
-    goalBonusEP > 0 ? `+${goalBonusEP} EP` : null,
-  ].filter(Boolean);
-  const enterMotion = useEnterMotion();
-  const rewardMotion = useRewardMotion();
-  return (
-    <motion.div
-      {...enterMotion}
-      className={`mx-auto w-full max-w-[520px] rounded-[28px] border p-4 ${
-        lightTheme
-          ? 'border-[var(--line)] bg-white shadow-[0_22px_56px_rgba(31,30,29,0.08)]'
-          : 'border-white/8 bg-white/[0.04] shadow-[0_18px_40px_rgba(0,0,0,0.18)] backdrop-blur-2xl'
-      }`}
-    >
-      <p className={`mono text-[11px] uppercase tracking-[0.22em] ${lightTheme ? 'text-[var(--muted)]' : 'text-amber-200/90'}`}>Đánh giá phiên vừa xong</p>
-      <p className={`mt-2 text-sm leading-relaxed ${lightTheme ? 'text-[var(--ink-2)]' : 'text-slate-300'}`}>
-        {goalText
-          ? <>Mục tiêu: <span className={`font-semibold ${lightTheme ? 'text-[var(--ink)]' : 'text-slate-50'}`}>{goalText}</span></>
-          : 'Phiên này chưa có mục tiêu ghi sẵn. Bạn vẫn có thể tự đánh giá nhanh.'}
-      </p>
-      <div className="mt-4 flex gap-3">
-        <button
-          type="button"
-          onClick={() => onPick(true)}
-          className={`flex-1 rounded-full border px-4 py-2.5 text-sm font-semibold transition ${
-            completedGoalAchieved === true
-              ? lightTheme
-                ? 'border-emerald-200 bg-[rgba(229,236,223,0.96)] text-[var(--good)] shadow-[0_10px_24px_rgba(91,122,82,0.12)]'
-                : 'border-[rgba(var(--accent-rgb),0.18)] bg-white/[0.06] text-[var(--ink)]'
-              : lightTheme
-                ? 'border-[var(--line)] bg-[rgba(244,242,236,0.82)] text-[var(--muted)] hover:border-emerald-200 hover:text-[var(--good)]'
-                : 'border-white/10 bg-white/[0.035] text-slate-300 hover:border-emerald-300/25 hover:bg-emerald-400/10 hover:text-emerald-100'
-          }`}
-        >
-          Đạt
-        </button>
-        <button
-          type="button"
-          onClick={() => onPick(false)}
-          className={`flex-1 rounded-full border px-4 py-2.5 text-sm font-semibold transition ${
-            completedGoalAchieved === false
-              ? lightTheme
-                ? 'border-[rgba(var(--accent-rgb),0.22)] bg-[rgba(255,247,237,0.96)] text-[var(--accent2)] shadow-[0_10px_24px_rgba(var(--accent-rgb),0.12)]'
-                : 'border-[rgba(var(--accent-rgb),0.18)] bg-white/[0.06] text-[var(--accent-light)]'
-              : lightTheme
-                ? 'border-[var(--line)] bg-[rgba(244,242,236,0.82)] text-[var(--muted)] hover:border-[rgba(var(--accent-rgb),0.22)] hover:text-[var(--accent2)]'
-                : 'border-white/10 bg-white/[0.035] text-slate-300 hover:border-rose-300/25 hover:bg-rose-400/10 hover:text-rose-100'
-          }`}
-        >
-          Chưa đạt
-        </button>
-      </div>
-      {showGoalBonus && (
-        <motion.p
-          {...rewardMotion}
-          className={`mt-3 text-center text-[13px] font-semibold ${lightTheme ? 'text-[var(--good)]' : 'text-emerald-300'}`}
-        >
-          🎯 Hoàn thành mục tiêu — thưởng {bonusParts.join(' · ')}
-        </motion.p>
-      )}
-    </motion.div>
-  );
-}
-
-function CancelConfirmDialog({ onAbort, onConfirm, progressPct, recoveryHint }) {
-  const uiTheme = useSettingsStore((s) => s.uiTheme);
-  const lightTheme = uiTheme === 'light';
-  const enterMotion = useEnterMotion();
-  const scrimMotion = useCustomMotion(SCRIM_FADE);
-
-  useEffect(() => {
-    const handleKeyDown = (event) => {
-      if (event.key === 'Escape') {
-        event.preventDefault();
-        onAbort();
-      }
-    };
-
-    window.addEventListener('keydown', handleKeyDown);
-    return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [onAbort]);
-
-  return (
-    <motion.div
-      {...scrimMotion}
-      className="fixed inset-0 z-[70] flex items-center justify-center p-4 sm:p-6"
-      style={{ backgroundColor: 'rgba(31, 30, 29, 0.34)', backdropFilter: 'blur(10px)' }}
-      onClick={onAbort}
-    >
-      <motion.div
-        {...enterMotion}
-        role="dialog"
-        aria-modal="true"
-        aria-labelledby="cancel-session-dialog-title"
-        onClick={(event) => event.stopPropagation()}
-        className={`w-full max-w-md rounded-[30px] border p-5 ${
-          lightTheme
-            ? 'border-[rgba(var(--accent-rgb),0.22)] bg-white shadow-[0_24px_64px_rgba(31,30,29,0.10)]'
-            : 'border-white/8 bg-[rgba(21,19,16,0.92)] shadow-[0_22px_56px_rgba(0,0,0,0.24)] backdrop-blur-2xl'
-        }`}
-      >
-        <p
-          id="cancel-session-dialog-title"
-          className={`mono text-[11px] uppercase tracking-[0.22em] ${lightTheme ? 'text-[var(--accent2)]' : 'text-rose-300'}`}
-        >
-          Xác nhận hủy phiên
-        </p>
-        <p className={`mt-2 text-sm leading-relaxed ${lightTheme ? 'text-[var(--ink-2)]' : 'text-slate-200'}`}>
-          {/* ADR-069: không còn «phạt N% tài nguyên». Sự thật còn lại là phiên này sẽ KHÔNG tính XP/EP
-              — nói thẳng, không đe doạ. */}
-          Phiên hủy không tính XP, EP hay nhịp hôm nay — chỉ số phút đã chạy được ghi vào thống kê.
-        </p>
-        <p className={`mt-2 text-xs leading-relaxed ${lightTheme ? 'text-[var(--muted)]' : 'text-slate-400'}`}>
-          Tiến độ hiện tại {formatPreviewPercent(progressPct)}%.
-          {recoveryHint ? ` ${recoveryHint}` : ''}
-        </p>
-        <div className="mt-5 flex flex-wrap gap-3">
-          <button
-            type="button"
-            onClick={onAbort}
-            className={`rounded-full border px-4 py-2.5 text-sm font-semibold transition ${
-              lightTheme
-                ? 'border-[var(--line)] bg-[rgba(244,242,236,0.82)] text-[var(--ink)] hover:border-[var(--line-2)]'
-                : 'border-white/10 bg-white/[0.04] text-slate-200 hover:border-white/18 hover:bg-white/[0.08]'
-            }`}
-          >
-            Quay lại
-          </button>
-          <button
-            type="button"
-            onClick={onConfirm}
-            className={`rounded-full border px-4 py-2.5 text-sm font-semibold transition ${
-              lightTheme
-                ? 'border-[rgba(var(--accent-rgb),0.22)] bg-[rgba(255,247,237,0.96)] text-[var(--accent2)] hover:bg-[rgba(255,239,228,0.98)]'
-                : 'border-[rgba(var(--accent-rgb),0.18)] bg-white/[0.06] text-[var(--accent-light)] hover:bg-white/[0.08]'
-            }`}
-          >
-            Hủy phiên
-          </button>
-        </div>
-      </motion.div>
-    </motion.div>
-  );
-}
-
-function CategoryManager({ categories, onClose, onAdd, onDelete }) {
-  const enterMotion = useEnterMotion();
-  const uiTheme = useSettingsStore((s) => s.uiTheme);
-  const lightTheme = uiTheme === 'light';
-  const [newLabel, setNewLabel] = useState('');
-  const [newColor, setNewColor] = useState('#6366f1');
-  const colors = ['#6366f1', '#22c55e', '#f59e0b', '#ef4444', '#06b6d4', '#ec4899', '#8b5cf6', '#f97316'];
-  const defaultIds = ['cat_hoc_dh', 'cat_tu_hoc', 'cat_lam_viec', 'cat_doc_sach', 'cat_luyen_tap', 'cat_khac'];
-  const customCategories = categories.filter((category) => !defaultIds.includes(category.id));
-
-  const handleAdd = () => {
-    const label = newLabel.trim();
-    if (!label) return;
-
-    onAdd({ id: `cat_${Date.now()}`, label, icon: '', color: newColor });
-    setNewLabel('');
-  };
-
-  return (
-    <motion.div
-      {...enterMotion}
-      className={`mt-3 rounded-3xl border p-4 ${
-        lightTheme
-          ? 'border-[var(--line)] bg-white shadow-[0_18px_40px_rgba(31,30,29,0.06)]'
-          : 'border-white/8 bg-white/[0.03]'
-      }`}
-    >
-      <div className="flex items-center justify-between">
-        <p className={`text-sm font-semibold ${lightTheme ? 'text-[var(--ink)]' : 'text-white'}`}>Quản lý phân loại</p>
-        <button
-          type="button"
-          onClick={onClose}
-          aria-label="Đóng quản lý phân loại"
-          className={`text-xl leading-none transition ${
-            lightTheme ? 'text-[var(--muted)] hover:text-[var(--ink)]' : 'text-slate-500 hover:text-white'
-          }`}
-        >
-          ✕
-        </button>
-      </div>
-
-      {customCategories.length > 0 && (
-        <div className="mt-3 flex flex-col gap-2">
-          {customCategories.map((category) => (
-            <div
-              key={category.id}
-              className={`flex items-center justify-between rounded-2xl border px-3 py-2 ${
-                lightTheme ? 'border-[var(--line)] bg-[rgba(244,242,236,0.78)]' : 'border-white/8 bg-white/[0.03]'
-              }`}
-            >
-              <span style={{ color: category.color }}>{category.label}</span>
-              <button
-                type="button"
-                onClick={() => onDelete(category.id)}
-                className={`text-xs font-semibold transition ${
-                  lightTheme ? 'text-[var(--muted)] hover:text-[var(--accent2)]' : 'text-slate-500 hover:text-rose-300'
-                }`}
-              >
-                Xóa
-              </button>
-            </div>
-          ))}
-        </div>
-      )}
-
-      <div className={`mt-4 rounded-2xl border p-3 ${
-        lightTheme ? 'border-[var(--line)] bg-[rgba(244,242,236,0.78)]' : 'border-white/8 bg-white/[0.03]'
-      }`}>
-        <div className="flex flex-wrap gap-2">
-          {colors.map((color) => (
-            <button
-              key={color}
-              type="button"
-              onClick={() => setNewColor(color)}
-              aria-label={`Chọn màu ${color}`}
-              aria-pressed={newColor === color}
-              className={`h-6 w-6 rounded-full ${newColor === color ? lightTheme ? 'ring-2 ring-[var(--ink)] ring-offset-2 ring-offset-[var(--canvas)]' : 'ring-2 ring-white/80 ring-offset-2 ring-offset-black/40' : ''}`}
-              style={{ backgroundColor: color }}
-            />
-          ))}
-        </div>
-
-        <div className="mt-3 flex gap-2">
-          <input
-            type="text"
-            name="newCategoryLabel"
-            value={newLabel}
-            onChange={(event) => setNewLabel(event.target.value)}
-            onKeyDown={(event) => {
-              if (event.key === 'Enter') handleAdd();
-            }}
-            aria-label="Tên phân loại mới"
-            autoComplete="off"
-            placeholder="Tên phân loại mới"
-            className={`flex-1 rounded-2xl border px-3 py-2 text-sm focus:outline-none ${
-              lightTheme
-                ? 'border-[var(--line)] bg-white text-[var(--ink)] placeholder:text-[var(--muted-2)] focus:border-[var(--line-2)]'
-                : 'border-white/8 bg-black/20 text-white placeholder:text-slate-600 focus:border-white/16'
-            }`}
-          />
-          <button
-            type="button"
-            disabled={!newLabel.trim()}
-            onClick={handleAdd}
-            className={`rounded-2xl border px-4 py-2 text-sm font-semibold transition disabled:opacity-40 ${
-              lightTheme
-                ? 'border-[rgba(var(--accent-rgb),0.22)] bg-[var(--ink)] text-[var(--canvas)] hover:bg-[var(--ink-2)]'
-                : 'border-[rgba(var(--accent-rgb),0.20)] bg-[rgba(var(--accent-rgb),0.88)] text-white hover:bg-[rgba(var(--accent-rgb),0.78)]'
-            }`}
-          >
-            Thêm
-          </button>
-        </div>
-      </div>
-    </motion.div>
-  );
-}
-
-/**
- * ActionButton — nút hành động chuẩn của app.
- *
- * ⚠️ MÀU ĐỌC TỪ TOKEN, KHÔNG RẼ NHÁNH THEO `lightTheme`. Bản cũ khai hai bảng màu cứng (một cho
- * sáng, một cho tối) với mã màu chốt thẳng vào chuỗi lớp — nên **đổi skin không đổi được nút**:
- * app có 5 skin × 2 chế độ = 10 tổ hợp, mà bảng cứng chỉ biết 2. Nay mỗi biến thể chỉ trỏ tới
- * token; token đã tự đổi theo CẢ skin lẫn chế độ sáng/tối, nên nút đi theo miễn phí. Vì vậy
- * component này KHÔNG còn đọc `useSettingsStore` nữa — nó không cần biết đang ở chế độ nào.
- *
- * ⚠️ BÓNG LÀ BÓNG ĐẶC (`0 4px 0 0`), KHÔNG PHẢI BÓNG MỜ. Bóng mờ nhiều lớp làm nút trông như một
- * thẻ giấy đang trôi; một vạch đặc dày 4px dưới đáy làm nó trông như một PHÍM BẤM có chiều dày.
- * Cả cảm giác bấm nằm ở chỗ đó: `whileTap` hạ nút xuống **đúng 4px** — bằng chiều dày vạch —
- * đồng thời `active:shadow-none` xoá vạch, nên mép dưới của nút đứng yên tại chỗ và mắt đọc ra
- * "nút vừa lún xuống chạm mặt bàn". Lệch hai con số ấy là hỏng hiệu ứng.
- *
- * ⚠️ VÌ SAO BÓNG XOÁ BẰNG CSS `active:` CHỨ KHÔNG BẰNG `whileTap: { boxShadow }` — đây là cái bẫy
- * đắt nhất ở đây. Framer Motion animate `boxShadow` bằng cách ghi một **style inline đã resolve**
- * (`var(--line-2)` bị thay bằng mã màu cụ thể tại thời điểm chạm). Style inline thắng mọi lớp CSS,
- * và nó ở lại sau khi animation kết thúc ⇒ nút sẽ **đóng băng màu bóng của skin cũ**: đổi skin
- * xong, mọi nút đã từng được bấm vẫn giữ bóng cũ, mà không có gì đỏ lên. Dùng `active:` thì `var()`
- * còn sống, nên bóng luôn đi theo skin. Framer chỉ lo `y` — thứ không chứa màu.
- *
- * ⚠️ `transition` CHỈ LIỆT KÊ THUỘC TÍNH CSS THẬT SỰ SỞ HỮU. Bản cũ dùng `transition-all`, mà
- * `all` bao gồm `transform` — thứ Framer đang tự animate bằng vòng lặp riêng của nó. Hai bên cùng
- * điều khiển một thuộc tính thì trình duyệt phải nội suy lại từng giá trị Framer ghi ra, và cú bấm
- * thành nhão. Bỏ `transform` khỏi danh sách thì cú lún đanh lại.
- */
-/** Bật Giảm chuyển động thì trải cái này SAU `whileHover`/`whileTap` để xoá cả hai — xem chú thích dưới. */
-const ACTION_BUTTON_STILL = Object.freeze({ whileHover: undefined, whileTap: undefined });
-
-function ActionButton({ children, className = '', disabled = false, onClick, size = 'default', title, variant = 'soft', ...motionProps }) {
-  const reduceMotion = useReducedMotion();
-  // Bóng đặc dày ĐÚNG bằng quãng lún của `whileTap` bên dưới. Đổi một con số thì phải đổi cả hai.
-  const themeMap = {
-    primary: 'border-transparent bg-[var(--ink)] text-[var(--canvas)] shadow-[0_4px_0_0_var(--line-2)]',
-    accent: 'border-transparent bg-[var(--accent)] text-white shadow-[0_4px_0_0_var(--accent2)]',
-    soft: 'border-[var(--line-2)] bg-[var(--card-bg-solid)] text-[var(--ink)] shadow-[0_4px_0_0_var(--line-2)]',
-    // `--accent-soft` chưa skin nào khai (2026-08-27) nên hôm nay fallback luôn là đường chạy thật.
-    // Giữ nguyên lối `var(a, b)` để skin nào muốn có nền nhấn riêng thì chỉ cần khai thêm token.
-    info: 'border-transparent bg-[var(--accent-soft,var(--card-bg-solid2))] text-[var(--accent-ink)] shadow-[0_4px_0_0_var(--line-2)]',
-    // ⚠️ `danger` PHẢI LÙI VỀ SAU, KHÔNG ĐƯỢC NỔI (đổi 2026-08-29). Bản cũ dùng nền ĐẶC
-    // (`--card-bg-solid2`) + chữ `--ink` đen đậm, tức nặng hơn cả `soft` đứng ngay cạnh — nên trên
-    // màn hình phiên đang chạy, "Hủy phiên" là nút HÚT MẮT NHẤT trong ba nút. Mà nó là hành động
-    // phá hoại: mất toàn bộ tiến độ phiên VÀ chịu phạt tài nguyên (`DISASTER_*_PENALTY_RATE`).
-    // Thứ tự thị giác phải khớp thứ tự hậu quả. Nay: nền trong, viền nhạt, chữ `--muted` — vẫn tìm
-    // ra ngay khi cần, nhưng thôi mời gọi. KHÔNG tô đỏ rực: đỏ cũng là một cách để nổi nhất, chỉ
-    // đổi từ "mời gọi" sang "doạ", mà cả hai đều kéo mắt khỏi cái đồng hồ.
-    danger: 'border-[var(--line-2)] bg-transparent text-[var(--muted)] shadow-[0_4px_0_0_var(--line-2)]',
-  };
-
-  // ⚠️ MỖI `size` LÀ MỘT BỘ TRỌN VẸN, CỐ Ý — đừng "gọn hơn" bằng cách để nơi gọi chồng thêm lớp.
-  // `sizeMap[size] ?? sizeMap.default` chỉ phát ra ĐÚNG MỘT bộ, nên không có hai lớp nào cùng khai
-  // một thuộc tính để mà tranh nhau. Dự án không có `tailwind-merge`, và Tailwind quyết lớp nào
-  // thắng theo thứ tự trong BẢNG KIỂU chứ không theo thứ tự viết trong `className` — đã có một lần
-  // thua mà không hay biết (xem chú thích ở nút "Cần điền mục tiêu"). Cần cỡ khác ⇒ THÊM một mục
-  // vào đây. Có test canh: `components/actionButtonSizing.test.js`.
-  const sizeMap = {
-    default: 'px-7 py-3.5 text-lg font-bold leading-none whitespace-nowrap',
-    // Cho HÀNG 4–5 NÚT lúc phiên đang chạy: mỗi nút chỉ được ~70px nên phải bóp rất mạnh.
-    compactMobile: 'min-w-0 w-full px-1 py-2.5 text-[10px] font-semibold leading-[1.05] tracking-[-0.03em] whitespace-normal sm:w-auto sm:px-7 sm:py-3.5 sm:text-lg sm:font-bold sm:leading-none sm:tracking-normal sm:whitespace-nowrap',
-    // Cho HÀNG 2 NÚT lúc chưa bắt đầu. Đo thật ở 390px: nút chính được **186px** — rộng gấp 2,7
-    // lần một ô của hàng 4–5 nút, nên dùng `compactMobile` ở đây là bóp chữ xuống 10px một cách
-    // không cần thiết cho nút QUAN TRỌNG NHẤT màn hình. 13px vẫn vừa (đo lại sau khi đổi), lại
-    // trên ngưỡng cỡ chữ dễ đọc trên điện thoại.
-    compactPrimary: 'min-w-0 w-full px-3 py-3 text-[13px] font-semibold leading-tight tracking-[-0.01em] whitespace-normal sm:w-auto sm:px-7 sm:py-3.5 sm:text-lg sm:font-bold sm:leading-none sm:tracking-normal sm:whitespace-nowrap',
-    // Cho nút THOÁT đứng CẠNH một chip co giãn ("Tự viết →" bên phải chip mục tiêu gần đây).
-    // ⚠️ Khác `compactPrimary` ở đúng một chỗ và đó là toàn bộ lý do nó tồn tại: **KHÔNG `w-full`**.
-    // `compactPrimary` có `w-full`, nên đặt nó cạnh một chip `flex-1` thì nút nuốt gần hết bề ngang
-    // và chip bị `truncate` xuống còn một chữ cái ("H…") — đã thấy tận mắt trên ảnh chụp 390px.
-    // ⚠️ Và đây PHẢI là một mục `sizeMap`, không được nhét `w-auto` qua `className`: dự án không có
-    // `tailwind-merge`, Tailwind quyết lớp nào thắng theo THỨ TỰ TRONG BẢNG KIỂU chứ không theo thứ
-    // tự viết — hai lớp cùng khai một thuộc tính là một canh bạc đã thua một lần (2026-08-13).
-    compactEscape: 'shrink-0 px-3 py-3 text-[13px] font-semibold leading-tight tracking-[-0.01em] whitespace-nowrap sm:px-7 sm:py-3.5 sm:text-lg sm:font-bold sm:leading-none sm:tracking-normal',
-  };
-
-  return (
-    <motion.button
-      type="button"
-      disabled={disabled}
-      title={title}
-      data-variant={variant}
-      // Nhấc nhẹ 1px + sáng lên 6%: đủ để biết con trỏ đang ở đâu, không đủ để chữ nhoè.
-      // (Bản cũ dùng `scale: 1.03` — phóng to cả khối làm chữ bị nội suy lại nên MỜ đi đúng lúc
-      // người dùng đang nhìn vào nó.)
-      whileHover={disabled ? undefined : { y: -1 }}
-      whileTap={disabled ? undefined : { y: 4 }}
-      // ⚠️ NGOẠI LỆ CÓ LÝ DO — nút này KHÔNG dùng nhịp `press` (scale 0,97) của `motionPresets.js`.
-      // Cú lún `y: 4` không phải một lựa chọn mỹ thuật rời rạc: nó BẰNG ĐÚNG chiều dày vạch bóng
-      // đặc bên dưới, nên khi bấm thì nút hạ xuống đúng bằng vạch rồi vạch tắt đi ⇒ mép dưới đứng
-      // yên và mắt đọc ra "lún chạm mặt bàn". `actionButtonPress.test.js` khoá cứng quan hệ ấy,
-      // và cùng bài test cấm `scale` trong `whileHover` (phóng to làm chữ nhoè). Một nhịp `press`
-      // dùng `scale` sẽ vừa phá quan hệ lún↔bóng vừa mất luôn hiệu ứng bóng đặc của skin.
-      // Trải SAU hai dòng trên nên nó THẮNG: bật Giảm chuyển động là nút đứng yên hoàn toàn.
-      // (Phải ghi đè chứ không gộp vào hai dòng trên, vì bài test khoá NGUYÊN VĂN dòng `whileTap`.)
-      {...(reduceMotion ? ACTION_BUTTON_STILL : null)}
-      onClick={onClick}
-      // ⚠️ `disabled:shadow-none` chứ KHÔNG phải `shadow-none` trần. Lớp trần có cùng độ đặc hiệu
-      // (0,1,0) với `shadow-[0_4px…]` của biến thể, nên ai thắng là do THỨ TỰ trong bảng kiểu
-      // Tailwind quyết — hôm nay đo được `.shadow-none` tình cờ đứng sau nên nó thắng, nhưng đó là
-      // một sự trùng hợp, không phải một luật. `:disabled` nâng độ đặc hiệu lên (0,2,0) nên nó
-      // thắng bất kể thứ tự. Cùng lý do với `active:shadow-none`. (Đây đúng là cái canh bạc mà
-      // chú thích của `sizeMap` ngay trên đã cảnh báo — chỉ khác là ở thuộc tính `box-shadow`.)
-      className={`inline-flex max-w-full items-center justify-center rounded-2xl border text-center transition-[background-color,border-color,color,box-shadow,filter] duration-150 disabled:shadow-none ${
-        sizeMap[size] ?? sizeMap.default
-      } ${
-        themeMap[variant] ?? themeMap.soft
-      } ${
-        disabled
-          ? 'cursor-not-allowed opacity-45'
-          : 'hover:brightness-[1.06] active:shadow-none'
-      } ${className}`}
-      {...motionProps}
-    >
-      {children}
-    </motion.button>
   );
 }

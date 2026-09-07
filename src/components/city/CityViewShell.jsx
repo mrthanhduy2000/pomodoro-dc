@@ -12,6 +12,7 @@
  */
 
 import { motion } from 'framer-motion';
+import { pickSessionProject } from '../../engine/sessionBrick';
 import { useEnterMotion, useSnapMotion } from '../../lib/motionPresets';
 
 import { summarizeMuseum } from '../../engine/cityCompletion';
@@ -108,9 +109,19 @@ export default function CityViewShell({
   const barMotion = useSnapMotion({ transition: { duration: 0.5, ease: 'easeOut' } });
 
   const scaffolds = layout.scaffolds ?? [];
+
   const era = viewing?.era;
   const label = viewing?.label ?? `Kỷ ${era}`;
   const isCurrent = !!viewing?.isCurrent;
+  // ADR-077: at zero buildings the empty state names the project the FIRST session will lay a brick for —
+
+  // the same auto-pick `completeFocusSession` makes, so the city and the Focus strip tell one story.
+
+  const firstProject = (layout.isEmpty && scaffolds.length === 0 && isCurrent)
+
+    ? pickSessionProject({ craftingQueue: [], activeBook: era, buildings: [] }).project
+
+    : null;
   const isLost = !!viewing?.isLost;
 
   // BẢNG SƯU TẬP của kỷ đang xem (`engine/cityCompletion.js`). Suy ra, không lưu.
@@ -178,9 +189,10 @@ export default function CityViewShell({
           // `layout.isEmpty` cố ý chỉ đếm công trình ĐÃ XÂY (lớp nền trang chủ dựa vào nó), nhưng
           // ở tab này mà chặn theo cờ đó thì hỏng đúng khoảnh khắc đáng giá nhất: lần đầu Đàm khởi
           // công, anh mở tab lên để xem thành quả phiên vừa rồi và nhận về đúng chữ "chưa có gì".
-          <EmptyState icon="⛰️" title="Bãi đất trống">
-            {label} chưa có công trình nào. Nghiên cứu bản vẽ ở Kho báu → Xưởng, rồi hoàn thành các
-            phiên tập trung để dựng căn nhà đầu tiên.
+          <EmptyState icon="🧱" title="Viên gạch đầu tiên đang chờ">
+            {firstProject
+              ? `Phiên tập trung đầu tiên đặt viên gạch đầu cho ${firstProject.label} — ${firstProject.total} phiên là nó mọc lên ở đây.`
+              : `${label} chưa có công trình nào. Mỗi phiên tập trung là một viên gạch.`}
           </EmptyState>
         ) : (
           <motion.div

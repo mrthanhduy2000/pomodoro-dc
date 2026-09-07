@@ -23,9 +23,11 @@
  * điều đáng khoá nhất chính là **`empty` và `partial` KHÔNG được cùng một tông** — đó là bản chất
  * của lỗi, còn chữ nghĩa thì chỉnh lúc nào cũng được.
  *
- * ⚠️ KHÔNG làm nhẹ đi thông tin: dòng chữ ở trạng thái `empty` vẫn nói rõ "từ 10 ký tự là bắt đầu
- * được", và nút Bắt đầu vẫn bị vô hiệu hoá kèm nhãn "Cần điền mục tiêu phiên". Thay đổi ở đây là
- * GIỌNG và MÀU, không phải luật.
+ * ⚠️ ADR-077 (round 37): the goal is OPTIONAL. The Start button never blocks on it any more — Đàm
+ * said plainly he rarely types one, and a mandatory field that is skipped by its only user is a
+ * gate with nobody behind it. `SESSION_GOAL_MIN_CHARS` survives as the "clear enough" threshold:
+ * chips only suggest goals that long, and the tone below still tells a half-typed goal apart from
+ * an empty box. What changed is the LAW (no gate), what stayed is the voice.
  */
 
 /** Số ký tự tối thiểu để một mục tiêu phiên được coi là đủ rõ. */
@@ -80,14 +82,14 @@ export function deriveSessionGoalState(rawText, minChars = SESSION_GOAL_MIN_CHAR
  */
 export function sessionGoalHint(state, variant = 'compact', minChars = SESSION_GOAL_MIN_CHARS) {
   if (!state || state.phase === 'empty') {
-    return `Phiên này bạn định chốt xong việc gì? Viết một dòng từ ${minChars} ký tự là bắt đầu được.`;
+    return `Không bắt buộc. Có mục tiêu thì cuối phiên chấm được Đạt / Chưa đạt — một dòng từ ${minChars} ký tự là đủ rõ.`;
   }
   if (state.phase === 'partial') {
-    return `Còn ${state.remaining} ký tự nữa là bắt đầu được.`;
+    return `Thêm ${state.remaining} ký tự nữa cho rõ — hoặc cứ bắt đầu, mục tiêu không bắt buộc.`;
   }
   return variant === 'expanded'
-    ? 'Mục tiêu đã đủ rõ. Bạn có thể quay lên và bắt đầu phiên bất cứ lúc nào.'
-    : 'Mục tiêu đã đủ rõ để mở phiên mới.';
+    ? 'Mục tiêu đã đủ rõ — quay lên và bắt đầu phiên bất cứ lúc nào.'
+    : 'Mục tiêu đã đủ rõ.';
 }
 
 /** Tối đa bao nhiêu mục tiêu cũ được gợi ý lại. Ba là vừa một hàng ở khung 390px. */
@@ -96,15 +98,13 @@ export const GOAL_SUGGESTION_LIMIT = 3;
 /**
  * Những mục tiêu ĐÃ DÙNG gần đây, để bấm một cái là điền lại.
  *
- * ⚠️ VÌ SAO ĐÁNG CÓ. Nút Bắt đầu bị khoá cho tới khi gõ đủ `SESSION_GOAL_MIN_CHARS` ký tự — một
- * luật CÓ CHỦ ĐÍCH (mục tiêu làm phiên có nghĩa, có thưởng khi đạt, AI Coach đọc nó). Nhưng phần
- * lớn công việc của một người là LẶP LẠI: "Hoàn thành phần đang dở" hôm nay cũng đúng như hôm qua.
- * Bắt gõ lại 10 ký tự ấy mỗi phiên là ma sát đặt đúng vào hành động quan trọng nhất của cả app.
- * Hàm này KHÔNG nới luật — nó chỉ bỏ việc GÕ LẠI.
+ * ⚠️ WHY IT EXISTS. Most work REPEATS: "Hoàn thành phần đang dở" today is the same as yesterday, and
+ * a goal is scored (Đạt / Chưa đạt) and read by the AI Coach, so it is worth one tap but never worth
+ * retyping. Since ADR-077 the goal is optional; these chips are the cheapest way to still have one.
  *
  * ⚠️ Bỏ trùng có PHÂN BIỆT HOA-THƯỜNG và khoảng trắng thừa: "Viết báo cáo" và "viết  báo cáo" là
  * một việc, hiện thành hai chip thì vừa tốn chỗ vừa trông như app không nhớ gì.
- * ⚠️ Chỉ lấy mục tiêu ĐỦ DÀI: gợi ý một chuỗi mà bấm vào vẫn không mở được nút là một cái bẫy.
+ * ⚠️ Chỉ lấy mục tiêu ĐỦ DÀI (`SESSION_GOAL_MIN_CHARS`): a chip must be a goal worth scoring.
  *
  * THUẦN: không đọc store, không đụng `Date`, không DOM.
  *
@@ -112,7 +112,7 @@ export const GOAL_SUGGESTION_LIMIT = 3;
  * @param {number} [limit] số chip tối đa
  * @returns {string[]} mục tiêu gần đây nhất, đã bỏ trùng, giữ nguyên chữ gốc của lần dùng gần nhất
  */
-export function pickRecentGoals(history, limit = GOAL_SUGGESTION_LIMIT) {
+export function pickRecentGoals(history, limit = GOAL_SUGGESTION_LIMIT, { preferCategoryId = null } = {}) {
   // ⚠️ Chặn ở ĐẦU, không dựa vào phép `break` cuối vòng. Bản đầu viết `push` rồi mới kiểm
   // `out.length >= limit`, nên với `limit = 0` nó vẫn trả về MỘT chip — tức một nơi gọi muốn tắt
   // hẳn gợi ý lại nhận được đúng một cái. Bài test bắt được.
@@ -120,7 +120,8 @@ export function pickRecentGoals(history, limit = GOAL_SUGGESTION_LIMIT) {
   if (max === 0) return [];
 
   const seen = new Set();
-  const out = [];
+  const preferred = [];
+  const rest = [];
 
   for (const entry of Array.isArray(history) ? history : []) {
     const goal = typeof entry?.goal === 'string' ? entry.goal.trim() : '';
@@ -129,9 +130,11 @@ export function pickRecentGoals(history, limit = GOAL_SUGGESTION_LIMIT) {
     const key = goal.toLowerCase().replace(/\s+/g, ' ');
     if (seen.has(key)) continue;
     seen.add(key);
-    out.push(goal);
-    if (out.length >= max) break;
+    // ADR-077 "smart default": goals used for the SAME task type come first, newest first inside
+    // each group — the chip Đàm most likely wants is the one he used for this kind of work.
+    (preferCategoryId != null && (entry?.categoryId ?? null) === preferCategoryId ? preferred : rest).push(goal);
+    if (preferred.length >= max) break;
   }
 
-  return out;
+  return [...preferred, ...rest].slice(0, max);
 }

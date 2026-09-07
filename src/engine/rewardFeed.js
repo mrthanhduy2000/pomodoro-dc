@@ -68,9 +68,9 @@ function sourceRank(source) {
  * trạng thái còn sót từ phiên trước. Xếp nó xuống cuối là mở đường cho nó rơi khỏi ba thẻ đầu
  * rồi biến mất — mà nó là thẻ DUY NHẤT trong chồng này không thể tự đến lần thứ hai.
  *
- * ⚠️ `action.weekly` chứ không phải `action.detail`: mở bản tổng kết phải đi qua
- * `openWeeklyReport()` của store, nơi giữ luật "cú mở đầu tiên trong tuần là bản TUẦN TRƯỚC"
- * và luật ghi "đã xem". Bật cờ mở bằng tay ở tầng giao diện là chép lại hai luật ấy lần thứ hai.
+ * ⚠️ `action.weekly` + `action.tab: 'stats'` (ADR-077): the summary IS the Stats screen. The host
+ * records "seen" through the store (`markWeeklyReportSeen`) and then navigates — the toast timeout
+ * alone must never record "seen".
  */
 function buildWeeklyToast(pending) {
   if (!pending) return null;
@@ -79,12 +79,12 @@ function buildWeeklyToast(pending) {
     source: 'weekly',
     key: 'weekly',
     icon: '📊',
-    name: 'Tổng kết tuần trước',
+    name: 'Tuần mới',
     // `tot` chứ không phải `hiem`: nó đến đều đặn mỗi tuần. Bậc hiếm để dành cho thứ hiếm thật.
     tier: 'tot',
-    description: 'Xem lại bảy ngày vừa qua.',
+    description: 'Thống kê đã so tuần vừa rồi với tuần trước.',
     amount: null,
-    action: { weekly: true },
+    action: { weekly: true, tab: 'stats' },
   };
 }
 

@@ -2755,6 +2755,7 @@ cấp `Math.min(3,…)` → `Math.min(9,…)` · cắt bớt danh sách cấp th
 - **Review Trigger**: khi thêm một skin **lệch tông** với họ ấm hiện tại, hoặc khi ai đó báo "nút chỗ
   này không đổi màu theo skin".
 - **Owner**: chưa ai · **Status**: MỞ (mở 2026-08-27, cùng phiên viết lại `ActionButton`)
+- **Update 2026-09-06 (ADR-077)**: the ROOT CAUSE is fixed — `ActionButton` is now `src/components/shared/ActionButton.jsx` (exported, token colours only, `sizeMap` opened with `sm`/`md`; guarded by `actionButtonPress.test.js` + `actionButtonSizing.test.js`). Remaining: the hand-drawn buttons in `Settings.jsx` (15, `lightTheme`-branched), `StatsJournal.jsx` (14), `NotificationCenter.jsx` (8), `CoachChat.jsx` (6) … still draw themselves; migrate them through the door, file by file, and count with `grep -c '<button' src/components/*.jsx`.
 
 ## #103 — ✅ **RESOLVED (2026-09-06 night, ADR-075)** — Reference archive so large that one `cat` blew the context window, with no guard
 

@@ -72,6 +72,9 @@ const PHIEN_THUONG = {
   weeklyBonusSP: 0,
   relicsEvolved: [],
   acceleratedCraftingIds: [],
+  // ADR-077: the ending's project card reads these three (brick landed / building finished / auto-queued).
+  newlyBuiltIds: [],
+  autoQueuedId: null,
 };
 
 /** Ca ĐỈNH: jackpot + rương lớn + lên cấp + sự kiện tốt. Dùng để soi lúc màn đông nhất. */

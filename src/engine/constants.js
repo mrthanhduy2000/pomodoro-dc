@@ -143,7 +143,6 @@ export const SIEU_TAP_TRUNG_MIN_MIN    = 45;        // mới — yêu cầu ≥4
 export const SIEU_TAP_TRUNG_CHARGES    = 1;
 
 // === Ý CHÍ (bền bỉ & streak) ===
-export const FORGIVENESS_CANCELS_PER_WEEK  = 2;     // (đời cũ) số lần miễn trừ tài nguyên khi huỷ — trục ngủ sau ADR-069
 // ADR-069: Sự Tha Thứ nay là bậc đầu của cặp «tha thứ → phục hồi»: sau khi huỷ một phiên, phiên kế
 // đủ dài nhận thêm XP (Phục Hồi cộng thêm nữa). Trước đó nó chỉ miễn một khoản phạt không còn ai thấy.
 export const SU_THA_THU_XP_BONUS           = 0.06;

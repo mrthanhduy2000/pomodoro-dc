@@ -34,9 +34,8 @@ function moiFileNguon(thuMuc, ra = []) {
 // chỗ quên. Thêm một tiếng vào đây thì phải viết được lý do; bỏ một tiếng ra thì bài này đỏ và
 // nhắc người ta cập nhật.
 const CO_Y_DE_CAM = [
-  // Nhịp tích tắc mỗi giây: cụm này còn nguyên tham số cho 4 gói âm thanh và một cờ trong bộ nhớ
-  // máy, nhưng chưa có nơi gọi. Bật nó là một quyết định về sự làm phiền, phải do Đàm chọn.
-  'playTick',
+  // ADR-077: `playTick` (never wired, dead setting) and `playExtensionReady` (a copy of the milestone
+  // chime) were deleted instead of exempted. Every sound left has a real moment.
 ];
 
 test('mọi tiếng trong soundEngine đều có ít nhất một nơi gọi thật', () => {

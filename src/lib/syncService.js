@@ -21,7 +21,6 @@ function getExportableState() {
     progress: s.progress,
     resources: s.resources,
     timerConfig: s.timerConfig,
-    forgiveness: s.forgiveness,
     rankSystem: s.rankSystem,
     rankChallenge: s.rankChallenge,
     eraCrisis: s.eraCrisis,

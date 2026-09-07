@@ -68,10 +68,10 @@ export function pickFocusMoment({
   // (3) LỜI MỜI ĐI CHỖ KHÁC — chỉ nói khi không còn lý do nào để bấm Bắt đầu.
   // ⚠️ Im trong lúc đang tập trung: giữa màn hình tập trung mà mời đi xem chỗ khác là mời Đàm rời
   //    khỏi đúng việc anh vừa bấm nút để làm.
-  // ⚠️ Tổng kết tuần KHÔNG bị mất khi nhường chỗ: chấm đỏ ở nút "Báo cáo tuần" (menu "Thêm" trên
-  //    iPhone, thanh bên trên desktop) là lưới an toàn thứ hai — xem ADR-061.
+  // ⚠️ Tổng kết tuần KHÔNG bị mất khi nhường chỗ: chấm đỏ ở tab Thống kê (ADR-077 — the report is
+  //    the Stats screen now) là lưới an toàn thứ hai — xem ADR-061.
   if (weeklyUnseen && !sessionInProgress && typeof onOpenWeekly === 'function') {
-    return { icon: '🏆', text: 'Tổng kết tuần trước đã xong — xem thử', strong: true, onClick: onOpenWeekly };
+    return { icon: '🏆', text: 'Tuần mới — Thống kê đã so tuần trước, xem thử', strong: true, onClick: onOpenWeekly };
   }
   // "Việc tiếp theo" đứng CUỐI vì nó là nguồn DUY NHẤT không có hạn: một điểm kỹ năng chưa tiêu
   // thì tuần sau tiêu vẫn thế, còn bốn nguồn trên đều mất đi nếu bỏ lỡ (lời chúc mừng trôi qua,

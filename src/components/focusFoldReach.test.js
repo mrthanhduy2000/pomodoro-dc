@@ -21,59 +21,38 @@ import { stripComments } from '../utils/sourceScan.js';
 const HERE = dirname(fileURLToPath(import.meta.url));
 const NGUON = stripComments(readFileSync(join(HERE, 'PomodoroEngine.jsx'), 'utf8'));
 
-test('chip mục tiêu gần đây ĐỨNG THAY CHỖ nút dẫn đường, không thêm một hàng', () => {
-  // ⚠️ Bản đầu của bản vá cho chip một hàng RIÊNG bên trên nút — nó chạy, nhưng tốn thêm **68px**
-  // và đẩy đáy nút xuống y=771 trong khi thanh tab bắt đầu ở y=774: **hở đúng 3px**. Màn này đã
-  // để nút chính chạm thanh tab hai lần trước đó (vòng 19, vòng 20). Đứng THAY CHỖ thì chiều cao
-  // không đổi một điểm ảnh nào — nay hở 71px.
-  assert.match(NGUON, /recentGoals\.slice\(0, 1\)\.map\(/, 'mất hàng chip — đường tắt hai-cú-chạm đã biến mất');
-  assert.match(NGUON, /Tự viết →/, 'mất đường thoát để tự đặt mục tiêu mới');
-  // Chip phải nằm TRONG nhánh "chưa đủ mục tiêu" của cùng hàng nút, tức trước nhánh "Bắt đầu phiên".
-  const iChip = NGUON.indexOf('recentGoals.slice(0, 1).map(');
-  // ⚠️ ADR-069: nút Bắt đầu không còn ternary "khủng hoảng ⇒ Đang khoá", nên nhãn là JSX text trần —
-  // neo vào `title` của chính nút ấy (chuỗi duy nhất, nằm trong thẻ), không neo vào một literal có nháy.
-  const iBatDau = NGUON.indexOf('title="Bắt đầu phiên tập trung"');
-  assert.ok(iChip !== -1 && iBatDau !== -1 && iChip < iBatDau, 'chip phải ở nhánh chưa-đủ-mục-tiêu của hàng nút.');
+test('ADR-077: the idle row is ONE primary Start button — no goal gate, no detour button', () => {
+  assert.match(NGUON, /onClick=\{handleStartSession\}/, 'the Start button is gone');
+  assert.doesNotMatch(NGUON, /\{!isSessionGoalValid \?/, 'the goal gate is back on the Start row');
+  assert.doesNotMatch(NGUON, /jumpToSessionGoal/, 'the scroll-to-goal detour is back');
+  assert.doesNotMatch(NGUON, /pendingSessionGoal\.trim\(\)\.length < SESSION_GOAL_MIN_CHARS/,
+    'Start blocks on the goal again — Đàm rarely types one, so this gate had nobody behind it');
+  assert.doesNotMatch(NGUON, /Điền mục tiêu →|Tự viết →/, 'old detour labels are back');
 });
 
-test('chip chỉ hiện khi CHƯA đủ mục tiêu — đủ rồi thì nó là chỗ chiếm chỗ', () => {
-  const i = NGUON.indexOf('recentGoals.slice(0, 1).map(');
-  const khoi = NGUON.slice(Math.max(0, i - 2600), i);
-  // ADR-069: khủng hoảng kỷ là nhiệm vụ mềm, KHÔNG còn chặn nút Bắt đầu ⇒ gác chỉ còn một vế.
-  assert.match(khoi, /\{!isSessionGoalValid \?/, 'thiếu gác: chip vẫn hiện sau khi đã có mục tiêu.');
-  assert.doesNotMatch(NGUON, /isCrisisBlockingStart/, 'cổng chặn-vì-khủng-hoảng quay lại — ADR-069 đã bỏ nó (thử thách kỷ là nhiệm vụ mềm).');
-  // Không có mục tiêu gần đây thì nút phải trở lại dạng đầy-hàng, không để một hàng rỗng.
-  assert.match(NGUON, /recentGoals\.length > 0 \? 'compactEscape' : 'compactPrimary'/,
-    'nút thoát phải trở lại cỡ đầy-hàng khi không có chip nào bên cạnh.');
-});
-
-test('KHÔNG in hai hàng chip trên một màn', () => {
-  // Bản gốc của hàng chip nằm cạnh ô nhập; giữ cả hai là nói cùng một chuyện hai lần, mà bản dưới
-  // chỉ thấy được sau khi đã cuộn — tức nó chỉ phục vụ người đã đi hết quãng đường bản trên xoá.
-  const soLan = [...NGUON.matchAll(/recentGoals[.\w()0-9, ]*\.map\(/g)].length;
+test('recent-goal chips: ONE row, inside the goal card, tap to fill, never auto-filled', () => {
+  const soLan = [...NGUON.matchAll(/recentGoals\.map\(/g)].length;
   assert.equal(soLan, 1, `có ${soLan} hàng chip mục tiêu; phải đúng 1.`);
-});
-
-test('LUẬT KHÔNG BỊ NỚI — vẫn phải đủ ký tự tối thiểu mới bắt đầu được', () => {
-  // ⚠️ Đây là vế quan trọng nhất. Cả bản vá chỉ được phép xoá quãng ĐI LẠI, không được xoá cái
-  // cổng: mục tiêu được chấm thưởng khi đạt và được AI Coach đọc.
-  assert.match(NGUON, /pendingSessionGoal\.trim\(\)\.length < SESSION_GOAL_MIN_CHARS/,
-    'cổng "đủ ký tự mới bắt đầu" đã bị gỡ — đó là nới luật, không phải bớt ma sát.');
-});
-
-test('KHÔNG tự điền mục tiêu giùm người chơi', () => {
-  // Gán ngầm mục tiêu hôm qua cho phiên hôm nay là nói dối thay Đàm — mục tiêu ấy sẽ được chấm
-  // "đạt/không đạt" và được AI Coach đọc. Chip phải do anh BẤM.
-  const i = NGUON.indexOf('recentGoals.slice(0, 1).map(');
+  const i = NGUON.indexOf('recentGoals.map(');
   const khoi = NGUON.slice(i, i + 900);
   assert.match(khoi, /onClick=\{\(\) => setPendingSessionGoal\(goal\)\}/, 'chip phải điền khi BẤM.');
-  assert.ok(
-    !/useEffect\([^;]*setPendingSessionGoal\(recentGoals/.test(NGUON),
-    'có chỗ tự điền mục tiêu gần đây mà không ai bấm — đó là nói dối thay người chơi.',
-  );
+  assert.ok(!/useEffect\([^;]*setPendingSessionGoal\(recentGoals/.test(NGUON),
+    'có chỗ tự điền mục tiêu gần đây mà không ai bấm — đó là nói dối thay người chơi.');
+  // The chips sit in the goal card (after the "Mục tiêu phiên" label), not on the Start row.
+  const iCard = NGUON.indexOf('Mục tiêu phiên');
+  const iStart = NGUON.indexOf('onClick={handleStartSession}');
+  assert.ok(iStart < iCard && iCard < i, 'chips must live in the goal card below the timer, not on the fold');
+  // Same task type first — the "smart default" of ADR-077.
+  assert.match(NGUON, /pickRecentGoals\(sessionHistory, GOAL_SUGGESTION_LIMIT, \{ preferCategoryId: pendingCategoryId \}\)/);
 });
 
-test('ô mục tiêu BẮT BUỘC đứng trước ô ghi chú TUỲ CHỌN', () => {
+test('the goal card says it is optional, and no longer counts characters toward a gate', () => {
+  assert.match(NGUON, /Tuỳ chọn/, 'the goal badge must say optional');
+  assert.doesNotMatch(NGUON, /Bắt buộc/, 'the goal badge still says mandatory');
+  assert.doesNotMatch(NGUON, /ký tự tối thiểu/, 'the character counter of the old gate is back');
+});
+
+test('ô mục tiêu đứng trước ô ghi chú (cả hai tuỳ chọn, nhưng mục tiêu được chấm cuối phiên)', () => {
   // Trước bản vá, accordion "Ghi chú phiên" (tuỳ chọn, đang đóng) nằm CHEN GIỮA nút bấm và ô mục
   // tiêu bắt buộc — chính nó đẩy ô bắt buộc xuống dưới nếp gấp.
   const iMucTieu = NGUON.indexOf('Mục tiêu phiên');

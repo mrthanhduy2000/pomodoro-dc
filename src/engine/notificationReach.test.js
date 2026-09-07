@@ -61,7 +61,7 @@ test('mọi thông báo trong notificationManager đều có ít nhất một n�
 });
 
 // THỬ-CHO-ĐỎ: gỡ `notificationManager.notifyBreakOver()` khỏi `syncBreakSession` ⇒ bài này đỏ.
-// THỬ-CHO-ĐỎ: gỡ `soundEngine.playTimerFinish()` ở cùng chỗ ⇒ bài này đỏ.
+// THỬ-CHO-ĐỎ: gỡ `soundEngine.playBreakOver()` ở cùng chỗ ⇒ bài này đỏ.
 test('hết giờ nghỉ có CẢ tiếng lẫn thông báo, và cả hai nằm NGOÀI set()', () => {
   const store = stripComments(readFileSync(new URL('../store/gameStore.js', import.meta.url), 'utf8'));
 
@@ -75,8 +75,8 @@ test('hết giờ nghỉ có CẢ tiếng lẫn thông báo, và cả hai nằm 
   );
 
   assert.match(
-    truocSet, /soundEngine\.playTimerFinish\(\)/,
-    'hết giờ nghỉ lại im lặng — mà nghỉ giải lao theo định nghĩa là lúc KHÔNG nhìn màn hình',
+    truocSet, /soundEngine\.playBreakOver\(\)/,
+    'hết giờ nghỉ lại im lặng — mà nghỉ giải lao theo định nghĩa là lúc KHÔNG nhìn màn hình (ADR-077: its OWN cue, not the session fanfare)',
   );
   assert.match(
     truocSet, /notificationManager\.notifyBreakOver\(\)/,

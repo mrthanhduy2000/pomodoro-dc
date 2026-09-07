@@ -13,7 +13,11 @@
 > mà không được refactor triệt để, phải CHỦ ĐỘNG đề xuất mở một "Maintenance Sprint" (nêu rõ mục
 > tiêu/phạm vi/lợi ích/rủi ro/tiêu chí hoàn thành) thay vì tiếp tục cộng thêm tính năng mới.
 >
-> **Threshold status (2026-09-06 night, after ADR-075)**: **103 entries · 44 closed · 59 open**, now
+> **Threshold status (2026-09-06 late night, after ADR-077 "round 37")**: no entry opened or closed;
+> **#2** progressed (`gameStore.js` 5,413 → 4,696 · `PomodoroEngine.jsx` 2,958 → 1,922) and **#86**
+> got its single door (`shared/ActionButton.jsx`, tenants not yet moved). Counts as in the snapshot below (this round opened and closed nothing).
+>
+> *(previous)* **Threshold status (2026-09-06 night, after ADR-075)**: **103 entries · 44 closed · 59 open**, now
 > stored by subsystem: **7 actionable debts live in this file** (#1 #2 #3 #4 #8 #14 #102), **52 belong
 > to the frozen 3D city** (`docs/TECH_DEBT_3D.md` — still open, not actionable while Đàm forbids
 > touching 3D), and the closed ones are in `docs/archive/TECH_DEBT_CLOSED_2026-09-06.md`.
@@ -36,7 +40,7 @@
 > They are a log of past counts, re-read on every `head` of this file for no operational
 > benefit. Nothing was deleted.
 - **#103** — Reference archive so large that one `cat` blew the context window, with no guard
-- **#86** — 137 nút tự vẽ trên 28 file KHÔNG đọc token skin, và `ActionButton` không nhận nổi chúng
+- **#86** — 137 nút tự vẽ trên 28 file KHÔNG đọc token skin, và `ActionButton` không nhận nổi chúng — ADR-077: the door now exists (`src/components/shared/ActionButton.jsx`); the tenants still to migrate are listed in the archive entry's last update
 - **#18** — ĐÃ ĐÓNG (2026-08-13) · Kỷ 12–14 không hề có bề mặt nào mang màu kỷ
 - **#17** — ĐÃ ĐÓNG (2026-08-13) · Bình minh và hoàng hôn là CÙNG MỘT BỨC ẢNH
 
@@ -196,7 +200,7 @@ Look one up: `grep -n '^## #<n>' docs/TECH_DEBT_3D.md`.
 
 ---
 
-## #2 — God File: `gameStore.js` (~5.400 dòng) — CÒN MỞ; nửa `StatsDashboard.jsx` đã xử lý 2026-09-06 (ADR-071: 3.792 → 294 dòng)
+## #2 — God File: `gameStore.js` (~4,700 dòng) — CÒN MỞ; `StatsDashboard.jsx` đã xử lý (ADR-071: 3.792 → 294) · `PomodoroEngine.jsx` 2,958 → 1,922 (ADR-077)
 
 - **Module**: `src/store/gameStore.js`, `src/components/StatsDashboard.jsx`
 - **Priority**: Low
@@ -219,6 +223,7 @@ Look one up: `grep -n '^## #<n>' docs/TECH_DEBT_3D.md`.
 
 ---
 - **Cập nhật 2026-09-06 (ADR-071)**: `StatsDashboard.jsx` 3.792 → **294 dòng** (ba thẻ trả lời + sổ tra cứu gấp); phần tra cứu tách nguyên văn sang `StatsJournal.jsx` (881) · `StatsNotes.jsx` (275) · `statsTheme.js` (45); logic ba câu trả lời ở `engine/statsAnswers.js` (171, thuần). `gameStore.js` 5.744 → 5.413 nhờ đóng #99 (xoá kinh tế ngủ), `gameMath.js` 2.044 → 1.732. Vế `gameStore.js` VẪN MỞ — ứng viên tách kế tiếp: chuỗi tuần (`autoClaimWeeklySteps` + `refreshWeeklyChain`) và nhiệm vụ ngày sang engine thuần.
+- **Update 2026-09-06 (ADR-077)**: done — daily missions and the weekly chain are `engine/missions.js` + `engine/weeklyChain.js` (pure, `now`/`today` params, 14 tests); the hand-written live mission tick inside `completeFocusSession` is gone (`tickDailyMissions`, live = reload); `forgiveness` removed. `gameStore.js` **5,413 → 4,696**. `PomodoroEngine.jsx` **2,958 → 1,922** (`shared/ActionButton.jsx`, `components/focus/*`, helpers to `engine/timerSession.js`). Still open: `completeFocusSession` itself (~700 lines) and the setup/support cards still inline in `PomodoroEngine.jsx`. Next candidate: `completeFocusSession` reward assembly → `engine/sessionRewards.js`.
 
 ## #3 — ⚠️ **PHẦN LỚN ĐÃ XỬ LÝ (2026-09-02)** — mô tả kỹ năng prestige (Thăng Hoa) không khớp code thật
 

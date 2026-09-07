@@ -202,3 +202,30 @@ export function getWorkedMinutesForBreak({
     ? Math.max(0, elapsedMs / 60_000)
     : Math.max(0, creditedMinutes);
 }
+
+/** Focus length as the timer accepts it: 1..180 minutes (ADR-077: moved from PomodoroEngine.jsx; statsAnswers uses the same clamp). */
+export function clampFocusMinutes(value) {
+  return Math.min(180, Math.max(1, value));
+}
+
+/** Digits-only parse of the minutes input, clamped; `null` when nothing usable was typed. */
+export function parseFocusMinutesInput(value) {
+  const digits = String(value ?? '').replace(/\D+/g, '').slice(0, 3);
+  if (!digits) return null;
+
+  const parsed = Number.parseInt(digits, 10);
+  if (!Number.isFinite(parsed)) return null;
+  return clampFocusMinutes(parsed);
+}
+
+/** Minutes actually worked in a finished session: wall clock minus pauses, else the credited minutes. */
+export function getSessionWorkedMinutes(session) {
+  if (!session) return null;
+
+  if (Number.isFinite(session.wallClockDurationMs)) {
+    const effectiveMs = Math.max(0, session.wallClockDurationMs - (session.pausedTotalMs ?? 0));
+    return effectiveMs / 60_000;
+  }
+
+  return Number.isFinite(session.minutes) ? session.minutes : null;
+}

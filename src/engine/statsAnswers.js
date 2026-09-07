@@ -4,8 +4,9 @@
  * Màn Thống kê cũ TRÌNH BÀY: 5 tab · 6 kỳ · 3.792 dòng biểu đồ, và không câu nào trong ba câu Đàm
  * thật sự hỏi được trả lời ở nếp gấp đầu. File này chỉ GHÉP những phép phân tích ĐÃ CÓ, ĐÃ TEST, ĐÃ
  * GÁC CỠ MẪU (`coach/coachIntel.js` · `gameMath.js`) thành ba câu trả lời:
- *   (1) Tôi có đang khá lên không?  — tuần này so với CÙNG QUÃNG của tuần trước, kèm 7 cặp cột.
- *   (2) Khi nào tôi mạnh nhất?      — giờ · độ dài · loại việc, mỗi thứ kèm cỡ mẫu.
+ *   (1) Tôi có đang khá lên không?  — tuần này so với CÙNG QUÃNG của tuần trước, kèm 7 cặp cột;
+ *       đầu tuần chưa có gì để so thì lùi một tuần: trọn tuần trước so với tuần trước nữa (ADR-077).
+ *   (2) Khi nào tôi mạnh nhất?      — giờ · độ dài · loại việc trên PHIÊN TRỌN VẸN, mỗi thứ kèm cỡ mẫu.
  *   (3) Làm gì tiếp?                — ĐÚNG MỘT gợi ý (phút + loại việc), đủ để bấm là chạy.
  *
  * ⚠️ HAI LUẬT, cùng luật với AI Coach và dải "Điều đáng chú ý" (`statsInsights.js`):
@@ -19,10 +20,11 @@
  * màn. Ngưỡng "giữ nhịp" thì dùng CHUNG (`WEEK_TREND_THRESHOLD_PCT`), để hai nơi không nói lệch.
  */
 import {
-  buildFocusProfile, recommendNextSession, wilsonLowerBound, observedRate, GOAL_RANK_MIN_SAMPLE,
+  buildFocusProfile, recommendNextSession, wilsonLowerBound, observedRate, COACH_BUCKET_MIN_SAMPLE, BAND_LABEL,
 } from './coach/coachIntel';
 import { coachCompletedSessions, COACH_MIN_SAMPLE, WEEK_TREND_THRESHOLD_PCT } from './gameMath';
 import { startOfVietnamWeekTs, vietnamHistoryTimeOpts } from './time';
+import { clampFocusMinutes } from './timerSession';
 
 const DAY_MS = 86_400_000;
 const WEEK_MS = 7 * DAY_MS;
@@ -34,7 +36,7 @@ export const DEFAULT_FALLBACK_MINUTES = 25;
 const pct = (x) => Math.round((x ?? 0) * 100);
 const entryTs = (e) => new Date(e?.timestamp ?? 0).getTime();
 const capitalize = (s) => (s ? s.charAt(0).toUpperCase() + s.slice(1) : s);
-const clampMinutes = (n) => Math.min(180, Math.max(1, Math.round(Number(n) || DEFAULT_FALLBACK_MINUTES)));
+const clampMinutes = (n) => clampFocusMinutes(Math.round(Number(n) || DEFAULT_FALLBACK_MINUTES));
 
 /** "2 giờ 15 phút" · "45 phút" — chữ đầy đủ, để lưới chống-bịa của Coach đọc được cùng đơn vị. */
 export function formatMinutesVi(minutes) {
@@ -51,71 +53,121 @@ export function formatMinutesVi(minutes) {
  *   thisMinutes, prevMinutes, thisN, prevN, elapsedDays, days:Array<{label,thisMinutes,prevMinutes,elapsed}>,
  *   headline:string, detail:string}}
  */
+/** Minutes/sessions of completed entries inside [start, end], split into 7 weekday buckets from `start`. */
+function sumWindow(entries, start, end) {
+  const perDay = Array(7).fill(0);
+  let minutes = 0; let n = 0;
+  for (const e of entries) {
+    const ts = entryTs(e);
+    if (ts < start || ts > end) continue;
+    perDay[Math.min(6, Math.floor((ts - start) / DAY_MS))] += e.minutes;
+    minutes += e.minutes; n += 1;
+  }
+  return { minutes, n, perDay };
+}
+
+function compareWindows(cur, prev, scope, elapsedDays) {
+  const days = WEEKDAY_SHORT.map((label, i) => ({ label, thisMinutes: cur.perDay[i], prevMinutes: prev.perDay[i], elapsed: i < elapsedDays }));
+  const base = { thisMinutes: cur.minutes, prevMinutes: prev.minutes, thisN: cur.n, prevN: prev.n, elapsedDays, days, scope, pct: null, direction: 'flat' };
+  const sameSpan = scope.kind === 'same-span';
+  if (prev.n === 0) {
+    return { ...base, status: 'no-baseline', direction: 'up', headline: `${scope.current} đã có ${cur.n} phiên, ${formatMinutesVi(cur.minutes)}.`, detail: sameSpan ? 'Cùng quãng này tuần trước chưa có phiên nào để so — sang tuần sau ô này mới thành một phép so sánh.' : 'Tuần trước nữa chưa có phiên nào để so.' };
+  }
+  if (cur.n === 0) {
+    return { ...base, status: 'ready', pct: -100, direction: 'down', headline: `${scope.current} chưa có phiên nào.`, detail: `${sameSpan ? 'Tới cùng lúc này tuần trước' : 'Tuần trước nữa'} bạn đã có ${prev.n} phiên, ${formatMinutesVi(prev.minutes)}.` };
+  }
+  const delta = Math.round(((cur.minutes - prev.minutes) / prev.minutes) * 100);
+  const direction = delta >= WEEK_TREND_THRESHOLD_PCT ? 'up' : delta <= -WEEK_TREND_THRESHOLD_PCT ? 'down' : 'flat';
+  const vs = sameSpan ? 'tuần trước' : 'tuần trước nữa';
+  const headline = direction === 'up'
+    ? `${scope.current} bạn tập trung nhiều hơn ${vs} ${delta}%.`
+    : direction === 'down'
+      ? `${scope.current} bạn tập trung ít hơn ${vs} ${Math.abs(delta)}%.`
+      : `${scope.current} bạn giữ nhịp ngang ${vs}.`;
+  const detail = `${formatMinutesVi(cur.minutes)} qua ${cur.n} phiên, so với ${formatMinutesVi(prev.minutes)} qua ${prev.n} phiên ${sameSpan ? 'tính tới cùng lúc này tuần trước' : 'của tuần trước nữa'}.`;
+  return { ...base, status: sameSpan ? 'ready' : 'last-week', pct: delta, direction, headline, detail };
+}
+
+/** Legend labels the screen prints — the engine names the windows so the bars never mislabel them. */
+export const WEEK_SCOPE = Object.freeze({
+  sameSpan: Object.freeze({ kind: 'same-span', current: 'Tuần này', baseline: 'Tuần trước, tới cùng lúc này' }),
+  lastWeek: Object.freeze({ kind: 'last-week', current: 'Tuần trước', baseline: 'Tuần trước nữa' }),
+});
+
 export function buildWeekComparison(history = [], { now = new Date() } = {}) {
   const nowTs = now instanceof Date ? now.getTime() : Number(now);
   const thisStart = startOfVietnamWeekTs(nowTs);
   const prevStart = thisStart - WEEK_MS;
-  const prevEnd = nowTs - WEEK_MS;
+  const entries = coachCompletedSessions(Array.isArray(history) ? history : []);
   const elapsedDays = Math.min(7, Math.floor((nowTs - thisStart) / DAY_MS) + 1);
-  const days = WEEKDAY_SHORT.map((label, i) => ({ label, thisMinutes: 0, prevMinutes: 0, elapsed: i < elapsedDays }));
-  let thisMinutes = 0; let prevMinutes = 0; let thisN = 0; let prevN = 0;
-  for (const e of coachCompletedSessions(Array.isArray(history) ? history : [])) {
-    const ts = entryTs(e);
-    if (ts >= thisStart && ts <= nowTs) {
-      days[Math.min(6, Math.floor((ts - thisStart) / DAY_MS))].thisMinutes += e.minutes;
-      thisMinutes += e.minutes; thisN += 1;
-    } else if (ts >= prevStart && ts <= prevEnd) {
-      days[Math.min(6, Math.floor((ts - prevStart) / DAY_MS))].prevMinutes += e.minutes;
-      prevMinutes += e.minutes; prevN += 1;
-    }
-  }
-  const base = { thisMinutes, prevMinutes, thisN, prevN, elapsedDays, days, pct: null, direction: 'flat' };
-  if (thisN === 0 && prevN === 0) {
-    return { ...base, status: 'empty', headline: 'Chưa có phiên nào trong hai tuần gần đây.', detail: 'Xong một phiên là ô này bắt đầu so tuần này với tuần trước.' };
-  }
-  if (prevN === 0) {
-    return { ...base, status: 'no-baseline', direction: 'up', headline: `Tuần này đã có ${thisN} phiên, ${formatMinutesVi(thisMinutes)}.`, detail: 'Cùng quãng này tuần trước chưa có phiên nào để so — sang tuần sau ô này mới thành một phép so sánh.' };
-  }
-  if (thisN === 0) {
-    return { ...base, status: 'ready', pct: -100, direction: 'down', headline: 'Tuần này chưa có phiên nào.', detail: `Tới cùng lúc này tuần trước bạn đã có ${prevN} phiên, ${formatMinutesVi(prevMinutes)}.` };
-  }
-  const delta = Math.round(((thisMinutes - prevMinutes) / prevMinutes) * 100);
-  const direction = delta >= WEEK_TREND_THRESHOLD_PCT ? 'up' : delta <= -WEEK_TREND_THRESHOLD_PCT ? 'down' : 'flat';
-  const headline = direction === 'up'
-    ? `Tuần này bạn tập trung nhiều hơn tuần trước ${delta}%.`
-    : direction === 'down'
-      ? `Tuần này bạn tập trung ít hơn tuần trước ${Math.abs(delta)}%.`
-      : 'Tuần này bạn giữ nhịp ngang tuần trước.';
-  const detail = `${formatMinutesVi(thisMinutes)} qua ${thisN} phiên, so với ${formatMinutesVi(prevMinutes)} qua ${prevN} phiên tính tới cùng lúc này tuần trước.`;
-  return { ...base, status: 'ready', pct: delta, direction, headline, detail };
+  const cur = sumWindow(entries, thisStart, nowTs);
+  const prev = sumWindow(entries, prevStart, nowTs - WEEK_MS);
+  if (cur.n > 0 || prev.n > 0) return compareWindows(cur, prev, WEEK_SCOPE.sameSpan, elapsedDays);
+  // ADR-077 (settles the round-36 §9 question): early in a week BOTH same-span windows can be empty
+  // (Monday 04:00: this week has nothing yet, and neither did last Monday by 04:00). "No sessions in
+  // two weeks" would be false. The one law stays "compare equal windows"; only the window moves back
+  // one full week: last week against the week before it.
+  const lastWeek = sumWindow(entries, prevStart, thisStart - 1);
+  const weekBefore = sumWindow(entries, prevStart - WEEK_MS, prevStart - 1);
+  if (lastWeek.n > 0 || weekBefore.n > 0) return compareWindows(lastWeek, weekBefore, WEEK_SCOPE.lastWeek, 7);
+  return {
+    thisMinutes: 0, prevMinutes: 0, thisN: 0, prevN: 0, elapsedDays, scope: WEEK_SCOPE.sameSpan, pct: null, direction: 'flat',
+    days: WEEKDAY_SHORT.map((label, i) => ({ label, thisMinutes: 0, prevMinutes: 0, elapsed: i < elapsedDays })),
+    status: 'empty', headline: 'Chưa có phiên nào trong hai tuần gần đây.', detail: 'Xong một phiên là ô này bắt đầu so tuần này với tuần trước.',
+  };
 }
 
 /**
- * (2) Khi nào tôi mạnh nhất — ba dòng: giờ · độ dài · loại việc. Đọc thẳng hồ sơ `buildFocusProfile`
- * (cùng số với thẻ Coach), KHÔNG tính lại. Dòng chưa đủ mẫu thì nói rõ CẦN GÌ, không để trống.
- * @returns {Array<{id,label,ready,value?,note,sample?,categoryId?}>}
+ * (2) When am I strongest — hour · length · task type, ranked on the WHOLE-SESSION rate (ADR-077).
+ *
+ * A whole session = started, not cancelled, not self-rated "Chưa đạt". Round 36 ranked these three
+ * lines on goal reviews only, so the heart of the screen stayed empty for the one player who rarely
+ * types a goal. The counters live in `buildFocusProfile` (`started`/`whole` per cell, band and
+ * category) — a goal review still counts, it lowers `whole` for a miss; it just no longer gates.
+ * Wilson lower bound (same brake as the Coach) ranks buckets with ≥ COACH_BUCKET_MIN_SAMPLE sessions;
+ * below that the line still ANSWERS with the busiest bucket and its raw fraction (`thin: true`), because
+ * a screen that asks the player to do more work first is an empty box with a caption.
  */
+const rankByWhole = (rows) => rows.slice().sort((a, b) => (
+  (wilsonLowerBound(b.whole, b.started) - wilsonLowerBound(a.whole, a.started)) || (b.started - a.started)
+));
+
+function bestRow(rows) {
+  const eligible = rows.filter((r) => r.started >= COACH_BUCKET_MIN_SAMPLE);
+  if (eligible.length) return { row: rankByWhole(eligible)[0], thin: false };
+  if (rows.length) return { row: rows.slice().sort((a, b) => (b.started - a.started) || (b.whole - a.whole))[0], thin: true };
+  return null;
+}
+
+function bestLine(id, label, rows, describe) {
+  const pick = bestRow(rows);
+  if (!pick) return { id, label, ready: false, note: 'Chưa có phiên nào.' };
+  const { row, thin } = pick;
+  return {
+    id, label, ready: true, thin, ...describe(row),
+    note: thin ? `${row.whole}/${row.started} phiên trọn vẹn` : `trọn vẹn ${pct(observedRate(row.whole, row.started))}%`,
+    sample: `${row.started} phiên`,
+  };
+}
+
 export function buildBestWindow(profile) {
-  const need = (note) => ({ ready: false, note });
-  const hour = profile?.chronotype;
-  const length = profile?.idealLength;
-  const items = [];
-  items.push(hour && hour.status !== 'insufficient'
-    ? { id: 'hour', label: 'Giờ', ready: true, value: capitalize(hour.value.bucketLabel), note: `đạt mục tiêu ${pct(hour.value.rate)}%`, sample: `${hour.sampleSize} phiên có mục tiêu` }
-    : { id: 'hour', label: 'Giờ', ...need('Cần phiên có đặt mục tiêu ở ít nhất hai buổi khác nhau để so.') });
-  items.push(length && length.status !== 'insufficient'
-    ? { id: 'length', label: 'Độ dài', ready: true, value: `Phiên ${length.value.label}`, note: `đạt mục tiêu ${pct(length.value.rate)}%`, sample: `${length.sampleSize} phiên có mục tiêu` }
-    : { id: 'length', label: 'Độ dài', ...need('Cần phiên có đặt mục tiêu ở ít nhất hai độ dài khác nhau để so.') });
-  const cats = [...(profile?._cats?.values() ?? [])].filter((c) => c.label && c.goalTotal >= GOAL_RANK_MIN_SAMPLE);
-  if (cats.length) {
-    // Wilson lower bound: 3/3 KHÔNG thắng 18/24 — cùng phanh lạc quan với Coach.
-    cats.sort((a, b) => wilsonLowerBound(b.goalHit, b.goalTotal) - wilsonLowerBound(a.goalHit, a.goalTotal));
-    const top = cats[0];
-    items.push({ id: 'category', label: 'Loại việc', ready: true, categoryId: top.categoryId, value: `"${top.label}"`, note: `đạt mục tiêu ${pct(observedRate(top.goalHit, top.goalTotal))}%`, sample: `${top.goalTotal} phiên có mục tiêu` });
-  } else {
-    items.push({ id: 'category', label: 'Loại việc', ...need(`Cần ít nhất ${GOAL_RANK_MIN_SAMPLE} phiên có đặt mục tiêu cho một loại việc.`) });
+  const byBucket = new Map();
+  const byBand = new Map();
+  const add = (map, key, init, cell) => {
+    const cur = map.get(key) ?? init();
+    cur.started += cell.started ?? 0; cur.whole += cell.whole ?? 0;
+    map.set(key, cur);
+  };
+  for (const c of profile?._cells?.values() ?? []) {
+    add(byBucket, c.bucketId, () => ({ bucketId: c.bucketId, bucketLabel: c.bucketLabel, started: 0, whole: 0 }), c);
+    add(byBand, c.band, () => ({ band: c.band, started: 0, whole: 0 }), c);
   }
-  return items;
+  const cats = [...(profile?._cats?.values() ?? [])].filter((c) => c.label);
+  return [
+    bestLine('hour', 'Giờ', [...byBucket.values()], (r) => ({ value: capitalize(r.bucketLabel) })),
+    bestLine('length', 'Độ dài', [...byBand.values()], (r) => ({ value: `Phiên ${BAND_LABEL[r.band]}` })),
+    bestLine('category', 'Loại việc', cats, (r) => ({ value: `"${r.label}"`, categoryId: r.categoryId })),
+  ];
 }
 
 /**

@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {
-  buildStatsAnswers, buildWeekComparison, buildBestWindow, buildNextAction, formatMinutesVi, WEEKDAY_SHORT,
+  buildStatsAnswers, buildWeekComparison, buildBestWindow, buildNextAction, formatMinutesVi, WEEKDAY_SHORT, WEEK_SCOPE,
 } from './statsAnswers.js';
 import { buildFocusProfile } from './coach/coachIntel.js';
 import { WEEK_TREND_THRESHOLD_PCT } from './gameMath.js';
@@ -54,6 +54,23 @@ test('so tuần: phiên huỷ không được đếm, và ngưỡng "giữ nhị
   assert.ok(Math.abs(w2.pct) < WEEK_TREND_THRESHOLD_PCT);
 });
 
+test('so tuần (ADR-077): Monday 04:00 with both same-span windows empty ⇒ last FULL week vs the week before, never "no sessions"', () => {
+  const MONDAY_EARLY = new Date('2026-09-07T04:00:00+07:00');
+  const TUAN_TRUOC_NUA = [at('2026-08-25T09:00:00+07:00', 60), at('2026-08-27T09:00:00+07:00', 40)]; // 100′
+  const w = buildWeekComparison([...TUAN_TRUOC, ...TUAN_TRUOC_NUA], { now: MONDAY_EARLY });
+  assert.equal(w.status, 'last-week');
+  assert.equal(w.scope, WEEK_SCOPE.lastWeek);
+  assert.deepEqual([w.thisMinutes, w.thisN, w.prevMinutes, w.prevN], [304, 5, 100, 2]); // all of last week counts now
+  assert.match(w.headline, /^Tuần trước bạn tập trung nhiều hơn tuần trước nữa 204%/);
+  assert.ok(w.days.every((d) => d.elapsed), 'a full week has no "not yet" days');
+  assert.equal(w.days[0].thisMinutes, 60); // Monday of last week
+  // same-span still wins as soon as this week has a session
+  const w2 = buildWeekComparison([at('2026-09-07T03:30:00+07:00', 20), ...TUAN_TRUOC], { now: MONDAY_EARLY });
+  assert.equal(w2.scope, WEEK_SCOPE.sameSpan);
+  // and with truly nothing in three weeks the honest word is "empty"
+  assert.equal(buildWeekComparison([], { now: MONDAY_EARLY }).status, 'empty');
+});
+
 test('so tuần: ba trạng thái biên đều có câu riêng, không có câu nào in "NaN" hay "−100%"', () => {
   const trong = buildWeekComparison([], { now: NOW });
   assert.equal(trong.status, 'empty');
@@ -80,28 +97,59 @@ const optsOf = (history) => ({
   history,
 });
 
-test('mạnh nhất: mỗi dòng sẵn sàng đều mang GIÁ TRỊ + tỉ lệ + CỠ MẪU; thiếu mẫu thì nói cần gì', () => {
+test('strongest: every line carries VALUE + whole-session rate + SAMPLE; a goal review lowers the rate, it does not gate it', () => {
   const profile = buildFocusProfile(HO_SO, optsOf(HO_SO));
   const best = buildBestWindow(profile);
   assert.deepEqual(best.map((b) => b.id), ['hour', 'length', 'category']);
   const [gio, doDai, loai] = best;
   assert.equal(gio.value, 'Buổi sáng');
-  assert.match(gio.note, /75%/);
-  assert.equal(gio.sample, '8 phiên có mục tiêu');
+  assert.match(gio.note, /trọn vẹn 75%/); // 6 whole of 8 started — the two "Chưa đạt" taps count against it
+  assert.equal(gio.sample, '8 phiên');
   assert.match(doDai.value, /^Phiên vừa/);
-  assert.equal(doDai.sample, '8 phiên có mục tiêu');
+  assert.equal(doDai.sample, '8 phiên');
   assert.equal(loai.value, '"Học"');
   assert.equal(loai.categoryId, 'hoc');
-  assert.equal(loai.sample, '8 phiên có mục tiêu');
+  assert.equal(loai.sample, '8 phiên');
   for (const b of best) {
     assert.equal(b.ready, true);
-    assert.match(b.sample, /\d+ phiên/, 'con số không có mẫu số thì không phải mục tiêu');
+    assert.equal(b.thin, false);
+    assert.match(b.sample, /\d+ phiên/, 'a number without a denominator is not a goal');
   }
-  const thieu = buildBestWindow(buildFocusProfile(TUAN_NAY, optsOf(TUAN_NAY)));
-  for (const b of thieu) {
-    assert.equal(b.ready, false);
-    assert.match(b.note, /Cần/);
+});
+
+test('strongest: with NO goal reviews the three lines still answer (ADR-077) — a cancel is the only thing that lowers the rate', () => {
+  const noGoals = HO_SO.map((e) => { const rest = { ...e }; delete rest.goalAchieved; return rest; });
+  const cancelledEvening = { id: 'x', timestamp: new Date('2026-08-26T19:00:00+07:00').getTime(), minutes: 10, targetMinutes: 50, completed: false, cancelled: true, cancelledAt: 1, categoryId: 'viec', categorySnapshot: { label: 'Làm việc' } };
+  const best = buildBestWindow(buildFocusProfile([...noGoals, cancelledEvening], optsOf(noGoals)));
+  const [gio, doDai, loai] = best;
+  assert.equal(gio.ready, true);
+  assert.equal(gio.value, 'Buổi sáng');
+  assert.match(gio.note, /trọn vẹn 100%/);
+  assert.equal(gio.sample, '8 phiên');
+  assert.match(doDai.value, /^Phiên vừa/);
+  assert.equal(loai.value, '"Học"');
+  // evening: 5 whole of 6 started (one cancel) — its sample counts the cancelled attempt too
+  const cells = [...buildFocusProfile([...noGoals, cancelledEvening], optsOf(noGoals))._cells.values()];
+  const evening = cells.find((c) => c.bucketId !== 'sang' && c.band === 'sau');
+  assert.equal(evening.started, 6);
+  assert.equal(evening.whole, 5);
+});
+
+test('strongest: under the sample floor the line answers with the busiest bucket and its raw fraction (thin), never with a request', () => {
+  const thin = buildBestWindow(buildFocusProfile(TUAN_NAY, optsOf(TUAN_NAY)));
+  for (const b of thin.slice(0, 2)) {
+    assert.equal(b.ready, true);
+    assert.equal(b.thin, true);
+    assert.match(b.note, /^\d+\/\d+ phiên trọn vẹn$/);
+    assert.match(b.sample, /^\d+ phiên$/);
+    assert.doesNotMatch(b.note, /Cần|chưa đủ/i);
   }
+  assert.equal(thin[0].value, 'Buổi sáng'); // 2 of the 3 sessions
+  assert.equal(thin[0].sample, '2 phiên');
+  // no session carries a category ⇒ the line is dropped by the screen, not shown as a caption
+  assert.equal(thin[2].ready, false);
+  const empty = buildBestWindow(buildFocusProfile([], optsOf([])));
+  for (const b of empty) assert.equal(b.ready, false);
 });
 
 test('làm gì tiếp: đủ dữ liệu ⇒ một nút "Bắt đầu N phút · loại"; thiếu ⇒ vẫn là một nút chạy được', () => {

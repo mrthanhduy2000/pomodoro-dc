@@ -29,7 +29,7 @@ const PRED_STREAK_MIN_DAYS = 4;
 const PRED_STREAK_PCT_MIN_DAYS = 6;
 export const STREAK_AT_RISK_MIN = 3; // chuỗi ≥ ngưỡng này + hôm nay chưa làm + thường-đã-làm → "đang treo"
 const WEEKDAY_LABELS = ['Chủ nhật', 'Thứ Hai', 'Thứ Ba', 'Thứ Tư', 'Thứ Năm', 'Thứ Sáu', 'Thứ Bảy'];
-const BAND_LABEL = { ngan: 'ngắn (dưới 26 phút)', vua: 'vừa (26 phút–44 phút)', sau: 'sâu (từ 45 phút)' };
+export const BAND_LABEL = { ngan: 'ngắn (dưới 26 phút)', vua: 'vừa (26 phút–44 phút)', sau: 'sâu (từ 45 phút)' };
 const BAND_MINUTES = { ngan: 20, vua: 35, sau: 50 };
 
 function isCompletedSession(e) {
@@ -91,32 +91,40 @@ export function buildFocusProfile(history = [], opts = {}) {
   const byCategory = new Map();
   const dayMinutes = new Map();
   let completed = 0; let cancelled = 0; let minutes = 0; let withGoal = 0; let goalHit = 0; let deep = 0;
+  const touch = (map, key, init) => { const cur = map.get(key) ?? init(); map.set(key, cur); return cur; };
 
   for (const e of all) {
-    if (isCancelledHistoryEntry(e)) { cancelled += 1; continue; }
-    if (!isCompletedSession(e)) continue;
+    const cancelledEntry = isCancelledHistoryEntry(e);
+    if (!cancelledEntry && !isCompletedSession(e)) continue;
+    // "Whole session" (ADR-077): started, not cancelled, not self-rated as missed. Every bucket keeps
+    // `started`/`whole` next to the goal counters so a screen can rank WITHOUT goal reviews — a goal
+    // review only sharpens the same number (a "Chưa đạt" tap lowers `whole`), it never gates it.
+    const whole = !cancelledEntry && e.goalAchieved !== false ? 1 : 0;
+    const bucket = getTimeOfDayBucket(getEntryHour(e));
+    const band = lengthBandOf(cancelledEntry ? (e.targetMinutes ?? e.minutes) : e.minutes);
+    const bd = touch(byBand, band, () => ({ band, total: 0, goalTotal: 0, goalHit: 0, started: 0, whole: 0 }));
+    bd.started += 1; bd.whole += whole;
+    const c = touch(byCell, `${bucket.id}|${band}`, () => ({ bucketId: bucket.id, bucketLabel: bucket.label, band, total: 0, goalTotal: 0, goalHit: 0, started: 0, whole: 0, minutesList: [] }));
+    c.started += 1; c.whole += whole;
+    const catId = e.categoryId ?? null;
+    let cat = null;
+    if (catId && (!activeCategoryIds || activeCategoryIds.has(catId))) {
+      const label = categoryLabelOf(catId) ?? e.categorySnapshot?.label ?? null;
+      if (label) {
+        cat = touch(byCategory, catId, () => ({ categoryId: catId, label, sessions: 0, minutes: 0, goalTotal: 0, goalHit: 0, started: 0, whole: 0 }));
+        cat.label = label; cat.started += 1; cat.whole += whole;
+      }
+    }
+    if (cancelledEntry) { cancelled += 1; continue; }
     completed += 1; minutes += e.minutes;
     if (e.minutes >= 45) deep += 1;
     const hasGoal = typeof e.goalAchieved === 'boolean';
     if (hasGoal) { withGoal += 1; if (e.goalAchieved === true) goalHit += 1; }
-    const bucket = getTimeOfDayBucket(getEntryHour(e));
-    const band = lengthBandOf(e.minutes);
-    const bd = byBand.get(band) ?? { band, total: 0, goalTotal: 0, goalHit: 0 };
     bd.total += 1; if (hasGoal) { bd.goalTotal += 1; if (e.goalAchieved) bd.goalHit += 1; }
-    byBand.set(band, bd);
-    const ck = `${bucket.id}|${band}`;
-    const c = byCell.get(ck) ?? { bucketId: bucket.id, bucketLabel: bucket.label, band, total: 0, goalTotal: 0, goalHit: 0, minutesList: [] };
     c.total += 1; c.minutesList.push(e.minutes); if (hasGoal) { c.goalTotal += 1; if (e.goalAchieved) c.goalHit += 1; }
-    byCell.set(ck, c);
-    const catId = e.categoryId ?? null;
-    if (catId && (!activeCategoryIds || activeCategoryIds.has(catId))) {
-      const label = categoryLabelOf(catId) ?? e.categorySnapshot?.label ?? null;
-      if (label) {
-        const cat = byCategory.get(catId) ?? { categoryId: catId, label, sessions: 0, minutes: 0, goalTotal: 0, goalHit: 0 };
-        cat.sessions += 1; cat.minutes += e.minutes; cat.label = label;
-        if (hasGoal) { cat.goalTotal += 1; if (e.goalAchieved) cat.goalHit += 1; }
-        byCategory.set(catId, cat);
-      }
+    if (cat) {
+      cat.sessions += 1; cat.minutes += e.minutes;
+      if (hasGoal) { cat.goalTotal += 1; if (e.goalAchieved) cat.goalHit += 1; }
     }
     if (typeof getEntryDayKey === 'function') {
       const dk = getEntryDayKey(e);

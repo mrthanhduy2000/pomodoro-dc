@@ -67,23 +67,23 @@ test('nó nằm ở CỘT GIỮA (iPhone thấy được), không nằm trong c�
     !/FocusMoment/.test(RAIL),
     '`FocusMoment` lọt vào `FocusRail` — cột đó là `hidden … lg:flex`, iPhone không bao giờ thấy',
   );
-  // Neo vào một thứ CHẮC CHẮN thuộc cột giữa: `FocusCityTease`, thứ đã có sẵn ở đó với đúng lý do
-  // ấy. Hỏi "có nằm cạnh nó không" đúng hơn là đếm số dấu cách thụt lề — thụt lề đổi theo mọi lần
-  // bọc thêm một thẻ, còn quan hệ láng giềng thì không.
-  const giua = APP_CODE.indexOf('<FocusCityTease');
+  // Anchor on something that is CERTAINLY in the centre column: `FocusIntro`, the greeting (ADR-077
+  // moved the city tease into the timer card as the brick strip). "Is it next to it" is a sturdier
+  // question than counting indentation.
+  const giua = APP_CODE.indexOf('<FocusIntro');
   const dong = APP_CODE.indexOf('<FocusMoment');
-  assert.ok(giua > 0 && dong > giua, 'không tìm thấy `FocusCityTease` đứng trước — bố cục đã đổi, đọc lại');
+  assert.ok(giua > 0 && dong > giua, 'không tìm thấy `FocusIntro` đứng trước — bố cục đã đổi, đọc lại');
   // ⚠️ TÌM ĐỒNG HỒ *SAU* MỐC NEO, không phải `indexOf` từ đầu file. Bản đầu của assert này viết
   // `APP_CODE.indexOf('<PomodoroEngine')` và ĐỎ trên mã hoàn toàn đúng: `App.jsx` dựng
   // `<PomodoroEngine>` ở HAI nhánh (một cho chế độ toàn màn hình, một cho cột giữa), và nhánh
   // toàn màn hình đứng trước cả khối này. `indexOf` trả về chỗ đầu tiên, nên nó đang so với một
   // cái đồng hồ ở màn hình KHÁC. Phép đo hỏng, không phải bố cục hỏng.
   const dongHo = APP_CODE.indexOf('<PomodoroEngine', giua);
-  assert.ok(dongHo > 0, 'không thấy đồng hồ nào sau `FocusCityTease` — bố cục đã đổi, đọc lại');
+  assert.ok(dongHo > 0, 'không thấy đồng hồ nào sau `FocusIntro` — bố cục đã đổi, đọc lại');
   assert.ok(
     dongHo > dong,
     'dòng này bị đẩy xuống DƯỚI đồng hồ; thẻ đồng hồ cao gần hết màn iPhone nên chỗ đó nằm dưới '
-    + 'nếp gấp — cùng lý do đã ghi cho `FocusCityTease`',
+    + 'nếp gấp — the timer card is nearly a full iPhone screen tall',
   );
 });
 

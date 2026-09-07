@@ -13,6 +13,67 @@
 > New operating rule in `CLAUDE.md` §TOKEN BUDGET #4 — **build, don't audit**: `npm test` green means
 > the doc system is healthy; do not re-measure or re-survey it before the task in the prompt.
 
+> Last update: **2026-09-06 (late night)** — **ROUND 37: A SESSION ALWAYS LAYS A BRICK (ADR-077).**
+> Order (verbatim essentials): *"Build lớn. Simplify mạnh. Làm game vui hơn. Tập trung nhiều hơn vào
+> UX/UI. TOÀN QUYỀN … thà xong bốn mạch trọn vẹn còn hơn bảy mạch dở dang."* Seven streams; all seven
+> reached `main` in three milestone commits + one gate commit + one merge commit (see «Foreign commits»).
+>
+> ### Done
+> 1. **Việc 1 — Stats always answers.** `buildFocusProfile` gained `started`/`whole` counters; the three
+>    "strongest" lines rank on the whole-session rate (Wilson), never on goal reviews; below the sample
+>    floor they still answer (`thin`). Cards 1–2 hide at zero history so Start is the only answer.
+>    Monday-morning fallback: last full week vs the week before (`WEEK_SCOPE`). Goal is OPTIONAL — no
+>    gate, chips in the goal card (same task type first). Empty-state sweep: City "Bãi đất trống" (stale
+>    nav path) → names the first project; Build hero copy; onboarding overlay deleted.
+> 2. **Việc 2 — the brick.** `engine/sessionBrick.js` + `focus/SessionBrickStrip.jsx` + `focus/BrickRow.jsx`;
+>    store auto-queues before advancing (`autoQueueSessionProject`, `pendingReward.autoQueuedId`); the
+>    ending's project card lands the brick; `CityGrowthMoment` / `FocusCityTease` / `cityMoment.js` deleted.
+> 3. **Việc 3 — sound & motion.** `playLastMinute` · `playBrickLaid` · `playBreakOver` added; `playTick`,
+>    `tickSoundEnabled`, `playExtensionReady` deleted; countdown ticks last 3 s only; XP card silent;
+>    haptics: none (iOS Safari has no Vibration API — decision recorded in ADR-077).
+> 4. **Việc 4 — `PomodoroEngine.jsx` 2,958 → 1,922.** `shared/ActionButton.jsx` (the #86 door, +`sm`/`md`),
+>    `components/focus/{ModeSwitch,QuickPresets,StrictModeToggle,CategoryChip,CategoryManager,
+>    SessionReviewCard,CancelConfirmDialog}.jsx`, `engine/timerSession.js` (`clampFocusMinutes` ·
+>    `parseFocusMinutesInput` · `getSessionWorkedMinutes`), `lib/keyboard.js`, `hooks/useMinWidth.js`.
+>    Milestone toast + combo/multiplier badges removed (the strip took their slot). Start sits ~22 px
+>    above the tab bar at 390×844 (screenshot).
+> 5. **Việc 5 — `gameStore.js` 5,413 → 4,696.** `engine/missions.js` · `engine/weeklyChain.js` ·
+>    `engine/seededRng.js`; `tickDailyMissions` replaces the hand-written live tick (live = reload);
+>    `components/missionXp.js` folded into the engine; `forgiveness` removed from state/partialize/
+>    sync/export/constants (round-36 §9 question 2: separately from the sleeping-money migration).
+> 6. **Việc 6 — secondary screens.** `WeeklyReportModal.jsx` (916) + `weeklyXpNote.js` deleted; Monday
+>    toast + Focus line navigate to Stats; `markWeeklyReportSeen` replaces open/dismiss; unseen dot on
+>    the Thống kê tab (`attentionTabIds`). Settings: dead tick toggle gone. #86: door built, tenants
+>    not yet moved (next round).
+> 7. **Việc 7 — first open.** Fresh save: Focus says «Phiên này đặt viên gạch đầu cho Hang Động Nguyên
+>    Thủy», City says «Viên gạch đầu tiên đang chờ»; the first ending tells the brick story.
+>
+> ### Gates
+> `npm run lint` clean · `npm run build` green · `npm run test:fast` **1,589 tests · 1,588 pass · 0 fail ·
+> 1 skipped** (round 36: 1,597 — 13 files deleted, 30 tests added). Screenshots (390 px, FULL data as ordered): `scratchpad/shots37/` — `focus-idle2.png`
+> (strip + Start on the fold), `ending-project.png` (brick landed), `st-0/st-1.png` (Stats, three lines
+> with numbers), `fresh-focus2.png` + `fresh-city2.png` (session #1 story). Fixture regenerated with
+> goals + reviews (`make-fixture.mjs`: `goalFields`).
+>
+> ### Lessons
+> - **A fixture that never reaches a state hides the empty box** — round 36 shipped an empty card
+>   because the fixture had no `goalAchieved`. Now the fixture carries them, and the engine no longer
+>   depends on them.
+> - **The shot tool's default seed is NOT a fresh save** (era 7, 5/5 built). A fresh save needs
+>   `--fixture` with `{"state":{},"version":4}`.
+> - **Multi-file scripts: compute everything, write at the end.** The weekly-report removal aborted
+>   once on an assertion; because nothing had been written, the retry was a one-line fix.
+> - **`$SP` does not survive between Bash calls** — three files landed in `/` before this was noticed.
+>
+> ### Foreign commits carried to `main`
+> Two batches from another session were already on `origin/main` and are merged into this branch
+> unaltered: `feb13e0`…`bc5ac7e` (ADR-072 → ADR-075: Mac menu-bar fix + docs retrieval architecture)
+> and `44a362d`…`92b9cf5` (ADR-075 → ADR-076: TECH_DEBT split by subsystem, owner-based knowledge
+> gate, ARCHITECTURE.md subsections, governance by discovery). Because that session took **ADR-076**
+> first, this round's ADR is numbered **ADR-077** everywhere. Merge conflicts were docs-only
+> (six files); resolved by keeping both sides in date order, and the 52 frozen-3D debts stayed in
+> `docs/TECH_DEBT_3D.md` where they moved them. `#86`'s full entry now lives in the closed archive,
+> so this round's update to it went there.
 ---
 
 > Last update: **2026-09-06 (night, fifth pass)** — **GOVERNANCE NOW RUNS ON DISCOVERY (ADR-076).**

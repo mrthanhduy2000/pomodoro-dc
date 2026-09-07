@@ -31,7 +31,7 @@ export default function EraStageBar({
   return (
     <div className={className}>
       <div className="flex items-center justify-between gap-3">
-        <span className="mono min-w-0 truncate text-[10px] uppercase tracking-[0.2em]" style={{ color: ink }}>
+        <span className="mono min-w-0 break-words text-[10px] uppercase tracking-[0.2em] leading-snug" style={{ color: ink }}>
           {eraStage ? eraStage.label : 'Tiến trình kỷ'}
         </span>
         <span className="mono whitespace-nowrap text-[11.5px]" style={{ color: ink }}>

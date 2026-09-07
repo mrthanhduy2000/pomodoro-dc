@@ -7,7 +7,7 @@ import useGameStore from '../store/gameStore';
 import { pushNow } from '../lib/syncService';
 import useSettingsStore from '../store/settingsStore';
 import { useTimer, formatTime, TIMER_MODES, TIMER_STATES } from '../hooks/useTimer';
-import { getDailyGoalProgress, suggestSessionLength } from '../engine/gameMath';
+import { countSessionsOnDay, suggestSessionLength } from '../engine/gameMath';
 import { getVietnamHour, localDateStr } from '../engine/time';
 import { FLOWTIME_BREAK_RULES, QUICK_FOCUS_PRESETS, getBreakPlan } from '../engine/breaks';
 
@@ -31,7 +31,12 @@ import {
 } from './sessionGoalState';
 import SessionBrickStrip from './focus/SessionBrickStrip';
 import ActionButton from './shared/ActionButton';
-import { clampFocusMinutes, parseFocusMinutesInput, getSessionWorkedMinutes } from '../engine/timerSession';
+import {
+  clampFocusMinutes,
+  describeClockSubline,
+  getSessionWorkedMinutes,
+  parseFocusMinutesInput,
+} from '../engine/timerSession';
 import ModeSwitch from './focus/ModeSwitch';
 import QuickPresets from './focus/QuickPresets';
 import StrictModeToggle from './focus/StrictModeToggle';
@@ -54,12 +59,9 @@ const RING_CIRCUMFERENCE = 2 * Math.PI * RING_RADIUS;
 // ngay đâu là "phiên này" và đâu là "cả ngày", không phải đoán. Bán kính suy ra từ hình học chứ
 // KHÔNG viết cứng: mép ngoài vòng chính + khoảng trống + nửa nét vòng ngoài. Đổi độ dày vòng chính
 // thì vòng ngoài tự dịch theo, và `SVG_SIZE` bên dưới cũng tự nới — không có con số nào phải sửa tay.
-const GOAL_RING_GAP = 8;
-const GOAL_RING_STROKE = 4;
-const GOAL_RING_RADIUS = RING_RADIUS + RING_STROKE / 2 + GOAL_RING_GAP + GOAL_RING_STROKE / 2;
-const GOAL_RING_CIRCUMFERENCE = 2 * Math.PI * GOAL_RING_RADIUS;
-// Khung SVG phải ôm được VÒNG NGOÀI CÙNG, nay là vòng mục tiêu chứ không còn là vòng chính.
-const SVG_SIZE = (GOAL_RING_RADIUS + GOAL_RING_STROKE / 2) * 2 + 4;
+// ADR-079: ONE ring. The outer daily-goal ring (a second arc, unlabelled) is gone — while a session
+// runs the only progress on screen is the time left. The SVG frame hugs the main ring.
+const SVG_SIZE = (RING_RADIUS + RING_STROKE / 2) * 2 + 4;
 
 const RING_COLORS = {
   [TIMER_STATES.IDLE]: 'var(--ink)',
@@ -115,9 +117,6 @@ export default function PomodoroEngine({
   const longBreakDuration = useSettingsStore((s) => s.longBreakDuration);
   const longBreakAfterN = useSettingsStore((s) => s.longBreakAfterN);
   const setBreakProfile = useSettingsStore((s) => s.setBreakProfile);
-  const dailyGoalType = useSettingsStore((s) => s.dailyGoalType);
-  const dailyGoalSessions = useSettingsStore((s) => s.dailyGoalSessions);
-  const dailyGoalMinutes = useSettingsStore((s) => s.dailyGoalMinutes);
   const uiTheme = useSettingsStore((s) => s.uiTheme);
   const lightTheme = uiTheme === 'light';
   const paperCardStyle = lightTheme
@@ -334,14 +333,12 @@ export default function PomodoroEngine({
   const goalBadgeClass = goalState.tone === 'good'
     ? lightTheme
       ? 'border border-[rgba(91,122,82,0.18)] bg-[rgba(229,236,223,0.92)] text-[var(--good)]'
-      : 'border border-[rgba(var(--accent-rgb),0.18)] bg-white/[0.05] text-[var(--accent-light)]'
+      : 'border border-[rgba(var(--accent-rgb),0.18)] bg-[var(--panel-soft)] text-[var(--accent-light)]'
     : goalState.tone === 'warn'
       ? lightTheme
         ? 'border border-[rgba(var(--accent-rgb),0.14)] bg-[rgba(var(--accent-rgb),0.08)] text-[var(--accent2)]'
-        : 'border border-white/8 bg-white/[0.05] text-[var(--muted)]'
-      : lightTheme
-        ? 'border border-[var(--line)] bg-[var(--panel-soft)] text-[var(--muted)]'
-        : 'border border-white/8 bg-white/[0.05] text-[var(--muted)]';
+        : 'border border-[var(--line)] bg-[var(--panel-soft)] text-[var(--muted)]'
+      : 'border border-[var(--line)] bg-[var(--panel-soft)] text-[var(--muted)]';
   // ⚠️ CHỈ GỢI Ý KHI Ô CÒN TRỐNG. Đang gõ dở mà mọc ra mấy cái chip thì chúng vừa che chỗ vừa mời
   // vứt bỏ thứ vừa gõ. Đây là lối tắt cho lúc bắt đầu, không phải một bảng chọn thường trực.
   // ⚠️ KHÔNG bọc `useMemo`: React Compiler từ chối tối ưu cả component khi thấy memo hoá thủ công
@@ -351,8 +348,8 @@ export default function PomodoroEngine({
   const recentGoals = sessionGoalText.trim() ? [] : pickRecentGoals(sessionHistory, GOAL_SUGGESTION_LIMIT, { preferCategoryId: pendingCategoryId });
 
   const goalHintClass = goalState.tone === 'warn'
-    ? lightTheme ? 'font-semibold text-[var(--accent2)]' : 'font-semibold text-red-300'
-    : lightTheme ? 'text-[var(--muted)]' : 'text-slate-500';
+    ? 'font-semibold text-[var(--accent2)]'
+    : 'text-[var(--muted)]';
   const showSessionReview = Boolean(lastCompletedSessionId && completedSessionReview && !isActive);
   const completedGoalAchieved = completedSessionReview?.goalAchieved ?? null;
   const reviewGoalText = completedSessionReview?.goal?.trim() || sessionGoalText;
@@ -433,6 +430,9 @@ export default function PomodoroEngine({
   // Màn Focus "tĩnh": khi đang chạy/tạm dừng (không phải giải lao) cũng dùng
   // chế độ tối giản như fullscreen — ẩn huy hiệu game để 25 phút chỉ còn đồng hồ.
   const useMinimalFocusStage = fullScreenMode || (isActive && !isBreakMode);
+  // ADR-079: the ring's viewport cap — tight while idle (Start must stay above the tab bar at 390 px),
+  // lifted while any timer runs (see the block comment above the ring).
+  const ringViewportCap = isIdle && !isBreakMode ? '58vw' : '72vw';
   // Cỡ chữ đã tăng ~20% so với bản trước (2026-08-27) để con số thành trung tâm thị giác thật sự.
   // ⚠️ Mọi mốc đáp ứng đều phải nhân CÙNG hệ số — nới một mốc rồi bỏ quên mốc kia thì chữ nhảy cỡ
   // đúng lúc xoay ngang máy. Bảng cũ → mới: 4.8→5.75 · 5.6→6.7 · 6.4→7.7 · 7.05→8.45 ·
@@ -455,30 +455,17 @@ export default function PomodoroEngine({
   // `font-extrabold` không phải tranh với ai — chồng thêm `font-medium`/`font-bold` như bản cũ là
   // để hai lớp cùng khai `font-weight` rồi phó mặc thứ tự bảng kiểu Tailwind quyết ai thắng.
   const timerValueFontClass = `${lightTheme ? 'serif' : 'font-mono'} font-extrabold`;
-  const timerValueToneClass = isBreakMode
-    ? breakIsLong
-      ? 'text-blue-300'
-      : 'text-sky-300'
-    : !lightTheme && timerState === TIMER_STATES.RUNNING && !isStopwatchMode && displaySeconds <= 10
-      ? 'text-red-400'
-      : lightTheme
-        ? 'text-[var(--ink)]'
-        : 'text-white';
+  // ADR-079: the number wears the ring's colour and nothing else — one accent per state (the last
+  // ten seconds used to flash red, a fourth colour for a fact the ring already shows).
+  const timerValueToneClass = isBreakMode ? 'text-[var(--good)]' : 'text-[var(--ink)]';
+  // ADR-079: the glow behind the ring is the ring's own colour, mixed from tokens (it used to be a
+  // blue glow under a green break ring and a green glow under an orange focus ring).
+  const glowOf = (token, a1, a2) => `radial-gradient(circle, color-mix(in srgb, ${token} ${a1}%, transparent) 0%, color-mix(in srgb, ${token} ${a2}%, transparent) 38%, transparent 72%)`;
   const immersiveGlow = isBreakMode
-    ? breakIsLong
-      ? (lightTheme
-        ? 'radial-gradient(circle, rgba(var(--accent-rgb),0.08) 0%, rgba(var(--accent-rgb),0.03) 38%, rgba(var(--accent-rgb),0) 72%)'
-        : 'radial-gradient(circle, rgba(96,165,250,0.14) 0%, rgba(96,165,250,0.06) 36%, rgba(96,165,250,0) 70%)')
-      : (lightTheme
-        ? 'radial-gradient(circle, rgba(var(--accent-rgb),0.07) 0%, rgba(var(--accent-rgb),0.025) 38%, rgba(var(--accent-rgb),0) 72%)'
-        : 'radial-gradient(circle, rgba(56,189,248,0.12) 0%, rgba(56,189,248,0.05) 36%, rgba(56,189,248,0) 70%)')
+    ? glowOf('var(--good)', lightTheme ? 8 : 14, lightTheme ? 3 : 6)
     : isActive
-      ? (lightTheme
-        ? 'radial-gradient(circle, rgba(var(--accent-rgb),0.10) 0%, rgba(var(--accent-rgb),0.035) 38%, rgba(var(--accent-rgb),0) 72%)'
-        : 'radial-gradient(circle, rgba(34,197,94,0.14) 0%, rgba(34,197,94,0.06) 36%, rgba(34,197,94,0) 70%)')
-      : (lightTheme
-        ? 'radial-gradient(circle, rgba(31,30,29,0.045) 0%, rgba(31,30,29,0.015) 42%, rgba(31,30,29,0) 72%)'
-        : 'radial-gradient(circle, rgba(99,102,241,0.08) 0%, rgba(99,102,241,0.03) 36%, rgba(99,102,241,0) 70%)');
+      ? glowOf('var(--accent)', lightTheme ? 10 : 14, lightTheme ? 3.5 : 6)
+      : glowOf('var(--ink)', lightTheme ? 4.5 : 8, lightTheme ? 1.5 : 3);
   const manualBreakWorkedMinutes = isStopwatchMode
     ? (completedSessionWorkedMinutes ?? (elapsedSeconds / 60))
     : (completedSessionReview?.minutes ?? currentSessionTargetMinutes);
@@ -613,21 +600,12 @@ export default function PomodoroEngine({
   // trên màn hình không đổi theo skin. Nay đọc token, đúng ở cả 10 tổ hợp skin × chế độ.
   const breakRingColor = 'var(--good)';
   const strokeDashoffset = RING_CIRCUMFERENCE - (displayProgressPct / 100) * RING_CIRCUMFERENCE;
-  // ⚠️ Dùng CHUNG công thức với thẻ "Hôm nay" ở `FocusRail` (qua `App.jsx`) — xem khối chú thích
-  // ở `getDailyGoalProgress` trong `gameMath.js`. Tính lại tại chỗ là cách chắc chắn nhất để hai
-  // con số cạnh nhau trên cùng màn hình nói hai điều khác nhau.
-  const dailyGoal = getDailyGoalProgress({
-    dailyTracking,
-    history: sessionHistory,
-    todayKey: localDateStr(),
-    dailyGoalType,
-    dailyGoalSessions,
-    dailyGoalMinutes,
+  // ADR-079: ONE line under the clock, device-independent (the daily-goal unit is a per-device
+  // setting) and true while running (an ordinal, not "0/5 done"). Pure, tested in engine/timerSession.test.js.
+  const clockSubline = describeClockSubline({
+    phase: isBreakMode ? 'break' : timerState === TIMER_STATES.FINISHED ? 'finished' : 'idle',
+    sessionsCompletedToday: countSessionsOnDay(dailyTracking, localDateStr()),
   });
-  // Vòng tròn thì PHẢI kẹp ở 100% (vẽ quá một vòng là vẽ đè lên chính nó, đọc ra thành "chưa xong"),
-  // còn dòng chữ bên dưới vẫn nói thật con số đã vượt.
-  const goalRingDashoffset = GOAL_RING_CIRCUMFERENCE
-    - (Math.min(100, Math.max(0, dailyGoal.pct)) / 100) * GOAL_RING_CIRCUMFERENCE;
   const baseRingColor = isBreakMode
     ? breakRingColor
     : (RING_COLORS[timerState] ?? RING_COLORS[TIMER_STATES.IDLE]);
@@ -669,14 +647,6 @@ export default function PomodoroEngine({
     transition: { strokeDashoffset: { duration: 0.8, ease: 'easeOut' }, stroke: { duration: 0.3 } },
   });
 
-  // NGOẠI LỆ (mang bố cục) — vòng MỤC TIÊU NGÀY: cung dài bao nhiêu CHÍNH LÀ đã đi được mấy phần
-  // mục tiêu, bỏ đi thì vòng luôn đầy và nói dối. Cùng 0,8s với vòng tiến độ phiên để hai vòng
-  // chạy như một khối, không phải hai thứ rời nhau.
-  const goalRingMotion = useSnapMotion({
-    animate: { strokeDashoffset: goalRingDashoffset },
-    transition: { duration: 0.8, ease: 'easeOut' },
-  });
-
   // NGOẠI LỆ (trang trí) — mười giây cuối đập theo nhịp giây, lặp vô hạn. Con số vẫn đọc được khi tắt.
   const countdownPulseMotion = useCustomMotion({
     animate: !isBreakMode && timerState === TIMER_STATES.RUNNING && !isStopwatchMode && displaySeconds <= 10
@@ -716,9 +686,7 @@ export default function PomodoroEngine({
     if (cyclePos <= 0) return null;
     return (
       <div className={`flex flex-wrap items-center gap-x-2.5 gap-y-2 ${useImmersiveHeroLayout ? 'px-0' : 'px-1'}`}>
-        <span className={`text-[10px] uppercase tracking-wider font-medium whitespace-nowrap ${
-          lightTheme ? 'text-[var(--muted)]' : 'text-slate-600'
-        }`}>
+        <span className={`text-[10px] uppercase tracking-wider font-medium whitespace-nowrap text-[var(--muted)]`}>
           Chu kỳ nghỉ
         </span>
         <div className="flex items-center gap-1.5">
@@ -762,15 +730,15 @@ export default function PomodoroEngine({
   const sessionSetupCard = (
     <div className={`w-full overflow-hidden border backdrop-blur-2xl transition-[border-color,box-shadow,background-color,opacity] duration-300 ${
       immersiveMode
-        ? 'mt-3 md:mt-4 bg-white/[0.045] border-white/[0.10] shadow-[0_14px_38px_rgba(15,23,42,0.12)]'
-        : 'mt-3 md:mt-4 bg-white/[0.04] border-white/[0.09] shadow-[0_10px_26px_rgba(15,23,42,0.10)]'
+        ? 'mt-3 md:mt-4 bg-[var(--panel-soft)] border-[var(--line)] shadow-[0_14px_38px_rgba(15,23,42,0.12)]'
+        : 'mt-3 md:mt-4 bg-[var(--panel-soft)] border-[var(--line)] shadow-[0_10px_26px_rgba(15,23,42,0.10)]'
     } ${!isIdle || isBreakMode ? 'opacity-25 pointer-events-none' : ''}`} style={{ borderRadius: 'var(--skin-radius-card, 18px)', ...paperCardStyle }}>
       <div className={`flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between ${
         immersiveMode ? 'px-5 py-4 md:px-5' : 'px-4 py-4'
       }`}>
         <div className="min-w-0">
           <p className={`mono text-[10px] uppercase tracking-[0.2em] whitespace-nowrap ${
-            lightTheme ? 'text-[var(--muted-2)]' : 'text-slate-400'
+            lightTheme ? 'text-[var(--muted-2)]' : 'text-[var(--muted)]'
           }`}>Thiết lập phiên</p>
           {/* ⚠️ ĐÃ GỠ câu "Chọn mode, thời lượng và mức kỷ luật trước khi bắt đầu." (41px, vòng 20).
               Nhãn "THIẾT LẬP PHIÊN" ngay trên đã trả lời xong, và ba thứ câu ấy liệt kê thì đứng
@@ -798,11 +766,9 @@ export default function PomodoroEngine({
         type="button"
         onClick={() => setSetupOpen((v) => !v)}
         aria-expanded={setupOpen}
-        className={`flex w-full items-center justify-between gap-3 border-t px-4 py-3 text-left transition-colors ${
-          lightTheme ? 'border-[var(--line)]' : 'border-[var(--line)]'
-        }`}
+        className={`flex w-full items-center justify-between gap-3 border-t px-4 py-3 text-left transition-colors border-[var(--line)]`}
       >
-        <span className="mono min-w-0 truncate text-[11px] tabular-nums" style={{ color: 'var(--muted)' }}>
+        <span className="mono min-w-0 text-[11px] leading-snug tabular-nums" style={{ color: 'var(--muted)' }}>
           {tomTatThietLap({
             mode: timerMode,
             focusMinutes: timerConfig.focusMinutes,
@@ -817,7 +783,7 @@ export default function PomodoroEngine({
       </button>
 
       {setupOpen && (
-      <div className={`grid gap-4 border-t border-white/5 sm:gap-3 ${
+      <div className={`grid gap-4 border-t border-[var(--line)] sm:gap-3 ${
         immersiveMode
           ? 'px-5 py-4 md:grid-cols-[minmax(0,1.12fr)_minmax(0,0.88fr)] md:px-5'
           : 'px-4 py-4 md:grid-cols-[minmax(0,1.1fr)_minmax(0,0.9fr)]'
@@ -825,12 +791,12 @@ export default function PomodoroEngine({
         <div className={`min-w-0 px-4 py-4 sm:py-3.5 ${
           lightTheme
             ? 'border border-[var(--line)] bg-[rgba(244,242,236,0.82)]'
-            : 'border border-white/[0.07] bg-black/10 rounded-[22px]'
+            : 'border border-[var(--line)] bg-[var(--canvas-2)] rounded-[22px]'
         }`} style={paperInsetStyle}>
           <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between sm:gap-3">
             <div className="min-w-0">
               <p className={`mono text-[10px] uppercase tracking-[0.2em] whitespace-nowrap ${
-                lightTheme ? 'text-[var(--muted-2)]' : 'text-emerald-400'
+                lightTheme ? 'text-[var(--muted-2)]' : 'text-[var(--good)]'
               }`}>
                 {isStopwatchMode ? 'Mốc tham chiếu' : 'Tập trung'}
               </p>
@@ -839,16 +805,12 @@ export default function PomodoroEngine({
                   còn chứa chữ "countdown". Chế độ Bấm giờ thì GIỮ — ở đó con số là một MỐC THAM
                   CHIẾU chứ không phải thời lượng đếm ngược, và không có gì khác nói ra điều đó. */}
               {isStopwatchMode && (
-                <p className={`mt-1 text-xs ${lightTheme ? 'text-[var(--muted)]' : 'text-slate-500'}`}>
+                <p className={`mt-1 text-xs text-[var(--muted)]`}>
                   Dùng để neo mốc thưởng khi bấm giờ.
                 </p>
               )}
             </div>
-            <div className={`flex items-center justify-between gap-3 self-stretch rounded-[var(--skin-radius-control,14px)] px-2 py-1.5 sm:self-auto sm:justify-start sm:gap-2 sm:rounded-none sm:px-0 sm:py-0 ${
-              lightTheme
-                ? 'bg-white/70 border border-[var(--line)] sm:bg-transparent sm:border-transparent'
-                : 'bg-white/[0.04] border border-white/[0.08] sm:bg-transparent sm:border-transparent'
-            }`}>
+            <div className={`flex items-center justify-between gap-3 self-stretch rounded-[var(--skin-radius-control,14px)] px-2 py-1.5 sm:self-auto sm:justify-start sm:gap-2 sm:rounded-none sm:px-0 sm:py-0 bg-[var(--panel-soft)] border border-[var(--line)] sm:bg-transparent sm:border-transparent`}>
               <button
                 type="button"
                 aria-label="Giảm số phút tập trung"
@@ -863,8 +825,8 @@ export default function PomodoroEngine({
               </button>
               <div className={`min-w-[4.5rem] rounded-[var(--skin-radius-control,14px)] border px-1.5 py-1 text-center transition-colors ${
                 lightTheme
-                  ? 'border-transparent focus-within:border-[var(--line)] focus-within:bg-white'
-                  : 'border-transparent focus-within:border-white/[0.14] focus-within:bg-white/[0.05]'
+                  ? 'border-transparent focus-within:border-[var(--line)] focus-within:bg-[var(--card-bg-solid)]'
+                  : 'border-transparent focus-within:border-[var(--line)] focus-within:bg-[var(--panel-soft)]'
               }`}>
                 <label htmlFor="focus-minutes-input" className="sr-only">
                   Số phút tập trung cho phiên kế tiếp
@@ -891,12 +853,10 @@ export default function PomodoroEngine({
                   onKeyDown={handleFocusMinutesInputKeyDown}
                   disabled={!isIdle || isBreakMode}
                   aria-label="Nhập trực tiếp số phút tập trung"
-                  className={`w-full bg-transparent text-center font-mono font-bold text-[2rem] leading-none tabular-nums outline-none touch-manipulation ${
-                    lightTheme ? 'text-[var(--ink)]' : 'text-white'
-                  } ${!isIdle || isBreakMode ? 'cursor-not-allowed' : 'cursor-text'}`}
+                  className={`w-full bg-transparent text-center font-mono font-bold text-[2rem] leading-none tabular-nums outline-none touch-manipulation text-[var(--ink)] ${!isIdle || isBreakMode ? 'cursor-not-allowed' : 'cursor-text'}`}
                 />
                 <div className={`mono mt-1 text-[11px] uppercase tracking-[0.16em] ${
-                  lightTheme ? 'text-[var(--muted-2)]' : 'text-slate-500'
+                  lightTheme ? 'text-[var(--muted-2)]' : 'text-[var(--muted)]'
                 }`}>phút</div>
               </div>
               <button
@@ -934,17 +894,17 @@ export default function PomodoroEngine({
               }`}
             >
               <span className="min-w-0">
-                <span className={`block text-[13px] font-semibold ${lightTheme ? 'text-[var(--good)]' : 'text-emerald-200'}`}>
+                <span className={`block text-[13px] font-semibold text-[var(--good)]`}>
                   💡 {lengthSuggestion.bucketLabel} bạn thường hợp phiên ~{lengthSuggestion.minutes} phút
                 </span>
-                <span className={`mono mt-0.5 block text-[10px] uppercase tracking-[0.16em] ${lightTheme ? 'text-[var(--muted)]' : 'text-slate-500'}`}>
+                <span className={`mono mt-0.5 block text-[10px] uppercase tracking-[0.16em] text-[var(--muted)]`}>
                   dựa trên {lengthSuggestion.sampleSize} phiên{lengthSuggestion.categoryScoped ? ' cùng loại' : ''}
                 </span>
               </span>
               <span className={`shrink-0 rounded-full border px-3 py-1 text-xs font-semibold ${
                 lightTheme
                   ? 'border-[rgba(91,122,82,0.3)] text-[var(--good)]'
-                  : 'border-emerald-300/30 text-emerald-200'
+                  : 'border-[var(--line)] text-[var(--good)]'
               }`}>
                 Dùng {lengthSuggestion.minutes}′
               </span>
@@ -955,16 +915,16 @@ export default function PomodoroEngine({
         <div className={`min-w-0 px-4 py-3.5 ${
           lightTheme
             ? 'border border-[var(--line)] bg-[rgba(244,242,236,0.82)]'
-            : 'border border-white/[0.07] bg-black/10 rounded-[22px]'
+            : 'border border-[var(--line)] bg-[var(--canvas-2)] rounded-[22px]'
         }`} style={paperInsetStyle}>
           <div className="flex items-start justify-between gap-4">
             <div className="min-w-0">
               <p className={`mono text-[10px] uppercase tracking-[0.2em] whitespace-nowrap ${
-                lightTheme ? 'text-[var(--muted-2)]' : 'text-sky-400'
+                lightTheme ? 'text-[var(--muted-2)]' : 'text-[var(--good)]'
               }`}>Nghỉ giải lao</p>
               {isStopwatchMode ? (
                 <>
-                  <p className={`mt-1 text-sm leading-relaxed ${lightTheme ? 'text-[var(--muted)]' : 'text-slate-500'}`}>
+                  <p className={`mt-1 text-sm leading-relaxed text-[var(--muted)]`}>
                     Chế độ Bấm giờ tự đổi giờ nghỉ theo đúng thời lượng bạn vừa làm.
                   </p>
                   <div className="mt-3 space-y-2">
@@ -973,26 +933,22 @@ export default function PomodoroEngine({
                         key={rule.id}
                         className={`flex items-center justify-between rounded-2xl px-3 py-2 ${
                           lightTheme
-                            ? 'border border-[var(--line)] bg-white'
-                            : 'border border-white/[0.08] bg-white/[0.03]'
+                            ? 'border border-[var(--line)] bg-[var(--card-bg-solid)]'
+                            : 'border border-[var(--line)] bg-[var(--panel-soft)]'
                         }`}
                       >
-                        <span className={`text-xs ${lightTheme ? 'text-[var(--muted)]' : 'text-slate-400'}`}>{rule.label}</span>
-                        <span className={`font-mono text-sm font-bold tabular-nums ${
-                          lightTheme ? 'text-[var(--ink)]' : 'text-white'
-                        }`}>{rule.breakMinutes}'</span>
+                        <span className={`text-xs text-[var(--muted)]`}>{rule.label}</span>
+                        <span className={`font-mono text-sm font-bold tabular-nums text-[var(--ink)]`}>{rule.breakMinutes}'</span>
                       </div>
                     ))}
                   </div>
                 </>
               ) : (
                 <>
-                  <p className={`mt-1 text-2xl font-mono font-bold tabular-nums ${
-                    lightTheme ? 'text-[var(--ink)]' : 'text-white'
-                  }`}>
-                    {shortBreakDuration}' <span className={lightTheme ? 'text-[var(--muted)]' : 'text-slate-600'}>/</span> {longBreakDuration}'
+                  <p className={`mt-1 text-2xl font-mono font-bold tabular-nums text-[var(--ink)]`}>
+                    {shortBreakDuration}' <span className="text-[var(--muted)]">/</span> {longBreakDuration}'
                   </p>
-                  <p className={`mt-1 text-xs ${lightTheme ? 'text-[var(--muted)]' : 'text-slate-500'}`}>
+                  <p className={`mt-1 text-xs text-[var(--muted)]`}>
                     Phiên dài xuất hiện sau mỗi {longBreakAfterN} lượt hoàn thành.
                   </p>
                 </>
@@ -1000,14 +956,14 @@ export default function PomodoroEngine({
             </div>
             <span className={`rounded-full px-2.5 py-1 text-[10px] font-semibold uppercase tracking-[0.18em] whitespace-nowrap ${
               lightTheme
-                ? 'border border-[var(--line)] bg-white text-[var(--muted)]'
-                : 'border border-sky-400/18 bg-sky-400/10 text-sky-300'
+                ? 'border border-[var(--line)] bg-[var(--card-bg-solid)] text-[var(--muted)]'
+                : 'border border-[var(--line)] bg-[var(--panel-soft)] text-[var(--good)]'
             }`}>
               Auto
             </span>
           </div>
 
-          <div className={`mt-4 pt-4 ${lightTheme ? 'border-t border-slate-200/80' : 'border-t border-white/5'}`}>
+          <div className={`mt-4 pt-4 border-t border-[var(--line)]`}>
             <StrictModeToggle
               disabled={isActive}
               enabled={strictMode}
@@ -1033,24 +989,7 @@ export default function PomodoroEngine({
         />
       )}
 
-      {!useMinimalFocusStage && isBreakMode && (
-        <motion.div
-          {...enterMotion}
-          className={`flex items-center gap-2 px-4 py-2 rounded-2xl border ${
-            breakIsLong
-              ? lightTheme
-                ? 'bg-[rgba(255,247,237,0.96)] border-[rgba(var(--accent-rgb),0.18)] text-[var(--accent2)]'
-                : 'bg-white/[0.05] border-white/8 text-[var(--ink)]'
-              : lightTheme
-                ? 'bg-[rgba(255,247,237,0.96)] border-[rgba(var(--accent-rgb),0.18)] text-[var(--accent2)]'
-                : 'bg-white/[0.05] border-white/8 text-[var(--ink)]'
-          }`}
-        >
-          <span className="text-sm font-bold">
-            {breakIsLong ? 'Giải lao dài' : 'Giải lao ngắn'}
-          </span>
-        </motion.div>
-      )}
+      {/* ADR-079: the «Giải lao dài» pill above the ring is gone — the ring's own label says it. */}
 
       {/*
         ⚠️ TRẦN THEO BỀ NGANG MÀN HÌNH, KHÔNG PHẢI ĐỔI CỠ ĐỒNG HỒ (2026-08-30).
@@ -1069,15 +1008,20 @@ export default function PomodoroEngine({
         và trần chỉ cắn khi bề ngang < 514px nên máy bàn không đổi một điểm ảnh nào.
         ⚠️ `minHeight` PHẢI dùng CÙNG biểu thức: nó là chỗ giữ sẵn chiều cao, nên nếu chỉ thu cái
         vòng mà quên nó thì khoảng trống vẫn bị giữ nguyên và không được một điểm ảnh nào.
+        ADR-079: the 58vw cap exists for ONE reason — the idle Start button above the tab bar. While a
+        timer runs there is no Start button and the card below is a one-line goal plus a short row of
+        buttons, so the cap is lifted to 72vw (the ring's natural size on every phone ≥ 380 px): at
+        226 px the inner disc is 192 px and the 72 px number ran over the track, and the line under
+        it grazed the arc at 20 characters. Same expression in both places, as the note above says.
       */}
       <div
         className="relative mt-2 flex w-full items-center justify-center sm:mt-5 md:mt-1"
-        style={{ minHeight: `min(${timerFootprintHeight}px, 58vw)` }}
+        style={{ minHeight: `min(${timerFootprintHeight}px, ${ringViewportCap})` }}
       >
         <motion.div
           className="relative flex shrink-0 items-center justify-center"
           {...timerScaleMotion}
-          style={{ width: `min(${timerCanvasSize}px, 58vw)`, height: `min(${timerCanvasSize}px, 58vw)` }}
+          style={{ width: `min(${timerCanvasSize}px, ${ringViewportCap})`, height: `min(${timerCanvasSize}px, ${ringViewportCap})` }}
         >
           {immersiveMode && (isActive || isBreakMode) && (
             <motion.div
@@ -1133,28 +1077,11 @@ export default function PomodoroEngine({
                 {...ringProgressMotion}
               />
             )}
-            {/* Vòng NGOÀI = tiến độ MỤC TIÊU NGÀY. Chưa đặt mục tiêu thì không vẽ gì cả — một
-                vòng rỗng vẫn là một vòng, và nó sẽ bị đọc thành "hôm nay chưa làm được gì". */}
-            {dailyGoal.hasGoal && (
-              <motion.circle
-                cx={SVG_SIZE / 2}
-                cy={SVG_SIZE / 2}
-                r={GOAL_RING_RADIUS}
-                fill="none"
-                style={{ stroke: 'var(--warn)' }}
-                strokeWidth={GOAL_RING_STROKE}
-                strokeLinecap="round"
-                strokeDasharray={GOAL_RING_CIRCUMFERENCE}
-                {...goalRingMotion}
-              />
-            )}
           </svg>
           </motion.div>
 
           <div className="absolute inset-0 flex flex-col items-center justify-center">
-            <span className={`mono text-[10px] uppercase tracking-[0.22em] ${
-              lightTheme ? 'text-[var(--muted)]' : 'text-slate-400'
-            }`}>
+            <span className={`mono text-[10px] uppercase tracking-[0.22em] text-[var(--muted)]`}>
               {isBreakMode && (breakIsLong ? 'Giải lao dài' : 'Giải lao')}
               {/*
                 ⚠️ "Sẵn sàng" TỪNG NÓI DỐI. Nhãn này hiện ở MỌI trạng thái chờ, kể cả khi app đang
@@ -1182,18 +1109,12 @@ export default function PomodoroEngine({
             >
               {formatTime(displayRingSeconds)}
             </motion.span>
-            {/* Câu trả lời thứ hai của đồng hồ: hôm nay đã đi được mấy phần mục tiêu. Đọc CÙNG
-                nguồn số liệu với vòng ngoài, nên hai thứ không thể nói hai điều khác nhau — và
-                cùng nguồn với thẻ "Hôm nay" ở cột bên phải.
-                ⚠️ Ở đây KHÔNG kẹp 100%: vượt mục tiêu thì phải nói thật là "Phiên 6/4", trong khi
-                vòng tròn thì buộc phải kẹp (vẽ quá một vòng là vẽ đè lên chính nó). */}
-            {dailyGoal.hasGoal && (
-              <span className="mt-1.5 text-[13px] leading-none" style={{ color: 'var(--muted)' }}>
-                {dailyGoal.useMinutes
-                  ? `${dailyGoal.currentValue}/${dailyGoal.goalValue} phút hôm nay`
-                  : `Phiên ${dailyGoal.currentValue}/${dailyGoal.goalValue} hôm nay`}
-              </span>
-            )}
+            {/* ADR-079: the second answer of the clock is an ORDINAL ("Phiên thứ N hôm nay"), the same
+                sentence on every device and true while running; the daily-goal fraction moved to
+                the postcard caption, idle only. */}
+            <span className="mt-1.5 text-[13px] leading-none" style={{ color: 'var(--muted)' }}>
+              {clockSubline}
+            </span>
             {/*
               ⚠️ MỤC TIÊU PHIÊN TỪNG BIẾN MẤT ĐÚNG LÚC CẦN NHẤT (2026-09-02). App BẮT BUỘC gõ ≥10
               ký tự mới cho bấm "Bắt đầu" — rồi giấu ngay câu ấy đi suốt 25 phút sau đó. Đo trên
@@ -1203,20 +1124,12 @@ export default function PomodoroEngine({
               Hậu quả: cái cổng bắt Đàm trả lời "phiên này chốt xong việc gì?" thu tiền xong thì
               vứt câu trả lời đi, đúng lúc câu ấy phải làm việc — nửa chừng phiên, khi đầu bắt đầu
               trôi. Nó biến một lời hứa với chính mình thành một thủ tục.
-              Đặt TRONG vòng đồng hồ vì đó là chỗ mắt đã nhìn sẵn; nếu để ở thẻ dưới thì lại rơi
-              xuống dưới nếp gấp đúng như ô nhập cũ.
-              ⚠️ `line-clamp-2` chứ không `truncate`: một mục tiêu thật thường dài hơn một dòng,
-              cắt còn một dòng thì đọc ra một câu cụt — mà câu cụt thì tệ hơn không có câu.
+              ADR-079: it now sits UNDER the ring (see the block right after this container), not
+              inside it. Inside, the disc's chord at that height is ~96 px at 390 px, so every real goal
+              ran across the ring's stroke — text over a ring is exactly the "chữ tràn" Đàm counted.
+              Under the ring it has the card's width, wraps freely and hides nothing, and it is still
+              inside the timer card, above the buttons — above the fold at 390 px while running.
             */}
-            {!isBreakMode && !isIdle && sessionGoalText && (
-              <span
-                className="mt-2 line-clamp-2 max-w-[15rem] text-center text-[12px] italic leading-snug"
-                style={{ color: 'var(--muted)' }}
-                title={sessionGoalText}
-              >
-                {sessionGoalText}
-              </span>
-            )}
             {!isBreakMode && isStopwatchMode && (
               <>
                 <span className={`mt-0.5 text-xs ${lightTheme ? 'text-[var(--accent)]' : 'text-[var(--accent-light)]'}`}>
@@ -1230,7 +1143,7 @@ export default function PomodoroEngine({
                         : `Xong ${currentSessionTargetMinutes}′ — đang tính giờ thêm`}
                     </span>
                     {!continuedPomodoroConfirmationPending && (
-                      <span className={`mt-0.5 text-[10px] ${lightTheme ? 'text-[var(--muted)]' : 'text-slate-400'}`}>
+                      <span className={`mt-0.5 text-[10px] text-[var(--muted)]`}>
                         Bấm Hết Phiên khi muốn dừng
                       </span>
                     )}
@@ -1238,14 +1151,24 @@ export default function PomodoroEngine({
                 )}
               </>
             )}
-            {isBreakMode && (
-              <span className="text-xs mt-0.5" style={{ color: lightTheme ? 'var(--muted)' : 'var(--muted)' }}>
-                Hít thở, thư giãn & quay lại đúng giờ
-              </span>
-            )}
           </div>
         </motion.div>
       </div>
+      {/* ADR-079: the ONE line under the ring — the session goal while focusing, the rest line on a
+          break. Outside the disc (see the note inside the ring column), full width, wraps, no clamp. */}
+      {!isBreakMode && !isIdle && sessionGoalText && (
+        <p
+          className="mt-3 w-full max-w-[26rem] px-2 text-center text-[13px] italic leading-snug"
+          style={{ color: 'var(--muted)' }}
+        >
+          {sessionGoalText}
+        </p>
+      )}
+      {isBreakMode && (
+        <p className="mt-3 w-full px-2 text-center text-[13px] leading-snug" style={{ color: 'var(--muted)' }}>
+          Hít thở, thư giãn & quay lại đúng giờ
+        </p>
+      )}
 
     </>
   );
@@ -1469,7 +1392,7 @@ export default function PomodoroEngine({
         ⚠️ LUẬT KHÔNG BỊ NỚI — vẫn phải đủ 10 ký tự. Thứ bị gỡ là quãng ĐI LẠI, không phải cái cổng.
       */}
       {isIdle && !isBreakMode && (
-      <div className="w-full px-3.5 py-3 backdrop-blur-2xl bg-white/[0.045] border border-white/[0.10] shadow-[0_12px_28px_rgba(15,23,42,0.10)]" style={{ borderRadius: 'var(--skin-radius-card, 18px)', ...paperCardStyle }}>
+      <div className="w-full px-3.5 py-3 backdrop-blur-2xl bg-[var(--panel-soft)] border border-[var(--line)] shadow-[0_12px_28px_rgba(15,23,42,0.10)]" style={{ borderRadius: 'var(--skin-radius-card, 18px)', ...paperCardStyle }}>
         <div className="flex items-start justify-between gap-3 px-0.5">
           <div className="min-w-0">
             {/*
@@ -1511,8 +1434,8 @@ export default function PomodoroEngine({
             lightTheme
               ? ''
               : isSessionGoalValid
-                ? 'rounded-[22px] border-[rgba(var(--accent-rgb),0.18)] bg-white/[0.05]'
-                : 'rounded-[22px] border-white/8 bg-white/[0.04]'
+                ? 'rounded-[22px] border-[rgba(var(--accent-rgb),0.18)] bg-[var(--panel-soft)]'
+                : 'rounded-[22px] border-[var(--line)] bg-[var(--panel-soft)]'
           }`}
           style={paperGoalInsetStyle}
         >
@@ -1522,7 +1445,7 @@ export default function PomodoroEngine({
                 <span className={`rounded-full px-2 py-1 text-[10px] font-semibold uppercase tracking-[0.16em] ${
                   lightTheme
                     ? 'bg-[rgba(var(--accent-rgb),0.1)] text-[var(--accent2)]'
-                    : 'bg-white/[0.08] text-[var(--accent-light)]'
+                    : 'bg-[var(--panel-soft)] text-[var(--accent-light)]'
                 }`}>
                   Tuỳ chọn
                 </span>
@@ -1543,10 +1466,10 @@ export default function PomodoroEngine({
               onChange={(e) => setPendingSessionGoal(e.target.value)}
               rows={useImmersiveHeroLayout ? 2 : 2}
               placeholder="Ví dụ: chốt outline, giải xong 3 bài, viết xong phần mở đầu..."
-              className="w-full rounded-xl px-3 py-2.5 text-sm placeholder-slate-600
+              className="w-full rounded-xl px-3 py-2.5 text-sm placeholder:text-[var(--muted-2)]
                          resize-none focus:outline-none transition-all leading-relaxed
-                         backdrop-blur-xl bg-white/[0.04] border border-white/[0.08]
-                         focus:bg-white/[0.07] focus:border-amber-400/30"
+                         backdrop-blur-xl bg-[var(--panel-soft)] border border-[var(--line)]
+                         focus:bg-[var(--panel-soft)] focus:border-[rgba(var(--accent-rgb),0.3)]"
               style={{ ...paperInputStyle, scrollbarWidth: 'none' }}
             />
             {/* ADR-077: one-tap goals — same task type first (`pickRecentGoals`), tap to fill, never auto-filled. */}
@@ -1557,7 +1480,7 @@ export default function PomodoroEngine({
                     key={goal}
                     type="button"
                     onClick={() => setPendingSessionGoal(goal)}
-                    className="max-w-full truncate rounded-full px-3 py-1.5 text-[12px] font-semibold transition-colors"
+                    className="max-w-full whitespace-normal break-words text-left rounded-full px-3 py-1.5 text-[12px] font-semibold leading-snug transition-colors"
                     style={{
                       background: 'rgba(var(--accent-rgb), 0.10)',
                       border: '1px solid rgba(var(--accent-rgb), 0.30)',
@@ -1595,8 +1518,8 @@ export default function PomodoroEngine({
 
       <div className={`w-full border backdrop-blur-2xl ${
         useImmersiveHeroLayout
-          ? 'bg-white/[0.045] border-white/[0.10] px-4 py-4 shadow-[0_12px_28px_rgba(15,23,42,0.10)]'
-          : 'bg-white/[0.04] border-white/[0.09] px-3.5 py-3 shadow-[0_8px_22px_rgba(15,23,42,0.08)]'
+          ? 'bg-[var(--panel-soft)] border-[var(--line)] px-4 py-4 shadow-[0_12px_28px_rgba(15,23,42,0.10)]'
+          : 'bg-[var(--panel-soft)] border-[var(--line)] px-3.5 py-3 shadow-[0_8px_22px_rgba(15,23,42,0.08)]'
       }`} style={{ borderRadius: 'var(--skin-radius-card, 18px)', ...paperCardStyle }}>
         <button
           type="button"
@@ -1605,11 +1528,11 @@ export default function PomodoroEngine({
           aria-expanded={noteExpanded}
         >
           <span className={`mono text-[10px] uppercase tracking-[0.2em] ${
-            lightTheme ? 'text-[var(--muted-2)]' : 'text-slate-500'
+            lightTheme ? 'text-[var(--muted-2)]' : 'text-[var(--muted)]'
           }`}>
             Ghi chú phiên{!noteExpanded && noteWordCount > 0 ? ` · ${noteWordCount} từ` : ''}
           </span>
-          <span className={`mono text-[10px] uppercase tracking-[0.16em] ${lightTheme ? 'text-[var(--muted)]' : 'text-slate-400'}`}>
+          <span className={`mono text-[10px] uppercase tracking-[0.16em] text-[var(--muted)]`}>
             {noteExpanded ? 'Thu gọn ▴' : 'Mở ▾'}
           </span>
         </button>
@@ -1644,10 +1567,10 @@ export default function PomodoroEngine({
       <div className="pt-1">
         <div className="flex items-center justify-between gap-3">
           <div>
-            <p className={`mono text-[10px] font-semibold uppercase tracking-[0.22em] ${lightTheme ? 'text-[var(--muted)]' : 'text-slate-500'}`}>
+            <p className={`mono text-[10px] font-semibold uppercase tracking-[0.22em] text-[var(--muted)]`}>
               Sổ tay phiên
             </p>
-            <p className={`mt-2 max-w-[34rem] text-[14px] leading-[1.7] ${lightTheme ? 'text-[var(--muted)]' : 'text-slate-400'}`}>
+            <p className={`mt-2 max-w-[34rem] text-[14px] leading-[1.7] text-[var(--muted)]`}>
               Ghi nhanh ý đang giữ trong đầu, chỗ đang kẹt, hoặc điều cần khóa lại trước khi vào guồng sâu.
             </p>
           </div>
@@ -1666,7 +1589,7 @@ export default function PomodoroEngine({
               ...paperInputStyle,
               borderColor: lightTheme ? 'var(--line)' : 'rgba(255,255,255,0.08)',
               background: lightTheme ? 'rgba(255,255,255,0.76)' : 'rgba(255,255,255,0.03)',
-              color: lightTheme ? 'var(--ink)' : 'var(--ink)',
+              color: 'var(--ink)',
             }}
             placeholder="Viết tự do. Một câu cũng được, một trang cũng được."
           />
@@ -1679,7 +1602,7 @@ export default function PomodoroEngine({
             <p className={`mono text-[10px] font-semibold uppercase tracking-[0.22em] ${lightTheme ? 'text-[var(--accent)]' : 'text-[var(--accent-light)]'}`}>
               Mục tiêu phiên
             </p>
-            <p className={`mt-2 max-w-[34rem] text-[14px] leading-[1.7] ${lightTheme ? 'text-[var(--muted)]' : 'text-slate-400'}`}>
+            <p className={`mt-2 max-w-[34rem] text-[14px] leading-[1.7] text-[var(--muted)]`}>
               Chỉ cần một đích đến đủ cụ thể để bạn biết phiên này có chốt được hay không.
             </p>
           </div>
@@ -1698,7 +1621,7 @@ export default function PomodoroEngine({
             ...paperGoalInsetStyle,
             borderColor: lightTheme ? 'rgba(var(--accent-rgb),0.18)' : 'rgba(255,255,255,0.08)',
             background: lightTheme ? 'rgba(255,248,243,0.96)' : 'rgba(255,255,255,0.03)',
-            color: lightTheme ? 'var(--ink)' : 'var(--ink)',
+            color: 'var(--ink)',
             scrollbarWidth: 'thin',
           }}
         />
@@ -1728,7 +1651,7 @@ export default function PomodoroEngine({
   const shortcutHint = showShortcutHint ? (
     <div className="hidden w-full justify-center py-5 md:flex">
       <p className={`mono px-1 text-center text-[10px] uppercase tracking-[0.18em] ${
-        lightTheme ? 'text-[var(--muted-2)]' : 'text-slate-500'
+        lightTheme ? 'text-[var(--muted-2)]' : 'text-[var(--muted)]'
       }`}>
         Space bắt đầu · Shift trái + F full screen · Shift trái + G thu/mở cột
       </p>
@@ -1868,9 +1791,7 @@ export default function PomodoroEngine({
           <div className="flex flex-col gap-2.5 w-full">
             <div className="flex items-center justify-between gap-3 px-1">
               <div className="min-w-0">
-                <span className={`mono text-[10px] uppercase tracking-wider font-medium whitespace-nowrap ${
-                  lightTheme ? 'text-[var(--muted)]' : 'text-slate-600'
-                }`}>
+                <span className={`mono text-[10px] uppercase tracking-wider font-medium whitespace-nowrap text-[var(--muted)]`}>
                   Loại phiên
                 </span>
               </div>

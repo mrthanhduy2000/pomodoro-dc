@@ -10,6 +10,21 @@
 > **Muốn hiểu VÌ SAO một quyết định được chọn** → `ARCHITECTURE_DECISIONS.md`. **Muốn biết migration
 > cụ thể nào cần chạy** → `MIGRATION.md`.
 
+## 2026-09-07 — Round 39: while a timer runs, the Focus screen is the timer (ADR-079)
+
+**Purpose.** *"Dọn giao diện màn Tập trung — mở app lên, liếc một cái, biết ngay còn bao lâu và đang làm gì."* No feature added, none deleted: what competes with the time left is hidden while a timer runs and returns when it stops.
+
+**Scope.**
+- **One progress indicator while running**: the daily-goal ring (second arc, `--warn`) is deleted; the brick strip is one headline («Đang xây X»); the postcard is a picture only (`quiet`); the «Giải lao dài» pill is gone; the voice line (`pickFocusMoment`) is silent while any timer runs.
+- **One line under the clock, every device**: `describeClockSubline` («Phiên thứ N hôm nay» / «Xong N phiên hôm nay»); the daily-goal fraction moved to the idle postcard caption («Hôm nay 2/5 phiên»).
+- **Goal line and break line under the ring** — inside the disc they crossed the ring's stroke at 390 px.
+- **Three colours**: canvas · ink · one accent (`--accent` focusing, `--good` on a break); the red last-10-s flash, the blue break number, the gold Coach and the palette classes in `PomodoroEngine.jsx` + `focus/*` are gone.
+- **Quiet chrome while a timer runs** (focus AND break): desktop right column, phone missions + Coach cards, top rail, streak card — `anyTimerRunning` in `App.jsx`.
+- **No cut text**: 20 `truncate` sites now wrap; the greeting wraps; the weekly line fits one line at 390 px; the tab bar keeps its three safety-net `truncate`.
+- Tests: `timerRing.test.js` rewritten (one dashed arc · tokens · subline · palette gate over the Focus files); `focusFoldReach` · `focusMoment` · `deadCode` · `sessionBrick` · `timerSession` retargeted. Full suite 1,605 tests · 1,604 pass · 0 fail · 1 skipped.
+
+**Compatibility.** No save migration; no setting changed (the daily-goal settings still drive the idle caption and the Stats/Coach cards). What is hidden while a timer runs is listed in `BAN_GIAO.md`.
+
 ## 2026-09-07 — Round 38: the city lives on the Focus screen (ADR-078)
 
 **Purpose.** *"Thôi dọn, bắt đầu xây."* Make the 3D city part of the main loop, let Đàm change the auto-picked project where he stands, finish the God File's last hand-written block, close round 37's unheard sounds, and put a gate on #86.

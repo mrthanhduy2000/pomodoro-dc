@@ -43,7 +43,11 @@ const frameStyle = {
 
 export default function CityPostcard({
   greeting = null,
+  /** ADR-079: the daily-goal fraction, idle only ("Hôm nay 2/5 phiên"). */
+  goalLine = null,
   sessionRunning = false,
+  /** ADR-079: any timer running (focus or break) ⇒ picture only, no caption, no bar. */
+  quiet = false,
   eraStage = null,
   eraProgress = 0,
   totalEP = 0,
@@ -99,7 +103,9 @@ export default function CityPostcard({
             selection={selection}
           />
         </div>
-        {/* Two soft scrims, only where text sits — the picture stays at full strength in between. */}
+        {/* Two soft scrims, only where text sits — the picture stays at full strength in between.
+            While a timer runs (`quiet`) there is no text, so no scrim either: just the city. */}
+        {!quiet && (<>
         <div
           aria-hidden="true"
           className="absolute inset-x-0 top-0 h-14"
@@ -111,12 +117,10 @@ export default function CityPostcard({
           style={{ background: 'linear-gradient(to top, rgba(12,10,8,0.66), rgba(12,10,8,0))' }}
         />
         {greeting && (
-          <p
-            className="absolute left-4 top-3 right-4 truncate text-[13px] font-medium leading-snug"
-            style={{ color: 'rgba(255,255,255,0.94)', textShadow: '0 1px 2px rgba(0,0,0,0.45)' }}
-          >
-            {greeting}
-          </p>
+          <div className="absolute left-4 right-4 top-3" style={{ color: 'rgba(255,255,255,0.94)', textShadow: '0 1px 2px rgba(0,0,0,0.45)' }}>
+            <p className="text-[13px] font-medium leading-snug">{greeting}</p>
+            {goalLine && <p className="mono mt-0.5 text-[10.5px] uppercase tracking-[0.14em] opacity-85">{goalLine}</p>}
+          </div>
         )}
         <EraStageBar
           onImage
@@ -126,6 +130,7 @@ export default function CityPostcard({
           totalEP={totalEP}
           eraEnd={eraEnd}
         />
+        </>)}
       </section>
     </AppErrorBoundary>
   );

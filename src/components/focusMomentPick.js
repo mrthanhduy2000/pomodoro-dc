@@ -33,6 +33,10 @@
 export function pickFocusMoment({
   stage, streak, weeklyUnseen, sessionInProgress, onOpenWeekly, nextAction, onNavigate,
 }) {
+  // ADR-079: while a timer runs (focus or break) the line is SILENT — every branch. A countdown to
+  // the next stage, a streak at risk, a milestone: all true, all a second thing to read while the
+  // only question is "how long is left". They come back the moment the timer stops.
+  if (sessionInProgress) return null;
   // (1) ĂN MỪNG VỪA QUA MỐC — thắng tất cả: ăn mừng thì phải NGAY, để lỡ là mất luôn.
   if (stage?.tone === 'celebrate') {
     return { icon: '🎉', text: stage.text, strong: true, onClick: stage.dismiss };
@@ -71,7 +75,7 @@ export function pickFocusMoment({
   // ⚠️ Tổng kết tuần KHÔNG bị mất khi nhường chỗ: chấm đỏ ở tab Thống kê (ADR-077 — the report is
   //    the Stats screen now) là lưới an toàn thứ hai — xem ADR-061.
   if (weeklyUnseen && !sessionInProgress && typeof onOpenWeekly === 'function') {
-    return { icon: '🏆', text: 'Tuần mới — Thống kê đã so tuần trước, xem thử', strong: true, onClick: onOpenWeekly };
+    return { icon: '🏆', text: 'Tuần mới — xem Thống kê so tuần trước', strong: true, onClick: onOpenWeekly };
   }
   // "Việc tiếp theo" đứng CUỐI vì nó là nguồn DUY NHẤT không có hạn: một điểm kỹ năng chưa tiêu
   // thì tuần sau tiêu vẫn thế, còn bốn nguồn trên đều mất đi nếu bỏ lỡ (lời chúc mừng trôi qua,

@@ -1,3 +1,47 @@
+> Last update: **2026-09-07** — **ROUND 39: WHILE A TIMER RUNS, THE FOCUS SCREEN IS THE TIMER (ADR-079).**
+> Order: *"Một chủ đề duy nhất: DỌN GIAO DIỆN MÀN TẬP TRUNG. Không thêm tính năng. Không tách file.
+> Không đóng nợ kỹ thuật … TOÀN QUYỀN."* Six jobs, one theme; everything on `main`.
+>
+> ### Done
+> 1. **One indicator while running** — the daily-goal ring is deleted (`GOAL_RING_*`, its motion, the
+>    `--warn` circle); the brick strip is one headline («Đang xây X»; `describeSessionBrick` keeps the
+>    numbers in `sub`); the postcard is `quiet` while any timer runs (no caption, scrims or era bar);
+>    the «Giải lao dài» pill is gone; `pickFocusMoment` returns null while any timer runs.
+> 2. **One line under the clock** — `describeClockSubline` (`engine/timerSession.js`): «Phiên thứ N hôm
+>    nay» / «Xong N phiên hôm nay», ≤ 22 chars (the disc's chord at 390 px); the goal fraction moved to
+>    the idle postcard caption (`goalLine`, in the goal's own unit).
+> 3. **Goal + break line under the ring** (`PomodoroEngine.jsx`, right after the ring container) —
+>    inside the disc they crossed the stroke at 390 px.
+> 4. **Three colours** — the number is `--good` on a break, `--ink` otherwise; the glow is `color-mix` of
+>    the arc's token; 72 palette classes in `PomodoroEngine.jsx` + `focus/*` became tokens (75 identical
+>    light/dark ternaries collapsed); Coach `GOLD` → `COACH_COLOR = var(--accent)`.
+> 5. **Quiet chrome** — `anyTimerRunning` (`App.jsx`) gates the desktop right column, the phone missions
+>    + Coach cards, the top rail, the streak card and the voice line — focus AND break.
+> 6. **Truncation sweep** — 20 `truncate` sites wrap now; the greeting has no clamp; the weekly line is
+>    shorter; the tab bar keeps 3 (commented as a safety net). Sweep of Hành trang · Thống kê · Cài đặt
+>    · Thành Phố · the ending card at 390/1280: no cut text. Logged, not fixed: the City tab's per-era
+>    colours and its era-chip scroller (report §10).
+>
+> ### Hidden while a timer runs (nothing deleted — all of it returns when the timer stops)
+> daily-goal ring · brick row + percent · era bar + greeting on the postcard · voice line · desktop
+> right column · phone missions + Coach cards · top rail (now on breaks too) · streak card · «Giải lao
+> dài» pill · red last-10-s flash · blue break number.
+>
+> ### Gates
+> lint clean · build green · `npm run test:fast` 1,605 tests · 1,604 pass · 0 fail · 1 skipped (`# skipped 1`).
+>
+> ### Lessons
+> - **A line inside a ring must fit the CHORD, not the diameter**: at 390 px the disc's chord under the
+>   number is ~155 px and ~96 px one line lower — "Chưa xong phiên nào hôm nay" and every real goal
+>   crossed the stroke. Copy has a geometric budget; `timerSession.test.js` pins it.
+> - **`lightTheme ? 'text-[var(--muted)]' : 'text-slate-400'` is a smell**: the token was already right
+>   for both themes — 75 such ternaries collapsed to one literal after recolouring.
+> - A multi-file edit script that writes only at the end leaves a clean tree when an anchor fails —
+>   `git status` said so; two anchors (a comment gap, a missing `= {}`) cost two reruns and no damage.
+>
+
+---
+
 > Last update: **2026-09-07** — **ROUND 38: THE CITY LIVES ON THE FOCUS SCREEN (ADR-078).**
 > Order: *"Build lớn. Simplify mạnh. Làm game vui hơn. Tập trung nhiều hơn vào UX/UI. Thôi dọn, bắt
 > đầu xây. TOÀN QUYỀN."* Six streams + a new report law (A for Đàm first, B for the advisor after).

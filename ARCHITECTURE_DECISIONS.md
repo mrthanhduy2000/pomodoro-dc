@@ -73,6 +73,30 @@ roughly 44%. Titles below are the lookup key; read one with
 
 ---
 
+## ADR-079 — Round 39: while a timer runs, the Focus screen IS the timer — one ring, three colours, nothing cut
+
+**Date**: 2026-09-07 · **Order**: *"Một chủ đề duy nhất: DỌN GIAO DIỆN MÀN TẬP TRUNG. Không thêm tính năng. Không tách file. Không đóng nợ kỹ thuật … mở app lên, liếc một cái, biết ngay còn bao lâu và đang làm gì — không phải đọc."*
+
+**Context.** On a running Focus screen Đàm counted six progress indicators (clock ring · brick row · "79% viên gạch này" · "Phiên 0/5 hôm nay" · the era bar on the postcard · the mission bars in the right column), thirteen numbers, six colours and at least three cut texts. The break ring drew two arcs (green session arc over the yellow daily-goal arc) that he read as one broken ring. The line under the clock said "Phiên 0/5 hôm nay" on the Mac and "0/300 phút hôm nay" on the iPhone for the same state, and "0" while a session was running. Each of those was true and defensible on its own; together they made the screen something to read instead of something to glance at.
+
+**Decisions.**
+1. **One progress indicator while a timer runs: the time left.** The outer daily-goal ring is deleted (its constants, motion, circle and the "clamp at 100 %" logic). The brick strip renders only its headline while running («Đang xây X» — no number, no brick row, no percent; `describeSessionBrick` keeps the numbers in `sub` for the idle strip and the ending). The postcard is a picture only while ANY timer runs (`quiet`: no caption, no scrim, no era bar). The «Giải lao dài» pill above the ring is gone — the ring label says it. `pickFocusMoment` returns null while any timer runs, every branch. Nothing is deleted from the app: all of it returns the moment the timer stops.
+2. **One line under the clock, the same on every device: an ordinal.** `describeClockSubline` (`engine/timerSession.js`, pure): «Phiên thứ N hôm nay» while idle or running, «Xong N phiên hôm nay» on a break. The daily-goal fraction was a per-DEVICE setting (sessions on the Mac, minutes on the iPhone) — it now lives only on the idle postcard caption («Hôm nay 2/5 phiên»), in the goal's own unit. Every string of this line must fit the disc's chord at 390 px (≈ 22 characters); that is geometry, not copy taste, and the test pins the length.
+3. **The session goal and the break line sit UNDER the ring, not inside it.** Inside, the disc's chord one line below the number is ~96 px at 390 px, so every real goal ran across the ring's stroke. Under the ring: same card, above the buttons (still above the fold while running), full width, wraps, no clamp.
+4. **Three colours on Focus: canvas · ink · ONE accent** — `--accent` while focusing, `--good` on a break; the number wears the arc's colour and the glow is mixed from the same token (`color-mix`). Gone: the red flash of the last ten seconds, the blue break number, the gold Coach (`COACH_COLOR = var(--accent)`), and every Tailwind palette class in `PomodoroEngine.jsx` + `focus/*` (75 identical light/dark ternaries collapsed on the way). `timerRing.test.js` rejects any palette class in those files.
+5. **While a timer runs the chrome goes too** — one flag, `anyTimerRunning` (`App.jsx`), for focus AND break: the desktop right column (Coach, missions, daily bonus, weekly chain, rank), the phone's missions + Coach cards, the top rail, the streak card, the voice line. Until now a break kept all of it on screen.
+6. **No `truncate` anywhere except the tab bar's safety net.** Twenty sites became wrapping text (`whitespace-normal break-words`, `leading-snug`); the postcard greeting wraps with no clamp; the weekly voice line was shortened to fit one line at 390 px («Tuần mới — xem Thống kê so tuần trước»). The three tab-bar `truncate` stay as a net over labels measured to fit, with a comment saying so.
+
+**Trade-offs.** The daily missions cannot be checked mid-session on desktop any more (they were never on the phone's running screen). The ordinal says nothing about the daily goal while running — by design: the goal is a reason to start, not something to watch. The Coach lost its gold identity for the skin's accent. Wrapped labels can grow a row by a line (preset cards, category chips) — height is cheaper than a cut word.
+
+**Counts (running state, dark, 617-session fixture, by eye on the after-shots).** Progress indicators 6 → 1 · numbers on screen 13 → 2 on desktop, 8 → 2 on the phone · colours 6 → 3 · cut or ring-crossing texts ≥ 3 → 0 · `truncate` sites in `src/` 20 → 3 (tab bar).
+
+**Rejected.** A smaller ring at 390 px so the goal fits inside (the ring is the one thing that must stay big). Keeping the daily-goal ring "only when a goal is set" (a second arc is a second indicator whatever its gate). Clamping the greeting to two lines (a clamp is an ellipsis waiting to happen). Recolouring the City tab's per-era colours (they are the era's identity; logged for Đàm's call).
+
+**Revisit when**: Đàm wants the daily goal while running (then «Phiên thứ 3/5 hôm nay» — still one line, still device-independent); a skin's `--good` sits too close to its `--accent` (then the break needs its own token); the idle screen is judged by the same three-colour rule (the idle right column still carries `--good` on done states).
+
+---
+
 ## ADR-078 — Round 38: the city lives on the Focus screen; the auto-pick is changeable in place; the reward assembly is a pure engine function; #86 gets a lint gate
 
 **Date**: 2026-09-07 · **Order**: *"Build lớn. Simplify mạnh. Làm game vui hơn. Tập trung nhiều hơn vào UX/UI … thôi dọn, bắt đầu xây."* Six streams, one report law (A for Đàm, B for the advisor).

@@ -188,7 +188,7 @@ function NearRow({ item, onSelect }) {
       </span>
       <span className="min-w-0 flex-1">
         <span className="flex items-baseline justify-between gap-2">
-          <span className="truncate text-[13px] font-semibold" style={{ color: 'var(--ink)' }}>{a.label}</span>
+          <span className="min-w-0 text-[13px] font-semibold leading-snug" style={{ color: 'var(--ink)' }}>{a.label}</span>
           <span className="mono shrink-0 text-[11px] font-semibold tabular-nums" style={{ color: 'var(--accent2)' }}>{pct}%</span>
         </span>
         <span className="mt-1.5 block h-[3px] overflow-hidden rounded-full" style={{ background: 'var(--line)' }}>

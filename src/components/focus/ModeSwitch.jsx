@@ -17,7 +17,7 @@ export default function ModeSwitch({ disabled, mode, onChange }) {
     <div className={`inline-flex rounded-full border p-1 ${disabled ? 'opacity-45' : ''} ${
       lightTheme
         ? 'border-[var(--line)] bg-[rgba(244,242,236,0.96)]'
-        : 'border-white/10 bg-white/[0.04]'
+        : 'border-[var(--line)] bg-[var(--panel-soft)]'
     }`}>
       {[
         { id: TIMER_MODES.POMODORO, label: 'Pomo' },
@@ -46,7 +46,7 @@ export default function ModeSwitch({ disabled, mode, onChange }) {
                 className={`absolute inset-0 rounded-full ${
                   lightTheme
                     ? 'bg-[var(--ink)] shadow-[0_10px_20px_rgba(31,30,29,0.14)]'
-                    : 'bg-white/[0.08] shadow-[inset_0_1px_0_rgba(255,255,255,0.08)]'
+                    : 'bg-[var(--panel-soft)] shadow-[inset_0_1px_0_rgba(255,255,255,0.08)]'
                 }`}
                 {...pillMotion}
               />

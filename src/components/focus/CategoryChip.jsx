@@ -12,7 +12,7 @@ export default function CategoryChip({ active, color, disabled, label, onClick }
       type="button"
       disabled={disabled}
       onClick={onClick}
-      className={`max-w-full rounded-full border px-3.5 py-2 text-[13px] font-semibold whitespace-nowrap transition-colors disabled:cursor-not-allowed truncate focus-visible:outline-none focus-visible:ring-2 ${
+      className={`max-w-full rounded-full border px-3.5 py-2 text-[13px] font-semibold whitespace-normal break-words text-left leading-snug transition-colors disabled:cursor-not-allowed focus-visible:outline-none focus-visible:ring-2 ${
         lightTheme ? 'focus-visible:ring-[rgba(31,30,29,0.14)]' : 'focus-visible:ring-[var(--line-2)]'
       }`}
       style={active
@@ -25,7 +25,7 @@ export default function CategoryChip({ active, color, disabled, label, onClick }
         : {
             borderColor: lightTheme ? 'var(--line)' : 'var(--panel)',
             background: lightTheme ? 'var(--panel-soft)' : 'var(--panel)',
-            color: lightTheme ? 'var(--muted)' : 'var(--muted)',
+            color: 'var(--muted)',
           }}
     >
       {label}

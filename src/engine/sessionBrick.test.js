@@ -44,7 +44,9 @@ test('idle / running: brick states and copy follow the queue — laid · laying 
   assert.equal(idle.bricks.length, total);
   assert.match(idle.headline, new RegExp(`viên gạch 2/${total}`));
   const running = describeSessionBrick({ craftingQueue: queue, activeBook: 1, buildings: [], phase: 'running', progressRatio: 0.5 });
-  assert.match(running.headline, /^Đang đặt viên 2\//);
+  assert.match(running.headline, /^Đang xây /); // ADR-079: no number in the running headline
+  assert.doesNotMatch(running.headline, /\d/, 'the running headline must carry no number — the ring is the only progress');
+  assert.match(running.sub, /Viên gạch 2\//);
   assert.equal(running.progressRatio, 0.5);
   const last = describeSessionBrick({ craftingQueue: [{ bpId: bp, sessionsRemaining: 1, startedAt: 1 }], activeBook: 1, buildings: [], phase: 'idle' });
   assert.equal(last.isFinal, true);

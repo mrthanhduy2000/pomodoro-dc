@@ -70,17 +70,15 @@ test('ăn mừng vẫn thắng cả lý do bấm Bắt đầu', () => {
   assert.equal(out.text, STAGE_CELEBRATE.text);
 });
 
-// ⚠️ Nhánh tuần là lời MỜI ĐI CHỖ KHÁC ⇒ phải im trong lúc đang tập trung, cùng luật
-// `FocusNextAction`. Ba nguồn kia nói lý do NGỒI YÊN nên chúng ở lại — đó là lý do cả cụm KHÔNG
-// bị bọc trong `!hasFocusSessionInProgress` ở `App.jsx`, mà chỉ riêng nhánh này tự im.
-test('đang chạy phiên thì tổng kết tuần IM, nhưng nhánh khác vẫn nói', () => {
-  // ⚠️ Từ 2026-09-05 tổng kết tuần vốn đã đứng SAU mốc chuỗi, nên bài này không còn chứng minh
-  // được gác `sessionInProgress` một mình. Vế thật sự canh cái gác ấy là bài ngay dưới: bỏ hết
-  // mọi lý do khác rồi đòi nó IM.
+// ADR-079: while a timer runs (focus OR break) the line is silent in EVERY branch — the guard sits
+// at the top of `pickFocusMoment`, before the celebration. Until round 38 only the weekly branch
+// went quiet and the streak/stage lines kept talking under the clock; Đàm counted them among the
+// six things competing with the time left.
+test('đang chạy phiên thì IM HẲN — mọi nhánh (ADR-079: một câu hỏi duy nhất lúc đang chạy)', () => {
   const out = pickFocusMoment({
     stage: STAGE_NORMAL, streak: STREAK, weeklyUnseen: true, onOpenWeekly, sessionInProgress: true,
   });
-  assert.equal(out.text, STREAK.text, 'phải rơi xuống mốc chuỗi, không được im hết');
+  assert.equal(out, null, 'giữa lúc tập trung không có dòng nào — kể cả mốc chuỗi');
 });
 
 // THỬ-CHO-ĐỎ: bỏ `&& !sessionInProgress` ở nhánh tổng kết tuần ⇒ bài này đỏ.
@@ -163,5 +161,5 @@ test('nhánh tổng kết tuần được nối đủ hai thứ nó cần', () =
   const tag = APP.slice(i, APP.indexOf('/>', i));
   assert.match(tag, /weeklyUnseen=\{weeklyReportUnseen\}/);
   assert.match(tag, /onOpenWeekly=\{openWeeklySummary\}/); // ADR-077: the summary is the Stats screen
-  assert.match(tag, /sessionInProgress=\{hasFocusSessionInProgress\}/);
+  assert.match(tag, /sessionInProgress=\{anyTimerRunning\}/);
 });

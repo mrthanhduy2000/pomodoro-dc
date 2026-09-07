@@ -13,7 +13,8 @@ import { buildLLMChatPrompt } from '../engine/coach/prompt';
 import { runGuardedCoachGeneration } from '../engine/coach/guardedGenerate';
 import { pickSuggestions, detectTopics } from '../engine/coach/coachSuggest';
 
-const GOLD = '#d9a441';
+// ADR-079: the Coach wears the skin's accent, not a fixed gold — one accent at a time on Focus.
+const COACH_COLOR = 'var(--accent)';
 const CHAT_STORE_KEY = 'dc-coach-chat-v1'; // lưu hội thoại. KHÔNG nạp số cũ vào prompt.
 const STARTER_CHIPS = [
   'Tổng quan tập trung của mình tới giờ thế nào?',
@@ -167,7 +168,7 @@ export default function CoachChat(goalProps) {
         type="button"
         onClick={() => setOpen(true)}
         className="mt-2 flex w-full items-center justify-center gap-1.5 rounded-full py-1.5 text-[11px] font-semibold uppercase tracking-[0.15em] transition-opacity hover:opacity-80"
-        style={{ border: `1px solid ${GOLD}55`, color: GOLD, background: `${GOLD}14` }}
+        style={{ border: `1px solid ${COACH_COLOR}55`, color: COACH_COLOR, background: `${COACH_COLOR}14` }}
       >
         <SparkGlyph size={12} /> Hỏi Coach
       </button>
@@ -176,7 +177,7 @@ export default function CoachChat(goalProps) {
         <div className="fixed inset-0 z-[60] flex items-end justify-center sm:items-center" style={{ background: 'rgba(15,14,13,0.55)' }} onClick={() => setOpen(false)}>
           <div className="flex max-h-[85vh] w-full max-w-[440px] flex-col overflow-hidden rounded-t-2xl sm:rounded-2xl" style={{ background: 'var(--card-bg-solid, #fff)', border: '1px solid var(--line)' }} onClick={(e) => e.stopPropagation()}>
             <div className="flex items-center justify-between px-4 py-3" style={{ borderBottom: '1px solid var(--line)' }}>
-              <div className="flex items-center gap-1.5" style={{ color: GOLD }}>
+              <div className="flex items-center gap-1.5" style={{ color: COACH_COLOR }}>
                 <SparkGlyph size={14} />
                 <span className="mono text-[11px] uppercase tracking-[0.2em]">Hỏi Coach</span>
               </div>
@@ -207,7 +208,7 @@ export default function CoachChat(goalProps) {
               {messages.map((m, i) => (
                 <div key={i} className={m.role === 'user' ? 'flex justify-end' : 'flex justify-start'}>
                   <div className="max-w-[88%] whitespace-pre-wrap rounded-2xl px-3 py-2 text-[13px] leading-relaxed" style={m.role === 'user' ? { background: 'var(--accent)', color: '#fff' } : { background: 'var(--panel, rgba(0,0,0,0.04))', color: 'var(--ink)' }}>
-                    {m.viaLocal && <span className="mono mr-1 text-[9px] uppercase tracking-wider" style={{ color: GOLD }}>AI · </span>}
+                    {m.viaLocal && <span className="mono mr-1 text-[9px] uppercase tracking-wider" style={{ color: COACH_COLOR }}>AI · </span>}
                     {m.content ? `${m.content}${thinking && m === lastAssistant ? ' ▍' : ''}` : (m.role === 'assistant' && busy ? placeholder : '')}
                   </div>
                 </div>
@@ -216,7 +217,7 @@ export default function CoachChat(goalProps) {
 
             {lastError && !busy && lastQuestion && (
               <div className="px-4 pb-1">
-                <button type="button" onClick={() => send(lastQuestion)} className="rounded-full px-3 py-1 text-[11px] font-semibold transition-opacity hover:opacity-80" style={{ border: `1px solid ${GOLD}66`, color: GOLD, background: `${GOLD}14` }}>↻ Thử lại</button>
+                <button type="button" onClick={() => send(lastQuestion)} className="rounded-full px-3 py-1 text-[11px] font-semibold transition-opacity hover:opacity-80" style={{ border: `1px solid ${COACH_COLOR}66`, color: COACH_COLOR, background: `${COACH_COLOR}14` }}>↻ Thử lại</button>
               </div>
             )}
 

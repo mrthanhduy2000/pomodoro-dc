@@ -229,3 +229,22 @@ export function getSessionWorkedMinutes(session) {
 
   return Number.isFinite(session.minutes) ? session.minutes : null;
 }
+
+/**
+ * The ONE line under the clock (ADR-079).
+ *
+ * It used to print the daily-goal fraction ("Phiên 0/5 hôm nay" / "0/300 phút hôm nay"). Two faults:
+ * the unit is a per-DEVICE setting, so the same state read as two different sentences on Đàm's Mac
+ * and iPhone; and "0/5" while a session is RUNNING reads as "you have done nothing". An ordinal is
+ * true in every state, needs no unit and no setting: the session you are in (or about to start)
+ * is the (done + 1)-th of the day; on a break you have finished `done`.
+ * Pure — no store, no clock.
+ */
+export function describeClockSubline({ phase = 'idle', sessionsCompletedToday = 0 } = {}) {
+  const done = Math.max(0, Math.floor(Number(sessionsCompletedToday) || 0));
+  // ⚠️ One template, zero included: "Chưa xong phiên nào hôm nay" was 27 characters and crossed
+  // the ring's stroke at 390 px (the disc's chord at that height holds ~20). Every string here must
+  // fit that chord — that is a geometry fact, not a copy preference.
+  if (phase === 'break' || phase === 'finished') return `Xong ${done} phiên hôm nay`;
+  return `Phiên thứ ${done + 1} hôm nay`;
+}

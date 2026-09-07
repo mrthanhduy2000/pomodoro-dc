@@ -9,7 +9,8 @@ import { useAnalystContext } from '../hooks/useCoachContext';
 import { buildLLMPrompt } from '../engine/coach/prompt';
 import { runGuardedCoachGeneration } from '../engine/coach/guardedGenerate';
 
-const GOLD = '#d9a441';
+// ADR-079: the Coach wears the skin's accent, not a fixed gold — one accent at a time on Focus.
+const COACH_COLOR = 'var(--accent)';
 
 export default function CoachOffline(goalProps) {
   const [open, setOpen] = useState(false);
@@ -48,7 +49,7 @@ export default function CoachOffline(goalProps) {
         type="button"
         onClick={() => setOpen(true)}
         className="mt-2 flex w-full items-center justify-center gap-1.5 rounded-full py-1.5 text-[11px] font-semibold uppercase tracking-[0.15em] transition-opacity hover:opacity-80"
-        style={{ border: `1px solid ${GOLD}55`, color: GOLD, background: `${GOLD}14` }}
+        style={{ border: `1px solid ${COACH_COLOR}55`, color: COACH_COLOR, background: `${COACH_COLOR}14` }}
       >
         <SparkGlyph size={12} /> AI phân tích tổng thể
       </button>
@@ -57,7 +58,7 @@ export default function CoachOffline(goalProps) {
         <div className="fixed inset-0 z-[60] flex items-end justify-center sm:items-center" style={{ background: 'rgba(15,14,13,0.55)' }} onClick={() => setOpen(false)}>
           <div className="flex max-h-[88vh] w-full max-w-[460px] flex-col overflow-hidden rounded-t-2xl sm:rounded-2xl" style={{ background: 'var(--card-bg-solid, #fff)', border: '1px solid var(--line)' }} onClick={(e) => e.stopPropagation()}>
             <div className="flex items-center justify-between px-4 py-3" style={{ borderBottom: '1px solid var(--line)' }}>
-              <div className="flex items-center gap-1.5" style={{ color: GOLD }}>
+              <div className="flex items-center gap-1.5" style={{ color: COACH_COLOR }}>
                 <SparkGlyph size={14} />
                 <span className="mono text-[11px] uppercase tracking-[0.2em]">AI phân tích tổng thể</span>
               </div>

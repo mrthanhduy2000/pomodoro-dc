@@ -201,7 +201,7 @@ function BuiltStrip({ tiles, pickedId, onPick }) {
                 trình không còn đường nâng sau ADR-069, nên một nhãn cấp chỉ mời một câu hỏi không có
                 câu trả lời ("lên cấp ở đâu?"). */}
             {t.perk?.label && (
-              <span className="max-w-full truncate text-[9.5px] leading-none" style={{ color: 'var(--muted)' }}>{t.perk.label}</span>
+              <span className="max-w-full text-center text-[9.5px] leading-tight" style={{ color: 'var(--muted)' }}>{t.perk.label}</span>
             )}
           </button>
         );

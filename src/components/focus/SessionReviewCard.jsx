@@ -21,14 +21,14 @@ export default function SessionReviewCard({ completedGoalAchieved, goalText, goa
       {...enterMotion}
       className={`mx-auto w-full max-w-[520px] rounded-[28px] border p-4 ${
         lightTheme
-          ? 'border-[var(--line)] bg-white shadow-[0_22px_56px_rgba(31,30,29,0.08)]'
-          : 'border-white/8 bg-white/[0.04] shadow-[0_18px_40px_rgba(0,0,0,0.18)] backdrop-blur-2xl'
+          ? 'border-[var(--line)] bg-[var(--card-bg-solid)] shadow-[0_22px_56px_rgba(31,30,29,0.08)]'
+          : 'border-[var(--line)] bg-[var(--panel-soft)] shadow-[0_18px_40px_rgba(0,0,0,0.18)] backdrop-blur-2xl'
       }`}
     >
-      <p className={`mono text-[11px] uppercase tracking-[0.22em] ${lightTheme ? 'text-[var(--muted)]' : 'text-amber-200/90'}`}>Đánh giá phiên vừa xong</p>
-      <p className={`mt-2 text-sm leading-relaxed ${lightTheme ? 'text-[var(--ink-2)]' : 'text-slate-300'}`}>
+      <p className={`mono text-[11px] uppercase tracking-[0.22em] ${lightTheme ? 'text-[var(--muted)]' : 'text-[var(--accent2)]/90'}`}>Đánh giá phiên vừa xong</p>
+      <p className={`mt-2 text-sm leading-relaxed ${lightTheme ? 'text-[var(--ink-2)]' : 'text-[var(--ink)]'}`}>
         {goalText
-          ? <>Mục tiêu: <span className={`font-semibold ${lightTheme ? 'text-[var(--ink)]' : 'text-slate-50'}`}>{goalText}</span></>
+          ? <>Mục tiêu: <span className={`font-semibold text-[var(--ink)]`}>{goalText}</span></>
           : 'Phiên này chưa có mục tiêu ghi sẵn. Bạn vẫn có thể tự đánh giá nhanh.'}
       </p>
       <div className="mt-4 flex gap-3">
@@ -66,7 +66,7 @@ export default function SessionReviewCard({ completedGoalAchieved, goalText, goa
       {showGoalBonus && (
         <motion.p
           {...rewardMotion}
-          className={`mt-3 text-center text-[13px] font-semibold ${lightTheme ? 'text-[var(--good)]' : 'text-emerald-300'}`}
+          className={`mt-3 text-center text-[13px] font-semibold text-[var(--good)]`}
         >
           🎯 Hoàn thành mục tiêu — thưởng {bonusParts.join(' · ')}
         </motion.p>

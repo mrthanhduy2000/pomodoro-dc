@@ -60,7 +60,7 @@ export default function FocusMoment({
     <>
       <span aria-hidden="true" className="text-[13px] leading-none">{moment.icon}</span>
       <span
-        className="min-w-0 truncate text-[12px] leading-snug"
+        className="min-w-0 text-[12px] leading-snug"
         style={{ color: moment.strong ? 'var(--accent2)' : 'var(--muted)', fontWeight: moment.strong ? 600 : 400 }}
       >
         {moment.text}

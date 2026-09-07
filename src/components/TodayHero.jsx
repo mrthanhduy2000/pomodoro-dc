@@ -119,7 +119,7 @@ export default function TodayHero({
         </div>
 
         <p
-          className="mt-2 truncate text-center text-[11px] leading-snug"
+          className="mt-2 text-center text-[11px] leading-snug"
           style={{ color: mauDongPhai, fontWeight: atRisk ? 600 : 400 }}
         >
           {dongPhai}

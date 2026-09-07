@@ -42,7 +42,9 @@ test('lời chào màn Tập trung: nơi gọi và hàm dựng phải NHẤT QU�
   const app = doc('../App.jsx');
   // ADR-078: the greeting is the caption of the city postcard, which STAYS while a session runs
   // (still, camera on the brick) — only the greeting line is dropped, via the prop.
-  const anLoiChao = /greeting=\{hasFocusSessionInProgress \? null : title\}/.test(app);
+  // ADR-079: "running" now means ANY timer — focus or break — through the `quiet` flag.
+  const anLoiChao = /const quiet = hasFocusSessionInProgress \|\| isOnBreak;/.test(app)
+    && /greeting=\{quiet \? null : title\}/.test(app);
   const dungLoiChaoDangChay = /getLiveSessionIntroCopy|titleSessionRunning|sessionLiveStatus/.test(app);
   assert.ok(anLoiChao, 'FocusIntro thôi ẩn lời chào khi phiên đang chạy');
   assert.ok(

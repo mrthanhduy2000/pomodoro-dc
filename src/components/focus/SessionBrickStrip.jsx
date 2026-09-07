@@ -63,10 +63,12 @@ export default function SessionBrickStrip({ phase = 'idle', progressRatio = 0 })
         <ProjectGlyph icon={brick.icon} label={brick.label} />
         <span className="font-semibold">{brick.headline}</span>
       </p>
-      {brick.bricks.length > 0 && (
-        <BrickRow bricks={brick.bricks} progressRatio={brick.progressRatio ?? 0} size={running ? 20 : 22} label={`${brick.done}/${brick.total} viên gạch · ${brick.label}`} />
+      {/* ADR-079: while the session runs the strip is ONE calm line — no brick row, no percent. The
+          ring is the only progress indicator on the screen; the bricks land in the ending. */}
+      {!running && brick.bricks.length > 0 && (
+        <BrickRow bricks={brick.bricks} progressRatio={brick.progressRatio ?? 0} size={22} label={`${brick.done}/${brick.total} viên gạch · ${brick.label}`} />
       )}
-      <p className="text-[11px] leading-snug" style={{ color: 'var(--muted)' }}>{brick.sub}</p>
+      {!running && <p className="text-[11px] leading-snug" style={{ color: 'var(--muted)' }}>{brick.sub}</p>}
 
       {canSwitch && choices.length > 0 && !open && (
         <ActionButton
@@ -92,7 +94,7 @@ export default function SessionBrickStrip({ phase = 'idle', progressRatio = 0 })
             >
               <span className="flex min-w-0 items-center gap-1.5 text-left">
                 <ProjectGlyph icon={choice.icon} label={choice.label} />
-                <span className="truncate">{choice.label}</span>
+                <span className="whitespace-normal break-words">{choice.label}</span>
               </span>
               <span className="mono shrink-0 text-[10.5px]" style={{ color: 'var(--muted)' }}>
                 {choice.queued ? `${choice.done}/${choice.total} viên` : `${choice.total} phiên`}

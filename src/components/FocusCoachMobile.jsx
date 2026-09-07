@@ -14,7 +14,7 @@ export default function FocusCoachMobile({ hidden = false, ...goalProps }) {
   return (
     <div className="mt-4 lg:hidden">
       <div className="p-4" style={{ background: '#1f1e1d', borderRadius: 'var(--skin-radius-card,18px)', border: '1px solid rgba(217,164,65,0.22)' }}>
-        <div className="mono text-[10px] uppercase tracking-[0.2em]" style={{ color: '#d9a441' }}>AI Coach</div>
+        <div className="mono text-[10px] uppercase tracking-[0.2em]" style={{ color: 'var(--accent)' }}>AI Coach</div>
         <p className="mt-2 text-[12.5px] leading-relaxed" style={{ color: '#e8e4dc' }}>
           Hỏi đáp & phân tích từ số liệu thật của bạn (chạy trên đám mây, cần mạng).
         </p>

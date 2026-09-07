@@ -47,22 +47,22 @@ export default function CancelConfirmDialog({ onAbort, onConfirm, progressPct, r
         onClick={(event) => event.stopPropagation()}
         className={`w-full max-w-md rounded-[30px] border p-5 ${
           lightTheme
-            ? 'border-[rgba(var(--accent-rgb),0.22)] bg-white shadow-[0_24px_64px_rgba(31,30,29,0.10)]'
-            : 'border-white/8 bg-[rgba(21,19,16,0.92)] shadow-[0_22px_56px_rgba(0,0,0,0.24)] backdrop-blur-2xl'
+            ? 'border-[rgba(var(--accent-rgb),0.22)] bg-[var(--card-bg-solid)] shadow-[0_24px_64px_rgba(31,30,29,0.10)]'
+            : 'border-[var(--line)] bg-[rgba(21,19,16,0.92)] shadow-[0_22px_56px_rgba(0,0,0,0.24)] backdrop-blur-2xl'
         }`}
       >
         <p
           id="cancel-session-dialog-title"
-          className={`mono text-[11px] uppercase tracking-[0.22em] ${lightTheme ? 'text-[var(--accent2)]' : 'text-rose-300'}`}
+          className={`mono text-[11px] uppercase tracking-[0.22em] text-[var(--accent2)]`}
         >
           Xác nhận hủy phiên
         </p>
-        <p className={`mt-2 text-sm leading-relaxed ${lightTheme ? 'text-[var(--ink-2)]' : 'text-slate-200'}`}>
+        <p className={`mt-2 text-sm leading-relaxed ${lightTheme ? 'text-[var(--ink-2)]' : 'text-[var(--ink)]'}`}>
           {/* ADR-069: không còn «phạt N% tài nguyên». Sự thật còn lại là phiên này sẽ KHÔNG tính XP/EP
               — nói thẳng, không đe doạ. */}
           Phiên hủy không tính XP, EP hay nhịp hôm nay — chỉ số phút đã chạy được ghi vào thống kê.
         </p>
-        <p className={`mt-2 text-xs leading-relaxed ${lightTheme ? 'text-[var(--muted)]' : 'text-slate-400'}`}>
+        <p className={`mt-2 text-xs leading-relaxed text-[var(--muted)]`}>
           Tiến độ hiện tại {formatPreviewPercent(progressPct)}%.
           {recoveryHint ? ` ${recoveryHint}` : ''}
         </p>

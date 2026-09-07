@@ -72,33 +72,30 @@ export default function QuickPresets({ className = '', activePresetId, disabled,
               ⚠️ ĐÃ THỬ cách vá theo breakpoint (`sm:flex-row`) và nó SAI: `sm:` hỏi bề ngang MÀN
               HÌNH, còn thứ quyết định ở đây là bề ngang CỦA THẺ. Hai đại lượng đó không liên quan
               nhau ở chỗ này — máy bàn 1280 lại cho thẻ HẸP HƠN điện thoại. Nên xếp dọc luôn.
-              ⚠️ `truncate` KHÔNG được gỡ — nó vẫn là lưới an toàn cho những bề ngang chưa từng đo.
+              ADR-079 (round 39): `truncate` IS gone — a label cut mid-word with «…» reads as a broken app,
+              which is exactly what Đàm reported; the two lines wrap instead. A wrapped word is honest.
               Đo lại bằng: `node scripts/shot.mjs --fit --phone` (các dòng bắt đầu bằng "…").
             */}
             <span className="flex min-w-0 flex-col gap-0.5">
               <span className={`font-mono text-lg font-bold tabular-nums ${
                 active
-                  ? lightTheme
-                    ? 'text-[var(--ink)]'
-                    : 'text-white'
-                  : lightTheme
-                    ? 'text-slate-900'
-                    : 'text-slate-100'
+                  ? 'text-[var(--ink)]'
+                  : 'text-[var(--ink)]'
               }`}>
                 {preset.focusMinutes}'
               </span>
               <span className="min-w-0">
-                <span className={`block truncate text-[11px] font-semibold leading-4 ${
+                <span className={`block whitespace-normal break-words text-[11px] font-semibold leading-4 ${
                   active
-                    ? lightTheme ? 'text-[var(--ink)]' : 'text-white'
-                    : lightTheme ? 'text-[var(--ink)]' : 'text-slate-200'
+                    ? 'text-[var(--ink)]'
+                    : 'text-[var(--ink)]'
                 }`}>
                   {preset.label}
                 </span>
-                <span className={`block truncate text-[10px] leading-4 ${
+                <span className={`block whitespace-normal break-words text-[10px] leading-4 ${
                   active
-                    ? lightTheme ? 'text-[var(--muted)]' : 'text-slate-300'
-                    : lightTheme ? 'text-[var(--muted)]' : 'text-slate-500'
+                    ? lightTheme ? 'text-[var(--muted)]' : 'text-[var(--ink)]'
+                    : 'text-[var(--muted)]'
                 }`}>
                   {preset.description}
                 </span>
@@ -120,10 +117,10 @@ export default function QuickPresets({ className = '', activePresetId, disabled,
                   active
                     ? lightTheme
                       ? 'bg-[rgba(255,255,255,0.54)] text-[var(--ink)]'
-                      : 'bg-white/[0.08] text-[var(--ink)]'
+                      : 'bg-[var(--panel-soft)] text-[var(--ink)]'
                     : lightTheme
                       ? 'bg-[rgba(244,242,236,0.96)] text-[var(--muted)]'
-                      : 'bg-white/[0.06] text-slate-500'
+                      : 'bg-[var(--panel-soft)] text-[var(--muted)]'
                 }`}>
                   ×{preset.longBreakAfterN}
                 </span>
@@ -133,10 +130,10 @@ export default function QuickPresets({ className = '', activePresetId, disabled,
                   active
                     ? lightTheme
                       ? 'bg-[rgba(255,255,255,0.54)] text-[var(--ink)]'
-                      : 'bg-white/[0.08] text-[var(--ink)]'
+                      : 'bg-[var(--panel-soft)] text-[var(--ink)]'
                     : lightTheme
                       ? 'bg-[rgba(244,242,236,0.96)] text-[var(--muted)]'
-                      : 'bg-white/[0.06] text-[var(--muted)]'
+                      : 'bg-[var(--panel-soft)] text-[var(--muted)]'
                 }`}>
                   nghỉ theo phiên
                 </span>
@@ -146,10 +143,10 @@ export default function QuickPresets({ className = '', activePresetId, disabled,
                     active
                       ? lightTheme
                         ? 'bg-[rgba(255,255,255,0.54)] text-[var(--ink)]'
-                        : 'bg-white/[0.08] text-[var(--ink)]'
+                        : 'bg-[var(--panel-soft)] text-[var(--ink)]'
                       : lightTheme
                         ? 'bg-[rgba(244,242,236,0.96)] text-[var(--muted)]'
-                        : 'bg-white/[0.05] text-slate-300'
+                        : 'bg-[var(--panel-soft)] text-[var(--ink)]'
                   }`}>
                     nghỉ {preset.shortBreakDuration}'
                   </span>
@@ -157,10 +154,10 @@ export default function QuickPresets({ className = '', activePresetId, disabled,
                     active
                       ? lightTheme
                         ? 'bg-[rgba(255,255,255,0.54)] text-[var(--ink)]'
-                        : 'bg-white/[0.08] text-[var(--ink)]'
+                        : 'bg-[var(--panel-soft)] text-[var(--ink)]'
                       : lightTheme
                         ? 'bg-[rgba(244,242,236,0.96)] text-[var(--muted)]'
-                        : 'bg-white/[0.05] text-slate-300'
+                        : 'bg-[var(--panel-soft)] text-[var(--ink)]'
                   }`}>
                     dài {preset.longBreakDuration}'
                   </span>

@@ -121,8 +121,10 @@ export function describeSessionBrick({
     return {
       ...base, done, remaining: remainingAfter, isFinal, progressRatio: clamp01(progressRatio),
       bricks: brickStates(total, done, { laying: true }),
-      headline: `Đang đặt viên ${done + 1}/${total} · ${project.label}`,
-      sub: isFinal ? 'Viên cuối — xong phiên này là mọc lên.' : `${Math.round(clamp01(progressRatio) * 100)}% viên gạch này.`,
+      // ADR-079: while the session runs the strip says WHAT is being built, never how much — the ring
+      // is the only progress on screen. The numbers wait in `sub` for anything that wants them.
+      headline: `Đang xây ${project.label}`,
+      sub: isFinal ? 'Viên cuối — xong phiên này là mọc lên.' : `Viên gạch ${done + 1}/${total} · ${Math.round(clamp01(progressRatio) * 100)}%`,
     };
   }
   return {

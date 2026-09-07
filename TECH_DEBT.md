@@ -13,7 +13,11 @@
 > mà không được refactor triệt để, phải CHỦ ĐỘNG đề xuất mở một "Maintenance Sprint" (nêu rõ mục
 > tiêu/phạm vi/lợi ích/rủi ro/tiêu chí hoàn thành) thay vì tiếp tục cộng thêm tính năng mới.
 >
-> **Threshold status (2026-09-07, after ADR-078 "round 38")**: no entry opened or closed; **#2** progressed
+> **Threshold status (2026-09-07, after ADR-079 "round 39")**: no entry opened or closed; a UI-only round
+> (one indicator · three colours · no cut text on the Focus screen). Two things seen and NOT fixed are in
+> the round report, not here: the City tab's per-era colours and its era-chip scroller — design calls for Đàm.
+>
+> *(previous)* **Threshold status (2026-09-07, after ADR-078 "round 38")**: no entry opened or closed; **#2** progressed
 > again (`gameStore.js` 4,677 → 2,879 — the reward assembly and ten helper clusters are `engine/` now) and
 > **#86** has its GATE (ESLint: palette classes / hex-rgb literals on any button) with 0 violations and
 > 11 action buttons through the door. Counts unchanged.

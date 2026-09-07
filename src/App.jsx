@@ -804,6 +804,9 @@ export default function App() {
   const focusMinutesToday = sumFocusMinutesOnDay(history, todayKey);
   const focusHoursToday = formatDurationMinutes(focusMinutesToday);
   const hasFocusSessionInProgress = timerSessionRunning && !isOnBreak;
+  // ADR-079: while ANY timer runs (focus or break) the Focus screen is the timer — no rail, no cards,
+  // no top rail, no voice line. Everything returns the moment the timer stops.
+  const anyTimerRunning = hasFocusSessionInProgress || isOnBreak;
   const handleNotificationNavigate = (action) => {
     if (!action) return;
     // ⚠️ `collectionTab` không còn là một tab con, nhưng nó VẪN nằm trong thông báo đã lưu của Đàm.
@@ -867,7 +870,7 @@ export default function App() {
         )}
 
         <div className="flex min-w-0 flex-1 flex-col">
-          {!showFocusFullscreen && isDesktop && !(activeTab === 'focus' && hasFocusSessionInProgress) && renderTopRail({ hideEra: activeTab === 'focus' })}
+          {!showFocusFullscreen && isDesktop && !(activeTab === 'focus' && anyTimerRunning) && renderTopRail({ hideEra: activeTab === 'focus' })}
 
           <main className={`min-h-0 flex-1 ${showFocusFullscreen ? 'overflow-y-auto overscroll-y-contain' : 'overflow-hidden'}`}>
             {showFocusFullscreen ? (
@@ -891,7 +894,7 @@ export default function App() {
                 <div className="relative min-h-0 min-w-0 flex-1">
                   <div className="relative h-full min-h-0 min-w-0 overflow-x-hidden overflow-y-auto scroll-pb-[calc(env(safe-area-inset-bottom)+7.4rem)]">
                     {/* `hideStats`: ô «Hôm nay»/«Chuỗi» nhường cho `TodayHero` ngay bên dưới (ADR-068). */}
-                    {!isDesktop && !showFocusFullscreen && !hasFocusSessionInProgress && renderTopRail({ hideStats: true, hideEra: true })}
+                    {!isDesktop && !showFocusFullscreen && !anyTimerRunning && renderTopRail({ hideStats: true, hideEra: true })}
                     <AppErrorBoundary
                       area="trang tập trung"
                       description="Khu vực timer chính gặp lỗi. Các phần khác của app vẫn được giữ lại."
@@ -912,6 +915,7 @@ export default function App() {
                           dailyGoalSessions={dailyGoalSessions}
                           dailyGoalMinutes={dailyGoalMinutes}
                           hasFocusSessionInProgress={hasFocusSessionInProgress}
+                          isOnBreak={isOnBreak}
                           eraStage={eraStage}
                           eraProgress={eraProgress}
                           totalEP={totalEP}
@@ -947,14 +951,14 @@ export default function App() {
                           weeklyUnseen={weeklyReportUnseen}
                           onOpenWeekly={openWeeklySummary}
                           onNavigate={handleNotificationNavigate}
-                          sessionInProgress={hasFocusSessionInProgress}
+                          sessionInProgress={anyTimerRunning}
                         />
                         {/* `mt-4` ở khổ điện thoại (ADR-068): khối chuỗi ở trên tiêu vào biên của nút Bắt
                             đầu, và 8px ở đây rẻ hơn bất kỳ chữ nào. */}
                         <div className="mt-4 md:mt-6">
                           <PomodoroEngine
                             immersiveMode={isWideViewport}
-                            belowTimer={!hasFocusSessionInProgress ? (
+                            belowTimer={!anyTimerRunning ? (
                               // ADR-078: the streak card paid for the postcard's height — it sits under the
                               // timer now, still above the goal card, never above the Start button.
                               <TodayHero
@@ -975,7 +979,7 @@ export default function App() {
                           `lg:hidden` vì màn rộng đã có cột phải dựng cả khối ngày lẫn tuần; ẩn khi phiên đang
                           chạy để giữ màn Tập trung tĩnh, cùng luật với thẻ AI Coach bên dưới.
                         */}
-                        {!hasFocusSessionInProgress && (
+                        {!anyTimerRunning && (
                           <div className="mt-4 lg:hidden">
                             <DailyMissions section="daily" />
                           </div>
@@ -983,7 +987,7 @@ export default function App() {
                         {/* Thẻ AI Coach gọn cho ĐIỆN THOẠI (cột phải chỉ hiện trên màn rộng).
                             Ẩn khi đang chạy phiên để giữ màn Focus tĩnh. */}
                         <FocusCoachMobile
-                          hidden={hasFocusSessionInProgress}
+                          hidden={anyTimerRunning}
                           sessionsCompletedToday={sessionsCompletedToday}
                           focusMinutesToday={focusMinutesToday}
                           dailyGoalType={dailyGoalType}
@@ -1002,6 +1006,10 @@ export default function App() {
                   resetKeys={[activeTab, supportRailOpen, isDesktop]}
                   variant="section"
                 >
+                  {/* ADR-079: while a timer runs (focus or break) the right rail is not there at all —
+                      Coach, missions, daily bonus, weekly chain and rank are a wall of numbers that helps
+                      nobody focus. They return the moment the timer stops. */}
+                  {!anyTimerRunning && (
                   <Motion.aside
                     className="hidden min-h-0 overflow-hidden border-l lg:flex lg:flex-col"
                     style={{ borderColor: 'var(--line)', background: 'var(--canvas)' }}
@@ -1048,6 +1056,7 @@ export default function App() {
                       </button>
                     </div>
                   </Motion.aside>
+                  )}
                 </AppErrorBoundary>
               </div>
             ) : (
@@ -1176,6 +1185,8 @@ export default function App() {
                       }}
                     >
                       <tab.Icon size={17} />
+                      {/* ADR-079: the tab bar keeps `truncate` as a SAFETY NET only — every `shortLabel` was measured
+                          to fit at 390px, so the ellipsis must never be seen. Everywhere else it was removed. */}
                       <span className="truncate">{tab.shortLabel}</span>
                     </button>
                   );
@@ -1584,7 +1595,7 @@ function SidebarItem({ active, attention = false, icon, isOpen, label, onClick }
       </span>
       {isOpen && (
         <span
-          className="truncate text-[13.5px] font-medium"
+          className="text-[13.5px] font-medium leading-snug"
           style={{ color: active ? '#faf9f6' : 'rgba(250,249,246,0.62)' }}
         >
           {label}
@@ -1793,6 +1804,7 @@ function FocusIntro({
   dailyGoalSessions,
   dailyGoalMinutes,
   hasFocusSessionInProgress,
+  isOnBreak = false,
   eraStage,
   eraProgress,
   totalEP,
@@ -1819,9 +1831,18 @@ function FocusIntro({
     dailyGoalSessions,
     dailyGoalMinutes,
   });
+  // ADR-079: while ANY timer runs (focus or break) the postcard is a picture only. When idle the
+  // caption carries the voice line and the daily-goal fraction in the goal's own unit — this is the
+  // one place that fraction lives now; the line under the clock is an ordinal on every device.
+  const quiet = hasFocusSessionInProgress || isOnBreak;
+  const goalLine = dailyGoalType === 'minutes'
+    ? (dailyGoalMinutes > 0 ? `Hôm nay ${focusMinutesToday}/${dailyGoalMinutes} phút` : null)
+    : (dailyGoalSessions > 0 ? `Hôm nay ${sessionsCompletedToday}/${dailyGoalSessions} phiên` : null);
   return (
     <CityPostcard
-      greeting={hasFocusSessionInProgress ? null : title}
+      greeting={quiet ? null : title}
+      goalLine={quiet ? null : goalLine}
+      quiet={quiet}
       sessionRunning={hasFocusSessionInProgress}
       eraStage={eraStage}
       eraProgress={eraProgress}

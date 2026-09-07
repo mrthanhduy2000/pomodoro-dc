@@ -328,7 +328,7 @@ export default function CityViewShell({
                   <div className="flex items-baseline gap-2 text-[12px]">
                     <span aria-hidden="true">{item.icon}</span>
                     <span
-                      className="min-w-0 flex-1 truncate"
+                      className="min-w-0 flex-1 break-words"
                       style={{ color: next ? 'var(--ink)' : 'var(--ink-2)', fontWeight: next ? 600 : 400 }}
                     >
                       {item.label}
@@ -361,7 +361,7 @@ export default function CityViewShell({
                   {item.reward && (
                     // "Còn 2 phiên" mới trả lời được CÒN BAO XA. Dòng này trả lời ĐI TỚI ĐÓ ĐỂ LÀM
                     // GÌ — nếu không có nó thì cái thanh tiến độ chỉ là một cái thanh tiến độ.
-                    <div className="truncate text-[11px]" style={{ color: 'var(--muted)' }}>
+                    <div className="text-[11px] leading-snug" style={{ color: 'var(--muted)' }}>
                       Mở khoá: {item.reward}
                     </div>
                   )}
@@ -419,7 +419,7 @@ export default function CityViewShell({
                       ra "chỗ này còn trống" rõ hơn nhiều so với một dấu chấm hỏi chung chung. */}
                   <span aria-hidden="true" style={{ opacity: built ? 1 : 0.35 }}>{slot.icon}</span>
                   <span
-                    className="min-w-0 flex-1 truncate"
+                    className="min-w-0 flex-1 break-words"
                     style={{ color: built ? 'var(--ink-2)' : 'var(--muted-2)' }}
                   >
                     {slot.label}

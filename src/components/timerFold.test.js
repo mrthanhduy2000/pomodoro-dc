@@ -25,12 +25,23 @@ const SRC = readFileSync(new URL('./PomodoroEngine.jsx', import.meta.url), 'utf8
 test('vòng đồng hồ có TRẦN theo bề ngang màn hình, không phải cỡ cố định', () => {
   // ⚠️ Phải là `min(...)`: một hằng số nhỏ hơn thì thu đồng hồ ở MỌI khổ màn hình, kể cả nơi không
   // hề thiếu chỗ — trả giá ở chỗ không có vấn đề. Trần chỉ cắn khi bề ngang < 466px.
-  const m = SRC.match(/timerCanvasSize\}px, (\d+)vw\)/);
-  assert.ok(m, 'vòng đồng hồ không còn trần theo bề ngang ⇒ nút Bắt đầu sẽ chui lại xuống dưới thanh tab');
-  const vw = Number(m[1]);
+  // ADR-079: the cap is a variable — TIGHT while idle (this fold law), LIFTED while a timer runs
+  // (no Start button then, and at 226 px the number ran over the track). Both values are read here.
   assert.ok(
-    vw <= 58,
-    `trần vòng đồng hồ đang là ${vw}vw — 64vw đã được ĐO là không đủ cho ngày mà khối chào dài 3 dòng`,
+    /timerCanvasSize\}px, \$\{ringViewportCap\}\)/.test(SRC),
+    'vòng đồng hồ không còn trần theo bề ngang ⇒ nút Bắt đầu sẽ chui lại xuống dưới thanh tab',
+  );
+  const m = SRC.match(/const ringViewportCap = isIdle && !isBreakMode \? '(\d+)vw' : '(\d+)vw';/);
+  assert.ok(m, 'không tìm thấy `ringViewportCap` với nhánh idle / đang chạy');
+  const idleVw = Number(m[1]);
+  const runningVw = Number(m[2]);
+  assert.ok(
+    idleVw <= 58,
+    `trần vòng đồng hồ lúc NGHỈ đang là ${idleVw}vw — 64vw đã được ĐO là không đủ cho ngày mà khối chào dài 3 dòng`,
+  );
+  assert.ok(
+    runningVw >= 70,
+    `trần lúc ĐANG CHẠY là ${runningVw}vw — dưới 70vw ở 390px vòng nhỏ hơn cỡ tự nhiên và số 72px lại đè lên nét vòng (ADR-079)`,
   );
 });
 
@@ -38,8 +49,8 @@ test('vòng đồng hồ có TRẦN theo bề ngang màn hình, không phải c�
 // GIỮ SẴN chiều cao. Thu mỗi cái vòng mà để nguyên nó thì khoảng trống vẫn bị giữ y như cũ.
 // THỬ-CHO-ĐỎ: đổi `minHeight` về `timerFootprintHeight` trần ⇒ đỏ.
 test('chỗ giữ sẵn chiều cao dùng CÙNG trần với vòng đồng hồ', () => {
-  const vong = SRC.match(/timerCanvasSize\}px, (\d+)vw\)/)?.[1];
-  const cho = SRC.match(/minHeight: `min\(\$\{timerFootprintHeight\}px, (\d+)vw\)`/)?.[1];
+  const vong = SRC.match(/timerCanvasSize\}px, (\$\{ringViewportCap\})\)/)?.[1];
+  const cho = SRC.match(/minHeight: `min\(\$\{timerFootprintHeight\}px, (\$\{ringViewportCap\})\)`/)?.[1];
   assert.ok(cho, 'chỗ giữ sẵn chiều cao không còn trần theo bề ngang');
   assert.equal(cho, vong, 'hai vế dùng hai trần KHÁC nhau ⇒ thu cái vòng mà chỗ trống vẫn giữ nguyên');
 });

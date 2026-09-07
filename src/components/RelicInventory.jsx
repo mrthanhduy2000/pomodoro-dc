@@ -411,7 +411,7 @@ function LockedRelics({ collectedIds, lightTheme, totalEP }) {
             className="flex items-baseline justify-between gap-3 border-b py-2.5"
             style={{ borderColor: lightTheme ? 'var(--line)' : 'rgba(255,255,255,0.08)' }}
           >
-            <p className="min-w-0 flex-1 truncate text-[13px]" style={lightTheme ? { color: 'var(--ink-2)' } : { color: '#cbd5e1' }}>
+            <p className="min-w-0 flex-1 text-[13px] leading-snug" style={lightTheme ? { color: 'var(--ink-2)' } : { color: '#cbd5e1' }}>
               <span className="mr-1">{relic.icon}</span>
               <span className="font-semibold">{relic.label}</span>
               <span style={{ opacity: 0.7 }}> · từ {relic.crisisName}</span>

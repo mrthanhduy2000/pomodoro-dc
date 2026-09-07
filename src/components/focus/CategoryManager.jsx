@@ -33,19 +33,17 @@ export default function CategoryManager({ categories, onClose, onAdd, onDelete }
       {...enterMotion}
       className={`mt-3 rounded-3xl border p-4 ${
         lightTheme
-          ? 'border-[var(--line)] bg-white shadow-[0_18px_40px_rgba(31,30,29,0.06)]'
-          : 'border-white/8 bg-white/[0.03]'
+          ? 'border-[var(--line)] bg-[var(--card-bg-solid)] shadow-[0_18px_40px_rgba(31,30,29,0.06)]'
+          : 'border-[var(--line)] bg-[var(--panel-soft)]'
       }`}
     >
       <div className="flex items-center justify-between">
-        <p className={`text-sm font-semibold ${lightTheme ? 'text-[var(--ink)]' : 'text-white'}`}>Quản lý phân loại</p>
+        <p className={`text-sm font-semibold text-[var(--ink)]`}>Quản lý phân loại</p>
         <button
           type="button"
           onClick={onClose}
           aria-label="Đóng quản lý phân loại"
-          className={`text-xl leading-none transition ${
-            lightTheme ? 'text-[var(--muted)] hover:text-[var(--ink)]' : 'text-[var(--muted)] hover:text-[var(--ink)]'
-          }`}
+          className={`text-xl leading-none transition text-[var(--muted)] hover:text-[var(--ink)]`}
         >
           ✕
         </button>
@@ -57,16 +55,14 @@ export default function CategoryManager({ categories, onClose, onAdd, onDelete }
             <div
               key={category.id}
               className={`flex items-center justify-between rounded-2xl border px-3 py-2 ${
-                lightTheme ? 'border-[var(--line)] bg-[rgba(244,242,236,0.78)]' : 'border-white/8 bg-white/[0.03]'
+                lightTheme ? 'border-[var(--line)] bg-[rgba(244,242,236,0.78)]' : 'border-[var(--line)] bg-[var(--panel-soft)]'
               }`}
             >
               <span style={{ color: category.color }}>{category.label}</span>
               <button
                 type="button"
                 onClick={() => onDelete(category.id)}
-                className={`text-xs font-semibold transition ${
-                  lightTheme ? 'text-[var(--muted)] hover:text-[var(--accent2)]' : 'text-[var(--muted)] hover:text-[var(--accent2)]'
-                }`}
+                className={`text-xs font-semibold transition text-[var(--muted)] hover:text-[var(--accent2)]`}
               >
                 Xóa
               </button>
@@ -76,7 +72,7 @@ export default function CategoryManager({ categories, onClose, onAdd, onDelete }
       )}
 
       <div className={`mt-4 rounded-2xl border p-3 ${
-        lightTheme ? 'border-[var(--line)] bg-[rgba(244,242,236,0.78)]' : 'border-white/8 bg-white/[0.03]'
+        lightTheme ? 'border-[var(--line)] bg-[rgba(244,242,236,0.78)]' : 'border-[var(--line)] bg-[var(--panel-soft)]'
       }`}>
         <div className="flex flex-wrap gap-2">
           {colors.map((color) => (
@@ -86,7 +82,7 @@ export default function CategoryManager({ categories, onClose, onAdd, onDelete }
               onClick={() => setNewColor(color)}
               aria-label={`Chọn màu ${color}`}
               aria-pressed={newColor === color}
-              className={`h-6 w-6 rounded-full ${newColor === color ? lightTheme ? 'ring-2 ring-[var(--ink)] ring-offset-2 ring-offset-[var(--canvas)]' : 'ring-2 ring-[var(--ink)] ring-offset-2 ring-offset-[var(--canvas)]' : ''}`}
+              className={`h-6 w-6 rounded-full ${newColor === color ? 'ring-2 ring-[var(--ink)] ring-offset-2 ring-offset-[var(--canvas)]' : ''}`}
               style={{ backgroundColor: color }}
             />
           ))}
@@ -106,8 +102,8 @@ export default function CategoryManager({ categories, onClose, onAdd, onDelete }
             placeholder="Tên phân loại mới"
             className={`flex-1 rounded-2xl border px-3 py-2 text-sm focus:outline-none ${
               lightTheme
-                ? 'border-[var(--line)] bg-white text-[var(--ink)] placeholder:text-[var(--muted-2)] focus:border-[var(--line-2)]'
-                : 'border-white/8 bg-black/20 text-white placeholder:text-slate-600 focus:border-white/16'
+                ? 'border-[var(--line)] bg-[var(--card-bg-solid)] text-[var(--ink)] placeholder:text-[var(--muted-2)] focus:border-[var(--line-2)]'
+                : 'border-[var(--line)] bg-[var(--canvas-2)] text-[var(--ink)] placeholder:text-[var(--muted)] focus:border-[var(--line)]'
             }`}
           />
           <button

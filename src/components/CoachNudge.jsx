@@ -19,7 +19,8 @@ import { useAnalystContext } from '../hooks/useCoachContext';
 import { buildLLMChatPrompt, buildNudgeContext, NUDGE_INSTRUCTION } from '../engine/coach/prompt';
 import { runGuardedCoachGeneration } from '../engine/coach/guardedGenerate';
 
-const GOLD = '#d9a441';
+// ADR-079: the Coach wears the skin's accent, not a fixed gold — one accent at a time on Focus.
+const COACH_COLOR = 'var(--accent)';
 const NUDGE_KEY = 'dc-coach-nudge-v1'; // id phiên đã nhắc (để mỗi phiên nhắc tối đa 1 lần)
 const RECENT_MS = 5 * 60 * 1000; // chỉ nhắc phiên xong trong 5 phút gần đây (tránh nhắc phiên cũ khi mở lại app)
 
@@ -80,8 +81,8 @@ export default function CoachNudge(goalProps) {
   if (!loading && !text) return null;
 
   return (
-    <div className="mt-2 rounded-xl px-3 py-2 text-[12.5px] leading-relaxed" style={{ border: `1px solid ${GOLD}44`, background: 'rgba(217,164,65,0.07)', color: 'var(--ink)' }}>
-      <div className="mono mb-0.5 flex items-center gap-1 text-[9px] uppercase tracking-[0.18em]" style={{ color: GOLD }}>
+    <div className="mt-2 rounded-xl px-3 py-2 text-[12.5px] leading-relaxed" style={{ border: `1px solid ${COACH_COLOR}44`, background: 'rgba(217,164,65,0.07)', color: 'var(--ink)' }}>
+      <div className="mono mb-0.5 flex items-center gap-1 text-[9px] uppercase tracking-[0.18em]" style={{ color: COACH_COLOR }}>
         <SparkGlyph size={11} /> Coach vừa nhận xét
       </div>
       {loading && !text ? (

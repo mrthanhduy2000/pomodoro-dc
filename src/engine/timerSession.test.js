@@ -3,8 +3,10 @@ import assert from 'node:assert/strict';
 
 import {
   BREAK_START_DELAY_MS,
+  BREAK_START_DELAY_QUICK_MS,
   CONTINUED_POMODORO_CONFIRM_SECONDS,
   TIMER_MODES,
+  describeClockSubline,
   getContinuedPomodoroConfirmUntilSeconds,
   getContinuedPomodoroOvertimeSeconds,
   getCreditedFocusMinutes,
@@ -15,7 +17,6 @@ import {
   shouldHoldContinuedPomodoroForConfirmation,
   shouldInferContinuedPomodoroSession,
   shouldStartBreakAfterCompletion,
-  BREAK_START_DELAY_QUICK_MS,
 } from './timerSession.js';
 
 test('continue-after-Pomodoro is resolved from the running session before settings fallback', () => {
@@ -204,4 +205,17 @@ test('session rhythm: the celebration delay covers the ending\'s first beat, and
   assert.ok(BREAK_START_DELAY_MS <= 3500, `${BREAK_START_DELAY_MS} ms reads as a frozen screen`);
   assert.ok(BREAK_START_DELAY_QUICK_MS < BREAK_START_DELAY_MS, 'the no-celebration delay must be the shorter one');
   assert.ok(BREAK_START_DELAY_QUICK_MS <= 800, `${BREAK_START_DELAY_QUICK_MS} ms of dead air before a plain break`);
+});
+
+test('describeClockSubline (ADR-079): an ordinal while idle/running, a count on a break, no unit, no setting', () => {
+  assert.equal(describeClockSubline({ phase: 'idle', sessionsCompletedToday: 0 }), 'Phiên thứ 1 hôm nay');
+  assert.equal(describeClockSubline({ phase: 'idle', sessionsCompletedToday: 2 }), 'Phiên thứ 3 hôm nay');
+  assert.equal(describeClockSubline({ phase: 'break', sessionsCompletedToday: 1 }), 'Xong 1 phiên hôm nay');
+  assert.equal(describeClockSubline({ phase: 'finished', sessionsCompletedToday: 3 }), 'Xong 3 phiên hôm nay');
+  assert.equal(describeClockSubline({ phase: 'break', sessionsCompletedToday: 0 }), 'Xong 0 phiên hôm nay');
+  for (const s of [describeClockSubline({ phase: 'break', sessionsCompletedToday: 12 }), describeClockSubline({ phase: 'idle', sessionsCompletedToday: 12 })]) {
+    assert.ok(s.length <= 22, `"${s}" is ${s.length} chars — longer than the ring's chord holds at 390 px`);
+  }
+  assert.equal(describeClockSubline({ sessionsCompletedToday: -4 }), 'Phiên thứ 1 hôm nay', 'garbage clamps to zero');
+  assert.equal(describeClockSubline(), 'Phiên thứ 1 hôm nay');
 });

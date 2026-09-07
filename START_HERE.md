@@ -32,7 +32,17 @@ Production branch `main` carries **both** work streams (merged 2026-08-28 on Đ�
 ⚠️ Phase 21 therefore shipped **before** Đàm reviewed its screenshots — the "waiting on Đàm's eyes"
 item below is still live, it just now reviews something already running.
 
-- **Loop — ROUND 38 (2026-09-07, LATEST): THE CITY LIVES ON THE FOCUS SCREEN (ADR-078).** Order:
+- **Loop — ROUND 39 (2026-09-07, LATEST): WHILE A TIMER RUNS, THE FOCUS SCREEN IS THE TIMER (ADR-079).**
+  Order: *"Dọn giao diện màn Tập trung — không thêm tính năng."* One indicator while running (daily-goal
+  ring deleted, brick strip = one headline, postcard `quiet`, no pill, voice line silent); one line under
+  the clock on every device (`describeClockSubline`: «Phiên thứ N hôm nay»; the goal fraction lives on the
+  idle postcard caption); goal/break line UNDER the ring; three colours (`--accent` focusing · `--good`
+  break; palette classes gone from `PomodoroEngine.jsx` + `focus/*`, Coach gold → accent); quiet chrome for
+  focus AND break (`anyTimerRunning`); 20 `truncate` sites → wrap (tab bar keeps 3). Counts while running:
+  indicators 6 → 1 · numbers 13 → 2 · colours 6 → 3 · cut texts ≥ 3 → 0. Guards: `timerRing.test.js` (one
+  dashed arc · tokens · palette gate), `focusFoldReach.test.js`. Inspect the running state with a seeded
+  `timerSession` fixture (ms timestamps) + `--settle 600`.
+- **Loop — ROUND 38 (2026-09-07): THE CITY LIVES ON THE FOCUS SCREEN (ADR-078).** Order:
   *"Thôi dọn, bắt đầu xây"* + a permanent report law (A for Đàm first, B for the advisor). (1) **City
   postcard** (`focus/CityPostcard.jsx` + pure `focus/cityPostcard.js`): the same `CityStage` framed at
   full opacity at the top of Focus — still in a session, alive when idle, camera on this session's

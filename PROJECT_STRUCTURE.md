@@ -833,7 +833,7 @@
 ├── electron/                   # App phụ Mac (menu bar/tray) — mở URL Vercel, đọc timer từ Supabase
 ├── public/                     # Asset tĩnh (icon, service worker push-worker.js, manifest PWA)
 ├── scripts/                    # Công cụ dev chạy tay (không vào app) — xem CLAUDE.md mục nào còn dùng
-│   ├── doc-budget.mjs          # ADR-073: đo ngân sách token của tài liệu; `--map <file>` in mục lục thay vì cat
+│   ├── doc-budget.mjs          # ADR-073/076: ngân sách token tài liệu; `--map <file>` mục lục thay vì cat; `--rotate <file>` tự đẩy mục cũ sang docs/archive/
 │   └── docBudget.test.js       # cổng canh trần — ĐỎ khi file tự-nạp phình quá trần
 │   └── shot.mjs                #   CHỤP MÀN HÌNH ĐÁNG TIN (qua CDP). ⚠️ DÙNG CÁI NÀY, đừng tự dựng
 │                               #   lệnh Chromium mới: `--virtual-time-budget` đóng băng hoạt hoạ rAF
@@ -1109,7 +1109,8 @@ Reopening something means moving it back out of the archive — never duplicatin
    · **Trần cửa sổ ngữ cảnh** *(ADR-075)*: không file tra cứu nào được vượt 200.000 token ước tính.
      Vượt = phải TÁCH, không được nới trần.
    · **Xoay vòng log chỉ-ghi-thêm** *(ADR-075, mở rộng ở ADR-076)*: `BAN_GIAO.md` · `CHANGELOG.md` ·
-     `TECH_DEBT.md` ≤ 120.000 ký tự · `ARCHITECTURE_DECISIONS.md` ≤ 250.000. Vượt = phải
+     `TECH_DEBT.md` ≤ 120.000 ký tự · `ARCHITECTURE_DECISIONS.md` ≤ 250.000. **Cổng đỏ thì tự chữa:**
+     `node scripts/doc-budget.mjs --rotate <file>` chuyển mục cũ sang `docs/archive/` nguyên văn. Vượt = phải
      chuyển mục cũ nhất sang `docs/archive/` (đúng `PHASE_RULES.md` §5), không được nới trần.
    Kiểm: **`node scripts/doc-budget.mjs`**. ⚠️ Đo bằng **ký tự Unicode (JS `String.length`)**, KHÔNG
    bằng `wc -c` (thổi phồng ~21%) và không bằng `len()` của Python (emoji ngoài BMP lệch). Hệ số:

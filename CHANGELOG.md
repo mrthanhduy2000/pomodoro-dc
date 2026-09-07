@@ -24,6 +24,16 @@
 - Tests: +20 (`cityPostcard` 4 · `sessionBrickChoose` 5 · `soundEngine.cues` 6 · `sessionRewards` 5); full suite 1,602 tests · 1,601 pass · 0 fail · 1 skipped.
 
 **Compatibility.** No save migration: `ui.postcardFocusBpId` is in-memory; the queue shape is unchanged; the Settings key `cityHomeBackdrop` keeps its name (now the postcard switch). Sandbox lesson: under software GL the FPS watchdog downgrades both the postcard and the City tab to 2D after ~3 s — shoot 3D with `--settle 600`.
+## 2026-09-07 — Self-healing rotation + "build, don't audit" (ADR-076 addendum)
+
+- **Purpose**: a red rotation gate said what was wrong but not how to fix it; every future session
+  would have re-measured and re-scripted the fix.
+- **Scope**: `node scripts/doc-budget.mjs --rotate <file>` / `--rotate-all` [`--dry`] [`--force`]
+  moves a log's old entries verbatim into a dated `docs/archive/` file and leaves an index; the gate
+  error names the command. Operating rule added to `CLAUDE.md`: `npm test` green = docs healthy, do
+  not re-audit before building.
+- **Impact**: growth is now handled by one command instead of a session's worth of investigation.
+  Tooling + docs only; 16 guard tests.
 
 ## 2026-09-06 (late night) — Round 37: a session always lays a brick (ADR-077)
 

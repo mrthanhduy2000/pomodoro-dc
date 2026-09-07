@@ -52,8 +52,10 @@ change makes their content FALSE**: new module → `PROJECT_STRUCTURE.md` · flo
 `ARCHITECTURE.md` · a decision with ≥2 genuinely weighed options → new ADR · debt found →
 `TECH_DEBT.md` · status or next-steps changed → `START_HERE.md`. **Never update "for completeness".**
 
-`BAN_GIAO.md` is a journal: **append only, read only the first 60 lines.** Past ~500 lines, move the
-old part to `docs/archive/`. Never read it whole.
+`BAN_GIAO.md` is a journal: **append only, read only the first 60 lines.** Never read it whole.
+When any append-only log passes its limit, `npm test` goes red and names the fix:
+`node scripts/doc-budget.mjs --rotate <file>` — it moves the old entries to `docs/archive/` verbatim.
+Do not survey or re-measure the docs before a task; the guards already did (`CLAUDE.md` §TOKEN BUDGET #4).
 
 ## 6. Reports: 5 lines
 ```

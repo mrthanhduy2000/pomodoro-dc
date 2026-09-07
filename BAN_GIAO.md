@@ -43,9 +43,28 @@
 > - The `--click` matcher uses the button's full text (`🔥Bếp Lửa Cổ Đại2 phiên`), not the label.
 >
 > ### Foreign commits carried to `main`
-> None — `origin/main` was at `a26ef83` (this branch's own merge) when the round started.
+> Two from another session landed on `origin/main` during this round and are merged in unaltered:
+> `ef8b245` (self-healing rotation: `doc-budget.mjs --rotate`, 16 guard tests, the "build, don't audit"
+> rule in `CLAUDE.md`) and its merge commit `ca4958a`. Conflicts were docs-only (this file, `CHANGELOG.md`),
+> resolved by keeping both entries — round 38 first, the addendum right below.
+>
 >
 ---
+
+> Last update: **2026-09-07** — **THE GATES HEAL THEMSELVES; BUILD, DON'T AUDIT (ADR-076 addendum).**
+>
+> Đàm's requirement: *"nếu file phình to thì cũng tự biết giải quyết"*. A red rotation gate used to
+> leave the HOW to the next session. Now `node scripts/doc-budget.mjs --rotate <file>` (or
+> `--rotate-all`) moves a log's oldest entries VERBATIM into a fresh dated `docs/archive/` file and
+> leaves a title index where they were; the gate's error message names that exact command.
+> `TECH_DEBT.md` moves only entries whose own title says closed and refuses to guess about open ones.
+> Proven end-to-end on a padded `BAN_GIAO.md`: 126,731 → 59,883 chars, 12 = 11 + 1, green.
+> Two bugs caught by the dry run first: rotating under-limit files, and treating "PHẦN LỚN ĐÃ XỬ LÝ"
+> as closed. Three planner unit tests pin the contract (lossless split · newest stays · partial never
+> moves).
+>
+> New operating rule in `CLAUDE.md` §TOKEN BUDGET #4 — **build, don't audit**: `npm test` green means
+> the doc system is healthy; do not re-measure or re-survey it before the task in the prompt.
 
 > Last update: **2026-09-06 (late night)** — **ROUND 37: A SESSION ALWAYS LAYS A BRICK (ADR-077).**
 > Order (verbatim essentials): *"Build lớn. Simplify mạnh. Làm game vui hơn. Tập trung nhiều hơn vào

@@ -200,6 +200,22 @@ roughly 44%. Titles below are the lookup key; read one with
 - **Trade-off**: discovery costs a directory walk per test run (negligible) and the classes are
   coarse — a genuinely special document cannot get a bespoke limit without adding it to a table. That
   is deliberate: coarse rules that need no maintenance beat precise rules nobody maintains.
+- **Addendum 2026-09-07 — the gate now heals itself.** A red rotation gate used to say "move old
+  entries to `docs/archive/`" and leave the HOW to the next session, which then had to measure, read
+  and write a one-off script — the opposite of Đàm's requirement *"nếu file phình to thì cũng tự biết
+  giải quyết"*. `node scripts/doc-budget.mjs --rotate <file>` (or `--rotate-all`) now does it: each
+  append-only log declares how its entries are delimited and ordered; rotation keeps the newest until
+  the file is under 60% of its limit, moves the rest VERBATIM into a fresh dated
+  `docs/archive/<name>_<date>.md` (so no archive can outgrow a window either) and leaves a title
+  index where the entries were. `TECH_DEBT.md` moves only entries whose own title says closed — never
+  "PHẦN LỚN ĐÃ XỬ LÝ" — and tells a human when the remaining open debts must be split by subsystem.
+  The gate's error message names the exact command. Proven end-to-end: `BAN_GIAO.md` padded to
+  126,731 chars → red → `--rotate` → 59,883 chars, 12 entries = 11 kept + 1 archived, structural
+  sections intact, green. Two bugs caught by the dry run before trusting it: it rotated files that
+  were still under their limit (now only over-limit, or `--force`), and it treated "mostly resolved"
+  as closed.
+- **Also**: operating rule #4 in `CLAUDE.md` — **build, don't audit**. `npm test` green means the doc
+  system is healthy; a session must not re-measure or re-survey it before the task in the prompt.
 - **Review conditions**: if a legitimate document must exceed one context window, do not raise the
   ceiling — split it, and if splitting is genuinely impossible, that is the signal to revisit this ADR.
 

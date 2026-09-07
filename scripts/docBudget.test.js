@@ -5,7 +5,7 @@ import { fileURLToPath } from 'node:url'
 import { dirname, resolve } from 'node:path'
 import { BUDGETS, VI_PARAGRAPH_LIMIT, CANONICAL_RULES, chars, viParagraphs, tokens, overBudget,
   wrongLanguage, duplicatedRules, brokenPointers, oversizedReferences, needsRotation, ROTATION_LIMITS,
-  discoverDocs, classify,
+  discoverDocs, classify, JOURNALS, splitLog, planRotation, KEEP_RATIO,
   REFERENCE_CEILING_TOKENS } from './doc-budget.mjs'
 
 const ROOT = resolve(dirname(fileURLToPath(import.meta.url)), '..')
@@ -205,4 +205,40 @@ test('doc-budget: discovery finds every .md and classifies it', () => {
   assert.equal(classify('docs/archive/anything.md'), 'archive')
   assert.equal(classify('docs/some-future-file.md'), 'active', 'an unknown new doc must still be governed')
   assert.ok(!docs.some((f) => f.includes('node_modules')), 'the walk must skip node_modules')
+})
+
+/**
+ * ROTATION ENGINE (ADR-076 addendum). A red rotation gate now names a command that fixes it:
+ * `node scripts/doc-budget.mjs --rotate <file>`. These tests pin the planner's contract on synthetic
+ * logs so a future edit cannot silently start dropping entries. End-to-end proof on 2026-09-07:
+ * BAN_GIAO.md padded to 126,731 chars → gate red → --rotate → 59,883 chars, 12 entries = 11 kept +
+ * 1 archived, structural sections intact, gate green.
+ */
+const fakeJournal = (n) => Array.from({ length: n }, (_, i) =>
+  `> Last update: **entry ${n - i}**\n> body ${'x'.repeat(900)}\n\n---\n\n`).join('') + '## structural section\nkeep me\n'
+
+test('rotation: splitLog keeps head, entries and structural tail apart', () => {
+  const { head, entries, tail } = splitLog(fakeJournal(5), JOURNALS['BAN_GIAO.md'])
+  assert.equal(head, '')
+  assert.equal(entries.length, 5)
+  assert.ok(tail.startsWith('## structural section'), 'the structural sections must survive as tail')
+  assert.equal(head + entries.join('') + tail, fakeJournal(5), 'split must be lossless')
+})
+
+test('rotation: newest-first logs keep the newest entries and never lose one', () => {
+  const text = fakeJournal(10)
+  const plan = planRotation(text, JOURNALS['BAN_GIAO.md'], 4000)
+  assert.ok(plan.keep.length >= 1 && plan.move.length >= 1, 'a log over its limit must move something')
+  assert.equal(plan.keep.length + plan.move.length, 10, 'no entry may vanish')
+  assert.ok(plan.keep[0].includes('entry 10'), 'the newest entry stays')
+  assert.ok(plan.move.at(-1).includes('entry 1'), 'the oldest entry moves')
+  assert.ok(plan.after <= 4000 * KEEP_RATIO + 1200, 'result must land under KEEP_RATIO of the limit')
+})
+
+test('rotation: TECH_DEBT moves only entries whose own title says closed, never partial ones', () => {
+  const log = '# Debt\n\n## #1 — open thing\nbody\n## #2 — ✅ RESOLVED (x) — done thing\nbody\n## #3 — ⚠️ PHẦN LỚN ĐÃ XỬ LÝ — mostly\nbody\n'
+  const plan = planRotation(log, JOURNALS['TECH_DEBT.md'], 10)
+  assert.deepEqual(plan.move.map((e) => e.split('\n')[0].slice(0, 6)), ['## #2 '])
+  assert.equal(plan.keep.length, 2, '#1 (open) and #3 (partial) must stay')
+  assert.ok(plan.reason, 'still over the limit → the tool must say a human has to split by subsystem')
 })

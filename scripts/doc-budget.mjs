@@ -24,8 +24,10 @@
  *
  *   node scripts/doc-budget.mjs            → full table, exit 1 if anything is over
  *   node scripts/doc-budget.mjs --map F    → headings + line ranges of F (read lines, don't cat)
+ *   node scripts/doc-budget.mjs --rotate F [--dry] [--force] → move a log's old entries into docs/archive/
+ *   node scripts/doc-budget.mjs --rotate-all [--dry]
  */
-import { readFileSync, existsSync, readdirSync } from 'node:fs'
+import { readFileSync, existsSync, readdirSync, writeFileSync } from 'node:fs'
 import { fileURLToPath } from 'node:url'
 import { dirname, resolve, relative } from 'node:path'
 
@@ -83,6 +85,114 @@ export const ROTATION_LIMITS = {
   'CHANGELOG.md': 120000,
   'TECH_DEBT.md': 120000,
   'ARCHITECTURE_DECISIONS.md': 250000,
+}
+
+/**
+ * ROTATION ENGINE (ADR-076 addendum, 2026-09-07). A red rotation gate used to say "move old entries
+ * to docs/archive/" and leave the HOW to the next session — which then had to measure, read, and
+ * write a one-off script. Đàm's requirement: *"nếu file phình to thì cũng tự biết giải quyết"*.
+ * So the fix is a command: `node scripts/doc-budget.mjs --rotate <file>` (or `--rotate-all`).
+ *
+ * Each append-only log declares how its entries are delimited and how they are ordered. Rotation
+ * keeps the newest entries until the file is back under KEEP_RATIO of its limit, moves the rest
+ * VERBATIM into a new dated file under docs/archive/, and leaves a title index behind. A fresh dated
+ * archive per rotation means no archive file can ever grow past one context window either.
+ * TECH_DEBT is the exception: only entries whose own title says closed are moved; open debts need a
+ * human to decide (split by subsystem, like docs/TECH_DEBT_3D.md), so the tool says so and stops.
+ */
+export const KEEP_RATIO = 0.6
+
+export const JOURNALS = {
+  'BAN_GIAO.md': {
+    entry: /^> (?:Last update|Cập nhật lần cuối)/m,
+    // journal blocks come first; structural "## " sections after them must stay in place
+    tailStart: /^## /m,
+    order: 'newest-first',
+    title: (b) => b.split('\n')[0].replace(/^> /, '').slice(0, 120),
+  },
+  'CHANGELOG.md': {
+    entry: /^## \d{4}-\d{2}-\d{2}/m,
+    tailStart: /^## Ghi chú vận hành/m,
+    order: 'newest-first',
+    title: (b) => b.split('\n')[0].replace(/^## /, ''),
+  },
+  'ARCHITECTURE_DECISIONS.md': {
+    entry: /^## ADR-\d+/m,
+    tailStart: null,
+    order: 'newest-first',
+    title: (b) => b.split('\n')[0].replace(/^## /, ''),
+  },
+  'TECH_DEBT.md': {
+    entry: /^## #\d+/m,
+    tailStart: null,
+    order: 'closed-only',
+    closed: /✅|RESOLVED|ĐÃ ĐÓNG|ĐÃ XỬ LÝ|HẾT ĐỐI TƯỢNG/,
+    partial: /PHẦN LỚN|MỘT PHẦN|PARTIAL/,
+    title: (b) => b.split('\n')[0].replace(/^## /, ''),
+  },
+}
+
+/** Split a log into { head, entries[], tail } using its declared delimiters. Pure. */
+export function splitLog(text, spec) {
+  const first = text.search(spec.entry)
+  if (first < 0) return { head: text, entries: [], tail: '' }
+  let tailAt = text.length
+  if (spec.tailStart) {
+    const rest = text.slice(first)
+    const t = rest.search(spec.tailStart)
+    if (t >= 0) tailAt = first + t
+  }
+  const body = text.slice(first, tailAt)
+  const starts = [...body.matchAll(new RegExp(spec.entry.source, 'gm'))].map((m) => m.index)
+  const entries = starts.map((st, i) => body.slice(st, i + 1 < starts.length ? starts[i + 1] : body.length))
+  return { head: text.slice(0, first), entries, tail: text.slice(tailAt) }
+}
+
+/** Decide what stays and what moves. Pure — returns { keep, move, reason }. */
+export function planRotation(text, spec, limit) {
+  const { head, entries, tail } = splitLog(text, spec)
+  const target = Math.floor(limit * KEEP_RATIO)
+  if (spec.order === 'closed-only') {
+    const move = entries.filter((e) => { const t = e.split('\n')[0]; return spec.closed.test(t) && !spec.partial.test(t) })
+    const keep = entries.filter((e) => !move.includes(e))
+    const after = head.length + tail.length + keep.reduce((a, e) => a + e.length, 0)
+    return { head, tail, keep, move, after,
+      reason: after > limit ? 'still over the limit after moving closed entries: the remaining debts are OPEN — split them by subsystem by hand (see docs/TECH_DEBT_3D.md for the pattern)' : null }
+  }
+  let size = head.length + tail.length
+  const keep = []
+  const move = []
+  for (const e of entries) {
+    if (size + e.length <= target || keep.length === 0) { keep.push(e); size += e.length } else move.push(e)
+  }
+  return { head, tail, keep, move, after: size, reason: null }
+}
+
+function rotateOne(file, { dry = false, force = false } = {}) {
+  const spec = JOURNALS[file]
+  if (!spec) { console.error(`Not a rotating log: ${file}. Known: ${Object.keys(JOURNALS).join(', ')}`); return 1 }
+  const limit = ROTATION_LIMITS[file]
+  const text = read(file)
+  // Rotate only when the gate would be red; --force trims proactively to KEEP_RATIO.
+  if (text.length <= limit && !force) { console.log(`${file}: under its limit (${fmt(text.length)} / ${fmt(limit)}) — nothing to do; add --force to trim anyway`); return 0 }
+  const plan = planRotation(text, spec, limit)
+  if (plan.move.length === 0) { console.log(`${file}: nothing to rotate (${fmt(text.length)} chars, limit ${fmt(limit)})`); return plan.reason ? 1 : 0 }
+  const date = new Date().toISOString().slice(0, 10)
+  const base = file.replace(/\.md$/, '')
+  let arc = `docs/archive/${base}_${date}.md`
+  for (let k = 2; existsSync(resolve(ROOT, arc)); k++) arc = `docs/archive/${base}_${date}_${k}.md`
+  const titles = plan.move.map((e) => `- ${spec.title(e)}`).join('\n')
+  console.log(`${file}: ${fmt(text.length)} → ${fmt(plan.after)} chars (limit ${fmt(limit)}) · moving ${plan.move.length} of ${plan.keep.length + plan.move.length} entries → ${arc}`)
+  if (dry) { console.log(titles); return 0 }
+  const archiveText = `# ${base} — rotated ${date} (ADR-076)\n\n> ${plan.move.length} entries moved VERBATIM out of \`${file}\` by \`node scripts/doc-budget.mjs --rotate ${file}\`. Nothing was rewritten or deleted. Index without reading: \`node scripts/doc-budget.mjs --map ${arc}\`\n\n---\n\n` + plan.move.join('')
+  const index = `## 📚 Rotated ${date} → [\`${arc}\`](${arc})\n\n${plan.move.length} entries moved verbatim (ADR-076); nothing deleted. Find one: \`grep -n '<title>' ${arc}\`.\n\n<details><summary>Titles</summary>\n\n${titles}\n\n</details>\n\n---\n\n`
+  writeFileSync(resolve(ROOT, arc), archiveText)
+  // The index sits where the moved entries were: at the end of the kept run for newest-first logs
+  // (so `head -60` still shows the newest entry), right after the header for closed-only logs.
+  const body = spec.order === 'closed-only' ? index + plan.keep.join('') : plan.keep.join('') + index
+  writeFileSync(resolve(ROOT, file), plan.head + body + plan.tail)
+  if (plan.reason) { console.error(`⚠️ ${file}: ${plan.reason}`); return 1 }
+  return 0
 }
 
 /** Active journals that have grown past their rotation limit. Empty = gate green. */
@@ -351,7 +461,7 @@ function report() {
     }
     if (rot.length) {
       for (const r of rot) console.error(`❌ NEEDS ROTATION: ${r.file} ${fmt(r.size)} chars > ${fmt(r.limit)} limit`)
-      console.error('   Fix: move the oldest entries into docs/archive/ (PHASE_RULES §5). Do not raise the limit.')
+      console.error(`   Fix: node scripts/doc-budget.mjs --rotate ${rot[0].file}   (moves old entries to docs/archive/ verbatim; never raise the limit)`)
     }
     if (huge.length) {
       for (const h of huge) console.error(`❌ LARGER THAN A CONTEXT WINDOW: ${h.file} ≈ ${fmt(h.tok)} tokens`)
@@ -381,6 +491,13 @@ function map(file) {
 }
 
 if (process.argv[1] && process.argv[1].endsWith('doc-budget.mjs')) {
-  const i = process.argv.indexOf('--map')
-  process.exit(i !== -1 ? map(process.argv[i + 1]) : report())
+  const argv = process.argv.slice(2)
+  const dry = argv.includes('--dry')
+  const force = argv.includes('--force')
+  const i = argv.indexOf('--map')
+  const r = argv.indexOf('--rotate')
+  if (i !== -1) process.exit(map(argv[i + 1]))
+  else if (argv.includes('--rotate-all')) process.exit(Object.keys(JOURNALS).map((f) => rotateOne(f, { dry, force })).some((c) => c) ? 1 : 0)
+  else if (r !== -1) process.exit(rotateOne(argv[r + 1], { dry, force }))
+  else process.exit(report())
 }

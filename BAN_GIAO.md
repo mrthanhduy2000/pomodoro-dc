@@ -1,3 +1,20 @@
+> Last update: **2026-09-07** — **THE GATES HEAL THEMSELVES; BUILD, DON'T AUDIT (ADR-076 addendum).**
+>
+> Đàm's requirement: *"nếu file phình to thì cũng tự biết giải quyết"*. A red rotation gate used to
+> leave the HOW to the next session. Now `node scripts/doc-budget.mjs --rotate <file>` (or
+> `--rotate-all`) moves a log's oldest entries VERBATIM into a fresh dated `docs/archive/` file and
+> leaves a title index where they were; the gate's error message names that exact command.
+> `TECH_DEBT.md` moves only entries whose own title says closed and refuses to guess about open ones.
+> Proven end-to-end on a padded `BAN_GIAO.md`: 126,731 → 59,883 chars, 12 = 11 + 1, green.
+> Two bugs caught by the dry run first: rotating under-limit files, and treating "PHẦN LỚN ĐÃ XỬ LÝ"
+> as closed. Three planner unit tests pin the contract (lossless split · newest stays · partial never
+> moves).
+>
+> New operating rule in `CLAUDE.md` §TOKEN BUDGET #4 — **build, don't audit**: `npm test` green means
+> the doc system is healthy; do not re-measure or re-survey it before the task in the prompt.
+
+---
+
 > Last update: **2026-09-06 (night, fifth pass)** — **GOVERNANCE NOW RUNS ON DISCOVERY (ADR-076).**
 >
 > Đàm asked the right question: *what about the files later work creates — will it just grow back?*

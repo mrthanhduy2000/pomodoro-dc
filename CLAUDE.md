@@ -61,9 +61,14 @@ ceiling, and crossing it means SPLIT, not raise.
    may restate a rule another owns — this file once had the merge rule backwards in two places) ·
    **pointer** (every `.md` reference must resolve) · **context-window ceiling** (no reference doc
    above one window) · **rotation** (every append-only log — `BAN_GIAO.md` · `CHANGELOG.md` · `TECH_DEBT.md` · `ARCHITECTURE_DECISIONS.md` — must shed old entries into `docs/archive/`). Any breach = **RED TEST**. Check: `node scripts/doc-budget.mjs`.
-   When one goes red the fix is **SPLIT and leave a pointer** — never raise a limit, never delete
-   knowledge. *(Why guards: the old 40,000 limit was only a sentence, and `START_HERE.md` had
-   silently blown its own limit with nobody noticing. **A threshold with no guard is a funnel.**)*
+   When one goes red the fix is named in the error: for a log, **`node scripts/doc-budget.mjs
+   --rotate <file>`** moves old entries into `docs/archive/` verbatim and leaves an index; for
+   anything else, **SPLIT and leave a pointer**. Never raise a limit, never delete knowledge.
+4. **Build, don't audit.** The doc system was measured, split and guarded on 2026-09-06 (ADR-073…076).
+   `npm test` green = the doc system is healthy — **do not re-measure it, re-read it, or re-audit it**
+   before starting the task in the prompt — that survey spends the very budget the guards protect.
+   *(Why guards: the old 40,000 limit was only a sentence, and `START_HERE.md` silently blew its own.
+   **A threshold with no guard is a funnel.**)*
 
 ## ⚠️ PRIORITY RULE #1 (every AI session)
 1. **Before working:** read **`START_HERE.md`** — the ONLY file required every session. Then
@@ -144,10 +149,9 @@ any of them before reading it**:
 8. ⚠️ **No `GEMINI_API_KEY` in Vercel env ⇒ AI Coach does not run** (the on-device engine is gone).
 
 ## 🗺️ DOC MAP — what auto-loads, what you must open
-Claude Code / Codex **auto-load 100% of `CLAUDE.md`** before the AI can decide anything, so
-*"CLAUDE.md is reference, just grep it"* is **impossible to obey**. The only fix is **splitting
-files**. Done in three passes on 2026-09-06: 190,700 → 21,600 tokens (split `LESSONS_3D`/`AI_COACH`)
-→ 9,600 (split `GOVERNANCE`/`OPERATIONS`) → **~2,800** (translated to English). Nothing was deleted.
+`CLAUDE.md` auto-loads in full before the AI can decide anything, so it cannot be "reference" — it
+must stay small, and everything else must be split out behind a pointer (ADR-073…076; history in
+`BAN_GIAO.md`). Nothing was deleted in any split.
 
 | File | Mechanism | When to open |
 |---|---|---|

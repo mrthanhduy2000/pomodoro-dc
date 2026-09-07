@@ -10,6 +10,17 @@
 > **Muốn hiểu VÌ SAO một quyết định được chọn** → `ARCHITECTURE_DECISIONS.md`. **Muốn biết migration
 > cụ thể nào cần chạy** → `MIGRATION.md`.
 
+## 2026-09-07 — Self-healing rotation + "build, don't audit" (ADR-076 addendum)
+
+- **Purpose**: a red rotation gate said what was wrong but not how to fix it; every future session
+  would have re-measured and re-scripted the fix.
+- **Scope**: `node scripts/doc-budget.mjs --rotate <file>` / `--rotate-all` [`--dry`] [`--force`]
+  moves a log's old entries verbatim into a dated `docs/archive/` file and leaves an index; the gate
+  error names the command. Operating rule added to `CLAUDE.md`: `npm test` green = docs healthy, do
+  not re-audit before building.
+- **Impact**: growth is now handled by one command instead of a session's worth of investigation.
+  Tooling + docs only; 16 guard tests.
+
 ## 2026-09-06 (night, fifth pass) — Document governance runs on discovery (ADR-076)
 
 - **Purpose**: the ADR-075 guards all read a hand-written list, so any document created later was

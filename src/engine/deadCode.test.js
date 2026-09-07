@@ -33,13 +33,16 @@ test('ba hành động store đã xoá không được sống lại mà vẫn kh
   assert.ok(!/surgeOverride/.test(store), 'surgeOverride quay lại — nó vĩnh viễn null');
   assert.ok(!/surgeOverride/.test(doc('./gameMath.js')), 'nhánh surgeOverride quay lại gameMath');
   // Gác chạy-rỗng: file phải thật sự được đọc.
-  assert.ok(store.length > 100_000, 'không đọc được gameStore.js — phép đo chạy rỗng');
+  // ADR-078 moved ~1,800 lines of helpers + the reward assembly into `engine/`; the floor follows.
+  assert.ok(store.length > 40_000, 'không đọc được gameStore.js — phép đo chạy rỗng');
 });
 
 // THỬ-CHO-ĐỎ: bỏ `if (hasFocusSessionInProgress) return null` khỏi FocusIntro ⇒ bài 2 đỏ.
 test('lời chào màn Tập trung: nơi gọi và hàm dựng phải NHẤT QUÁN về ca "đang chạy"', () => {
   const app = doc('../App.jsx');
-  const anLoiChao = /if \(hasFocusSessionInProgress\) return null;/.test(app);
+  // ADR-078: the greeting is the caption of the city postcard, which STAYS while a session runs
+  // (still, camera on the brick) — only the greeting line is dropped, via the prop.
+  const anLoiChao = /greeting=\{hasFocusSessionInProgress \? null : title\}/.test(app);
   const dungLoiChaoDangChay = /getLiveSessionIntroCopy|titleSessionRunning|sessionLiveStatus/.test(app);
   assert.ok(anLoiChao, 'FocusIntro thôi ẩn lời chào khi phiên đang chạy');
   assert.ok(

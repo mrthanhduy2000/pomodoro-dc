@@ -44,7 +44,7 @@ export default function CategoryManager({ categories, onClose, onAdd, onDelete }
           onClick={onClose}
           aria-label="Đóng quản lý phân loại"
           className={`text-xl leading-none transition ${
-            lightTheme ? 'text-[var(--muted)] hover:text-[var(--ink)]' : 'text-slate-500 hover:text-white'
+            lightTheme ? 'text-[var(--muted)] hover:text-[var(--ink)]' : 'text-[var(--muted)] hover:text-[var(--ink)]'
           }`}
         >
           ✕
@@ -65,7 +65,7 @@ export default function CategoryManager({ categories, onClose, onAdd, onDelete }
                 type="button"
                 onClick={() => onDelete(category.id)}
                 className={`text-xs font-semibold transition ${
-                  lightTheme ? 'text-[var(--muted)] hover:text-[var(--accent2)]' : 'text-slate-500 hover:text-rose-300'
+                  lightTheme ? 'text-[var(--muted)] hover:text-[var(--accent2)]' : 'text-[var(--muted)] hover:text-[var(--accent2)]'
                 }`}
               >
                 Xóa
@@ -86,7 +86,7 @@ export default function CategoryManager({ categories, onClose, onAdd, onDelete }
               onClick={() => setNewColor(color)}
               aria-label={`Chọn màu ${color}`}
               aria-pressed={newColor === color}
-              className={`h-6 w-6 rounded-full ${newColor === color ? lightTheme ? 'ring-2 ring-[var(--ink)] ring-offset-2 ring-offset-[var(--canvas)]' : 'ring-2 ring-white/80 ring-offset-2 ring-offset-black/40' : ''}`}
+              className={`h-6 w-6 rounded-full ${newColor === color ? lightTheme ? 'ring-2 ring-[var(--ink)] ring-offset-2 ring-offset-[var(--canvas)]' : 'ring-2 ring-[var(--ink)] ring-offset-2 ring-offset-[var(--canvas)]' : ''}`}
               style={{ backgroundColor: color }}
             />
           ))}
@@ -117,7 +117,7 @@ export default function CategoryManager({ categories, onClose, onAdd, onDelete }
             className={`rounded-2xl border px-4 py-2 text-sm font-semibold transition disabled:opacity-40 ${
               lightTheme
                 ? 'border-[rgba(var(--accent-rgb),0.22)] bg-[var(--ink)] text-[var(--canvas)] hover:bg-[var(--ink-2)]'
-                : 'border-[rgba(var(--accent-rgb),0.20)] bg-[rgba(var(--accent-rgb),0.88)] text-white hover:bg-[rgba(var(--accent-rgb),0.78)]'
+                : 'border-[rgba(var(--accent-rgb),0.20)] bg-[rgba(var(--accent-rgb),0.88)] text-[var(--canvas)] hover:bg-[rgba(var(--accent-rgb),0.78)]'
             }`}
           >
             Thêm

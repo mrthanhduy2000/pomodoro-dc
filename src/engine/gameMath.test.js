@@ -460,7 +460,7 @@ test('weekend vs weekday: chênh tỉ-lệ nhỏ nhưng phút/phiên ≥20% → 
   const r = getWeekendVsWeekdayContrast(h, { getEntryWeekday: wdOf });
   assert.ok(r); assert.equal(r.basis, 'minutes'); assert.equal(r.stronger, 'weekend');
 });
-test('weekend vs weekday: một nhóm <4 phiên → null; thiếu getter → null', () => {
+test('weekend vs weekday: một nhóm dưới sàn mẫu (COACH_BUCKET_MIN_SAMPLE) → null; thiếu getter → null', () => {
   const tiny = [{ weekday: 6, minutes: 30, completed: true, goalAchieved: true }, { weekday: 3, minutes: 30, completed: true, goalAchieved: true }];
   assert.equal(getWeekendVsWeekdayContrast(tiny, { getEntryWeekday: wdOf }), null);
   assert.equal(getWeekendVsWeekdayContrast([], {}), null);

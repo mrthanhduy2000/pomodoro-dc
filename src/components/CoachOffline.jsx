@@ -48,7 +48,7 @@ export default function CoachOffline(goalProps) {
         type="button"
         onClick={() => setOpen(true)}
         className="mt-2 flex w-full items-center justify-center gap-1.5 rounded-full py-1.5 text-[11px] font-semibold uppercase tracking-[0.15em] transition-opacity hover:opacity-80"
-        style={{ border: `1px solid ${GOLD}55`, color: GOLD, background: 'rgba(217,164,65,0.08)' }}
+        style={{ border: `1px solid ${GOLD}55`, color: GOLD, background: `${GOLD}14` }}
       >
         <SparkGlyph size={12} /> AI phân tích tổng thể
       </button>

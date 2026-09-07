@@ -288,9 +288,9 @@ export default function PrestigeModal() {
                 className="flex-1 border px-5 py-3 text-sm font-semibold transition"
                 style={canPrestige ? {
                   borderRadius: 'var(--skin-radius-control,14px)',
-                  borderColor: confirmed ? 'rgba(31,30,29,0.12)' : 'rgba(var(--accent-rgb),0.16)',
+                  borderColor: confirmed ? 'var(--line-2)' : 'rgba(var(--accent-rgb),0.16)',
                   background: confirmed
-                    ? 'rgba(31,30,29,0.98)'
+                    ? 'var(--ink)'
                     : 'rgba(var(--accent-rgb),0.92)',
                   color: 'var(--canvas)',
                   boxShadow: confirmed
@@ -299,7 +299,7 @@ export default function PrestigeModal() {
                 } : {
                   borderRadius: 'var(--skin-radius-control,14px)',
                   borderColor: 'var(--line)',
-                  background: 'rgba(244,242,236,0.86)',
+                  background: 'var(--panel-soft)',
                   color: 'var(--muted-2)',
                   cursor: 'not-allowed',
                 }}

@@ -38,11 +38,11 @@ export default function SessionReviewCard({ completedGoalAchieved, goalText, goa
           className={`flex-1 rounded-full border px-4 py-2.5 text-sm font-semibold transition ${
             completedGoalAchieved === true
               ? lightTheme
-                ? 'border-emerald-200 bg-[rgba(229,236,223,0.96)] text-[var(--good)] shadow-[0_10px_24px_rgba(91,122,82,0.12)]'
-                : 'border-[rgba(var(--accent-rgb),0.18)] bg-white/[0.06] text-[var(--ink)]'
+                ? 'border-[var(--good)] bg-[rgba(229,236,223,0.96)] text-[var(--good)] shadow-[0_10px_24px_rgba(91,122,82,0.12)]'
+                : 'border-[rgba(var(--accent-rgb),0.18)] bg-[var(--panel-soft)] text-[var(--ink)]'
               : lightTheme
-                ? 'border-[var(--line)] bg-[rgba(244,242,236,0.82)] text-[var(--muted)] hover:border-emerald-200 hover:text-[var(--good)]'
-                : 'border-white/10 bg-white/[0.035] text-slate-300 hover:border-emerald-300/25 hover:bg-emerald-400/10 hover:text-emerald-100'
+                ? 'border-[var(--line)] bg-[rgba(244,242,236,0.82)] text-[var(--muted)] hover:border-[var(--good)] hover:text-[var(--good)]'
+                : 'border-[var(--line)] bg-[var(--panel-soft)] text-[var(--ink)] hover:border-[var(--good)] hover:text-[var(--good)]'
           }`}
         >
           Đạt
@@ -54,10 +54,10 @@ export default function SessionReviewCard({ completedGoalAchieved, goalText, goa
             completedGoalAchieved === false
               ? lightTheme
                 ? 'border-[rgba(var(--accent-rgb),0.22)] bg-[rgba(255,247,237,0.96)] text-[var(--accent2)] shadow-[0_10px_24px_rgba(var(--accent-rgb),0.12)]'
-                : 'border-[rgba(var(--accent-rgb),0.18)] bg-white/[0.06] text-[var(--accent-light)]'
+                : 'border-[rgba(var(--accent-rgb),0.18)] bg-[var(--panel-soft)] text-[var(--accent-light)]'
               : lightTheme
                 ? 'border-[var(--line)] bg-[rgba(244,242,236,0.82)] text-[var(--muted)] hover:border-[rgba(var(--accent-rgb),0.22)] hover:text-[var(--accent2)]'
-                : 'border-white/10 bg-white/[0.035] text-slate-300 hover:border-rose-300/25 hover:bg-rose-400/10 hover:text-rose-100'
+                : 'border-[var(--line)] bg-[var(--panel-soft)] text-[var(--ink)] hover:border-[var(--accent2)] hover:bg-[rgba(var(--accent-rgb),0.12)] hover:text-[var(--accent2)]'
           }`}
         >
           Chưa đạt

@@ -174,16 +174,16 @@ export default function StatsNotes({ savedNotes, sessionCategories }) {
                               });
                               setConfirmDeleteNoteId(null);
                             }}
-                            className="px-2.5 py-1 rounded-lg text-[10px] font-bold focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-red-400/60 focus-visible:ring-offset-2 transition-[background-color,color,border-color,box-shadow] duration-200"
-                            style={{ background: 'rgba(239,68,68,0.2)', color: '#f87171', border: '1px solid rgba(239,68,68,0.4)' }}
+                            className="px-2.5 py-1 rounded-lg text-[10px] font-bold focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[rgba(var(--accent-rgb),0.45)] focus-visible:ring-offset-2 transition-[background-color,color,border-color,box-shadow] duration-200"
+                            style={{ background: 'rgba(var(--accent-rgb),0.2)', color: 'var(--accent2)', border: '1px solid rgba(var(--accent-rgb),0.4)' }}
                           >
                             Xoá
                           </button>
                           <button
                             type="button"
                             onClick={() => setConfirmDeleteNoteId(null)}
-                            className="px-2.5 py-1 rounded-lg text-[10px] font-bold focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-400/60 focus-visible:ring-offset-2 transition-[background-color,color,border-color,box-shadow] duration-200"
-                            style={{ background: 'rgba(100,116,139,0.2)', color: '#94a3b8', border: '1px solid rgba(100,116,139,0.3)' }}
+                            className="px-2.5 py-1 rounded-lg text-[10px] font-bold focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--line-2)] focus-visible:ring-offset-2 transition-[background-color,color,border-color,box-shadow] duration-200"
+                            style={{ background: 'var(--panel-soft)', color: 'var(--muted)', border: '1px solid var(--line)' }}
                           >
                             Huỷ
                           </button>
@@ -192,8 +192,8 @@ export default function StatsNotes({ savedNotes, sessionCategories }) {
                         <button
                           type="button"
                           onClick={() => setConfirmDeleteNoteId(entry.id)}
-                          className="inline-flex w-fit items-center rounded-full border px-3 py-1 text-[10px] font-semibold transition-[background-color,color,border-color,transform] duration-200 hover:-translate-y-px focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-red-400/60 focus-visible:ring-offset-2"
-                          style={{ background: 'rgba(239,68,68,0.10)', color: '#f87171', borderColor: 'rgba(239,68,68,0.24)' }}
+                          className="inline-flex w-fit items-center rounded-full border px-3 py-1 text-[10px] font-semibold transition-[background-color,color,border-color,transform] duration-200 hover:-translate-y-px focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[rgba(var(--accent-rgb),0.45)] focus-visible:ring-offset-2"
+                          style={{ background: 'rgba(var(--accent-rgb),0.10)', color: 'var(--accent2)', borderColor: 'rgba(var(--accent-rgb),0.24)' }}
                         >
                           Xoá ghi chú
                         </button>

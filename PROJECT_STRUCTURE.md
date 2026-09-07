@@ -19,9 +19,14 @@
 │   │   │                         #   store, không biết luật chơi ⇒ dùng được cả trong hộp thoại
 │   │   │                         #   lẫn trong toast. Độ hiếm lấy từ `engine/rewardTiers.js` và
 │   │   │                         #   phải đọc được KHI KHÔNG NHÌN MÀU (nhãn chữ + dải chấm)
+│   │   │   ├── EraStageBar.jsx    # Era STAGE bar (label · EP · 3px bar · dots), one component for the top rail AND the postcard caption (ADR-078)
 │   │   │   └── ActionButton.jsx   # THE button (ADR-077, TECH_DEBT #86 door): token colours only, one `sizeMap`
+│   │   │   │                     #   ⚠️ #86 GATE (ADR-078): eslint `no-restricted-syntax` rejects palette classes / hex-rgb literals on any button
 │   │   │                         #   (`default`·`compactMobile`·`compactPrimary`·`sm`·`md`), press depth = shadow depth.
 │   │   ├── focus/            # Leaf controls of the Focus screen, extracted from PomodoroEngine.jsx (ADR-077)
+│   │   │   ├── CityPostcard.jsx   # THE CITY ON THE FOCUS SCREEN (ADR-078): framed CityStage tenant, still in a session,
+│   │   │   │                     #   alive when idle, camera on this session's brick; caption = greeting + EraStageBar
+│   │   │   ├── cityPostcard.js    # PURE: layout input (phantom scaffold for the auto-pick) · focus target · selection resolve
 │   │   │   ├── SessionBrickStrip.jsx # "This session's brick" above the ring — reads craftingQueue/buildings, engine/sessionBrick.js
 │   │   │   ├── BrickRow.jsx          # Brick cells (laid · laying · new · empty), shared with the ending's project card
 │   │   │   ├── QuickPresets.jsx      # 25/5 · 50/10 … presets (+ `CHU_KY_NGHI_CO_KHAC_NHAU`)
@@ -70,14 +75,6 @@
 │   │   │   ├── CityStage.jsx     # CHỌN bộ vẽ + tự lùi về 2D khi 3D hỏng. Nạp LƯỜI render3d
 │   │   │   │                     #   Có CHẾ ĐỘ LỚP NỀN (chrome/still/fill/interactive) — cùng một
 │   │   │   │                     #   bộ vẽ, hai vai trò: màn hình để ngắm vs khung cảnh phía sau
-│   │   │   ├── CityBackdrop.jsx  # THÀNH PHỐ RA TRANG CHỦ: lớp nền mờ sau đồng hồ ở trang Tập
-│   │   │   │                     #   Trung. ⚠️ Đang chạy phiên (và mọi lúc trên điện thoại) thì
-│   │   │   │                     #   ĐỨNG YÊN — luật pin, xem ghi chú trong file
-│   │   │   ├── cityBackdropScrim.js # Hồ sơ mốc THUẦN của lớp phủ giữ-chữ-đọc-được (2 hồ sơ: máy
-│   │   │   │                     #   bàn / điện thoại, vì chữ đứng ở hai độ sâu khác nhau).
-│   │   │   │                     #   ⚠️ Tách khỏi JSX vì một chuỗi CSS trong JSX thì KHÔNG bài
-│   │   │   │                     #   test nào chạm tới được, mà đây là thứ sai được theo kiểu đo
-│   │   │   │                     #   được — đổi bố cục trang chủ thì phải đo lại (textmap3.mjs)
 │   │   │   ├── CityPerfHud.jsx   # Bảng FPS/lệnh vẽ/tam giác — để đo cổng hiệu năng Phase 3A
 │   │   │   └── render3d/         # Bộ vẽ three.js — ⚠️ NƠI DUY NHẤT được import 'three'
 │   │   │       ├── CityScene3D.jsx # Vỏ React: vòng đời, resize, mất context. KHÔNG chứa logic 3D
@@ -126,7 +123,7 @@
 │   │   ├── StatsNotes.jsx     # Sổ tra cứu 2: ghi chú đã lưu. Cùng lý do tách.
 │   │   ├── statsTheme.js      # Biến màu/chữ dùng chung ba file Thống kê (CSS var có mặc định).
 │   │   │                     #   Hàm định dạng thuần của sổ tra cứu ở statsFormatters.js cạnh nó.
-│   │   ├── PomodoroEngine.jsx # ~1,900 dòng (ADR-077) — khung đồng hồ Pomodoro/Stopwatch (UI, logic timer
+│   │   ├── PomodoroEngine.jsx # ~1,900 dòng (ADR-077; `belowTimer` slot ADR-078) — khung đồng hồ Pomodoro/Stopwatch (UI, logic timer
 │   │   │                     #   thật nằm ở src/hooks/useTimer.js)
 │   │   ├── BuildScreen.jsx    # Màn CÔNG TRÌNH một nút (ADR-069): Đang xây · Xây tiếp (≤3 lựa chọn,
 │   │   │                     #   "Khởi công") · Đã xây · Trùng tu. Luật ở engine/buildChoices.js; gọi
@@ -165,7 +162,12 @@
 │   │   │                     #   ⚠️ Không chế công thức mới ở đây (một luật hai công thức). Bộ
 │   │   │                     #   getter giờ VN: time.vietnamHistoryTimeOpts (dùng chung với Coach).
 │   │   │                     #   ⚠️ statsPeriod.js · statsFocus.js ĐÃ XOÁ 2026-09-06 cùng 3 tab cũ.
-│   │   ├── sessionBrick.js    # "This session's brick" (ADR-077): pickSessionProject · autoQueueSessionProject · describeSessionBrick
+│   │   ├── sessionRewards.js  # EVERYTHING a finished session changes, PURE (ADR-078): assembleSessionReward({state, …, now,
+│   │   │                     #   today, weekKey, dailyGoal, random}) → {patch, sessionResult}; the store only applies `patch`
+│   │   ├── feedNotifications.js · achievementState.js · streak.js · overclock.js · trackingDefaults.js · eraScope.js
+│   │   ├── buildingPerks.js · historyStats.js · longBreakCycle.js · savedNotes.js   # ten helper clusters moved verbatim
+│   │   │                     #   out of gameStore.js (ADR-078); each header says what it owns. Pure, no store.
+│   │   ├── sessionBrick.js    # "This session's brick" (ADR-077): pickSessionProject · autoQueueSessionProject · chooseSessionProject · describeSessionBrick
 │   │   ├── missions.js        # Daily missions, PURE (ADR-077): roll · normalize · snapshot progress · tickDailyMissions (live = reload)
 │   │   ├── weeklyChain.js     # Weekly step chain, PURE (`now` param): refreshWeeklyChain · autoClaimWeeklySteps · rebuild
 │   │   ├── seededRng.js       # String-seeded PRNG shared by missions.js + weeklyChain.js
@@ -782,6 +784,7 @@
 │   │   └── useGameLoop.js
 │   ├── lib/                   # Hạ tầng dùng chung, KHÔNG phải logic game thuần: tích hợp dịch vụ
 │   │                          #   ngoài, và từ 2026-08-27 thêm từ vựng chuyển động của giao diện
+│   │   ├── isRecord.js         # `isRecord(value)` plain-object predicate shared by the store and the engine (ADR-078)
 │   │   ├── keyboard.js         # `isEditableShortcutTarget` · `isSpaceKeyEvent` for the Space shortcut (ADR-077)
 │   │   ├── motionPresets.js    # BA NHỊP CHUYỂN ĐỘNG DUY NHẤT của app (`enter`/`press`/`reward`).
 │   │   │                       #   ⚠️ ĐÚNG BA, KHÔNG HƠN — nhịp thứ tư là bước đầu quay lại tình
@@ -799,8 +802,8 @@
 │   │   ├── pushService.js      # Web Push phía trình duyệt (đăng ký, huỷ, lên lịch)
 │   │   └── appIdentity.js      # Hằng số key localStorage, tên app (đổi tên app thì sửa ở đây)
 │   ├── store/                  # State toàn app (Zustand)
-│   │   ├── gameStore.js         # RẤT LỚN (~4,700 dòng sau ADR-077) — mọi state + action của game. Điểm nóng:
-│   │   │                       #   completeFocusSession (~760 dòng). Sửa công thức → gameMath.js,
+│   │   ├── gameStore.js         # ~2,900 dòng sau ADR-078 (was 4,677) — state + actions; the session-end computation Điểm nóng:
+│   │   │                       #   is engine/sessionRewards.js; completeFocusSession is a 15-line wrapper. Sửa công thức → engine,
 │   │   │                       #   ĐỪNG nhồi thêm vào đây.
 │   │   └── settingsStore.js     # Cài đặt UI riêng (theme, âm thanh...) — KHÔNG lẫn với gameStore
 │   └── utils/                  # Tiện ích thuần, dùng nhiều nơi không liên quan game logic

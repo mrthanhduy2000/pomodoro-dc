@@ -417,8 +417,8 @@ function FormatButton({ children, label, shortcut, onClick, lightTheme }) {
       onClick={onClick}
       className={`flex size-8 items-center justify-center rounded-[10px] border text-[12px] font-semibold transition-colors focus-visible:outline-none focus-visible:ring-2 ${
         lightTheme
-          ? 'border-[var(--line)] bg-white text-[var(--ink)] hover:border-[var(--line-2)] hover:bg-[rgba(244,242,236,0.94)] focus-visible:ring-[rgba(31,30,29,0.14)]'
-          : 'border-white/10 bg-white/[0.04] text-slate-200 hover:border-white/20 hover:bg-white/[0.08] focus-visible:ring-white/30'
+          ? 'border-[var(--line)] bg-[var(--card-bg-solid)] text-[var(--ink)] hover:border-[var(--line-2)] hover:bg-[rgba(244,242,236,0.94)] focus-visible:ring-[rgba(31,30,29,0.14)]'
+          : 'border-[var(--line)] bg-[var(--panel-soft)] text-[var(--ink)] hover:border-[var(--line-2)] hover:bg-[var(--panel)] focus-visible:ring-[var(--line-2)]'
       }`}
     >
       {children}
@@ -858,7 +858,7 @@ export function RichNoteEditor({
           className={`flex size-8 items-center justify-center rounded-[10px] border transition-colors focus-visible:outline-none focus-visible:ring-2 ${
             lightTheme
               ? 'border-[rgba(176,125,59,0.22)] bg-[rgba(176,125,59,0.14)] focus-visible:ring-[rgba(31,30,29,0.14)]'
-              : 'border-amber-300/20 bg-amber-300/10 focus-visible:ring-white/30'
+              : 'border-[rgba(var(--accent-rgb),0.2)] bg-[rgba(var(--accent-rgb),0.1)] focus-visible:ring-[var(--line-2)]'
           }`}
         >
           <span className="size-3 rounded-full" style={{ background: '#b07d3b' }} />
@@ -884,8 +884,8 @@ export function RichNoteEditor({
           onClick={() => setShowGuide((current) => !current)}
           className={`ml-auto rounded-full border px-3 py-1.5 text-[10px] font-semibold transition-colors focus-visible:outline-none focus-visible:ring-2 ${
             lightTheme
-              ? 'border-[var(--line)] bg-white text-[var(--muted)] hover:text-[var(--ink)] focus-visible:ring-[rgba(31,30,29,0.14)]'
-              : 'border-white/10 bg-white/[0.04] text-slate-400 hover:text-slate-100 focus-visible:ring-white/30'
+              ? 'border-[var(--line)] bg-[var(--card-bg-solid)] text-[var(--muted)] hover:text-[var(--ink)] focus-visible:ring-[rgba(31,30,29,0.14)]'
+              : 'border-[var(--line)] bg-[var(--panel-soft)] text-[var(--muted)] hover:text-[var(--ink)] focus-visible:ring-[var(--line-2)]'
           }`}
         >
           Cách dùng
@@ -941,8 +941,8 @@ export function RichNoteEditor({
               onClick={() => applyFormat(item.id)}
               className={`rounded-full border px-2.5 py-1 text-[10px] font-semibold transition-colors focus-visible:outline-none focus-visible:ring-2 ${
                 lightTheme
-                  ? 'border-[var(--line)] bg-[rgba(244,242,236,0.82)] text-[var(--muted)] hover:bg-white focus-visible:ring-[rgba(31,30,29,0.14)]'
-                  : 'border-white/10 bg-white/[0.035] text-slate-500 hover:text-slate-200 focus-visible:ring-white/30'
+                  ? 'border-[var(--line)] bg-[rgba(244,242,236,0.82)] text-[var(--muted)] hover:bg-[var(--card-bg-solid)] focus-visible:ring-[rgba(31,30,29,0.14)]'
+                  : 'border-[var(--line)] bg-[var(--panel-soft)] text-[var(--muted)] hover:text-[var(--ink)] focus-visible:ring-[var(--line-2)]'
               }`}
             >
               {item.id === 'check' && (

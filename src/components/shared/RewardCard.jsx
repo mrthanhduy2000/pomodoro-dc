@@ -127,7 +127,7 @@ export default function RewardCard({
         // `huyenThoai` mới được nền pha màu + vệt dày hơn. Hiếm mà nổi thì không phải quảng
         // cáo; thường mà nổi mới là.
         // `color-mix` chứ không mã màu cứng: app có 2 theme × 5 skin (cùng lý do
-        // `cityBackdropScrim.js` đã chọn nó).
+        // `InventoryHero.jsx` đã chọn nó).
         background: tier.rank >= 2
           ? `color-mix(in srgb, ${tier.colorVar} ${tier.rank >= 3 ? 12 : 7}%, var(--card-bg-solid))`
           : 'var(--card-bg-solid)',

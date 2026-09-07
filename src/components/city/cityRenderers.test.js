@@ -199,11 +199,11 @@ test('THẺ THÔNG TIN nổi trên cảnh không được nuốt thao tác kéo 
     'chính thẻ phải có pointer-events-auto, nếu không nút đóng bấm không được');
 });
 
-test('LỚP NỀN TRANG CHỦ không được chạm vào công trình', () => {
+test('BƯU THIẾP THÀNH PHỐ không được chạm vào công trình', () => {
   // Trang chủ là chỗ để LÀM VIỆC. Một thẻ thông tin bật lên sau lưng đồng hồ đếm ngược vì Đàm lỡ
   // chạm vào màn hình là đúng thứ phá mất sự yên tĩnh mà màn hình đó tồn tại để giữ. Hai lớp chặn:
-  // `CityBackdrop` không truyền `onPick`, và `CityStage` chỉ chuyển tiếp khi `interactive`.
-  const backdrop = SOURCES.find((f) => f.path === 'components/city/CityBackdrop.jsx');
+  // `CityPostcard` không truyền `onPick`, và `CityStage` chỉ chuyển tiếp khi `interactive`.
+  const backdrop = SOURCES.find((f) => f.path === 'components/focus/CityPostcard.jsx');
   const stage = SOURCES.find((f) => f.path === 'components/city/CityStage.jsx');
   assert.doesNotMatch(codeOnly(backdrop.source), /onPick/,
     'lớp nền trang chủ truyền onPick ⇒ chạm vào nền sẽ bật thẻ thông tin giữa phiên tập trung');
@@ -211,13 +211,13 @@ test('LỚP NỀN TRANG CHỦ không được chạm vào công trình', () => {
     'CityStage phải chặn onPick khi không nhận thao tác — lưới an toàn thứ hai');
 });
 
-test('LỚP NỀN TRANG CHỦ không được nuốt thao tác của Đàm', () => {
+test('BƯU THIẾP THÀNH PHỐ không được nuốt thao tác của Đàm', () => {
   // ⚠️ Đây là bài "một dòng mất thì cả trang chủ hỏng, mà chạy thử vẫn thấy đẹp". `CityScene3D`
   // đăng ký `wheel` với `passive: false` và có `preventDefault` — nếu lớp nền bật `interactive`
   // thì cú cuộn trang trên trang Tập Trung bị nuốt mất, và trên điện thoại thì cả trang không
   // cuộn nổi nữa. Lỗi kiểu này không lộ ra ở lint, cũng không lộ ra ở ảnh chụp.
-  const backdrop = SOURCES.find((f) => f.path === 'components/city/CityBackdrop.jsx');
-  assert.ok(backdrop, 'không thấy CityBackdrop.jsx');
+  const backdrop = SOURCES.find((f) => f.path === 'components/focus/CityPostcard.jsx');
+  assert.ok(backdrop, 'không thấy CityPostcard.jsx');
   assert.match(backdrop.source, /interactive=\{false\}/,
     'lớp nền trang chủ phải truyền interactive={false}');
   assert.match(backdrop.source, /pointer-events-none/,
@@ -229,20 +229,20 @@ test('LỚP NỀN TRANG CHỦ không được nuốt thao tác của Đàm', () 
     'lớp nền trang chủ phải truyền chrome={false}');
 });
 
-test('LỚP NỀN TRANG CHỦ đứng yên khi đang chạy phiên — luật pin, không phải sở thích', () => {
+test('BƯU THIẾP THÀNH PHỐ đứng yên khi đang chạy phiên — luật pin, không phải sở thích', () => {
   // Trang chủ là màn hình mở lâu nhất trong cả app (25 phút mỗi phiên). Cư dân đi lại ở đó nghĩa
   // là vẽ 30 khung/giây suốt phiên — đúng thứ mà cả cổng hiệu năng Phase 3A sinh ra để chặn.
-  const backdrop = SOURCES.find((f) => f.path === 'components/city/CityBackdrop.jsx');
-  assert.match(backdrop.source, /still=\{hasFocusSessionInProgress/,
+  const backdrop = SOURCES.find((f) => f.path === 'components/focus/CityPostcard.jsx');
+  assert.match(backdrop.source, /still=\{sessionRunning/,
     'lớp nền phải đứng yên khi đang chạy phiên');
 });
 
-test('LỚP NỀN TRANG CHỦ vẫn là NGƯỜI THUÊ của CityStage, không phải bản sao thứ hai', () => {
+test('BƯU THIẾP THÀNH PHỐ vẫn là NGƯỜI THUÊ của CityStage, không phải bản sao thứ hai', () => {
   // Cám dỗ lớn nhất ở Phase 3F là chép `CityStage`/`CityScene3D` ra một bản "rút gọn cho nền".
   // Làm vậy thì mọi bản vá sau này (đường lùi 2D, watchdog FPS, dọn context, giờ trong ngày) phải
   // nhớ sửa ở hai nơi — và lần quên đầu tiên sẽ là một lỗi không ai truy ra.
-  const backdrop = SOURCES.find((f) => f.path === 'components/city/CityBackdrop.jsx');
-  assert.match(backdrop.source, /from\s+['"]\.\/CityStage['"]/,
+  const backdrop = SOURCES.find((f) => f.path === 'components/focus/CityPostcard.jsx');
+  assert.match(backdrop.source, /from\s+['"]\.\.\/city\/CityStage['"]/,
     'lớp nền phải dùng lại CityStage chứ không tự dựng cảnh riêng');
   assert.doesNotMatch(backdrop.source, /from\s+['"]three['"]/,
     'lớp nền không được import three — đó là việc của render3d/');
@@ -321,16 +321,21 @@ test('BAY VÀO KHU PHỐ PHẢI CÓ BA ĐƯỜNG THOÁT, và cả ba đều nằ
   assert.match(code, /pointer-events-auto rounded-full/, 'chính cái nút phải có pointer-events-auto');
 });
 
-test('LỚP NỀN TRANG CHỦ KHÔNG ĐƯỢC TỰ BAY ĐI ĐÂU CẢ', () => {
-  // Lớp nền không nhận thao tác nên nó không thể tự chọn công trình — nhưng lưới an toàn phải nằm
-  // ở chỗ TRUYỀN, không phải ở chỗ hy vọng. Cùng khuôn với `onPick={interactive ? … : undefined}`.
+test('BƯU THIẾP THÀNH PHỐ KHÔNG ĐƯỢC TỰ BAY ĐI ĐÂU CẢ', () => {
+  // ADR-078: the postcard's camera DOES have a target — this session's brick — but the target is
+  // decided by pure data (`postcardSelection`), never by a touch: the postcard passes no `onPick`,
+  // and `CityStage` forwards `onPick` only when `interactive`. The camera follows `selection` on
+  // every tenant now (that is how the postcard frames the brick), so the safety net sits at the
+  // TOUCH, not at the focus.
   const stage = SOURCES.find((f) => f.path === 'components/city/CityStage.jsx');
   const code = codeOnly(stage.source);
-  assert.match(code, /focusKind=\{interactive \? \(selection\?\.kind \?\? null\) : null\}/,
-    'CityStage phải chặn tiêu điểm khi không nhận thao tác');
-  assert.match(code, /focusBpId=\{interactive \? \(selection\?\.bpId \?\? null\) : null\}/,
-    'CityStage phải chặn tiêu điểm khi không nhận thao tác');
-  const backdrop = SOURCES.find((f) => f.path === 'components/city/CityBackdrop.jsx');
-  assert.doesNotMatch(codeOnly(backdrop.source), /focusKind|focusBpId/,
-    'lớp nền trang chủ truyền tiêu điểm ⇒ thành phố sau lưng đồng hồ có thể tự bay đi giữa phiên');
+  assert.match(code, /focusKind=\{selection\?\.kind \?\? null\}/,
+    'CityStage phải để camera đi theo `selection` ở MỌI người thuê (bưu thiếp cần nó để khung viên gạch)');
+  assert.match(code, /onPick=\{interactive \? onPick : undefined\}/,
+    'CityStage phải chặn `onPick` khi không nhận thao tác — đó là lưới an toàn thật');
+  const postcard = SOURCES.find((f) => f.path === 'components/focus/CityPostcard.jsx');
+  const pc = codeOnly(postcard.source);
+  assert.doesNotMatch(pc, /onPick/, 'bưu thiếp truyền onPick ⇒ một cú chạm lỡ giữa phiên làm camera bay đi');
+  assert.match(pc, /selection=\{selection\}/, 'bưu thiếp không truyền `selection` ⇒ camera không bao giờ tới viên gạch');
+  assert.match(pc, /postcardSelection\(/, 'tiêu điểm phải đi qua `postcardSelection` (thuần, có test), không tự tính trong JSX');
 });

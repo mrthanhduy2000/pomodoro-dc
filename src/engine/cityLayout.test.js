@@ -380,8 +380,8 @@ test('GIÀN GIÁO — bỏ qua bpId lạ, khác kỷ, trùng nhau, và ĐÃ XÂY
 });
 
 test('GIÀN GIÁO — bãi đất chỉ có công trình đang xây vẫn tính là TRỐNG', () => {
-  // `CityBackdrop` dựa vào `isEmpty` để quyết định có vẽ lớp nền ở trang chủ không. Bốn cái cọc gỗ
-  // sau lưng đồng hồ đếm ngược thì đọc ra "lỗi hiển thị", không đọc ra "thành phố của bạn".
+  // The City tab's empty state reads `isEmpty`: four wooden posts alone must read as "first brick
+  // waiting", never as "your city" (ADR-078 keeps the same rule for the Focus postcard's caption).
   const layout = computeCityLayout({
     built: [], era: 6, pending: [{ bpId: ERA6[0], sessionsRemaining: 3 }],
   });

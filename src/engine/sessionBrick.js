@@ -15,6 +15,9 @@
  * composition layer already consumes.
  */
 import { describeProject, describeQueue, eraBuildProgress, listNextProjects } from './buildChoices';
+import { CRAFT_QUEUE_SLOTS } from './constants';
+import { countActiveCrafting } from './eraLegacy';
+import { describeCraftProgress } from './craftProgress';
 
 /** The project this session pushes: current-era queue head → restoration head → auto-pick → none. */
 export function pickSessionProject({ craftingQueue = [], activeBook = 1, buildings = [] } = {}) {
@@ -108,7 +111,7 @@ export function describeSessionBrick({
       ...base, done, remaining, bricks: brickStates(total, done, { fresh }),
       headline: fresh >= 2 ? `Hai viên gạch đã đặt · ${done}/${total}` : `Viên gạch ${done}/${total} đã đặt`,
       sub: auto
-        ? `Tự chọn ${project.label} cho bạn — đổi ở Hành trang › Công trình.`
+        ? `Tự chọn ${project.label} cho bạn.`
         : remaining === 1 ? `Một phiên nữa là ${project.label} mọc lên.` : `Còn ${remaining} phiên nữa ${project.label} mọc lên.`,
     };
   }
@@ -131,7 +134,72 @@ export function describeSessionBrick({
         ? `Phiên này đặt viên gạch đầu cho ${project.label}.`
         : `Phiên này đặt viên gạch ${done + 1}/${total} cho ${project.label}.`,
     sub: auto
-      ? 'Tự chọn cho bạn · đổi ở Hành trang › Công trình.'
+      ? 'Tự chọn cho bạn · bấm «Đổi» nếu muốn công trình khác.'
       : isFinal ? 'Hoàn thành ngay sau phiên này.' : `Còn ${remainingAfter} phiên sau phiên này.`,
   };
+}
+
+/**
+ * Change this session's project IN PLACE (ADR-078, Việc 2): put `bpId` at the HEAD of the queue.
+ *
+ * Đàm's rule: *the app may decide for me, but I must be able to change my mind right where I stand.*
+ * Round 37's auto-pick chose the cheapest project and sent him to another screen to disagree —
+ * exactly the friction four rounds went to remove. So:
+ *   · already queued        → moved to the head, its bricks kept;
+ *   · not queued            → inserted at the head with a fresh scaffold (current era, not built);
+ *   · queue over the cap    → the LAST item with NO brick laid makes room; if every item already has
+ *                             bricks, refuse (`reason: 'full'`) — a tap never throws bricks away;
+ *   · restorations (older eras) keep their own door on the Build screen (`reason: 'era'`).
+ * Pure: `now` and `slots` are parameters; the store only applies the returned queue.
+ */
+export function chooseSessionProject({
+  craftingQueue = [], activeBook = 1, buildings = [], bpId, now = Date.now(), slots = CRAFT_QUEUE_SLOTS,
+} = {}) {
+  const queue = Array.isArray(craftingQueue) ? craftingQueue : [];
+  const refuse = (reason) => ({ craftingQueue: queue, ok: false, changed: false, dropped: null, reason });
+  const project = describeProject(bpId);
+  if (!project) return refuse('unknown');
+  if ((Array.isArray(buildings) ? buildings : []).includes(bpId)) return refuse('built');
+
+  const idx = queue.findIndex((q) => q?.bpId === bpId);
+  if (idx === 0) return { craftingQueue: queue, ok: true, changed: false, dropped: null, reason: null };
+  if (idx > 0) {
+    return {
+      craftingQueue: [queue[idx], ...queue.slice(0, idx), ...queue.slice(idx + 1)],
+      ok: true, changed: true, dropped: null, reason: null,
+    };
+  }
+  if (project.era !== activeBook) return refuse('era');
+
+  let rest = queue;
+  let dropped = null;
+  if (countActiveCrafting(rest, activeBook) >= slots) {
+    const victim = [...rest].reverse().find((q) => (
+      describeProject(q?.bpId)?.era === activeBook
+      && describeCraftProgress(q.bpId, q.sessionsRemaining).done === 0
+    ));
+    if (!victim) return refuse('full');
+    dropped = victim.bpId;
+    rest = rest.filter((q) => q !== victim);
+  }
+  return {
+    craftingQueue: [{ bpId, sessionsRemaining: project.sessions, startedAt: now }, ...rest],
+    ok: true, changed: true, dropped, reason: null,
+  };
+}
+
+/**
+ * The choices the in-place switch offers, in the order they are shown: projects already in the
+ * queue first (they keep their bricks, so they are the cheapest change), then unbuilt blueprints of
+ * the era in `listNextProjects` order (cheapest first). Never the head itself, never a restoration.
+ */
+export function listSessionProjectChoices({ craftingQueue = [], activeBook = 1, buildings = [], limit = 4 } = {}) {
+  const head = pickSessionProject({ craftingQueue, activeBook, buildings }).project;
+  const queued = describeQueue({ craftingQueue, activeBook })
+    .filter((q) => !q.restoration && q.bpId !== head?.bpId)
+    .map((q) => ({ ...q, queued: true }));
+  const fresh = listNextProjects({ activeBook, buildings, craftingQueue })
+    .filter((p) => p.bpId !== head?.bpId)
+    .map((p) => ({ ...p, total: p.sessions, done: 0, remaining: p.sessions, queued: false }));
+  return [...queued, ...fresh].slice(0, Math.max(0, Math.floor(limit) || 0));
 }

@@ -14,12 +14,14 @@
  * File MỚI, chỉ import (không sửa) gameMath → giữ nguyên test cũ.
  */
 import {
-  isCancelledHistoryEntry, getTimeOfDayBucket, TIME_OF_DAY_BUCKETS, COACH_MIN_SAMPLE,
+  isCancelledHistoryEntry, getTimeOfDayBucket, TIME_OF_DAY_BUCKETS, COACH_MIN_SAMPLE, COACH_BUCKET_MIN_SAMPLE,
   getWeeklyTrend, getGoldenHourBucket, getAbandonHotspot, getLateNightQualityDrop,
   getNeglectedCategory, getDailyGoalCalibration, getWeekdayHighlight, suggestSessionLength,
 } from '../gameMath';
 
-export const COACH_BUCKET_MIN_SAMPLE = 4;
+// ADR-078: one definition, in `gameMath.js` (which owns the other sample floors); re-exported here
+// because Stats (`statsAnswers.js`) reads it from this module.
+export { COACH_BUCKET_MIN_SAMPLE } from '../gameMath';
 const CAT_MIN_SAMPLE = 4;
 /** Một ô (buổi×độ dài) hay một loại việc cần bấy nhiêu phiên CÓ MỤC TIÊU mới được xếp hạng theo tỉ lệ đạt — Coach + Thống kê dùng chung. */
 export const GOAL_RANK_MIN_SAMPLE = 3;

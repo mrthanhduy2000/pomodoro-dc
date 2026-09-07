@@ -36,7 +36,7 @@ import { describeCraftProgress } from './craftProgress.js';
 /** Thứ tự gợi ý: rẻ phiên trước — phổ thông (4 phiên) rồi hiếm rồi sử thi (kỳ quan). */
 const RARITY_ORDER = { common: 0, rare: 1, epic: 2 };
 
-const CATALOG_LOOKUP = Object.fromEntries(
+export const CATALOG_LOOKUP = Object.fromEntries(
   Object.entries(BLUEPRINT_CATALOG).flatMap(([era, items]) => items.map((bp) => [bp.id, { ...bp, era: Number(era) }])),
 );
 

@@ -35,7 +35,8 @@ const APP_CODE = codeOnly(APP);
 
 test('thanh tiêu đề dựng bề rộng từ tiến độ CHẶNG', () => {
   assert.ok(
-    /width:\s*`\$\{\(eraStage \? eraStage\.progress : eraProgress\)/.test(APP_CODE),
+    // ADR-078: drawn once in `shared/EraStageBar.jsx` (top rail AND Focus postcard) — read that file.
+    /const ratio = eraStage \? eraStage\.progress : eraProgress;/.test(readFileSync(join(HERE, 'shared', 'EraStageBar.jsx'), 'utf8')),
     'thanh tiêu đề không còn đo chặng — nó đã quay về đo cả kỷ (~1%/phiên, đầy 1 lần mỗi 1–6 tháng)',
   );
 });
@@ -45,7 +46,7 @@ test('thanh tiêu đề nằm NGOÀI mọi khối chỉ-desktop', () => {
   // `lg:hidden` ngay dưới nó là khối thống kê riêng cho điện thoại — tức TopRail chắc chắn hiện
   // ở cả hai. Đòi thanh chặng nằm trong TopRail là đòi đúng điều đó.
   const topRail = APP_CODE.indexOf('function TopRail(');
-  const stageBar = APP_CODE.indexOf('eraStage ? eraStage.progress');
+  const stageBar = APP_CODE.indexOf('<EraStageBar', topRail); // ADR-078: the bar is a shared component now
   assert.ok(topRail > 0 && stageBar > topRail, 'thanh chặng không nằm trong `TopRail`');
 
   const sau = APP_CODE.slice(topRail, stageBar);

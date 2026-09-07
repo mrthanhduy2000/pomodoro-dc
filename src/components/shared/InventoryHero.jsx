@@ -5,7 +5,7 @@
  * Xem khối chú thích ở file ấy để biết vì sao dải này tồn tại.
  *
  * ⚠️ MÀU LẤY TỪ TOKEN, KHÔNG MÃ CỨNG: app có 2 theme × 5 skin. `color-mix` là cách dự án đã dùng
- * ở `cityBackdropScrim.js` và `RewardCard.jsx` cho đúng lý do này.
+ * ở `RewardCard.jsx` cho đúng lý do này.
  * ⚠️ HAI TRẠNG THÁI, KHÔNG PHẢI MỘT: `gap = true` nghĩa là ĐANG CÓ VIỆC LÀM ĐƯỢC (điểm chưa tiêu,
  * công trình đang xây, huy hiệu sắp đạt) — lúc ấy dải mang màu nhấn. Không có việc thì nó lặng
  * xuống thành xám. Nếu lúc nào cũng rực thì "rực" thôi mang tin — đúng bài học vừa rút ra ở thẻ

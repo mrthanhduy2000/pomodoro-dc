@@ -4,6 +4,9 @@ import { readFileSync } from 'node:fs';
 import { stripComments } from '../utils/sourceScan.js';
 
 const STORE = stripComments(readFileSync(new URL('./gameStore.js', import.meta.url), 'utf8'));
+// ADR-078: the live path moved out of the store into `engine/sessionRewards.js` (pure) — the
+// store must now hold NO tick at all.
+const LIVE = stripComments(readFileSync(new URL('../engine/sessionRewards.js', import.meta.url), 'utf8'));
 const ENGINE = stripComments(readFileSync(new URL('../engine/missions.js', import.meta.url), 'utf8'));
 
 /**
@@ -18,16 +21,17 @@ const ENGINE = stripComments(readFileSync(new URL('../engine/missions.js', impor
 
 // BREAK-TEST: paste back `if (m.type === 'sessions') progress = Math.min(m.goal, progress + 1);` ⇒ red.
 test('the store has exactly ONE live tick, and it is the engine function', () => {
-  const calls = STORE.split('tickDailyMissions(').length - 1;
-  assert.equal(calls, 1, `tickDailyMissions( must be called exactly once in gameStore.js (found ${calls})`);
+  const calls = LIVE.split('tickDailyMissions(').length - 1;
+  assert.equal(calls, 1, `tickDailyMissions( must be called exactly once in engine/sessionRewards.js (found ${calls})`);
+  assert.equal(STORE.split('tickDailyMissions(').length - 1, 0, 'the store grew a second mission tick — the engine owns the only one');
   assert.doesNotMatch(STORE, /m\.type === 'singleSession'/, 'a hand-written singleSession branch is back in the store');
   assert.doesNotMatch(STORE, /m\.type === 'sessions'\) progress =/, 'a hand-written sessions branch is back in the store');
   assert.doesNotMatch(STORE, /function getDailyMissionProgressFromSnapshot/, 'the snapshot formula must live in engine/missions.js only');
 });
 
 test('the live tick feeds the SAME draft entry to the week snapshot and the mission tick', () => {
-  assert.match(STORE, /weeklySnapshotWithSession\(state\.history, refreshedChain\.weekKey, sessionEntryDraft\)/);
-  assert.match(STORE, /sessionEntry: sessionEntryDraft/);
+  assert.match(LIVE, /weeklySnapshotWithSession\(state\.history, refreshedChain\.weekKey, sessionEntryDraft\)/);
+  assert.match(LIVE, /sessionEntry: sessionEntryDraft/);
 });
 
 // The rebuild path must stay continuous — it is the one the live path was pulled towards.

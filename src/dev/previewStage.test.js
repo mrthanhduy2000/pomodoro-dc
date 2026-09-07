@@ -52,14 +52,15 @@ test('mọi cảnh soi phải phủ ĐỦ những trường hộp thoại thật
 
 // THỬ-CHO-ĐỎ: thêm một trường bịa vào PHIEN_THUONG ⇒ bài này đỏ.
 test('bản giả không được BỊA trường mà bản thật không có', () => {
-  const store = doc('../store/gameStore.js');
+  // ADR-078: the real `pendingReward` is assembled in `engine/sessionRewards.js` now (pure), not in the store.
+  const store = doc('../engine/sessionRewards.js');
   const i = store.indexOf('pendingReward: {');
   assert.ok(i > 0, 'không tìm thấy pendingReward trong gameStore — phép đo đang chạy rỗng');
 
   // Bản thật ghép từ `...reward` (một object dựng trước đó) + các trường liệt kê tường minh.
   // Lấy CẢ HAI nguồn: khối `pendingReward: {…}` và mọi khoá của `reward`/`boostedReward`.
-  const khoiReward = store.slice(i, store.indexOf('\n              },', i));
-  const thatCo = new Set([...khoiReward.matchAll(/^\s{16}([a-zA-Z0-9_]+)[:,]/gm)].map((m) => m[1]));
+  const khoiReward = store.slice(i, store.indexOf('\n      },', i));
+  const thatCo = new Set([...khoiReward.matchAll(/^\s{8}([a-zA-Z0-9_]+)[:,]/gm)].map((m) => m[1]));
   // Những trường đến qua `...reward` thì không nằm trong khối trên — lấy chúng từ chỗ hộp thoại
   // đọc, vì hộp thoại đọc được nghĩa là bản thật có.
   for (const k of truongHopThoaiDoc()) thatCo.add(k);

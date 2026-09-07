@@ -54,3 +54,5 @@
   session, filling once every 1–6 months. `stageProgressWiring.test.js` guards it, including a case
   demanding it stay OUTSIDE any `hidden … lg:flex` block (the old stage bar lived only in the right
   column, so iPhone never saw it).
+
+- **No button paints itself (ADR-078, #86 gate).** A `<button>` / `<motion.button>` may not carry a Tailwind palette colour in `className` or a hex / numeric rgb()/rgba() literal in `style` — ESLint `no-restricted-syntax` in `eslint.config.js` is the gate, discovery-based over every file; the only exemptions are `shared/ActionButton.jsx` (the door) and pure white on a filled button. Action buttons go through `ActionButton`; tabs, chips, toggles and icon buttons stay raw and read tokens.

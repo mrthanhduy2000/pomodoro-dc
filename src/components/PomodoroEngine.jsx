@@ -15,8 +15,6 @@ import {
   DEFAULT_DEEP_FOCUS_THRESHOLD,
   WARMUP_REDUCED_THRESHOLD,
   BREAK_EXTENSION_MINUTES,
-  COMBO_BONUS_PER_STACK,
-  COMBO_MAX_STACKS,
   VUNG_DONG_CHAY_MIN_MIN,
   Y_CHI_THEP_RETENTION,
   BAT_KHUAT_DISASTER_XP_PENALTY,
@@ -76,6 +74,8 @@ export default function PomodoroEngine({
   immersiveMode = false,
   onEnterFullScreen,
   onExitFullScreen,
+  /** ADR-078: rendered right under the timer card (the streak card lives here now). */
+  belowTimer = null,
 }) {
   const isDesktopViewport = useMinWidth(1024);
   const timerConfig = useGameStore((s) => s.timerConfig);
@@ -750,8 +750,8 @@ export default function PomodoroEngine({
           aria-label="Reset chu kỳ nghỉ dài"
           className={`rounded-full px-2.5 py-1 text-[10px] transition-all focus-visible:outline-none focus-visible:ring-2 ${
             lightTheme
-              ? 'border border-[var(--line)] bg-white text-[var(--muted)] hover:border-[var(--line-2)] hover:text-[var(--ink)] focus-visible:ring-[rgba(var(--accent-rgb),0.22)]'
-              : 'text-slate-600 hover:text-slate-300 border border-white/[0.06] hover:border-white/[0.14] bg-white/[0.03] hover:bg-white/[0.07] focus-visible:ring-white/30'
+              ? 'border border-[var(--line)] bg-[var(--card-bg-solid)] text-[var(--muted)] hover:border-[var(--line-2)] hover:text-[var(--ink)] focus-visible:ring-[rgba(var(--accent-rgb),0.22)]'
+              : 'text-[var(--muted)] hover:text-[var(--ink)] border border-[var(--line)] hover:border-[var(--line-2)] bg-[var(--panel-soft)] hover:bg-[var(--panel)] focus-visible:ring-[var(--line-2)]'
           }`}
         >
           đặt lại
@@ -799,7 +799,7 @@ export default function PomodoroEngine({
         onClick={() => setSetupOpen((v) => !v)}
         aria-expanded={setupOpen}
         className={`flex w-full items-center justify-between gap-3 border-t px-4 py-3 text-left transition-colors ${
-          lightTheme ? 'border-[var(--line)]' : 'border-white/5'
+          lightTheme ? 'border-[var(--line)]' : 'border-[var(--line)]'
         }`}
       >
         <span className="mono min-w-0 truncate text-[11px] tabular-nums" style={{ color: 'var(--muted)' }}>
@@ -855,8 +855,8 @@ export default function PomodoroEngine({
                 onClick={() => applyFocusMinutes(focusMinutesStepBase - 1)}
                 className={`size-11 rounded-full font-bold flex items-center justify-center transition-colors touch-manipulation focus-visible:outline-none focus-visible:ring-2 sm:size-9 ${
                   lightTheme
-                    ? 'text-[var(--muted)] hover:text-[var(--ink)] bg-white border border-[var(--line)] hover:bg-[rgba(244,242,236,0.98)] focus-visible:ring-[rgba(31,30,29,0.14)]'
-                    : 'text-slate-400 hover:text-white backdrop-blur-md bg-white/[0.06] hover:bg-white/[0.11] border border-white/[0.10] focus-visible:ring-white/30'
+                    ? 'text-[var(--muted)] hover:text-[var(--ink)] bg-[var(--card-bg-solid)] border border-[var(--line)] hover:bg-[rgba(244,242,236,0.98)] focus-visible:ring-[rgba(31,30,29,0.14)]'
+                    : 'text-[var(--muted)] hover:text-[var(--ink)] backdrop-blur-md bg-[var(--panel-soft)] hover:bg-[var(--panel)] border border-[var(--line)] focus-visible:ring-[var(--line-2)]'
                 }`}
               >
                 −
@@ -905,8 +905,8 @@ export default function PomodoroEngine({
                 onClick={() => applyFocusMinutes(focusMinutesStepBase + 1)}
                 className={`size-11 rounded-full font-bold flex items-center justify-center transition-colors touch-manipulation focus-visible:outline-none focus-visible:ring-2 sm:size-9 ${
                   lightTheme
-                    ? 'text-[var(--muted)] hover:text-[var(--ink)] bg-white border border-[var(--line)] hover:bg-[rgba(244,242,236,0.98)] focus-visible:ring-[rgba(31,30,29,0.14)]'
-                    : 'text-slate-400 hover:text-white backdrop-blur-md bg-white/[0.06] hover:bg-white/[0.11] border border-white/[0.10] focus-visible:ring-white/30'
+                    ? 'text-[var(--muted)] hover:text-[var(--ink)] bg-[var(--card-bg-solid)] border border-[var(--line)] hover:bg-[rgba(244,242,236,0.98)] focus-visible:ring-[rgba(31,30,29,0.14)]'
+                    : 'text-[var(--muted)] hover:text-[var(--ink)] backdrop-blur-md bg-[var(--panel-soft)] hover:bg-[var(--panel)] border border-[var(--line)] focus-visible:ring-[var(--line-2)]'
                 }`}
               >
                 +
@@ -930,7 +930,7 @@ export default function PomodoroEngine({
               className={`mt-4 flex w-full items-center justify-between gap-3 rounded-[var(--skin-radius-control,14px)] border px-3.5 py-2.5 text-left transition ${
                 lightTheme
                   ? 'border-[rgba(91,122,82,0.28)] bg-[rgba(229,236,223,0.6)] hover:bg-[rgba(229,236,223,0.95)]'
-                  : 'border-emerald-300/20 bg-emerald-400/[0.07] hover:bg-emerald-400/[0.14]'
+                  : 'border-[var(--good)] bg-transparent'
               }`}
             >
               <span className="min-w-0">
@@ -1100,7 +1100,7 @@ export default function PomodoroEngine({
               // — một giá trị CSS vô nghĩa, nên `drop-shadow` im lặng không vẽ gì. Thật ra nó đã
               // hỏng sẵn ở theme sáng từ trước (ở đó `RING_COLORS` vốn đã là token); chỉ nhánh tối
               // còn chạy nhờ hai mã hex cứng, mà hai mã ấy vừa bị gỡ. `color-mix` giữ được `var()`
-              // nên quầng sáng đi theo skin — dự án đã dùng cách này ở `cityBackdropScrim.js`.
+              // nên quầng sáng đi theo skin — dự án đã dùng cách này ở `RewardCard.jsx`.
               filter: isBreakMode || timerState === TIMER_STATES.RUNNING
                 ? `drop-shadow(0 0 12px ${ringGlowColor})`
                 : 'none',
@@ -1581,7 +1581,7 @@ export default function PomodoroEngine({
                   className={`shrink-0 rounded-full px-2.5 py-1 text-[10px] font-semibold transition-colors focus-visible:outline-none focus-visible:ring-2 ${
                     lightTheme
                       ? 'border border-[rgba(var(--accent-rgb),0.14)] text-[var(--accent2)] hover:bg-[rgba(var(--accent-rgb),0.08)] focus-visible:ring-[rgba(31,30,29,0.14)]'
-                      : 'border border-white/10 text-slate-300 hover:bg-white/6 focus-visible:ring-white/30'
+                      : 'border border-[var(--line)] text-[var(--ink)] hover:bg-[var(--panel)] focus-visible:ring-[var(--line-2)]'
                   }`}
                 >
                   Xoá
@@ -1714,7 +1714,7 @@ export default function PomodoroEngine({
               className={`shrink-0 rounded-full px-2.5 py-1 text-[10px] font-semibold transition-colors focus-visible:outline-none focus-visible:ring-2 ${
                 lightTheme
                   ? 'border border-[rgba(var(--accent-rgb),0.14)] text-[var(--accent2)] hover:bg-[rgba(var(--accent-rgb),0.08)] focus-visible:ring-[rgba(31,30,29,0.14)]'
-                  : 'border border-white/10 text-slate-300 hover:bg-white/6 focus-visible:ring-white/30'
+                  : 'border border-[var(--line)] text-[var(--ink)] hover:bg-[var(--panel)] focus-visible:ring-[var(--line-2)]'
               }`}
             >
               Xoá mục tiêu
@@ -1745,7 +1745,7 @@ export default function PomodoroEngine({
           className={`fixed right-4 top-4 z-20 rounded-full border px-3 py-2 text-[11px] font-semibold transition-colors focus-visible:outline-none focus-visible:ring-2 md:right-6 md:top-6 ${
             lightTheme
               ? 'border-[var(--line)] bg-[rgba(255,255,255,0.82)] text-[var(--muted)] hover:text-[var(--ink)] focus-visible:ring-[rgba(31,30,29,0.14)]'
-              : 'border-white/10 bg-black/30 text-slate-300 hover:text-white focus-visible:ring-white/30'
+              : 'border-[var(--line)] bg-[var(--canvas-2)] text-[var(--ink)] hover:text-[var(--ink)] focus-visible:ring-[var(--line-2)]'
           }`}
           style={{ top: 'calc(env(safe-area-inset-top) + 16px)' }}
         >
@@ -1822,6 +1822,7 @@ export default function PomodoroEngine({
             <div className="mx-auto flex w-full max-w-[640px] flex-col items-center px-5 py-8 md:px-7 md:py-10" style={timerCardStyle}>
               {timerStageContent}
             </div>
+            {belowTimer && <div className="mx-auto mt-4 w-full max-w-[640px] md:mt-5">{belowTimer}</div>}
           </div>
           {shortcutHint}
           {focusSupportContent}
@@ -1831,6 +1832,7 @@ export default function PomodoroEngine({
           <div className="mx-auto flex w-full max-w-[640px] flex-col items-center px-5 py-8 md:px-7 md:py-10" style={timerCardStyle}>
             {timerStageContent}
           </div>
+          {belowTimer && <div className="mx-auto mt-4 w-full max-w-[640px] md:mt-5">{belowTimer}</div>}
           {shortcutHint}
           {focusSupportContent}
         </>
@@ -1879,8 +1881,8 @@ export default function PomodoroEngine({
                   aria-label="Mở quản lý phân loại"
                   className={`flex-shrink-0 size-7 rounded-full flex items-center justify-center transition-all text-xs focus-visible:outline-none focus-visible:ring-2 ${
                     lightTheme
-                      ? 'border border-[var(--line)] bg-white text-[var(--muted)] hover:text-[var(--ink)] focus-visible:ring-[rgba(var(--accent-rgb),0.22)]'
-                      : 'text-slate-500 hover:text-slate-200 backdrop-blur-md bg-white/[0.05] hover:bg-white/[0.10] border border-white/[0.08] focus-visible:ring-white/30'
+                      ? 'border border-[var(--line)] bg-[var(--card-bg-solid)] text-[var(--muted)] hover:text-[var(--ink)] focus-visible:ring-[rgba(var(--accent-rgb),0.22)]'
+                      : 'text-[var(--muted)] hover:text-[var(--ink)] backdrop-blur-md bg-[var(--panel-soft)] hover:bg-[var(--panel)] border border-[var(--line)] focus-visible:ring-[var(--line-2)]'
                   }`}
                   title="Quản lý phân loại"
                 >

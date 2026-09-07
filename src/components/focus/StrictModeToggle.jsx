@@ -34,11 +34,11 @@ export default function StrictModeToggle({ disabled, enabled, onChange }) {
         className={`relative h-7 w-12 flex-shrink-0 rounded-full transition-colors focus-visible:outline-none focus-visible:ring-2 ${
           enabled
             ? lightTheme
-              ? 'bg-rose-500/85 focus-visible:ring-rose-400/25'
-              : 'bg-rose-500/85 focus-visible:ring-white/30'
+              ? 'bg-[var(--accent)] focus-visible:ring-[rgba(var(--accent-rgb),0.25)]'
+              : 'bg-[var(--accent)] focus-visible:ring-[var(--line-2)]'
             : lightTheme
-              ? 'bg-slate-300 focus-visible:ring-[rgba(31,30,29,0.14)]'
-              : 'bg-slate-700/90 focus-visible:ring-white/30'
+              ? 'bg-[var(--line-2)] focus-visible:ring-[rgba(31,30,29,0.14)]'
+              : 'bg-[var(--line-2)] focus-visible:ring-[var(--line-2)]'
         }`}
       >
         <motion.span

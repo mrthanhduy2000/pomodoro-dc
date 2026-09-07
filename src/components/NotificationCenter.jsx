@@ -19,6 +19,7 @@ import {
   NOTIF_BLUEPRINT_CATEGORY_GLYPH,
   NOTIF_WORKSHOP_CATEGORY_GLYPH,
 } from './icons/glyphData';
+import ActionButton from './shared/ActionButton';
 
 const DISPLAY_FONT = '"Source Serif 4", Georgia, serif';
 const MONO_FONT = '"JetBrains Mono", "SFMono-Regular", Menlo, monospace';
@@ -353,19 +354,9 @@ export default function NotificationCenter({ onNavigate }) {
 
                 <div className="flex items-center gap-2">
                   {notificationFeed.length > 0 && (
-                    <button
-                      type="button"
-                      onClick={clearUiNotifications}
-                      className="mono rounded-full border px-2.5 py-1 text-[10px] uppercase tracking-[0.12em]"
-                      style={{
-                        borderColor: 'var(--line)',
-                        color: 'var(--muted)',
-                        background: 'var(--item-bg)',
-                        fontFamily: MONO_FONT,
-                      }}
-                    >
+                    <ActionButton size="sm" variant="soft" onClick={clearUiNotifications} className="mono uppercase tracking-[0.12em]">
                       Xóa hết
-                    </button>
+                    </ActionButton>
                   )}
 
                   <button

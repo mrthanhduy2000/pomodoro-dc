@@ -13,7 +13,12 @@
 > mà không được refactor triệt để, phải CHỦ ĐỘNG đề xuất mở một "Maintenance Sprint" (nêu rõ mục
 > tiêu/phạm vi/lợi ích/rủi ro/tiêu chí hoàn thành) thay vì tiếp tục cộng thêm tính năng mới.
 >
-> **Threshold status (2026-09-06 late night, after ADR-077 "round 37")**: no entry opened or closed;
+> **Threshold status (2026-09-07, after ADR-078 "round 38")**: no entry opened or closed; **#2** progressed
+> again (`gameStore.js` 4,677 → 2,879 — the reward assembly and ten helper clusters are `engine/` now) and
+> **#86** has its GATE (ESLint: palette classes / hex-rgb literals on any button) with 0 violations and
+> 11 action buttons through the door. Counts unchanged.
+>
+> *(previous)* **Threshold status (2026-09-06 late night, after ADR-077 "round 37")**: no entry opened or closed;
 > **#2** progressed (`gameStore.js` 5,413 → 4,696 · `PomodoroEngine.jsx` 2,958 → 1,922) and **#86**
 > got its single door (`shared/ActionButton.jsx`, tenants not yet moved). Counts as in the snapshot below (this round opened and closed nothing).
 >
@@ -40,7 +45,7 @@
 > They are a log of past counts, re-read on every `head` of this file for no operational
 > benefit. Nothing was deleted.
 - **#103** — Reference archive so large that one `cat` blew the context window, with no guard
-- **#86** — 137 nút tự vẽ trên 28 file KHÔNG đọc token skin, và `ActionButton` không nhận nổi chúng — ADR-077: the door now exists (`src/components/shared/ActionButton.jsx`); the tenants still to migrate are listed in the archive entry's last update
+- **#86** — 137 nút tự vẽ trên 28 file KHÔNG đọc token skin, và `ActionButton` không nhận nổi chúng — ADR-078: GATED (`eslint.config.js`, palette classes or hex/rgb literals on any button = error, 0 violations); 11 action buttons through the door, the rest read tokens
 - **#18** — ĐÃ ĐÓNG (2026-08-13) · Kỷ 12–14 không hề có bề mặt nào mang màu kỷ
 - **#17** — ĐÃ ĐÓNG (2026-08-13) · Bình minh và hoàng hôn là CÙNG MỘT BỨC ẢNH
 
@@ -200,7 +205,7 @@ Look one up: `grep -n '^## #<n>' docs/TECH_DEBT_3D.md`.
 
 ---
 
-## #2 — God File: `gameStore.js` (~4,700 dòng) — CÒN MỞ; `StatsDashboard.jsx` đã xử lý (ADR-071: 3.792 → 294) · `PomodoroEngine.jsx` 2,958 → 1,922 (ADR-077)
+## #2 — God File: `gameStore.js` (~2,900 dòng sau ADR-078) — CÒN MỞ; `StatsDashboard.jsx` đã xử lý (ADR-071: 3.792 → 294) · `PomodoroEngine.jsx` 2,958 → 1,922 (ADR-077)
 
 - **Module**: `src/store/gameStore.js`, `src/components/StatsDashboard.jsx`
 - **Priority**: Low
@@ -223,6 +228,7 @@ Look one up: `grep -n '^## #<n>' docs/TECH_DEBT_3D.md`.
 
 ---
 - **Cập nhật 2026-09-06 (ADR-071)**: `StatsDashboard.jsx` 3.792 → **294 dòng** (ba thẻ trả lời + sổ tra cứu gấp); phần tra cứu tách nguyên văn sang `StatsJournal.jsx` (881) · `StatsNotes.jsx` (275) · `statsTheme.js` (45); logic ba câu trả lời ở `engine/statsAnswers.js` (171, thuần). `gameStore.js` 5.744 → 5.413 nhờ đóng #99 (xoá kinh tế ngủ), `gameMath.js` 2.044 → 1.732. Vế `gameStore.js` VẪN MỞ — ứng viên tách kế tiếp: chuỗi tuần (`autoClaimWeeklySteps` + `refreshWeeklyChain`) và nhiệm vụ ngày sang engine thuần.
+- **Update 2026-09-07 (ADR-078)**: `completeFocusSession` is a 15-line wrapper over `engine/sessionRewards.js` (`assembleSessionReward`, pure, clocks and dice as parameters, 5 behaviour tests); ten helper clusters moved verbatim to `engine/feedNotifications.js` · `achievementState.js` · `streak.js` · `overclock.js` · `trackingDefaults.js` · `eraScope.js` · `buildingPerks.js` · `historyStats.js` · `longBreakCycle.js` · `savedNotes.js`; `gameStore.js` **4,677 → 2,879**. Still open: `normalizePersistedGameState` + the hydration/migration cluster (~600 lines) and the remaining actions. Next cut: split `assembleSessionReward` into named stages (`reward → history → buildings → notifications`).
 - **Update 2026-09-06 (ADR-077)**: done — daily missions and the weekly chain are `engine/missions.js` + `engine/weeklyChain.js` (pure, `now`/`today` params, 14 tests); the hand-written live mission tick inside `completeFocusSession` is gone (`tickDailyMissions`, live = reload); `forgiveness` removed. `gameStore.js` **5,413 → 4,696**. `PomodoroEngine.jsx` **2,958 → 1,922** (`shared/ActionButton.jsx`, `components/focus/*`, helpers to `engine/timerSession.js`). Still open: `completeFocusSession` itself (~700 lines) and the setup/support cards still inline in `PomodoroEngine.jsx`. Next candidate: `completeFocusSession` reward assembly → `engine/sessionRewards.js`.
 
 ## #3 — ⚠️ **PHẦN LỚN ĐÃ XỬ LÝ (2026-09-02)** — mô tả kỹ năng prestige (Thăng Hoa) không khớp code thật

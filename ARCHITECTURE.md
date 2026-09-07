@@ -125,7 +125,10 @@ Hobby" để biết cách đếm lại khi thêm route mới.
 lower bound...) — không đụng Zustand. `src/store/gameStore.js` chỉ gọi các hàm này và lưu kết
 quả. Sửa công thức → sửa ở `gameMath.js`; đừng nhồi công thức mới thẳng vào action của store.
 
-`gameStore.js` hiện vẫn RẤT LỚN (~6000 dòng, điểm nóng `completeFocusSession` ~760 dòng) — đây là
+`gameStore.js` is ~2,900 lines after ADR-078 (it was ~6,000): the session-end computation is
+`engine/sessionRewards.js` (`assembleSessionReward`, pure — clocks, calendar, settings and dice are
+parameters) and ten helper clusters moved to `engine/` verbatim; `completeFocusSession` is a 15-line
+wrapper. The note below is kept as history of WHY the split waited so long: — đây là
 lựa chọn CÓ CHỦ Ý, không phải bỏ sót: audit 2026-07-12 xác nhận việc tách nhỏ store cần rất nhiều
 test hành vi (XP/streak/mission tính sai sẽ không có gì tự động bắt được, vì app này không chạy
 được E2E trên dev — xem `CLAUDE.md` §NEVER). Rủi ro tách nhỏ store hiện lớn hơn lợi ích "dễ đọc hơn" cho
@@ -136,6 +139,7 @@ nếu muốn làm tiếp, kèm điều kiện cần có trước khi làm an to�
 
 ```
         BEFORE / DURING                                AFTER (ending card)
+   <CityPostcard> at the top of Focus (ADR-078)   camera on the same scaffold / the built building
    <SessionBrickStrip> above the ring            ProjectCard in <SessionRewardStory>
         │                                              │
    engine/sessionBrick.describeSessionBrick     engine/sessionBrick.describeSessionBrick
@@ -160,7 +164,8 @@ vì anh làm việc chủ yếu trên iPhone.
 useTimer.commitCompletedSession()
         │  (KHÔNG đổi — vẫn đồng bộ y như trước)
         ▼
-gameStore.completeFocusSession()  ── đặt ui.lootModalOpen = true NGAY LẬP TỨC  ("chuỗi thẻ đang chờ")
+gameStore.completeFocusSession()  ── ADR-078: `assembleSessionReward(...)` (engine, pure) → set(patch)
+        │     · patch.ui.lootModalOpen = true NGAY LẬP TỨC  ("chuỗi thẻ đang chờ") · patch.ui.postcardFocusBpId
         │   ADR-070: MỌI phần thưởng đã đạt TỰ VÀO ở đây, không còn nút nào ở tầng giao diện —
         │     · autoQueueSessionProject ⇒ empty queue gets the next project (ADR-077) ⇒ queue advances one brick
         │     · tickDailyMissions (engine/missions.js) ⇒ rebuild from history WITH this session ⇒ +dailyBonusXP (trọn ngày)
@@ -1133,8 +1138,16 @@ nhân nhau chứ không thay thế nhau.
 
 ### 7.15 The city on the home screen — one painter, two roles
 
+**ADR-078 (2026-09-07): the backdrop became a POSTCARD.** `focus/CityPostcard.jsx` frames the same
+`CityStage` at full opacity as the first block of the Focus column (still while a session runs, alive
+when idle, camera on this session's scaffold via `selection` — `CityStage` forwards it for
+non-interactive tenants too; a phantom scaffold shows the auto-pick's plot at session 1, computed in
+`focus/cityPostcard.js`). `CityBackdrop.jsx` and `cityBackdropScrim.js` are deleted. The paragraph
+below is the history of the backdrop and still explains why the postcard is a TENANT of `CityStage`
+and never a copy.
+
 **Thành phố ra TRANG CHỦ — một bộ vẽ, hai vai trò (2026-08-12, Phase 3F)**: `city/CityBackdrop.jsx`
-đặt chính cảnh 3D đó làm lớp nền mờ phía sau đồng hồ ở trang Tập Trung. Nó KHÔNG dựng cảnh riêng —
+(deleted in ADR-078) đặt chính cảnh 3D đó làm lớp nền mờ phía sau đồng hồ ở trang Tập Trung. Nó KHÔNG dựng cảnh riêng —
 vẫn thuê `CityStage`, chỉ bật bốn công tắc (`chrome`/`still`/`fill`/`interactive`). Đây là chỗ dễ
 sinh bản sao thứ hai nhất trong cả dự án, mà bản sao đó sẽ phải nhớ vá song song mọi thứ về sau
 (đường lùi 2D, watchdog FPS, dọn WebGL context, giờ trong ngày) — có test đọc mã nguồn khoá lại ở

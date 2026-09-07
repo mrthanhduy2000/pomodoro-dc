@@ -996,7 +996,11 @@ export function calculateStreakMilestoneProgress(currentStreak = 0) {
 // ─────────────────────────────────────────────────────────────────────────────
 
 export const COACH_MIN_SAMPLE = 5;        // đủ phiên mới bật coach
-const COACH_BUCKET_MIN_SAMPLE = 4;        // đủ mẫu trong 1 buổi mới dám so sánh
+// ADR-078: 4 → 3. Đàm is a one-session-a-day user; at 4 an hour-of-day bucket needs most of a week
+// before Stats or the Coach may rank it. The Wilson lower bound stays the brake against
+// over-claiming on small samples, and `thin` still marks anything under this floor. ONE definition —
+// `coach/coachIntel.js` re-exports this; it used to carry its own copy of the same number.
+export const COACH_BUCKET_MIN_SAMPLE = 3;        // đủ mẫu trong 1 buổi mới dám so sánh
 
 const WEEKDAY_LABELS = ['Chủ nhật', 'Thứ Hai', 'Thứ Ba', 'Thứ Tư', 'Thứ Năm', 'Thứ Sáu', 'Thứ Bảy'];
 

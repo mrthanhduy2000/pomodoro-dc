@@ -167,7 +167,7 @@ export default function CoachChat(goalProps) {
         type="button"
         onClick={() => setOpen(true)}
         className="mt-2 flex w-full items-center justify-center gap-1.5 rounded-full py-1.5 text-[11px] font-semibold uppercase tracking-[0.15em] transition-opacity hover:opacity-80"
-        style={{ border: `1px solid ${GOLD}55`, color: GOLD, background: 'rgba(217,164,65,0.08)' }}
+        style={{ border: `1px solid ${GOLD}55`, color: GOLD, background: `${GOLD}14` }}
       >
         <SparkGlyph size={12} /> Hỏi Coach
       </button>
@@ -216,7 +216,7 @@ export default function CoachChat(goalProps) {
 
             {lastError && !busy && lastQuestion && (
               <div className="px-4 pb-1">
-                <button type="button" onClick={() => send(lastQuestion)} className="rounded-full px-3 py-1 text-[11px] font-semibold transition-opacity hover:opacity-80" style={{ border: `1px solid ${GOLD}66`, color: GOLD, background: 'rgba(217,164,65,0.08)' }}>↻ Thử lại</button>
+                <button type="button" onClick={() => send(lastQuestion)} className="rounded-full px-3 py-1 text-[11px] font-semibold transition-opacity hover:opacity-80" style={{ border: `1px solid ${GOLD}66`, color: GOLD, background: `${GOLD}14` }}>↻ Thử lại</button>
               </div>
             )}
 

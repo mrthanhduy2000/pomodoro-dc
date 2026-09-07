@@ -74,7 +74,60 @@ export default defineConfig([
       // `sessionsCompletedToday` mà nó cần thì khai xuống dưới 146 dòng.
       // `functions: false` — hàm khai sau mà gọi trước là hợp lệ và cả dự án đang dùng kiểu đó.
       'no-use-before-define': ['error', { functions: false, classes: false, variables: true }],
+      /*
+        ⚠️ #86's GATE (ADR-078). 137 hand-drawn buttons on 28 files once painted themselves with
+        Tailwind palette classes (`bg-orange-500`, `text-white`, `border-slate-700`…) instead of the
+        skin tokens, so five skins × two themes could not recolour them. Round 37 built the door
+        (`shared/ActionButton.jsx`); this rule keeps everything behind it: a `<button>` /
+        `<motion.button>` whose `className` carries a hard-coded palette colour is a lint ERROR. Tabs,
+        chips and toggles may stay raw buttons — they just have to read tokens (`var(--…)`).
+        Only the door itself may name a colour (override below). A lesson written down blocks
+        nothing; only a gate does — and this one is discovery-based: every file, no list.
+      */
+      'no-restricted-syntax': ['error',
+        {
+          selector: "JSXOpeningElement[name.name='button'] > JSXAttribute[name.name='className'] Literal[value=/\\b(?:bg|text|border|from|via|to|ring|shadow|fill|stroke|placeholder|divide|outline)-(?:white|black|slate|gray|zinc|neutral|stone|red|orange|amber|yellow|lime|green|emerald|teal|cyan|sky|blue|indigo|violet|purple|fuchsia|pink|rose)(?:-[0-9]{2,3})?(?:\\/[0-9]+|\\/\\[[^\\]]+\\])?(?![-\\w])/]",
+          message: 'Raw <button> painted with a Tailwind palette colour — use <ActionButton> (shared/ActionButton.jsx) or skin tokens (var(--…)). TECH_DEBT #86 / ADR-078.',
+        },
+        {
+          selector: "JSXOpeningElement[name.object.name='motion'][name.property.name='button'] > JSXAttribute[name.name='className'] Literal[value=/\\b(?:bg|text|border|from|via|to|ring|shadow|fill|stroke|placeholder|divide|outline)-(?:white|black|slate|gray|zinc|neutral|stone|red|orange|amber|yellow|lime|green|emerald|teal|cyan|sky|blue|indigo|violet|purple|fuchsia|pink|rose)(?:-[0-9]{2,3})?(?:\\/[0-9]+|\\/\\[[^\\]]+\\])?(?![-\\w])/]",
+          message: 'Raw <motion.button> painted with a Tailwind palette colour — use <ActionButton> or skin tokens. TECH_DEBT #86 / ADR-078.',
+        },
+        {
+          selector: "JSXOpeningElement[name.name='button'] > JSXAttribute[name.name='className'] TemplateElement[value.raw=/\\b(?:bg|text|border|from|via|to|ring|shadow|fill|stroke|placeholder|divide|outline)-(?:white|black|slate|gray|zinc|neutral|stone|red|orange|amber|yellow|lime|green|emerald|teal|cyan|sky|blue|indigo|violet|purple|fuchsia|pink|rose)(?:-[0-9]{2,3})?(?:\\/[0-9]+|\\/\\[[^\\]]+\\])?(?![-\\w])/]",
+          message: 'Raw <button> painted with a Tailwind palette colour (template string) — use <ActionButton> or skin tokens. TECH_DEBT #86 / ADR-078.',
+        },
+        {
+          selector: "JSXOpeningElement[name.object.name='motion'][name.property.name='button'] > JSXAttribute[name.name='className'] TemplateElement[value.raw=/\\b(?:bg|text|border|from|via|to|ring|shadow|fill|stroke|placeholder|divide|outline)-(?:white|black|slate|gray|zinc|neutral|stone|red|orange|amber|yellow|lime|green|emerald|teal|cyan|sky|blue|indigo|violet|purple|fuchsia|pink|rose)(?:-[0-9]{2,3})?(?:\\/[0-9]+|\\/\\[[^\\]]+\\])?(?![-\\w])/]",
+          message: 'Raw <motion.button> painted with a Tailwind palette colour (template string) — use <ActionButton> or skin tokens. TECH_DEBT #86 / ADR-078.',
+        },
+        // …and the same defect through `style={{ color: '#f87171', background: 'rgba(239,68,68,0.2)' }}`:
+        // (pure white is exempt: white-on-accent is the door's own recipe for a filled button)
+        // a colour literal (hex, or rgb/rgba starting with a NUMBER — `rgba(var(--accent-rgb),…)` is fine)
+        // inside a button's inline style.
+        {
+          selector: "JSXOpeningElement[name.name='button'] > JSXAttribute[name.name='style'] Literal[value=/^#(?!fff$|ffffff$)[0-9a-fA-F]{3,8}$/]",
+          message: 'Raw <button> with a hex colour in `style` — use <ActionButton> or skin tokens (var(--…)). TECH_DEBT #86 / ADR-078.',
+        },
+        {
+          selector: "JSXOpeningElement[name.name='button'] > JSXAttribute[name.name='style'] Literal[value=/^rgba?\\(\\s*[0-9]/]",
+          message: 'Raw <button> with a numeric rgb()/rgba() colour in `style` — use rgba(var(--accent-rgb),…) or <ActionButton>. TECH_DEBT #86 / ADR-078.',
+        },
+        {
+          selector: "JSXOpeningElement[name.object.name='motion'][name.property.name='button'] > JSXAttribute[name.name='style'] Literal[value=/^#(?!fff$|ffffff$)[0-9a-fA-F]{3,8}$/]",
+          message: 'Raw <motion.button> with a hex colour in `style` — use <ActionButton> or skin tokens. TECH_DEBT #86 / ADR-078.',
+        },
+        {
+          selector: "JSXOpeningElement[name.object.name='motion'][name.property.name='button'] > JSXAttribute[name.name='style'] Literal[value=/^rgba?\\(\\s*[0-9]/]",
+          message: 'Raw <motion.button> with a numeric rgb()/rgba() colour in `style` — use rgba(var(--accent-rgb),…) or <ActionButton>. TECH_DEBT #86 / ADR-078.',
+        },
+      ],
     },
+  },
+  {
+    // The one door that may name a colour: `text-white` on the accent variant (ADR-078, #86).
+    files: ['src/components/shared/ActionButton.jsx'],
+    rules: { 'no-restricted-syntax': 'off' },
   },
   {
     files: ['vite.config.js', 'electron/**/*.js', 'scripts/**/*.{js,mjs}', 'api/**/*.js', '*config.js'],

@@ -73,7 +73,7 @@ export default function CancelConfirmDialog({ onAbort, onConfirm, progressPct, r
             className={`rounded-full border px-4 py-2.5 text-sm font-semibold transition ${
               lightTheme
                 ? 'border-[var(--line)] bg-[rgba(244,242,236,0.82)] text-[var(--ink)] hover:border-[var(--line-2)]'
-                : 'border-white/10 bg-white/[0.04] text-slate-200 hover:border-white/18 hover:bg-white/[0.08]'
+                : 'border-[var(--line)] bg-[var(--panel-soft)] text-[var(--ink)] hover:border-[var(--line-2)] hover:bg-[var(--panel)]'
             }`}
           >
             Quay lại
@@ -84,7 +84,7 @@ export default function CancelConfirmDialog({ onAbort, onConfirm, progressPct, r
             className={`rounded-full border px-4 py-2.5 text-sm font-semibold transition ${
               lightTheme
                 ? 'border-[rgba(var(--accent-rgb),0.22)] bg-[rgba(255,247,237,0.96)] text-[var(--accent2)] hover:bg-[rgba(255,239,228,0.98)]'
-                : 'border-[rgba(var(--accent-rgb),0.18)] bg-white/[0.06] text-[var(--accent-light)] hover:bg-white/[0.08]'
+                : 'border-[rgba(var(--accent-rgb),0.18)] bg-[var(--panel-soft)] text-[var(--accent-light)] hover:bg-[var(--panel)]'
             }`}
           >
             Hủy phiên

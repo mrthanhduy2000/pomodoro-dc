@@ -890,7 +890,8 @@ export function computeCityLayout({ built, levels, era, stats, pending } = {}) {
     scaffolds: scaffolds.sort(byIsometricDepth),
     ground:    buildGround(eraNum),
     // ⚠️ "Trống" vẫn CHỈ tính công trình đã xây. Một bãi đất chỉ có giàn giáo thì đúng là chưa có
-    // gì để khoe — và `CityBackdrop` dựa vào cờ này để quyết định có vẽ lớp nền ở trang chủ không.
+    // gì để khoe — the City tab's empty state reads this flag (ADR-078: the Focus postcard draws the
+    // land regardless, with the first project's scaffold staked out).
     isEmpty:   buildings.length === 0,
   };
 }

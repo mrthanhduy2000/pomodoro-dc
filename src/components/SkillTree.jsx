@@ -464,10 +464,10 @@ function ActiveAbilityBar({ lightTheme, unlockedSkills, skillActivations, onActi
                   ? 'cursor-not-allowed'
                   : 'cursor-pointer'
               : sfActive
-                ? 'bg-white/[0.06] border-white/10 text-[var(--accent-light)] cursor-default'
+                ? 'bg-[var(--panel-soft)] border-[var(--line)] text-[var(--accent-light)] cursor-default'
                 : sfUsed
-                  ? 'bg-white/[0.03] border-white/8 text-slate-500 cursor-not-allowed opacity-60'
-                  : 'bg-white/[0.04] border-[rgba(var(--accent-rgb),0.20)] text-[var(--accent-light)] hover:bg-white/[0.06] cursor-pointer'
+                  ? 'bg-[var(--panel-soft)] border-[var(--line)] text-[var(--muted)] cursor-not-allowed opacity-60'
+                  : 'bg-[var(--panel-soft)] border-[rgba(var(--accent-rgb),0.20)] text-[var(--accent-light)] hover:bg-[var(--panel)] cursor-pointer'
           }`}
           style={getButtonStyles(sfActive ? 'active' : sfUsed ? 'disabled' : 'purple') ?? undefined}
         >
@@ -491,10 +491,10 @@ function ActiveAbilityBar({ lightTheme, unlockedSkills, skillActivations, onActi
                   ? 'cursor-not-allowed'
                   : 'cursor-pointer'
               : lmActive
-                ? 'bg-white/[0.06] border-white/10 text-[var(--accent-light)] cursor-default'
+                ? 'bg-[var(--panel-soft)] border-[var(--line)] text-[var(--accent-light)] cursor-default'
                 : lmUsed
-                  ? 'bg-white/[0.03] border-white/8 text-slate-500 cursor-not-allowed opacity-60'
-                  : 'bg-white/[0.04] border-[rgba(var(--accent-rgb),0.20)] text-[var(--accent-light)] hover:bg-white/[0.06] cursor-pointer'
+                  ? 'bg-[var(--panel-soft)] border-[var(--line)] text-[var(--muted)] cursor-not-allowed opacity-60'
+                  : 'bg-[var(--panel-soft)] border-[rgba(var(--accent-rgb),0.20)] text-[var(--accent-light)] hover:bg-[var(--panel)] cursor-pointer'
           }`}
           style={getButtonStyles(lmActive ? 'active' : lmUsed ? 'disabled' : 'amber') ?? undefined}
         >

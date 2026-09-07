@@ -5,6 +5,7 @@
 import React, { useEffect, useState } from 'react';
 import { AnimatePresence, motion } from 'framer-motion';
 import { useCustomMotion, usePressMotion, useSnapMotion } from '../lib/motionPresets';
+import ActionButton from './shared/ActionButton';
 import useSettingsStore from '../store/settingsStore';
 import useGameStore from '../store/gameStore';
 import ExportImport from './ExportImport';
@@ -610,23 +611,9 @@ export default function Settings() {
                 <p>2. Bấm Chia sẻ → “Add to Home Screen”.</p>
                 <p>3. Mở lại app từ icon ngoài màn hình chính rồi quay lại đây để bật thông báo.</p>
                 {!isInstalled && canInstall && (
-                  <motion.button
-                    {...hoverGrow}
-                    {...pressMotion}
-                    onClick={install}
-                    className="mt-3 px-4 py-3 text-sm font-semibold"
-                    style={lightTheme ? {
-                      background: '#1f1e1d',
-                      color: '#fffdf9',
-                      borderRadius: 'var(--skin-radius-control, 14px)',
-                    } : {
-                      background: 'rgba(255,255,255,0.08)',
-                      color: 'var(--ink)',
-                      borderRadius: 'var(--skin-radius-control, 14px)',
-                    }}
-                  >
+                  <ActionButton onClick={install} variant="primary" size="md" className="mt-3">
                     Cài app ra Home Screen
-                  </motion.button>
+                  </ActionButton>
                 )}
               </div>
             ) : notificationPermission === 'denied' ? (
@@ -636,25 +623,9 @@ export default function Settings() {
             ) : (
               <>
                 {notificationPermission === 'default' && (
-                  <motion.button
-                    {...hoverGrow}
-                    {...pressMotion}
-                    onClick={requestNotificationPermission}
-                    className="w-full py-3 text-sm font-semibold"
-                    style={lightTheme ? {
-                      background: 'var(--accent, #c96442)',
-                      color: '#fffdf9',
-                      borderRadius: 'var(--skin-radius-control, 14px)',
-                      boxShadow: '0 12px 28px rgba(var(--accent-rgb), 0.18)',
-                    } : {
-                      background: 'rgba(var(--accent-rgb), 0.88)',
-                      color: 'var(--ink)',
-                      borderRadius: 'var(--skin-radius-control, 14px)',
-                      boxShadow: '0 10px 22px rgba(var(--accent-rgb), 0.18)',
-                    }}
-                  >
+                  <ActionButton onClick={requestNotificationPermission} variant="accent" size="md" className="w-full">
                     Bật thông báo iPhone
-                  </motion.button>
+                  </ActionButton>
                 )}
                 {notificationPermission === 'granted' && (
                   <>
@@ -840,8 +811,8 @@ export default function Settings() {
               <div className="mt-3">
                 <ToggleRow
                   lightTheme={lightTheme}
-                  label="Thành phố làm nền trang chủ"
-                  description="Hiện thành phố mờ phía sau đồng hồ ở trang Tập Trung, để bạn thấy thứ mình đang xây ngay trong lúc làm việc. Trong phiên thì thành phố đứng yên cho đỡ phân tâm và đỡ tốn pin. Máy không chạy được 3D sẽ tự bỏ qua."
+                  label="Thành phố trên màn Tập trung"
+                  description="Tấm bưu thiếp thành phố thật ở đầu màn Tập trung: đứng yên trong phiên, sống lại khi rảnh, camera nhìn vào viên gạch của phiên này."
                   value={cityHomeBackdrop}
                   onChange={setCityHomeBackdrop}
                 />
@@ -881,25 +852,9 @@ export default function Settings() {
               Đạt {PRESTIGE_EP_REQUIREMENT.toLocaleString()} EP. Bắt đầu lại với +5% chỉ số vĩnh viễn.
               {prestigeCount > 0 && ` (Lần ${prestigeCount + 1})`}
             </p>
-            <motion.button
-              {...hoverGrow}
-              {...pressMotion}
-              onClick={openPrestigeModal}
-              className="w-full py-3 text-sm font-semibold"
-              style={lightTheme ? {
-                background: 'var(--accent, #c96442)',
-                color: '#fffdf9',
-                borderRadius: 'var(--skin-radius-control, 14px)',
-                boxShadow: '0 10px 22px rgba(var(--accent-rgb), 0.16)',
-              } : {
-                background: 'rgba(var(--accent-rgb), 0.88)',
-                color: 'var(--ink)',
-                borderRadius: 'var(--skin-radius-control, 14px)',
-                boxShadow: '0 10px 22px rgba(var(--accent-rgb), 0.18)',
-              }}
-            >
+            <ActionButton onClick={openPrestigeModal} variant="accent" size="md" className="w-full">
               Mở phiên Prestige
-            </motion.button>
+            </ActionButton>
           </Card>
         )}
 
@@ -920,24 +875,9 @@ export default function Settings() {
                   <p className="mb-3 text-sm leading-relaxed" style={lightTheme ? { color: '#6a6862' } : { color: 'var(--muted)' }}>
                     Cài lên màn hình chính để mở nhanh và dùng như một cửa sổ app riêng.
                   </p>
-                  <motion.button
-                    {...hoverGrow}
-                    {...pressMotion}
-                    onClick={install}
-                    className="w-full py-3 text-sm font-semibold"
-                    style={lightTheme ? {
-                      background: '#1f1e1d',
-                      color: '#faf9f6',
-                      borderRadius: 'var(--skin-radius-control, 14px)',
-                    } : {
-                      background: 'rgba(var(--accent-rgb), 0.88)',
-                      color: 'var(--ink)',
-                      borderRadius: 'var(--skin-radius-control, 14px)',
-                      boxShadow: '0 10px 22px rgba(var(--accent-rgb), 0.18)',
-                    }}
-                  >
+                  <ActionButton onClick={install} variant="primary" size="md" className="w-full">
                     Cài đặt lên thiết bị
-                  </motion.button>
+                  </ActionButton>
                 </>
               )}
             </div>
@@ -979,39 +919,9 @@ export default function Settings() {
           <p className="my-3 text-sm" style={lightTheme ? { color: '#6a6862' } : { color: 'var(--muted)' }}>
             Chỉ dùng khi bạn thực sự muốn bắt đầu lại từ đầu.
           </p>
-          <motion.button
-            {...hoverGrow}
-            {...pressMotion}
-            onClick={handleReset}
-            className={`w-full py-3 text-sm font-semibold transition-all ${resetConfirm ? 'animate-pulse' : ''}`}
-            style={resetConfirm ? (
-              lightTheme ? {
-                background: '#9f4a3e',
-                color: '#fffdf9',
-                borderRadius: 'var(--skin-radius-control, 14px)',
-                boxShadow: '0 14px 30px rgba(159, 74, 62, 0.22)',
-              } : {
-                background: 'rgba(159, 74, 62, 0.92)',
-                color: '#fff8f4',
-                borderRadius: 'var(--skin-radius-control, 14px)',
-                boxShadow: '0 10px 22px rgba(159, 74, 62, 0.18)',
-              }
-            ) : (
-              lightTheme ? {
-                background: 'rgba(159, 74, 62, 0.08)',
-                color: '#9f4a3e',
-                borderRadius: 'var(--skin-radius-control, 14px)',
-                border: '1px solid rgba(159, 74, 62, 0.18)',
-              } : {
-                background: 'rgba(127,29,29,0.2)',
-                color: '#f87171',
-                borderRadius: 'var(--skin-radius-control, 14px)',
-                border: '1px solid rgba(239,68,68,0.2)',
-              }
-            )}
-          >
+          <ActionButton onClick={handleReset} variant={resetConfirm ? 'accent' : 'danger'} size="md" className={`w-full ${resetConfirm ? 'animate-pulse' : ''}`}>
             {resetConfirm ? 'Nhấn lần nữa để xác nhận' : 'Đặt lại toàn bộ dữ liệu'}
-          </motion.button>
+          </ActionButton>
         </Card>
       </div>
     </div>
@@ -1098,7 +1008,7 @@ function ToggleRow({ label, description, value, onChange, compact = false, disab
         onClick={() => !disabled && onChange(!value)}
         className="relative h-6 w-11 flex-shrink-0 rounded-full transition-colors"
         style={lightTheme ? {
-          background: value ? '#c96442' : 'rgba(31, 30, 29, 0.12)',
+          background: value ? 'var(--accent)' : 'var(--line-2)',
           border: value ? '1px solid rgba(var(--accent-rgb), 0.5)' : '1px solid rgba(31, 30, 29, 0.08)',
         } : {
           background: value ? 'var(--accent)' : 'var(--toggle-off-bg, rgba(58, 52, 46, 0.96))',
@@ -1164,9 +1074,9 @@ function NumberStepper({ label, sub, value, min, max, onChange, step = 1, disabl
           disabled={disabled || value <= min}
           className="flex h-8 w-8 items-center justify-center rounded-xl text-base font-bold transition-colors disabled:opacity-30"
           style={lightTheme ? {
-            background: 'rgba(255, 255, 255, 0.86)',
+            background: 'var(--card-bg-solid)',
             border: '1px solid rgba(31, 30, 29, 0.08)',
-            color: '#6a6862',
+            color: 'var(--muted)',
           } : {
             background: 'var(--item-btn-bg, rgba(31, 27, 22, 0.96))',
             border: '1px solid rgba(255,255,255,0.08)',
@@ -1226,9 +1136,9 @@ function NumberStepper({ label, sub, value, min, max, onChange, step = 1, disabl
           disabled={disabled || value >= max}
           className="flex h-8 w-8 items-center justify-center rounded-xl text-base font-bold transition-colors disabled:opacity-30"
           style={lightTheme ? {
-            background: 'rgba(255, 255, 255, 0.86)',
+            background: 'var(--card-bg-solid)',
             border: '1px solid rgba(31, 30, 29, 0.08)',
-            color: '#6a6862',
+            color: 'var(--muted)',
           } : {
             background: 'var(--item-btn-bg, rgba(31, 27, 22, 0.96))',
             border: '1px solid rgba(255,255,255,0.08)',

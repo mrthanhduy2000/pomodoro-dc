@@ -12,6 +12,7 @@ import { getGlyph, hasGlyphIcon } from '../utils/labelMark';
 import { timeAgo, formatExactDateTime, formatPreciseDuration, resolveEntryCategory, fmtCount } from './statsFormatters';
 import { isCancelledHistoryEntry } from '../engine/gameMath';
 import { ACCENT2, BG_CARD, DISPLAY_FONT, FILTER_PILL_ACTIVE_BG, FILTER_PILL_ACTIVE_BORDER, FILTER_PILL_ACTIVE_TEXT, FILTER_PILL_BG, FILTER_PILL_BORDER, FILTER_PILL_TEXT, JOURNAL_PANEL_BG, JOURNAL_PANEL_BORDER, JOURNAL_PANEL_MUTED, JOURNAL_PANEL_SUB_BG, JOURNAL_PANEL_TEXT, JOURNAL_PANEL_TITLE, JOURNAL_ROW_BG, JOURNAL_ROW_BORDER, NOTE_PANEL_BG, NOTE_PANEL_BORDER, NOTE_PANEL_TEXT, NOTE_PANEL_TITLE, PANEL_BG, PANEL_BG_SOFT, PANEL_BORDER, TAB_ACTIVE_BG, TAB_ACTIVE_BORDER, TAB_ACTIVE_SHADOW, TAB_ACTIVE_TEXT, TAB_IDLE_BG, TAB_IDLE_BORDER, TAB_IDLE_TEXT, TEXT_MUTED, TEXT_PRIMARY, TEXT_SOFT } from './statsTheme';
+import ActionButton from './shared/ActionButton';
 
 // ─── Trạng thái ôn tập của một phiên (mục tiêu · ghi chú kế) ─────────────────
 function getSessionGoalText(entry) {
@@ -472,31 +473,24 @@ export default function StatsJournal({ history, sessionCategories }) {
                   <div className="flex-shrink-0 flex items-center gap-1">
                     {canDeleteThisSession && isConfirming ? (
                       <>
-                        <button
-                          type="button"
+                        <ActionButton
+                          size="sm"
+                          variant="danger"
                           onClick={() => { deleteSession(h.id); setConfirmDelete(null); }}
-                          className="px-2 py-1 rounded-lg text-[10px] font-bold focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-red-400/60 focus-visible:ring-offset-2 transition-[background-color,color,border-color,box-shadow] duration-200"
-                          style={{ background: 'rgba(239,68,68,0.2)', color: '#f87171', border: '1px solid rgba(239,68,68,0.4)' }}
                           title={willUndoSessionReward ? 'Xác nhận xoá và hoàn tác phần thưởng phiên mới nhất' : 'Xác nhận xoá phiên khỏi Nhật ký'}
                         >
                           {willUndoSessionReward ? 'Xoá + hoàn tác' : 'Xoá phiên'}
-                        </button>
-                        <button
-                          type="button"
-                          onClick={() => setConfirmDelete(null)}
-                          className="px-2 py-1 rounded-lg text-[10px] font-bold focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-400/60 focus-visible:ring-offset-2 transition-[background-color,color,border-color,box-shadow] duration-200"
-                          style={{ background: 'rgba(100,116,139,0.2)', color: '#94a3b8', border: '1px solid rgba(100,116,139,0.3)' }}
-                          title="Huỷ"
-                        >
-                          ✕
-                        </button>
+                        </ActionButton>
+                        <ActionButton size="sm" variant="soft" onClick={() => setConfirmDelete(null)} title="Huỷ">
+                            ✕
+                        </ActionButton>
                       </>
                     ) : canDeleteThisSession ? (
                       <button
                         type="button"
                         onClick={() => setConfirmDelete(h.id)}
-                        className="flex h-8 w-8 items-center justify-center rounded-lg opacity-100 transition-[background-color,color,opacity,transform] duration-200 hover:-translate-y-px sm:opacity-0 sm:group-hover:opacity-100 focus-visible:opacity-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-red-400/60 focus-visible:ring-offset-2"
-                        style={{ background: 'rgba(239,68,68,0.12)', color: '#f87171' }}
+                        className="flex h-8 w-8 items-center justify-center rounded-lg opacity-100 transition-[background-color,color,opacity,transform] duration-200 hover:-translate-y-px sm:opacity-0 sm:group-hover:opacity-100 focus-visible:opacity-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[rgba(var(--accent-rgb),0.45)] focus-visible:ring-offset-2"
+                        style={{ background: 'rgba(var(--accent-rgb),0.12)', color: 'var(--accent2)' }}
                         title={willUndoSessionReward ? 'Xoá phiên này và hoàn tác phần thưởng mới nhất' : 'Xoá phiên này khỏi Nhật ký'}
                       >
                         <svg width="12" height="12" viewBox="0 0 12 12" fill="none">
@@ -777,35 +771,21 @@ export default function StatsJournal({ history, sessionCategories }) {
                           </div>
                           {isConfirmingNoteDelete ? (
                             <div className="flex items-center gap-2">
-                              <button
-                                type="button"
-                                onClick={() => {
-                                  deleteSavedNoteEntry({ sessionId: h.id });
-                                  setConfirmDeleteNoteSessionId(null);
-                                }}
-                                className="px-2.5 py-1 rounded-lg text-[10px] font-bold focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-red-400/60 focus-visible:ring-offset-2 transition-[background-color,color,border-color,box-shadow] duration-200"
-                                style={{ background: 'rgba(239,68,68,0.2)', color: '#f87171', border: '1px solid rgba(239,68,68,0.4)' }}
+                              <ActionButton
+                                size="sm"
+                                variant="danger"
+                                onClick={() => { deleteSavedNoteEntry({ sessionId: h.id }); setConfirmDeleteNoteSessionId(null); }}
                               >
                                 Xoá ghi chú
-                              </button>
-                              <button
-                                type="button"
-                                onClick={() => setConfirmDeleteNoteSessionId(null)}
-                                className="px-2.5 py-1 rounded-lg text-[10px] font-bold focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-400/60 focus-visible:ring-offset-2 transition-[background-color,color,border-color,box-shadow] duration-200"
-                                style={{ background: 'rgba(100,116,139,0.2)', color: '#94a3b8', border: '1px solid rgba(100,116,139,0.3)' }}
-                              >
+                              </ActionButton>
+                              <ActionButton size="sm" variant="soft" onClick={() => setConfirmDeleteNoteSessionId(null)}>
                                 Huỷ
-                              </button>
+                              </ActionButton>
                             </div>
                           ) : (
-                            <button
-                              type="button"
-                              onClick={() => setConfirmDeleteNoteSessionId(h.id)}
-                              className="w-fit rounded-full border px-3 py-1 text-[10px] font-semibold transition-[background-color,color,border-color,transform] duration-200 hover:-translate-y-px focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-red-400/60 focus-visible:ring-offset-2"
-                              style={{ background: 'rgba(239,68,68,0.10)', color: '#f87171', borderColor: 'rgba(239,68,68,0.24)' }}
-                            >
+                            <ActionButton size="sm" variant="danger" onClick={() => setConfirmDeleteNoteSessionId(h.id)}>
                               Xoá ghi chú cũ
-                            </button>
+                            </ActionButton>
                           )}
                         </div>
 
@@ -855,13 +835,9 @@ export default function StatsJournal({ history, sessionCategories }) {
 
       {/* Load more */}
       {hasMore && (
-        <button
-          onClick={() => setPage((p) => p + 1)}
-          className="w-full py-2.5 rounded-xl text-sm font-medium border focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[rgba(var(--accent-rgb),0.28)] focus-visible:ring-offset-2 transition-[background-color,color,border-color,box-shadow,transform] duration-200 hover:-translate-y-px"
-          style={{ background: FILTER_PILL_BG, color: FILTER_PILL_TEXT, borderColor: FILTER_PILL_BORDER }}
-        >
+        <ActionButton size="md" variant="soft" className="w-full" onClick={() => setPage((p) => p + 1)}>
           Xem thêm ({filtered.length - paged.length} phiên)
-        </button>
+        </ActionButton>
       )}
 
       {/* Empty after filter */}

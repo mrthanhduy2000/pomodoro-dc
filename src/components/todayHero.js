@@ -17,8 +17,7 @@
  */
 import { localDateStr } from '../engine/time';
 import { calculateStreakMilestoneProgress, isCancelledHistoryEntry } from '../engine/gameMath';
-import { streakBonusCapDays } from '../engine/wonderEffects.js';
-import { STREAK_BONUS_PER_DAY } from '../engine/constants';
+import { streakBonusRate } from '../engine/streak';
 
 /** Thứ Hai → Chủ Nhật, đúng thứ tự tuần Việt Nam (tuần bắt đầu Thứ Hai, như `localWeekMondayStr`). */
 export const WEEK_DAY_LABELS = Object.freeze(['T2', 'T3', 'T4', 'T5', 'T6', 'T7', 'CN']);
@@ -83,6 +82,6 @@ export function describeStreakTarget(currentStreak = 0) {
 
 /** +N% XP mỗi phiên nhờ chuỗi — cùng công thức `DailyMissions` từng in, nay in ở khối Hôm nay. */
 export function streakBonusPercent(currentStreak = 0, buildings = []) {
-  const streak = Math.max(0, Math.floor(Number(currentStreak) || 0));
-  return Math.min(streak, streakBonusCapDays(buildings)) * (STREAK_BONUS_PER_DAY * 100);
+  // ADR-078: the reward's own formula, printed — never a second copy of it.
+  return streakBonusRate(currentStreak, buildings) * 100;
 }

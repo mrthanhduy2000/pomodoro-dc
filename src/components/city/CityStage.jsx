@@ -77,7 +77,11 @@ export default function CityStage({
   // ── CHẠM VÀO CÔNG TRÌNH (Phase 3K) ──────────────────────────────────────────
   /** `{ kind, bpId }` do bộ vẽ 3D báo về → gọi lên trên để lưu lựa chọn. */
   onPick,
-  /** Phần tử của `layout.buildings` / `layout.scaffolds` đang được chọn, đã kèm `kind`. */
+  /**
+   * Phần tử của `layout.buildings` / `layout.scaffolds` đang được chọn, đã kèm `kind`.
+   * ADR-078: the camera follows `selection` on EVERY tenant (the Focus postcard frames this
+   * session's brick with it); only the escape button and the info card need `interactive`.
+   */
   selection = null,
 }) {
   const enterMotion = useEnterMotion();
@@ -160,8 +164,8 @@ export default function CityStage({
               // ⚠️ HAI SỐ RỜI, không phải object `selection`: `selection` được `useMemo` dựng lại
               // mỗi khi bố cục đổi, và một object mới sẽ làm effect bay nổ lại vô cớ.
               // Cũng chỉ truyền khi `interactive` — lớp nền trang chủ không được tự bay đi đâu cả.
-              focusKind={interactive ? (selection?.kind ?? null) : null}
-              focusBpId={interactive ? (selection?.bpId ?? null) : null}
+              focusKind={selection?.kind ?? null}
+              focusBpId={selection?.bpId ?? null}
             />
           </Suspense>
 
@@ -177,7 +181,7 @@ export default function CityStage({
           */}
           <div className="pointer-events-none absolute inset-x-2 top-2 flex justify-end">
             <AnimatePresence>
-              {selection && (
+              {interactive && selection && (
                 <motion.button
                   type="button"
                   {...enterMotion}
@@ -195,7 +199,7 @@ export default function CityStage({
               luật này thì cả vùng trống quanh thẻ nuốt mất thao tác kéo xoay của Đàm. */}
           <div className="pointer-events-none absolute inset-x-2 bottom-2 flex justify-start">
             <AnimatePresence>
-              {selection && (
+              {interactive && selection && (
                 <BuildingCard
                   item={selection}
                   era={layout.era}
@@ -210,7 +214,11 @@ export default function CityStage({
         // hình minh hoạ sắc nét, có viền — đặt sau lưng đồng hồ đếm ngược nó đọc ra "cái ảnh dán
         // nhầm chỗ" chứ không ra "khung cảnh". Lùi về nền trơn là lựa chọn ĐẸP hơn ở đây, còn tab
         // Thành Phố thì vẫn luôn có bản 2D đầy đủ.
-        !fill && <CityCanvas2D layout={layout} dimmed={dimmed} />
+        // ADR-078: the Focus postcard is a fixed-height frame, so in `fill` mode the 2D drawing is
+        // cropped by the frame instead of skipped — a picture of the city beats an empty card.
+        fill
+          ? <div className="h-full overflow-hidden"><CityCanvas2D layout={layout} dimmed={dimmed} /></div>
+          : <CityCanvas2D layout={layout} dimmed={dimmed} />
       )}
 
       {/*

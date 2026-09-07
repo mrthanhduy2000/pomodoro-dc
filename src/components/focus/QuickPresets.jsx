@@ -46,10 +46,10 @@ export default function QuickPresets({ className = '', activePresetId, disabled,
               active
                 ? lightTheme
                   ? 'border-[rgba(31,30,29,0.16)] bg-[rgba(238,234,227,0.99)] text-[var(--ink)] shadow-[0_10px_20px_rgba(31,30,29,0.05)] focus-visible:ring-[rgba(31,30,29,0.12)]'
-                  : 'border-[rgba(var(--accent-rgb),0.20)] bg-white/[0.08] text-[var(--ink)] focus-visible:ring-white/30'
+                  : 'border-[rgba(var(--accent-rgb),0.20)] bg-[var(--panel-soft)] text-[var(--ink)] focus-visible:ring-[var(--line-2)]'
                 : lightTheme
-                  ? 'border-[var(--line)] bg-white text-[var(--muted)] hover:border-[var(--line-2)] hover:bg-[rgba(250,249,246,0.98)] focus-visible:ring-[rgba(31,30,29,0.14)]'
-                  : 'border-white/8 bg-white/[0.03] text-slate-400 hover:border-white/16 hover:text-slate-100 focus-visible:ring-white/30'
+                  ? 'border-[var(--line)] bg-[var(--card-bg-solid)] text-[var(--muted)] hover:border-[var(--line-2)] hover:bg-[rgba(250,249,246,0.98)] focus-visible:ring-[rgba(31,30,29,0.14)]'
+                  : 'border-[var(--line)] bg-[var(--panel-soft)] text-[var(--muted)] hover:border-[var(--line-2)] hover:text-[var(--ink)] focus-visible:ring-[var(--line-2)]'
             }`}
           >
             {active && (

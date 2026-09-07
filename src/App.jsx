@@ -11,6 +11,8 @@ import DailyMissions from './components/DailyMissions';
 import FocusRail from './components/FocusRail';
 import FocusMoment from './components/FocusMoment';
 import TodayHero from './components/TodayHero';
+import CityPostcard from './components/focus/CityPostcard';
+import EraStageBar from './components/shared/EraStageBar';
 import SessionRewardStory from './components/SessionRewardStory';
 import { getEraStage } from './engine/eraStage';
 import { calculateStreakMilestoneProgress, evaluateStreakAtRisk } from './engine/gameMath';
@@ -42,7 +44,6 @@ const CityView = createRecoverableLazy(() => import('./components/CityView.jsx')
 // kéo cả `CityStage` + bộ vẽ 2D + bảng số liệu vào chunk chính (đo được +4,9 KB gzip) và làm chậm
 // đúng thứ phải hiện ra trước nhất: cái đồng hồ. Thành phố chỉ là khung cảnh — nó hiện sau vài
 // phần trăm giây cũng không sao, mà bấm được nút Bắt đầu ngay thì có sao.
-const CityBackdrop = createRecoverableLazy(() => import('./components/city/CityBackdrop.jsx'), 'city-backdrop');
 const Settings = createRecoverableLazy(() => import('./components/Settings.jsx'), 'settings');
 const PrestigeModal = createRecoverableLazy(() => import('./components/PrestigeModal.jsx'), 'prestige-modal');
 const LevelUpModal = createRecoverableLazy(() => import('./components/LevelUpModal.jsx'), 'level-up-modal');
@@ -811,7 +812,7 @@ export default function App() {
     if (action.tab) selectTab(action.tab, action.collectionTab);
   };
 
-  const renderTopRail = ({ hideStats = false } = {}) => (
+  const renderTopRail = ({ hideStats = false, hideEra = false } = {}) => (
     <AppErrorBoundary
       area="thanh trạng thái"
       description="Top rail gặp lỗi. Nội dung chính vẫn có thể hoạt động độc lập."
@@ -835,6 +836,7 @@ export default function App() {
         totalEP={totalEP}
         notificationControl={<NotificationCenter onNavigate={handleNotificationNavigate} />}
         hideStats={hideStats}
+        hideEra={hideEra}
       />
     </AppErrorBoundary>
   );
@@ -865,7 +867,7 @@ export default function App() {
         )}
 
         <div className="flex min-w-0 flex-1 flex-col">
-          {!showFocusFullscreen && isDesktop && !(activeTab === 'focus' && hasFocusSessionInProgress) && renderTopRail()}
+          {!showFocusFullscreen && isDesktop && !(activeTab === 'focus' && hasFocusSessionInProgress) && renderTopRail({ hideEra: activeTab === 'focus' })}
 
           <main className={`min-h-0 flex-1 ${showFocusFullscreen ? 'overflow-y-auto overscroll-y-contain' : 'overflow-hidden'}`}>
             {showFocusFullscreen ? (
@@ -884,17 +886,12 @@ export default function App() {
               </AppErrorBoundary>
             ) : activeTab === 'focus' ? (
               <div className="flex h-full min-h-0">
-                {/* ⚠️ Thêm một lớp bọc `relative` chỉ để LỚP NỀN THÀNH PHỐ có chỗ neo. Không đặt lớp
-                    nền vào thẳng vùng cuộn bên trong được: nó sẽ cuộn theo nội dung và chỉ phủ được
-                    đúng một màn hình đầu, phần dưới trơ ra nền trắng. Neo ở ngoài vùng cuộn thì
-                    thành phố đứng yên như một khung cảnh thật phía sau. */}
+                {/* ADR-078: the city is no longer a backdrop behind this column — it is the postcard
+                    at the top of it (`FocusIntro` → `CityPostcard`). */}
                 <div className="relative min-h-0 min-w-0 flex-1">
-                  <Suspense fallback={null}>
-                    <CityBackdrop hasFocusSessionInProgress={hasFocusSessionInProgress} />
-                  </Suspense>
                   <div className="relative h-full min-h-0 min-w-0 overflow-x-hidden overflow-y-auto scroll-pb-[calc(env(safe-area-inset-bottom)+7.4rem)]">
                     {/* `hideStats`: ô «Hôm nay»/«Chuỗi» nhường cho `TodayHero` ngay bên dưới (ADR-068). */}
-                    {!isDesktop && !showFocusFullscreen && !hasFocusSessionInProgress && renderTopRail({ hideStats: true })}
+                    {!isDesktop && !showFocusFullscreen && !hasFocusSessionInProgress && renderTopRail({ hideStats: true, hideEra: true })}
                     <AppErrorBoundary
                       area="trang tập trung"
                       description="Khu vực timer chính gặp lỗi. Các phần khác của app vẫn được giữ lại."
@@ -915,8 +912,10 @@ export default function App() {
                           dailyGoalSessions={dailyGoalSessions}
                           dailyGoalMinutes={dailyGoalMinutes}
                           hasFocusSessionInProgress={hasFocusSessionInProgress}
-                          todayKey={todayKey}
-                          mondayKey={mondayKey}
+                          eraStage={eraStage}
+                          eraProgress={eraProgress}
+                          totalEP={totalEP}
+                          eraEnd={eraEnd}
                         />
                         {/*
                           ADR-077: the one-line city tease that lived here moved INTO the timer card as the
@@ -955,6 +954,15 @@ export default function App() {
                         <div className="mt-4 md:mt-6">
                           <PomodoroEngine
                             immersiveMode={isWideViewport}
+                            belowTimer={!hasFocusSessionInProgress ? (
+                              // ADR-078: the streak card paid for the postcard's height — it sits under the
+                              // timer now, still above the goal card, never above the Start button.
+                              <TodayHero
+                                todayKey={todayKey}
+                                mondayKey={mondayKey}
+                                sessionsCompletedToday={sessionsCompletedToday}
+                              />
+                            ) : null}
                             onEnterFullScreen={() => {
                               selectTab('focus');
                               setFocusFullscreen(true);
@@ -1533,7 +1541,7 @@ function EditorialSidebar({ activeTab, attentionTabIds, isOpen, onSelect, onTogg
           className={`flex h-9 items-center rounded-[11px] text-[12.5px] transition-colors hover:bg-[rgba(255,255,255,0.06)] ${
             isOpen ? 'gap-2.5 px-3 justify-start' : 'justify-center'
           }`}
-          style={{ color: 'rgba(250,249,246,0.5)' }}
+          style={{ color: 'var(--muted)' }}
         >
           <Motion.span {...chevronMotion}>
             <AppIcon.chevronLeft size={16} />
@@ -1601,6 +1609,8 @@ function TopRail({
   totalEP,
   notificationControl,
   hideStats = false,
+  // ADR-078: on the Focus tab the era bar lives on the city postcard's caption.
+  hideEra = false,
 }) {
   return (
     <header
@@ -1642,60 +1652,20 @@ function TopRail({
           <div className="mt-1 text-[23px] font-bold leading-none tracking-[-0.03em] text-[var(--ink)]" style={{ fontFamily: 'var(--skin-font-display)' }}>{eraLabel}</div>
         </div>
 
-        <div
-          className="min-w-0 flex-1 rounded-[18px] border px-3 py-2.5"
-          style={{
-            borderColor: 'var(--line)',
-            background: 'var(--panel-soft)',
-            boxShadow: '0 8px 16px rgba(31,30,29,0.03)',
-          }}
-        >
-          {/*
-            ⚠️ THANH NÀY ĐO **CHẶNG**, KHÔNG ĐO CẢ KỶ (2026-08-29).
-            Một kỷ dài 5.600–20.800 EP ⇒ ở nhịp thường một phiên đẩy thanh ~1% và nó đầy ĐÚNG MỘT
-            LẦN mỗi 1–6 tháng. Một cái đích xa tới mức không nhìn thấy mình đang tiến thì không
-            phải một cái đích. Mỗi kỷ đã chia sẵn 3 chặng từ lâu (`makeEraStages`) nhưng chặng chỉ
-            được dùng ở `ResourceDisplay` — mà thẻ đó nằm ở cột phải `hidden … lg:flex`, tức trên
-            iPhone Đàm KHÔNG BAO GIỜ thấy. Đây là chỗ cả hai nền tảng đều thấy.
-            Phép tính ở `engine/eraStage.js`, dùng CHUNG với `ResourceDisplay` và màn Tập trung.
-          */}
-          <div className="flex items-center justify-between gap-3">
-            <span className="mono min-w-0 truncate text-[10px] uppercase tracking-[0.2em] text-[var(--muted)]">
-              {eraStage ? eraStage.label : 'Tiến trình kỷ'}
-            </span>
-            <span className="mono whitespace-nowrap text-[11.5px] text-[var(--muted)]">
-              {/* ⚠️ ĐƠN VỊ Ở ĐÂY LÀ **EP**, KHÔNG PHẢI XP. Cùng đơn vị mà `ResourceDisplay`/
-                  `PrestigeModal`/`StakePanel` đều gọi là EP. Chữ "XP" ở đây từng nói dối suốt một
-                  thời gian dài mà không ai thấy, vì trên tài khoản mới nó chỉ là "0 / 1.300" — vô
-                  hại. Chỉ khi soi bằng fixture "đã chơi 6 tháng" mới lộ ra: cấp 4 mà thanh XP báo
-                  20.888, trong khi cấp 4 cần 24.000 XP — hai đại lượng khác nhau, cùng một nhãn,
-                  ngay trên thanh tiêu đề. */}
-              {eraStage
-                ? `${Math.round(eraStage.epInStage).toLocaleString()} / ${eraStage.epRange.toLocaleString()} EP`
-                : `${totalEP.toLocaleString()} / ${eraEnd.toLocaleString()} EP`}
-            </span>
+        {!hideEra && (
+          <div
+            className="min-w-0 flex-1 rounded-[18px] border px-3 py-2.5"
+            style={{
+              borderColor: 'var(--line)',
+              background: 'var(--panel-soft)',
+              boxShadow: '0 8px 16px rgba(31,30,29,0.03)',
+            }}
+          >
+            {/* Stage bar (label · EP in stage · bar · dots): `shared/EraStageBar.jsx`, shared with the
+                Focus postcard (ADR-078). The why of measuring STAGES, not eras, is in that file. */}
+            <EraStageBar eraStage={eraStage} eraProgress={eraProgress} totalEP={totalEP} eraEnd={eraEnd} />
           </div>
-          <div className="mt-2.5 h-[3px] overflow-hidden rounded-full bg-[var(--line)]">
-            <div
-              className="h-full rounded-full bg-[var(--ink)] transition-[width] duration-500"
-              style={{ width: `${(eraStage ? eraStage.progress : eraProgress) * 100}%` }}
-            />
-          </div>
-          {/* Ba vạch chặng: cho thấy đây là mốc thứ mấy trong ba, tức "đầy thanh" sẽ tới BA lần
-              mỗi kỷ chứ không phải một. Không có nó thì thanh mới trông y hệt thanh cũ, chỉ chạy
-              nhanh hơn — và người xem không có cách nào biết vì sao. */}
-          {eraStage && (
-            <div className="mt-1.5 flex gap-1" aria-hidden="true">
-              {Array.from({ length: eraStage.total }, (_, i) => (
-                <span
-                  key={i}
-                  className="h-[2px] flex-1 rounded-full"
-                  style={{ background: i <= eraStage.index ? 'var(--accent)' : 'var(--line)' }}
-                />
-              ))}
-            </div>
-          )}
-        </div>
+        )}
 
         {/*
           ⚠️ BA Ô XUỐNG CÒN HAI (2026-08-30) — ô «Phiên» đã bị GỠ, và đây là lý do, không phải
@@ -1823,11 +1793,24 @@ function FocusIntro({
   dailyGoalSessions,
   dailyGoalMinutes,
   hasFocusSessionInProgress,
-  todayKey,
-  mondayKey,
+  eraStage,
+  eraProgress,
+  totalEP,
+  eraEnd,
 }) {
-  // Màn Focus tĩnh: khi phiên đang chạy/tạm dừng, ẩn lời chào lớn để chỉ còn đồng hồ.
-  if (hasFocusSessionInProgress) return null;
+  /*
+    ADR-078: the opening block of the Focus screen is the CITY POSTCARD — the same 3D city as the
+    City tab, framed at the top of the column, still while a session runs, camera on this
+    session's brick. The one-line greeting (the app's voice) is its caption; the era bar moved
+    from the top rail into the same caption; the streak card (`TodayHero`) moved under the timer.
+    Net height at 390px went DOWN, which is the only reason this block may exist at all — the
+    Start button has sunk under the tab bar four times on this screen.
+
+    ⚠️ Lịch sử khối chào (giữ nguyên, vẫn đúng cho câu chào): dòng nhãn "NGÀY HÔM NAY", câu
+    `progressTemplate` và câu `statusTemplate` đều đã GỠ (2026-08-30 / 2026-09-01) vì cùng nói
+    lại con số đã có mẫu số ngay dưới đồng hồ («Phiên 0/5 hôm nay»). Khối chào chỉ còn đúng một
+    dòng: TIẾNG NÓI — nay in lên bầu trời của tấm bưu thiếp.
+  */
   const { title } = getFocusIntroCopy({
     greeting,
     sessionsCompletedToday,
@@ -1836,47 +1819,14 @@ function FocusIntro({
     dailyGoalSessions,
     dailyGoalMinutes,
   });
-
   return (
-    /*
-      ⚠️ HAI LỚP ĐÃ BỊ GỠ (2026-08-30) — cả hai đều là chỗ NÓI LẦN THỨ HAI, không phải chỗ nói
-      lần đầu. Đo trên ảnh chụp khung 390px: đồng hồ `25:00` nằm ở y≈1325 trên một trang cao
-      1690, tức **thứ duy nhất Đàm mở app để làm đang nằm dưới nếp gấp**, và nút bắt đầu bị
-      thanh tab che mất hẳn. Phía trên nó là 425px thanh đầu + 280px khối chào.
-
-      · **Dòng nhãn "NGÀY HÔM NAY · CHỦ NHẬT"** — GỠ. Câu ngay dưới nó mở đầu bằng "Chào buổi
-        tối", tức đã nói cả "hôm nay" lẫn "đang là lúc nào trong ngày", bằng giọng người thay vì
-        giọng nhãn dán. Thứ còn lại của nó là tên thứ trong tuần — một thông tin mà điện thoại
-        nào cũng hiện sẵn ở thanh trạng thái phía trên.
-      · **Câu `progressTemplate`** ("Bạn chưa chốt phiên nào trong hôm nay.") — GỠ. Đây là chỗ
-        thứ BA nói cùng một con số: thanh đầu có ô «PHIÊN 0», và ngay dưới đồng hồ có
-        «Phiên 0/5 hôm nay». Bản dưới đồng hồ là bản TỐT NHẤT vì nó có mẫu số — nó nói được
-        "còn bao xa", còn hai bản kia chỉ nói "đang ở đâu" (đúng luật «một con số không có mẫu
-        số thì không phải mục tiêu»). Theo luật sẵn có của dự án — *hai chỗ nói cùng một chuyện
-        thì chỗ nói ít hơn phải nhường* — chỗ nhường là câu này.
-
-      · **Câu `statusTemplate`** ("Bạn còn 5 phiên nữa là đủ nhịp hôm nay.") — GỠ NỐT (2026-09-01).
-        Vòng trước GIỮ nó với lý do *"nó là nửa hành động được của cặp câu, và nó không trùng với
-        ai"*. Lý lẽ ấy tự mâu thuẫn với đoạn ngay trên: `progressTemplate` bị gỡ **vì** dòng dưới
-        đồng hồ đã "nói được còn bao xa" — mà đó đúng là việc câu này đang làm. Đo ở khung 390px:
-        phụ đề ở y=288 và «Phiên 0/5 hôm nay» ở y=626, **cùng trên một màn hình**, cùng nói một
-        trạng thái; bản dưới đồng hồ có cả tử lẫn mẫu và nằm ngay chỗ ra quyết định.
-        Cái được không chỉ là 27px chữ: nó là BIÊN AN TOÀN của nút chính ở ca tiêu đề DÀI NHẤT —
-        đo được **22px → 49px**. Màn này đã tụt xuống dưới thanh tab HAI lần (vòng 19 và 20), nên
-        biên là thứ đáng mua.
-        Khối chào còn đúng một dòng: TIẾNG NÓI. Phần hành-động-được nằm ở hai dòng ngay dưới
-        («Đang xây … · còn 4 phiên» · «Tổng kết tuần trước») và ở «Phiên 0/5» dưới đồng hồ.
-    */
-    /*
-      ⚠️ KHỐI CHÀO NAY LÀ `TodayHero` (2026-09-05, ADR-068): dòng TIẾNG NÓI ở trên giữ nguyên, ngay
-      dưới nó là chuỗi · dải bảy ngày · mốc kế tiếp — thứ một app thói quen cho người ta thấy ĐẦU
-      TIÊN. Nó thay ô «Chuỗi» ở thanh tiêu đề (ẩn ở tab này) và hai thẻ của cột phải desktop.
-    */
-    <TodayHero
-      title={title}
-      todayKey={todayKey}
-      mondayKey={mondayKey}
-      sessionsCompletedToday={sessionsCompletedToday}
+    <CityPostcard
+      greeting={hasFocusSessionInProgress ? null : title}
+      sessionRunning={hasFocusSessionInProgress}
+      eraStage={eraStage}
+      eraProgress={eraProgress}
+      totalEP={totalEP}
+      eraEnd={eraEnd}
     />
   );
 }

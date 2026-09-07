@@ -32,7 +32,23 @@ Production branch `main` carries **both** work streams (merged 2026-08-28 on Đ�
 ⚠️ Phase 21 therefore shipped **before** Đàm reviewed its screenshots — the "waiting on Đàm's eyes"
 item below is still live, it just now reviews something already running.
 
-- **Loop — ROUND 37 (2026-09-06, LATEST): A SESSION ALWAYS LAYS A BRICK (ADR-077).** Order: *"Build
+- **Loop — ROUND 38 (2026-09-07, LATEST): THE CITY LIVES ON THE FOCUS SCREEN (ADR-078).** Order:
+  *"Thôi dọn, bắt đầu xây"* + a permanent report law (A for Đàm first, B for the advisor). (1) **City
+  postcard** (`focus/CityPostcard.jsx` + pure `focus/cityPostcard.js`): the same `CityStage` framed at
+  full opacity at the top of Focus — still in a session, alive when idle, camera on this session's
+  scaffold (phantom at session 1) or on the building just finished (`ui.postcardFocusBpId`); the ghost
+  `CityBackdrop` is deleted; streak card under the timer (`belowTimer`), era bar in the caption
+  (`shared/EraStageBar.jsx`, hidden in the top rail on Focus). (2) **«Đổi công trình»** on the brick strip
+  (`chooseSessionProject`, store `setSessionProject`). (3) **`engine/sessionRewards.js`** —
+  `assembleSessionReward` is the whole session-end computation, pure (`now`/`today`/`weekKey`/
+  `dailyGoal`/`random` params); ten helper clusters moved to `engine/`; `gameStore.js` 4,677 → 2,879.
+  (4) `COACH_BUCKET_MIN_SAMPLE` 4 → 3, one definition. (5) **#86 gate**: ESLint rejects palette classes
+  and hex/rgb literals on any button (0 violations; 11 action buttons through `ActionButton`).
+  (6) `soundEngine.cues.test.js` proves the five cues differ; no haptics by design (iOS has no API).
+  ⚠️ Lessons: *the sandbox's software GL trips the FPS watchdog in ~3 s — shoot 3D with `--settle 600`*;
+  *`--click` matches a button's FULL text, emoji included*. Inspect: `--fixture <fx> --tab "Tập trung"
+  --settle 600` · `--fixture fresh.json --tab "Tập trung" --click "Đổi công trình" --settle 600`.
+- **Loop — ROUND 37 (2026-09-06): A SESSION ALWAYS LAYS A BRICK (ADR-077).** Order: *"Build
   lớn. Simplify mạnh. Làm game vui hơn. Tập trung nhiều hơn vào UX/UI. TOÀN QUYỀN."* Seven streams, all
   on `main`. (1) **The brick**: `engine/sessionBrick.js` names the building THIS session pushes; the
   strip above the ring (`focus/SessionBrickStrip.jsx`, replacing the milestone toast + combo badges +
@@ -66,23 +82,11 @@ item below is still live, it just now reviews something already running.
   ⚠️ Lesson: *the three "strongest" lines only have numbers when sessions SET A GOAL* — the 599-session
   fixture has no goals so all three were empty; the screen now says what to do instead of going quiet.
   Inspect: `node scripts/shot.mjs --phone --fixture <fx> --tab "Thống kê" --full`.
-- **Game — ROUNDS 34 & 35 (2026-09-06, ADR-069/070): the only currency is a SESSION, and there is ONE
-  ending.** Building costs N sessions + a queue slot, not RP/materials; ranks self-promote from
-  history; era crises are soft quests; relics grow by session count (`engine/relicGrowth.js`); every
-  reward sits on the living axis (`rewardAxes.test.js`); the reward card chain is the only ending —
-  no Claim buttons, no `LootDropModal`. Resources/RP/refining are DORMANT DATA on purpose
-  (`TECH_DEBT #99` — do not delete what Đàm earned, do not touch synced state).
-  ⚠️ Two lessons worth more than the changes: *a valid reward table with green tests can still grant
-  something nobody can see — only a SCREENSHOT catches it* (a Rank card printed «+12% Tài Nguyên»),
-  and *when you remove a button, hunt down everything it did BESIDES granting the reward* (the old
-  «Nhận» also reconciled quests against history).
-  Full text: `grep -n 'ROUND 3[45]' docs/archive/START_HERE_LOG_2026-09-06.md`.
-
-- 📚 **Rounds 20 → 33 moved to `docs/archive/START_HERE_LOG_2026-09-06.md`** (verbatim), together
+- 📚 **Rounds 20 → 35 moved to `docs/archive/START_HERE_LOG_2026-09-06.md`** (verbatim), together
   with the 3D city details (BSP skeleton · `reach` 0.8 · two-layer shadows · 15 eras/`country` ·
   12×12 grid · 3.2× perf headroom) — a finished black box is not worth paying tokens for every
   session. **Keep at most 3 rounds here**; a new round pushes the oldest down.
-  Older rounds: `grep -n 'VÒNG 2[0-9]\|VÒNG 33' docs/archive/START_HERE_LOG_2026-09-06.md`.
+  Older rounds: `grep -n 'VÒNG 2[0-9]\|VÒNG 33\|ROUND 3[45]' docs/archive/START_HERE_LOG_2026-09-06.md`.
 
 ### UI invariants — read before touching the UI
 ⚠️ **Changing anything under `src/components/` or `src/store/uiSkins.js` means reading
@@ -116,6 +120,9 @@ at 20 and 120 sessions). Accepted by EYE: eras 1–9 must show no rows/alignment
 ⚠️ This is already running in production.
 
 ### D. Known blind spots in the tooling (not "not done" — "cannot be seen")
+- **3D in the sandbox lives ~3 s** — SwiftShader is slow, the FPS watchdog (`renderLoop.js`) gives up
+  after three slow samples and BOTH the City tab and the Focus postcard fall back to the 2D drawing.
+  That is the tool, not the app: pass `--settle 600` to `shot.mjs` to catch the 3D frame (ADR-078).
 - ✅ **Solved 2026-09-02** — `src/dev/previewStage.js` + `shot.mjs --preview <scene>` (`loot` ·
   `loot-max` · `era` · `level` · `toasts`); round 33 added `dc-preview-card=<card>`. Why it was
   needed: `ui` is not in the store's `partialize`, so it cannot be seeded via `--fixture`/`--ls`, and

@@ -131,7 +131,7 @@ function BoundaryFallback({
               className="rounded-full border px-4 py-2.5 text-sm font-semibold transition"
               style={{
                 borderColor: 'var(--line)',
-                background: 'rgba(244,242,236,0.82)',
+                background: 'var(--panel-soft)',
                 color: 'var(--ink)',
               }}
             >

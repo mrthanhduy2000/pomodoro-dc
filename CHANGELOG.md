@@ -10,6 +10,21 @@
 > **Muốn hiểu VÌ SAO một quyết định được chọn** → `ARCHITECTURE_DECISIONS.md`. **Muốn biết migration
 > cụ thể nào cần chạy** → `MIGRATION.md`.
 
+## 2026-09-07 — Round 38: the city lives on the Focus screen (ADR-078)
+
+**Purpose.** *"Thôi dọn, bắt đầu xây."* Make the 3D city part of the main loop, let Đàm change the auto-picked project where he stands, finish the God File's last hand-written block, close round 37's unheard sounds, and put a gate on #86.
+
+**Scope.**
+- **City postcard** at the top of the Focus screen (`focus/CityPostcard.jsx` + pure `focus/cityPostcard.js`, `shared/EraStageBar.jsx`): full-opacity 3D city, still during a session, alive when idle, camera on this session's scaffold or on the building just finished (`ui.postcardFocusBpId`); at session 1 the first project's scaffold is already staked out. `CityBackdrop.jsx` + `cityBackdropScrim.js` deleted; the streak card moved under the timer (`PomodoroEngine belowTimer`); the era bar moved into the caption (hidden in the top rail on the Focus tab). Start button rises at 390 px.
+- **«Đổi công trình»** on the brick strip: in-place list of the era's other projects (queued first, then cheapest); `chooseSessionProject` / `listSessionProjectChoices` (engine), `setSessionProject` (store).
+- **`engine/sessionRewards.js`** — `assembleSessionReward` is the whole session-end computation, pure (clocks, calendar, settings, dice as parameters); ten helper modules moved out of the store verbatim; `gameStore.js` 4,677 → 2,879 lines; streak bonus formula deduplicated (`streakBonusRate`).
+- **Sound/haptics verified** by `soundEngine.cues.test.js` (five cues pairwise distinct in four packs; start cue inside the tap; no haptic code by design).
+- **#86 lint gate**: palette colours in a button's `className` or hex/rgb literals in its `style` are errors; 100 literals recoloured to tokens; 11 action buttons (Settings, Journal, Notification Center) through `ActionButton`.
+- **`COACH_BUCKET_MIN_SAMPLE` 4 → 3**, one definition (`gameMath.js`).
+- Tests: +20 (`cityPostcard` 4 · `sessionBrickChoose` 5 · `soundEngine.cues` 6 · `sessionRewards` 5); full suite 1,602 tests · 1,601 pass · 0 fail · 1 skipped.
+
+**Compatibility.** No save migration: `ui.postcardFocusBpId` is in-memory; the queue shape is unchanged; the Settings key `cityHomeBackdrop` keeps its name (now the postcard switch). Sandbox lesson: under software GL the FPS watchdog downgrades both the postcard and the City tab to 2D after ~3 s — shoot 3D with `--settle 600`.
+
 ## 2026-09-06 (late night) — Round 37: a session always lays a brick (ADR-077)
 
 - **Purpose**: Đàm's round-37 order — *build big, simplify hard, more fun, more UX/UI*. Four rounds of

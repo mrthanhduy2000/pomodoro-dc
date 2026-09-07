@@ -2756,6 +2756,7 @@ cấp `Math.min(3,…)` → `Math.min(9,…)` · cắt bớt danh sách cấp th
   này không đổi màu theo skin".
 - **Owner**: chưa ai · **Status**: MỞ (mở 2026-08-27, cùng phiên viết lại `ActionButton`)
 - **Update 2026-09-06 (ADR-077)**: the ROOT CAUSE is fixed — `ActionButton` is now `src/components/shared/ActionButton.jsx` (exported, token colours only, `sizeMap` opened with `sm`/`md`; guarded by `actionButtonPress.test.js` + `actionButtonSizing.test.js`). Remaining: the hand-drawn buttons in `Settings.jsx` (15, `lightTheme`-branched), `StatsJournal.jsx` (14), `NotificationCenter.jsx` (8), `CoachChat.jsx` (6) … still draw themselves; migrate them through the door, file by file, and count with `grep -c '<button' src/components/*.jsx`.
+- **Update 2026-09-07 (ADR-078)**: the GATE exists — `no-restricted-syntax` in `eslint.config.js` rejects a Tailwind palette colour in a button's `className` and a hex / numeric rgb()/rgba() literal in its `style` (only `shared/ActionButton.jsx` and pure white are exempt). It found 57 + 43 literals; all recoloured to skin tokens; Settings (5), StatsJournal (5) and NotificationCenter (1) action buttons now render through `ActionButton`. Tabs, chips, toggles and icon buttons stay raw by design — they read tokens.
 
 ## #103 — ✅ **RESOLVED (2026-09-06 night, ADR-075)** — Reference archive so large that one `cat` blew the context window, with no guard
 

@@ -1,3 +1,52 @@
+> Last update: **2026-09-07** — **ROUND 38: THE CITY LIVES ON THE FOCUS SCREEN (ADR-078).**
+> Order: *"Build lớn. Simplify mạnh. Làm game vui hơn. Tập trung nhiều hơn vào UX/UI. Thôi dọn, bắt
+> đầu xây. TOÀN QUYỀN."* Six streams + a new report law (A for Đàm first, B for the advisor after).
+>
+> ### Done
+> 0. **Round 37's 12 % closed.** `engine/soundEngine.cues.test.js`: a stub AudioContext records the
+>    oscillators; start · last minute · brick · finish · break-over are pairwise different and never
+>    silent in all four packs; the start cue is scheduled inside the tap (iOS autoplay); **no haptic
+>    code exists on purpose** — iOS Safari has no Vibration API, and a test goes red if one appears.
+> 1. **The city postcard** (`focus/CityPostcard.jsx`, `focus/cityPostcard.js`, `shared/EraStageBar.jsx`).
+>    The ghost backdrop (50 % opacity under a 92 % scrim, frozen on phones, absent at 0 buildings) is
+>    gone; the same `CityStage` is framed at full opacity as the first block of Focus — still while a
+>    session runs, alive when idle, camera on this session's scaffold (a phantom one at session 1) or
+>    on the building the last session finished (`ui.postcardFocusBpId`). Paid for: streak card under
+>    the timer (`belowTimer`), era bar in the caption, greeting on the sky. Start at 390 px: bottom
+>    edge 759 → ~700 px (tab bar at 774).
+> 2. **«Đổi công trình»** on the brick strip: queued projects first (bricks kept), then cheapest
+>    fresh blueprints; full queue evicts the last untouched item, never a brick. Engine
+>    `chooseSessionProject`/`listSessionProjectChoices`, store `setSessionProject`. Verified by
+>    clicking through the shot tool: strip, postcard camera and queue all follow.
+> 3. **`assembleSessionReward`** (`engine/sessionRewards.js`, 772 lines, pure, 5 behaviour tests):
+>    the ~710-line body moved verbatim with `now`/`today`/`weekKey`/`dailyGoal`/`random` as
+>    parameters; ten helper clusters (≈1,180 lines) moved to `engine/` verbatim; `gameStore.js`
+>    **4,677 → 2,879**. Hand-copied formula found: the streak bonus in `todayHero.js` → `streakBonusRate`.
+> 4. **§9 settled**: `COACH_BUCKET_MIN_SAMPLE` 4 → 3 in ONE definition (it existed twice); the #86 gate
+>    is ESLint `no-restricted-syntax` on palette classes and hex/rgb literals in a button's style
+>    (57 + 43 hits recoloured to tokens; Settings 5 · Journal 5 · Notification Center 1 action buttons
+>    through `ActionButton`). Only the door and pure white are exempt.
+> 5. **Ledger 33–37**: ≈20 visible things removed, ≈10 added → **thinner**; the free effort of this
+>    round therefore went to adding (postcard, switch, control polish).
+>
+> ### Gates
+> lint clean · build green · `npm run test:fast` 1,602 tests · 1,601 pass · 0 fail · 1 skipped (`# skipped 1`).
+>
+> ### Lessons
+> - **The sandbox's software GL trips the FPS watchdog in ~3 s** and both the postcard and the City
+>   tab fall back to 2D — the first postcard shot showed the 2D grid and looked like a bug. Shoot 3D
+>   with `--settle 600`. On real hardware the City tab never falls back, so neither will the postcard.
+> - **A gate finds what a sweep misses**: round 37 "recoloured Settings by token", yet the inline
+>   `style` branch still carried hex colours; the second selector (style literals) found 43 more.
+> - **Moving 1,800 lines verbatim is safe only with `no-undef` + `no-unused-vars` as the map**: comment
+>   words (`persist`, `getVietnamHour`) became imports until lint said which were dead.
+> - The `--click` matcher uses the button's full text (`🔥Bếp Lửa Cổ Đại2 phiên`), not the label.
+>
+> ### Foreign commits carried to `main`
+> None — `origin/main` was at `a26ef83` (this branch's own merge) when the round started.
+>
+---
+
 > Last update: **2026-09-06 (late night)** — **ROUND 37: A SESSION ALWAYS LAYS A BRICK (ADR-077).**
 > Order (verbatim essentials): *"Build lớn. Simplify mạnh. Làm game vui hơn. Tập trung nhiều hơn vào
 > UX/UI. TOÀN QUYỀN … thà xong bốn mạch trọn vẹn còn hơn bảy mạch dở dang."* Seven streams; all seven

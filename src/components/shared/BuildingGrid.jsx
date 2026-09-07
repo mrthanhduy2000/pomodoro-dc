@@ -2,7 +2,7 @@
  * BuildingGrid.jsx — LƯỚI công trình đã xây. Luật ở `buildingGrid.js`; file này CHỈ vẽ.
  *
  * ⚠️ MÀU LẤY TỪ TOKEN, KHÔNG MÃ CỨNG (2 theme × 5 skin) — `color-mix` là cách dự án đã dùng ở
- * `cityBackdropScrim.js`, `InventoryHero.jsx`, `SkillMatrix.jsx` cho đúng lý do này.
+ * `InventoryHero.jsx`, `SkillMatrix.jsx` cho đúng lý do này.
  * ⚠️ TÊN CÔNG TRÌNH XUỐNG DÒNG, KHÔNG `truncate`: "Xưởng Đóng Tàu" và "Xưởng Dệt" cắt ở ký tự thứ
  * bảy thì đọc ra giống nhau. Cùng luật đã ghi cho đầu cột bản đồ kỹ năng.
  */

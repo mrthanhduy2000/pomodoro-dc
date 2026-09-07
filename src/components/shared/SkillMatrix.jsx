@@ -2,7 +2,7 @@
  * SkillMatrix.jsx — BẢN ĐỒ kỹ năng 6 cột × 6 hàng. Luật ở `skillMatrix.js`; file này CHỈ vẽ.
  *
  * ⚠️ MÀU LẤY TỪ TOKEN, KHÔNG MÃ CỨNG (2 theme × 5 skin). `color-mix` là cách dự án đã dùng ở
- * `cityBackdropScrim.js`, `RewardCard.jsx`, `InventoryHero.jsx` cho đúng lý do này.
+ * `RewardCard.jsx`, `InventoryHero.jsx` cho đúng lý do này.
  * ⚠️ ĐƯỜNG NỐI DỌC nằm ở lớp NỀN của mỗi cột (một `<div>` tuyệt đối, `z-0`), ô nằm trên (`z-10`).
  * Vẽ đường bằng `border` của từng ô thì đường đứt quãng theo khe `gap` và mắt thôi đọc ra một
  * nhánh liền mạch — mà chính sự liền mạch ấy là thứ nói "muốn xuống dưới phải mở cái trên".

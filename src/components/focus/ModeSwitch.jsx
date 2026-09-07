@@ -34,10 +34,10 @@ export default function ModeSwitch({ disabled, mode, onChange }) {
               active
                 ? lightTheme
                   ? 'text-[var(--canvas)] focus-visible:ring-[rgba(31,30,29,0.14)]'
-                  : 'text-white focus-visible:ring-white/30'
+                  : 'text-[var(--canvas)] focus-visible:ring-[var(--line-2)]'
                 : lightTheme
                   ? 'text-[var(--muted)] hover:text-[var(--ink)] focus-visible:ring-[rgba(31,30,29,0.14)]'
-                  : 'text-slate-500 hover:text-slate-200 focus-visible:ring-white/30'
+                  : 'text-[var(--muted)] hover:text-[var(--ink)] focus-visible:ring-[var(--line-2)]'
             }`}
           >
             {active && (

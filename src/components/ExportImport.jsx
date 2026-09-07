@@ -201,8 +201,8 @@ export default function ExportImport() {
           onClick={handleExport}
           className="flex flex-1 items-center justify-center gap-2 rounded-[18px] px-3 py-3 text-xs font-bold transition-colors"
           style={{
-            background: '#1f1e1d',
-            color: '#faf9f6',
+            background: 'var(--ink)',
+            color: 'var(--canvas)',
           }}
         >
           {/* ⚠️ ĐÃ GỠ huy hiệu "JSON" khỏi HAI nút (vòng 20). Đoạn văn ngay trên đã nói "một bản
@@ -302,7 +302,7 @@ export default function ExportImport() {
                 {...pressMotion}
                 onClick={handleConfirmImport}
                 className="flex-1 rounded-[16px] px-3 py-2.5 text-xs font-bold"
-                style={{ background: '#1f1e1d', color: '#faf9f6' }}
+                style={{ background: 'var(--ink)', color: 'var(--canvas)' }}
               >
                 Ghi đè &amp; khôi phục
               </motion.button>

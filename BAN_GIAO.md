@@ -1,4 +1,60 @@
-> Last update: **2026-09-08** — **ROUND 42: SPACE — ONE NUMBER FOR A SHAPE, ONE AXIS FOR A STACK (ADR-083).**
+> Last update: **2026-09-08** — **ROUND 43: ONE DESTINATION, AND EVERY DISTANCE IN SESSIONS (ADR-082).**
+> Order: *"tôi đang tiến tới cái gì, và vì sao tôi nên quan tâm"* · *"một đơn vị mà tôi không làm gì
+> được với nó thì nó không phải tiền tệ, nó là tiếng ồn."*
+> Everything on `main`. Round 42 (layout and space) was UNMERGED while this ran, so nothing here
+> moves, resizes or re-spaces anything — every change is text inside an element that already existed.
+>
+> ### The audit that decided the round
+> Twelve units of progress were found, not the eight Đàm counted. Column three — *what can he DO with
+> it?* — is empty for six of them: EP, level, era, rank title, day streak, and the 360 badges.
+> Only TWO are spendable: SP (skill tree) and the bricks that become a building. And **not one of the
+> twelve ever ends**, which is why none of them could answer "where am I going".
+>
+> ### Done
+> 1. **The destination** — `engine/journey.js` (pure): 15 eras x 5 blueprints = **75 buildings**, and
+>    then the city is finished. The denominator is SUMMED from `BLUEPRINT_CATALOG`, never typed, so a
+>    16th era moves the destination by itself (`journey.test.js` goes red on a literal). No ninth unit:
+>    the numerator is `summarizeMuseum().builtTotal`, the same bricks already counted one cell away.
+>    `hooks/useJourney.js` is the ONLY seam between that pure module and the store.
+> 2. **The top rail stops printing EP** — on every tab, and in the Focus postcard's caption. It says
+>    the distance in SESSIONS while that estimate is honest, and falls through to `38/75 công trình`
+>    when it is not. ⚠️ It never falls back to EP: `describeStageCountdown` has an EP-phrased branch
+>    for the no-sample case, and `describeRailProgress` drops it. Removing that guard is a RED test.
+> 3. **`Cư dân 28` → `Thành phố 38/75 · còn 37`** in the city's four-cell stat grid. Residents were
+>    derived, unspendable and unaimable — the only decorative cell of the four. They did not leave the
+>    app: they still walk the streets in the picture directly above the cell.
+> 4. **Distances that changed unit** — rank card `✓ 3.955 / 672` → `✓ Đã đủ` (a met condition printed
+>    as a fraction bigger than its own denominator read like a bug); badge thresholds ≥120 minutes say
+>    `còn ~27 giờ` instead of `còn 1.627 phút`; weekly chain `+328` → `+328 XP` with `≈ 6 phiên` under
+>    it; daily mission rows now carry a unit at all.
+> 5. **The level countdown is silent past the reach ceiling.** Converting it to sessions is what made
+>    the ladder legible — and it said *"còn ~155 phiên"* (6.000 XP/level against a measured median of
+>    ~35 XP/session). `STAGE_COUNTDOWN_MAX_SESSIONS` exists to refuse that number, so the line hides.
+>    SP is not the bottleneck anyway: the 617-session save has 2 unspent points and 8 affordable skills.
+> 6. **A close names the destination, an open never does** — `describeDayClose`/`describeWeekClose`
+>    take a `journeyLine`. A total is a reward when he is looking back and a demand when he is starting.
+>
+> ### Decided and NOT done, with the number
+> **XP for achievements — rejected.** 360 badges grant nothing; that is the emptiest third column in
+> the app. Tier-scaled XP would have filled it with an existing unit, and the cost was measured first:
+> bronze 64 · silver 87 · gold 89 · platinum 61 · diamond 59, at 60/120/250/500/1.000, is **126.030 XP
+> ≈ 21 levels ≈ 42 SP** across the game, against a tree of 36 skills. A second XP faucet that large
+> dissolves the one-currency rule this whole round enforces. Left open in `TECH_DEBT.md`.
+>
+> ### The finding worth keeping
+> `describeStageCountdown` — the EP→sessions converter, written with a threshold, a silence rule and
+> its own tests — had been reachable from exactly ONE screen since the day it was written, while the
+> top rail printed raw EP on every tab all day. **Third time** this project has shipped a finished
+> engine function nobody called (`summarizeMuseum` was the first two). `components/journeyWiring.test.js`
+> now reads the call sites: an engine test proves a function RUNS, never that anyone CALLS it.
+>
+> ### Gates
+> lint ✅ · build ✅ · `npm run test:quiet` **1.652 tests · 1.651 pass · 0 fail · skipped 1** ✅
+> Shots at 390px: before/after of Thành Phố · Tiến trình · Hành trang · Tập trung, in `.city-preview/`.
+
+---
+
+> Previous: **2026-09-08** — **ROUND 42: SPACE — ONE NUMBER FOR A SHAPE, ONE AXIS FOR A STACK (ADR-083).**
 > Order: *"Build lớn. Simplify mạnh… Tập trung nhiều hơn vào UX/UI. VÒNG 42 = KHÔNG GIAN. TOÀN QUYỀN."*
 > Reported with three photographs of a real session. Round 41 (TIME) ran in parallel on its own branch.
 >
@@ -53,6 +109,42 @@
 > (+10 from round 40: 8 new in `ringText.test.js`, `timerFold.test.js` rewritten around the new invariant).
 
 ---
+
+> Previous: **2026-09-08** — **ROUND 41: THE LONG RHYTHMS, AND A TOOL THAT CAN SEE (ADR-081).**
+> Order: *"Ba lần liên tiếp có thứ không nghiệm thu được là đủ rồi … Chữa cái công cụ, đừng chữa từng ca."*
+> Everything on `main`. Round 39's counts and round 40's seven moments are untouched.
+>
+> ### Done
+> 0. **The tool** — `shot.mjs --dilate <rate>` patches `performance.now()` and the rAF timestamp in the
+>    page (before the bundle) and sets the WAAPI playback rate to match. ⚠️ THE FINDING OF THIS ROUND:
+>    one framer animation runs on TWO clocks — `opacity` on WAAPI, `x/y/scale` on framer's own rAF loop.
+>    Slowing one gave a photograph that LIED (particles halfway along their path with opacity already 0),
+>    which is exactly what round 40 read as "cannot be photographed". `--frames n --frame-gap ms` for a
+>    filmstrip; `--city2d` keeps the main thread free; `--ask <js>` asks the page a question.
+> 1. **The burst, redrawn after seeing it** — `--accent2` is a smudge on the dark canvas (a third of the
+>    confetti was invisible) and a full circle threw half of it through the headline. Two colours now,
+>    upward fan −165°…−15°, gravity arc, varied shards. Both lessons locked in `rewardBurst.test.js`.
+> 2. **Day and week arcs** — `engine/dayArc.js` (pure: `describeDayOpen` · `describeDayClose` ·
+>    `describeWeekOpen` · `describeWeekClose` · `pickArcMoment`) + `focus/DayMoment.jsx` (7 s banner,
+>    tap to dismiss, stamps in `localStorage`, silent while any timer runs or the reward chain is up).
+> 3. **Two new surprises at two new beats** — «Guồng vàng» mid-session (hash of day + sessions done
+>    today, so the screen and `assembleSessionReward` agree with no state passed; +15 % XP, chip in the
+>    ending) and «Thợ đêm» at a day's open (`rollNightBuilder`, ~16 %, one brick, never the last one).
+> 4. **Beats at every length** — `MAX_GAP_SECONDS = 15 min`, gaps filled evenly («Vẫn trong guồng» /
+>    «Cứ nghỉ tiếp»); a 25-minute session keeps exactly the four beats of ADR-080.
+> 5. **Round-40 questions decided** — no task name in «Đoạn cuối»; the ripple stays (the photographs
+>    settle it); no lucky brick on 2-session projects.
+>
+> ### Gates
+> lint clean · build green · `npm run test:fast` 1,637 tests · 1,636 pass · 0 fail · 1 skipped (`# skipped 1`).
+>
+> ### Lessons
+> - **"The DOM has it" is not "the screen shows it".** A field, an element, a particle count — none of
+>   them is evidence about pixels. Three rounds died on this; the fix was one flag, not three excuses.
+> - **One animation, two clocks.** Before slowing anything down, ask WHICH clock drives it — and check
+>   that every property of the same animation answers the same way.
+> - **A screenshot tool that waits for the DOM to go still can never photograph a moment.** `--watch`
+>   plus a snap path that skips every probe between the hit and the shutter is the whole trick.
 
 > Last update: **2026-09-08** — **ROUND 40: THINGS THAT HAPPEN AND VANISH (ADR-080).**
 > Order: *"Build lớn. Simplify mạnh. Làm game vui hơn và đầy dopamine hơn … Ngân sách thứ đứng yên: 0.

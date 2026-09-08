@@ -52,6 +52,7 @@ export default function CityPostcard({
   eraProgress = 0,
   totalEP = 0,
   eraEnd = 0,
+  railProgressText = null,
 }) {
   const enabled = useSettingsStore((s) => s.cityHomeBackdrop);
   const buildings = useGameStore((s) => s.buildings);
@@ -132,6 +133,7 @@ export default function CityPostcard({
           eraProgress={eraProgress}
           totalEP={totalEP}
           eraEnd={eraEnd}
+          progressText={railProgressText}
         />
         </>)}
       </section>

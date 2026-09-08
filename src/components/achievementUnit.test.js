@@ -19,10 +19,22 @@ test('bảng đơn vị KHÔNG chứa trường thừa — thừa nghĩa là b�
 });
 
 test('câu "còn N" gắn đúng đơn vị và có dấu phân cách nghìn kiểu Việt', () => {
-  assert.equal(cauConLai(751, 'totalFocusMinutes'), 'còn 751 phút');
+  assert.equal(cauConLai(90, 'totalFocusMinutes'), 'còn 90 phút', 'dưới 2 giờ thì phút vẫn là đơn vị hình dung được');
   assert.equal(cauConLai(112, 'sessionsCompleted'), 'còn 112 phiên');
   assert.equal(cauConLai(4, 'longestStreak'), 'còn 4 ngày');
   assert.equal(cauConLai(1234, 'totalXP'), 'còn 1.234 XP', 'phải là dấu chấm kiểu Việt, không phải dấu phẩy');
+});
+
+// ⚠️ ROUND 43: MỘT SỐ QUÁ LỚN ĐỂ HÌNH DUNG KHÔNG PHẢI MỘT KHOẢNG CÁCH. The badge hero shipped
+// *"còn 1.627 phút"* — true, and unusable: nobody plans in four-digit minutes. RED WHEN: the
+// hours branch is removed, or its 120-minute threshold is raised so high that the wall comes back.
+test('mốc tính bằng phút mà còn quá xa thì nói bằng GIỜ, không đọc ra bốn chữ số', () => {
+  assert.equal(cauConLai(1627, 'totalFocusMinutes'), 'còn ~27 giờ');
+  assert.equal(cauConLai(120, 'totalFocusMinutes'), 'còn ~2 giờ', 'đúng ngưỡng thì đã đổi sang giờ');
+  assert.equal(cauConLai(119, 'totalFocusMinutes'), 'còn 119 phút', 'dưới ngưỡng thì giữ nguyên phút');
+  // Chỉ đơn vị PHÚT mới đổi — "còn 1.234 XP" hay "còn 112 phiên" không được nhân chia gì cả.
+  assert.equal(cauConLai(1234, 'totalXP'), 'còn 1.234 XP');
+  assert.equal(cauConLai(300, 'sessionsCompleted'), 'còn 300 phiên');
 });
 
 test('không biết đơn vị thì CÂM, không đoán bừa', () => {

@@ -25,6 +25,35 @@ export const BEAT_WINDOW_SECONDS = 8;
 /** The settling-in / final-stretch length: a fifth of the session, at most five minutes. */
 const SETTLE_CAP_SECONDS = 300;
 
+/**
+ * ⚠️ NO SILENCE LONGER THAN THIS (ADR-081). Round 40's four beats were measured on a 25-minute
+ * session and only make sense there: a 90-minute session got its four beats at 5:00 · 45:00 · 85:00
+ * · 89:00 — forty minutes of nothing, twice, which is exactly the emptiness beats were added to fill.
+ * Any gap wider than this is filled with evenly spaced "still going" beats, so the rhythm is a
+ * property of the CLOCK, not of one duration someone happened to test.
+ */
+const MAX_GAP_SECONDS = 15 * 60;
+
+/** Fill any gap wider than `MAX_GAP_SECONDS` with evenly spaced beats of `filler`. */
+function fillGaps(core, filler) {
+  const out = [];
+  let prev = 0;
+  for (const beat of [...core].sort((a, b) => a.at - b.at)) {
+    const gap = beat.at - prev;
+    if (gap > MAX_GAP_SECONDS) {
+      const inserts = Math.ceil(gap / MAX_GAP_SECONDS) - 1;
+      const step = gap / (inserts + 1);
+      for (let i = 1; i <= inserts; i += 1) {
+        const at = Math.round(prev + step * i);
+        out.push({ ...filler, id: `${filler.id}-${at}`, at });
+      }
+    }
+    out.push(beat);
+    prev = beat.at;
+  }
+  return out;
+}
+
 function clampInt(n) {
   const v = Math.floor(Number(n));
   return Number.isFinite(v) ? Math.max(0, v) : 0;
@@ -50,13 +79,13 @@ export function planSessionBeats(totalSeconds) {
   if (total < 600) {
     return spaced([{ id: 'halfway', at: Math.round(total / 2), label: 'Nửa đường', glyph: '◑' }]);
   }
-  return spaced([
+  return spaced(fillGaps([
     { id: 'settled', at: settle, label: 'Vào guồng', glyph: '◔' },
     { id: 'halfway', at: Math.round(total / 2), label: 'Nửa đường', glyph: '◑' },
     { id: 'final', at: total - settle, label: 'Đoạn cuối', glyph: '◕' },
     // The last-minute bell already rings here (useTimer); this is its visual twin, no new sound.
     { id: 'lastMinute', at: total - 60, label: 'Phút cuối', glyph: '●' },
-  ]);
+  ], { id: 'flow', label: 'Vẫn trong guồng', glyph: '◈' }));
 }
 
 /**
@@ -71,7 +100,8 @@ export function planBreakBeats(totalSeconds) {
     beats.push({ id: 'leave', at: 20, label: 'Đứng dậy', glyph: '☕' });
     beats.push({ id: 'water', at: Math.round(total / 2), label: 'Uống nước', glyph: '☕' });
   }
-  return spaced(beats);
+  // A long break falls under the same no-long-silence law as a session (ADR-081).
+  return spaced(fillGaps(beats, { id: 'rest', label: 'Cứ nghỉ tiếp', glyph: '☕' }));
 }
 
 /**
@@ -101,4 +131,45 @@ export function sessionPhaseGlyph(elapsedSeconds, totalSeconds) {
   if (p >= 0.5) return '◑';
   if (p >= 0.25) return '◔';
   return '○';
+}
+
+/**
+ * THE GOLDEN BEAT (ADR-081) — the second kind of surprise, and it lands mid-session.
+ *
+ * «Gạch đôi» (ADR-080) is the only surprise the game had, and it always arrives at the same place:
+ * the ending. This one arrives while the work is happening — one beat of a session, rarely, comes up
+ * as «Guồng vàng» instead of its usual label, and that session pays a little more XP at the end.
+ *
+ * ⚠️ NO DICE AND NO STATE: the roll is a HASH of the day and how many sessions are already done
+ * today. Both sides can compute it independently and always agree — the running screen (which has no
+ * store write to spare) and `assembleSessionReward` (which must stay pure and deterministic). It
+ * also means a background tab, a reload or a restored session never re-rolls it.
+ *
+ * Never negative: a miss is an ordinary session.
+ */
+export const GOLDEN_BEAT_CHANCE = 0.15;
+export const GOLDEN_BEAT_XP_BONUS = 0.15;
+export const GOLDEN_BEAT_LABEL = 'Guồng vàng';
+
+/** FNV-1a → [0, 1). Deterministic across devices; no `Math.random`, no storage. */
+function hashUnit(text) {
+  let h = 0x811c9dc5;
+  for (let i = 0; i < text.length; i += 1) {
+    h ^= text.charCodeAt(i);
+    h = Math.imul(h, 0x01000193) >>> 0;
+  }
+  return h / 0x100000000;
+}
+
+/**
+ * Which beat of this session is golden, or null.
+ * @returns {'halfway'|'final'|null}
+ */
+export function rollGoldenBeat({ dayKey = '', sessionsDoneToday = 0, chance = GOLDEN_BEAT_CHANCE } = {}) {
+  if (!dayKey) return null;
+  const roll = hashUnit(`${dayKey}#${Math.max(0, Math.floor(Number(sessionsDoneToday) || 0))}#golden`);
+  if (roll >= chance) return null;
+  // Spread it over the two beats in the middle of the session — never the last minute, where the
+  // bell already rings, and never the first, which would read as a reward for merely starting.
+  return roll < chance / 2 ? 'halfway' : 'final';
 }

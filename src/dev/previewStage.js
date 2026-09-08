@@ -79,6 +79,9 @@ const PHIEN_THUONG = {
   autoQueuedId: null,
   // ADR-080: the lucky second brick (null = a normal session).
   luckyBrickId: null,
+  // ADR-081: the golden beat mid-session and what it paid.
+  goldenBeat: null,
+  goldenBonusXP: 0,
 };
 
 /** Ca ĐỈNH: jackpot + rương lớn + lên cấp + sự kiện tốt. Dùng để soi lúc màn đông nhất. */
@@ -114,6 +117,8 @@ const PHIEN_DINH = {
   weeklySteps: [{ index: 0, total: 4, label: 'Nhóm lửa — hoàn thành phiên đầu tiên', xp: 20, isLast: false, bonusSP: 0 }],
   weeklyChainTitle: 'Thuở Khai Thiên',
   weeklyBonusSP: 0,
+  goldenBeat: 'halfway',
+  goldenBonusXP: 39,
   relicsEvolved: [{ id: 'mam_song_bat_diet', label: 'Mầm Sống Bất Diệt', icon: '🌱', stage: 1, stageLabel: 'Tiến Hóa', buff: { epBonus: 0.11 } }],
 };
 
@@ -181,4 +186,28 @@ export function readPreviewCard(search) {
   if (typeof search !== 'string' || search === '') return null;
   const raw = new URLSearchParams(search).get(PREVIEW_CARD_PARAM);
   return raw && /^[a-z]+$/.test(raw) ? raw : null;
+}
+
+/**
+ * ADR-081 — SOI CÁC BANNER THEO LỊCH. Bốn khoảnh khắc dài (`engine/dayArc.js`) phụ thuộc vào NGÀY
+ * và TUẦN, cộng một cú gieo may rủi cho «thợ đêm»: không có cú bấm nào dựng ra được chúng, và đợi
+ * đúng sáng thứ Hai để chụp một tấm ảnh thì không phải một quy trình nghiệm thu.
+ *
+ * Dùng CHUNG tham số `?dc-preview=` với các cảnh `ui` ở trên: `readPreviewScene` bỏ qua tên lạ, còn
+ * `readPreviewArc` bỏ qua tên của cảnh `ui`. Hai người đọc, một cửa, không ai đoán.
+ */
+export const PREVIEW_ARC = {
+  'arc-day-open': { id: 'day-open', title: 'Ngày mới', line: 'Hôm qua 3 phiên · 1 giờ 20 phút · chuỗi 4 ngày.', tone: 'open' },
+  'arc-gift': { id: 'day-open', title: 'Đêm qua có người xây giúp', line: 'Kho Gia Vị nhích thêm một viên gạch.', tone: 'gift' },
+  'arc-day-close': { id: 'day-close', title: 'Xong mục tiêu hôm nay', line: '5 phiên · 2 giờ 10 phút.', tone: 'met' },
+  'arc-day-close-small': { id: 'day-close', title: 'Ngày hôm nay khép lại', line: '1 phiên · 25 phút.', tone: 'some' },
+  'arc-week-open': { id: 'week-open', title: 'Tuần mới', line: 'Tuần trước 12 phiên · 6 giờ 40 phút.', tone: 'open' },
+  'arc-week-close': { id: 'week-close', title: 'Tuần này khép lại', line: '12 phiên · 6 giờ 40 phút.', tone: 'met' },
+};
+
+/** Khoảnh khắc dài cần dựng sẵn, hoặc `null`. Tên lạ ⇒ `null`, không đoán. */
+export function readPreviewArc(search) {
+  if (typeof search !== 'string' || search === '') return null;
+  const raw = new URLSearchParams(search).get(PREVIEW_PARAM);
+  return raw && Object.hasOwn(PREVIEW_ARC, raw) ? PREVIEW_ARC[raw] : null;
 }

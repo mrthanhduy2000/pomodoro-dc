@@ -34,7 +34,8 @@
 │   │   │   ├── ringText.test.js    # The Việc-3 gate: 25% clearance for every clock string at every ring size
 │   │   │   ├── SessionBrickStrip.jsx # "This session's brick" above the ring — reads craftingQueue/buildings, engine/sessionBrick.js
 │   │   │   ├── BrickRow.jsx          # Brick cells (laid · laying · new · empty), shared with the ending's project card; new bricks DROP (ADR-080)
-│   │   │   ├── BeatRipple.jsx        # The visible half of a session/break beat: two rings out of the clock, 1.9 s (ADR-080)
+│   │   │   ├── BeatRipple.jsx        # The visible half of a session/break beat: two rings out of the clock, ~2 s (ADR-080)
+│   │   │   ├── DayMoment.jsx         # The LONG rhythms on screen (ADR-081): day/week open+close as a 7-second banner; stamps in localStorage
 │   │   │   ├── QuickPresets.jsx      # 25/5 · 50/10 … presets (+ `CHU_KY_NGHI_CO_KHAC_NHAU`)
 │   │   │   ├── ModeSwitch.jsx        # Pomodoro ↔ Stopwatch
 │   │   │   ├── StrictModeToggle.jsx  # strict mode switch
@@ -172,7 +173,16 @@
 │   │   ├── buildingPerks.js · historyStats.js · longBreakCycle.js · savedNotes.js   # ten helper clusters moved verbatim
 │   │   │                     #   out of gameStore.js (ADR-078); each header says what it owns. Pure, no store.
 │   │   ├── sessionBrick.js    # "This session's brick" (ADR-077): pickSessionProject · autoQueueSessionProject · chooseSessionProject · describeSessionBrick · rollLuckyBrick (ADR-080)
-│   │   ├── sessionBeats.js    # Session + break BEATS, PURE (ADR-080): planSessionBeats · planBreakBeats · resolveBeat · sessionPhaseGlyph
+│   │   ├── sessionBeats.js    # Session + break BEATS, PURE (ADR-080/081): planSessionBeats · planBreakBeats · resolveBeat · sessionPhaseGlyph · rollGoldenBeat
+│   │   ├── dayArc.js          # The LONG rhythms, PURE (ADR-081): describeDayOpen/Close · describeWeekOpen/Close · pickArcMoment. No failure branch.
+│   │   │                     #   ADR-082: the two CLOSE moments take a `journeyLine`; the opens never do.
+│   │   ├── journey.js         # ADR-082 — THE DESTINATION, PURE. 15 eras x 5 blueprints = 75
+│   │   │                     #   buildings, SUMMED from BLUEPRINT_CATALOG (never a literal, so a
+│   │   │                     #   16th era moves the destination by itself). describeJourney →
+│   │   │                     #   { built, total, remaining, line, short, sentence };
+│   │   │                     #   describeRailProgress → sessions, else the destination. ⚠️ It must
+│   │   │                     #   NEVER fall back to EP: describeStageCountdown has an EP-phrased
+│   │   │                     #   branch for the no-sample case and this file drops it on purpose.
 │   │   ├── missions.js        # Daily missions, PURE (ADR-077): roll · normalize · snapshot progress · tickDailyMissions (live = reload)
 │   │   ├── weeklyChain.js     # Weekly step chain, PURE (`now` param): refreshWeeklyChain · autoClaimWeeklySteps · rebuild
 │   │   ├── seededRng.js       # String-seeded PRNG shared by missions.js + weeklyChain.js
@@ -779,6 +789,13 @@
 │   │   │                     #   ở engine/navAttention.js. ⚠️ Selector trả về BOOLEAN, không phải
 │   │   │                     #   mảng — gốc app bọc cả cảnh 3D, cho nó render lại theo từng con số
 │   │   │                     #   tài nguyên là trả một cái giá không ai đo được cho một chấm 5px
+│   │   ├── useJourney.js      # ADR-082 — THE DESTINATION, and the ONLY seam between the pure
+│   │   │                     #   engine/journey.js and the store. Returns { journey, rail }: the
+│   │   │                     #   city's 38/75 total, and what the top rail says on the right
+│   │   │                     #   (sessions, or the destination — never raw EP). Memo keys are
+│   │   │                     #   CONTENT keys (buildings.join), not array identity: the store
+│   │   │                     #   hands back a new array each render and the rail redraws on every
+│   │   │                     #   store nudge, so identity keys would rebuild 75 entries per tick
 │   │   ├── useStageCountdown.js # Nhịp EP/phiên lấy TRUNG VỊ 10 phiên gần nhất (không lấy từ Cài
 │   │   │                     #   đặt: đó là phiên Đàm ĐỊNH làm, không phải phiên anh THẬT SỰ làm)
 │   │   ├── useNextAction.js   # "Việc tiếp theo" cho màn Tập trung — MỘT việc, hoặc null. Đọc

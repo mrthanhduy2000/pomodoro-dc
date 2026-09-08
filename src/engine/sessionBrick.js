@@ -15,7 +15,9 @@
  * composition layer already consumes.
  */
 import { describeProject, describeQueue, eraBuildProgress, listNextProjects } from './buildChoices';
-import { CRAFT_QUEUE_SLOTS, LUCKY_BRICK_CHANCE, LUCKY_BRICK_MIN_MINUTES } from './constants';
+import {
+  CRAFT_QUEUE_SLOTS, LUCKY_BRICK_CHANCE, LUCKY_BRICK_MIN_MINUTES, LUCKY_BRICK_MIN_PROJECT_SESSIONS,
+} from './constants';
 import { countActiveCrafting } from './eraLegacy';
 import { describeCraftProgress } from './craftProgress';
 
@@ -236,6 +238,8 @@ export function rollLuckyBrick({
   const head = queue[0];
   if (!head?.bpId || !(Number(head.sessionsRemaining) >= 1)) return miss;
   if (!(Number(minutesFocused) >= LUCKY_BRICK_MIN_MINUTES)) return miss;
+  // ADR-081: never on a 2-session project — see LUCKY_BRICK_MIN_PROJECT_SESSIONS.
+  if ((describeProject(head.bpId)?.sessions ?? 0) < LUCKY_BRICK_MIN_PROJECT_SESSIONS) return miss;
   if (!(random() < chance)) return miss;
   const remaining = Number(head.sessionsRemaining) - 1;
   if (remaining <= 0) {

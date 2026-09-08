@@ -14,12 +14,23 @@
  * ⚠️ Chữ "EP", không phải "XP": thanh này đo tiến trình KỶ (EP). Nhãn "XP" từng nói dối ở đây
  * suốt một thời gian dài — chỉ lộ ra khi soi bằng fixture "đã chơi 6 tháng" (cấp 4 mà thanh báo
  * 20.888, trong khi cấp 4 cần 24.000 XP — hai đại lượng khác nhau, cùng một nhãn).
+ *
+ * ⚠️ THE NUMBER ON THE RIGHT IS NO LONGER EP (round 43). It used to read `222 / 1.867 EP`, on every
+ * tab, all day. ADR-069 fixed the only currency of this game as a SESSION, and EP fails every test
+ * of a currency: Đàm cannot spend it, cannot compare two numbers of it, and cannot feel the
+ * difference between 222 and 1.867 — so the most-repeated number in the whole app was the one he
+ * could do the least with. `progressText` now arrives already phrased in sessions, or in the
+ * destination when a session count would be a guess (`engine/journey.js` owns that order).
+ * `totalEP` / `eraEnd` stay as the LAST-RESORT caption for the pre-stage case only; if you find
+ * yourself printing EP again, read `describeRailProgress` first — the fallback is deliberate and it
+ * is not EP.
  */
 export default function EraStageBar({
   eraStage = null,
   eraProgress = 0,
   totalEP = 0,
   eraEnd = 0,
+  progressText = null,
   onImage = false,
   className = '',
 }) {
@@ -35,9 +46,10 @@ export default function EraStageBar({
           {eraStage ? eraStage.label : 'Tiến trình kỷ'}
         </span>
         <span className="mono whitespace-nowrap text-[11.5px]" style={{ color: ink }}>
-          {eraStage
-            ? `${Math.round(eraStage.epInStage).toLocaleString()} / ${eraStage.epRange.toLocaleString()} EP`
-            : `${Number(totalEP).toLocaleString()} / ${Number(eraEnd).toLocaleString()} EP`}
+          {progressText
+            ?? (eraStage
+              ? `${Math.round(eraStage.epInStage).toLocaleString()} / ${eraStage.epRange.toLocaleString()} EP`
+              : `${Number(totalEP).toLocaleString()} / ${Number(eraEnd).toLocaleString()} EP`)}
         </span>
       </div>
       <div className="mt-2.5 h-[3px] overflow-hidden rounded-full" style={{ background: track }}>

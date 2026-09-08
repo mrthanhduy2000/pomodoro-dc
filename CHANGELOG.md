@@ -10,6 +10,27 @@
 > **Muốn hiểu VÌ SAO một quyết định được chọn** → `ARCHITECTURE_DECISIONS.md`. **Muốn biết migration
 > cụ thể nào cần chạy** → `MIGRATION.md`.
 
+## 2026-09-08 — Round 43: one destination, and every distance told in sessions (ADR-082)
+
+**Purpose.** Answer *"làm cái này để đi tới đâu?"* in one sentence. The app spoke twelve units of
+progress and only two were spendable; none of the twelve ever ends, so none could be a destination.
+
+**Scope.** New pure `engine/journey.js` (destination = 15 eras x 5 blueprints = 75 buildings, summed
+from `BLUEPRINT_CATALOG`) and its single store seam `hooks/useJourney.js`. The top rail and the Focus
+postcard caption stop printing raw EP: they say the distance in sessions, or the destination when a
+session estimate would be a guess — never EP. The city's fourth stat cell changes from `Cư dân` to
+`Thành phố 38/75 · còn 37`. The rank card's `3.955 / 672` becomes `Đã đủ`; the level card hides its
+countdown past the same reach ceiling the stage countdown uses; badge thresholds over two hours say
+hours; the weekly chain bonus gains its unit and a session comparison; daily mission rows gain their
+unit. Day-close and week-close cards now name the city total.
+
+**Impact.** No game formula changed and no reward value moved. Residents are no longer counted in a
+stat cell — they still walk the 3D city above it. Adding XP rewards to the 360 achievements was
+measured (about 126.030 XP, 21 levels, 42 SP over the whole game) and rejected as a second faucet.
+
+**Compatibility.** No state shape change, no migration. `journey.test.js` (8) and
+`journeyWiring.test.js` (6) are new; `achievementUnit.test.js` gained the hours rule.
+
 ## 2026-09-08 — Round 42: space — one number for a shape, one axis for a stack (ADR-083)
 
 - **Purpose**: close the three layout faults Đàm photographed in a real session — the session-goal
@@ -30,6 +51,20 @@
   `container-type: inline-size` requires Safari 16+ / Chrome 105+; the layout itself never depends
   on it, only the type sizes inside the disc.
 
+## 2026-09-08 — Round 41: the long rhythms, three kinds of surprise, and a tool that photographs a moment (ADR-081)
+
+**Purpose.** Close the hole that ended three rounds in a row (a feature nobody could see), then give the app the rhythms it still lacked: a day and a week that open and close.
+
+**Scope.**
+- **`shot.mjs --dilate <rate>`**: patches `performance.now()` + the rAF timestamp in the page and matches the WAAPI playback rate, so framer's two clocks slow together; `--frames`/`--frame-gap` return a filmstrip. The three ending bursts of round 40 are photographed for the first time.
+- **Burst redrawn** after seeing it: two legible colours (a third of the confetti used to be invisible on the dark canvas), an upward fan away from the copy, varied shard sizes, gravity arc.
+- **`engine/dayArc.js` + `focus/DayMoment.jsx`**: day open · day close · week open · week close as 7-second banners; no branch reads as a failure; stamps in `localStorage`, never in the synced save.
+- **Two more surprises**: «Guồng vàng» mid-session (a hash, not dice; +15 % XP, chip in the ending) and «Thợ đêm» at the open of a day (one brick, never the last one).
+- **Beats at every length**: no silence over 15 minutes; fillers evenly spaced; a 25-minute session keeps its original four.
+- **Round-40 questions decided**: no task name in «Đoạn cuối» · the ripple stays · no lucky brick on 2-session projects.
+- Tests: `dayArc` 5 · `dayMoment` 4 · `sessionBeats` +3 · `rewardBurst` +1; full suite 1,637 tests · 1,636 pass · 0 fail · 1 skipped.
+
+**Compatibility.** No save migration. `goldenBeat`/`goldenBonusXP` live in `ui.pendingReward` (not persisted); the night crew moves `craftingQueue.sessionsRemaining`, an ordinary state change.
 ## 2026-09-08 — Round 40: things that happen and vanish (ADR-080)
 
 **Purpose.** *"Dọn xong thì lộ ra chỗ trống — vòng này lấp chỗ trống ấy."* Give the 125 silent minutes a rhythm, make the ending burst by tier, add one real surprise, design the break — while round 39's screen stays exactly as it is (1 indicator · ≤2 numbers · ≤3 colours · 0 cut text). Static budget: zero.

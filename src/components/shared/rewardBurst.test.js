@@ -34,7 +34,7 @@ test('three tiers, strictly bigger each step: brick < building < rare in count, 
 test('a burst never blocks and never stays: pointer-events none, every particle rests at opacity 0, no button, no timer', () => {
   assert.match(SRC, /pointer-events-none/, 'the burst must let taps through to the card');
   assert.doesNotMatch(SRC, /<button|setTimeout|setInterval|onClick/, 'a burst has no button and no clock of its own');
-  const restingOpacities = [...SRC.matchAll(/opacity: 0 \}\}/g)].length;
+  const restingOpacities = [...SRC.matchAll(/opacity: 0,?\s*\}/g)].length;
   assert.ok(restingOpacities >= 3, 'particles, wave and flash must all REST at opacity 0 (so Reduce motion shows nothing)');
   assert.match(SRC, /useCustomMotion/, 'motion goes through the sanctioned door');
   assert.doesNotMatch(SRC, /Math\.random/, 'positions are a fixed pattern per index — a screenshot must be reproducible');
@@ -48,4 +48,15 @@ test('the ending wires the tiers: rare cards burst full-screen, the project card
   assert.match(STORY, /const burst = built \|\| card\.lucky \? 'building' : 'brick';/, 'a lucky double brick earns the building-size burst');
   assert.match(ROW, /const dropMotion = useCustomMotion\(\{/, 'the new brick drops through useCustomMotion');
   assert.match(ROW, /delay: 0\.25 \+ index \* 0\.12/, 'two new bricks land as two thuds, not one');
+});
+
+test('ADR-081, learned from the first photographs: two legible colours, and the fan flies UPWARD away from the copy', () => {
+  const palette = /const COLORS = \[([^\]]*)\]/.exec(SRC);
+  assert.ok(palette, 'COLORS not found');
+  const colors = palette[1].split(',').map((s) => s.trim()).filter(Boolean);
+  assert.equal(colors.length, 2, `the burst uses ${colors.length} colours — a third of them was invisible on the dark canvas`);
+  assert.ok(!/--accent2/.test(palette[1]), '`--accent2` reads as a smudge on the dark canvas, never as a spark');
+  // The fan is an upward arc, never a full circle: a full circle drops half the confetti onto the headline.
+  assert.match(SRC, /-165 \+ \(150 \* index\)/, 'particles must leave in an upward fan (−165°…−15°)');
+  assert.doesNotMatch(SRC, /Math\.PI \* 2/, 'a full circle sends half the particles through the text below the glyph');
 });

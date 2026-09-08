@@ -99,9 +99,26 @@ export function getEraStage(era, totalEP) {
  * số bịa. Một tài khoản mới chưa có phiên nào thì không có cách nào biết nhịp của người ấy.
  */
 export function medianSessionEP(history, sample = STAGE_PACE_SAMPLE) {
+  return medianSessionField(history, 'epEarned', sample);
+}
+
+/**
+ * Same median, over the XP a session earned — for "how many sessions to the next level".
+ *
+ * ⚠️ ONE FORMULA, TWO FIELDS (round 43). XP and EP are different quantities and this file is about
+ * eras, so the temptation is to write the XP median wherever the level card lives. That is exactly
+ * how `EraStageBar` once ended up labelling EP as "XP" for months. The median, the sample window,
+ * the "ignore zero and cancelled" rule and the even-length average are ONE rule; only the field
+ * name differs, so only the field name is a parameter.
+ */
+export function medianSessionXP(history, sample = STAGE_PACE_SAMPLE) {
+  return medianSessionField(history, 'xpEarned', sample);
+}
+
+function medianSessionField(history, field, sample = STAGE_PACE_SAMPLE) {
   const values = (Array.isArray(history) ? history : [])
     .slice(0, Math.max(1, sample))
-    .map((entry) => Number(entry?.epEarned))
+    .map((entry) => Number(entry?.[field]))
     .filter((value) => Number.isFinite(value) && value > 0)
     .sort((a, b) => a - b);
 

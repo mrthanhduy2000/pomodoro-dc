@@ -1,15 +1,17 @@
-# TECH_DEBT — 3D city subsystem (52 open entries)
+# TECH_DEBT — 3D city subsystem (49 open entries · 3 closed in round 47)
 
 > Split out of the active `TECH_DEBT.md` on 2026-09-06 (ADR-075). **These are still OPEN debts, not
 > archived history** — they were moved by SUBSYSTEM, not by status.
 >
-> **Why:** the 3D city (`src/engine/city3d/`, `src/components/city/render3d/`) is a **finished black
-> box Đàm forbids touching**, so none of these is actionable work today — yet they were 87% of
+> **Why:** when this file was split, the 3D city (`src/engine/city3d/`, `src/components/city/render3d/`)
+> was a finished black box Đàm forbade touching, so none of these was actionable — yet they were 87% of
 > `TECH_DEBT.md` (218,861 of 250,190 chars) and every `grep` for a live debt had to wade through them.
-> The active file now holds only debts that can actually be worked on.
 >
-> ⚠️ **If 3D work is ever unfrozen, this file comes back into scope first.** Entries keep all 14
-> fields and their original numbering. Index: `node scripts/doc-budget.mjs --map docs/TECH_DEBT_3D.md`
+> ⚠️ **UNFROZEN 2026-09-08 — round 47 (ADR-087).** Đàm reopened the city's ART (shapes · colours ·
+> materials · lights · ground · sky · camera); ADR-007 still locks every building's position. This file
+> is therefore back in scope: its entries are live debts again. Round 47 closed **#25 · #76 · #90(a)**
+> and re-measured #88 / #73 (see each entry). Entries keep all 14 fields and their original numbering.
+> Index: `node scripts/doc-budget.mjs --map docs/TECH_DEBT_3D.md`
 
 ---
 
@@ -449,8 +451,13 @@
 - **Estimated Complexity**: thấp (một dòng + một bài test + một lần quét ảnh)
 - **Blocking Conditions**: không có
 - **Review Trigger**: khi làm bước "Historical Architecture" hoặc khi Đàm nói nhà dân trông trống
-- **Owner**: phiên AI kế tiếp · **Status**: Open
+- **Owner**: round 47 (2026-09-08) · **Status**: ✅ **CLOSED 2026-09-08 (ADR-087)**
 
+
+> **Closed in round 47.** `emitWindows` now skips a mass only when `height < storyHeight × 0.36` — a
+> RATIO, as the Recommended Solution asked — so the smallest common house of every windowed era carries
+> at least one `glass` part. Guarded by `buildingSpec.test.js` («CỬA SỔ: nhà dân NHỎ NHẤT…»): it walks
+> every era whose `windows !== 'none'` and fails the moment one common house has 0 glass parts.
 ---
 
 ## #26 — Nhà dân chưa có LOD, và cổng hiệu năng iPhone vẫn chưa đo lại (nối với #23)
@@ -2001,8 +2008,12 @@ hai con số. Việc *nâng* 9 kỷ kia lên trên 5% nếu có làm thì thuộ
 - **Estimated Complexity**: Medium.
 - **Blocking Conditions**: không có — đây là nợ ĐƯỢC CHỌN mang, không phải nợ bị kẹt.
 - **Review Trigger**: **lần đầu tiên có một phase thật sự cần đổi `CITY_GRID_SIZE`.**
-- **Owner**: chưa phân công · **Status**: Open — cố ý hoãn
+- **Owner**: chưa giao · **Status**: MỞ — camera untouched in round 47 (2026-09-08)
 
+
+> **Round 47 (ADR-087):** the camera was unlocked but not moved. Every art change was judged at the
+> DEFAULT camera on purpose (Đàm's bevel gate: *«tắt/bật, CÙNG camera mặc định»*); moving the eye at the
+> same time would have made every before/after photo compare two things at once.
 ---
 
 ## #75 — Ziggurat kỷ 3 đã có hình ĐÚNG nhưng vẫn đọc ra là «một khối cao đội cái mũ giật cấp» — đây là bài toán KHỐI TÍCH, không phải bài toán MÁI
@@ -2134,8 +2145,15 @@ hai con số. Việc *nâng* 9 kỷ kia lên trên 5% nếu có làm thì thuộ
     nhà" nay sai ở tầng BỐ CỤC dù còn đúng ở tầng MÁI. Đó là giảm nhẹ, không phải chữa khỏi.
 - **Review Trigger (MỚI, thay cho mốc đã dùng)**: **ngay phase sau §1(3)**, hoặc sớm hơn nếu Đàm
   nhìn ảnh §1(3) rồi nói mái nhà dân trông giống nhau giữa các kỷ.
-- **Owner**: chưa phân công · **Status**: Open (đã rà soát 2026-08-21, hoãn có lý do)
+- **Owner**: round 47 (2026-09-08) · **Status**: ✅ **CLOSED 2026-09-08 (ADR-087)**
 
+
+> **Closed in round 47.** `ROOF_KINDS` gained `hip` and `mansard`; `vernacularRoof` now spans **5 values**
+> (cone · flat · gable · hip · mansard) with `MUST_DIFFER = [2,3,4,6,7,9,10,11,12,15]` locked in
+> `eraStyle.test.js`. Era 4 (China) hip · era 7 (Tuscany) low hip · era 9 (Paris) mansard with dormers ·
+> era 12 (Stalingrad) snow gable. A vernacular roof may carry its **own pitch** (`vernacularPitch`, applied
+> by `getVernacularStyle`): inheriting the landmark's pitch made era 12's gables lids (0,12) and would
+> have made era 7's hips steeples (0,56).
 ---
 
 > ⚠️ **ĐÁNH SỐ LẠI khi hợp nhất (Phase 21)**: hai mục dưới đây vốn mang số **#79** và **#80** trên
@@ -2193,8 +2211,14 @@ hai con số. Việc *nâng* 9 kỷ kia lên trên 5% nếu có làm thì thuộ
   khác. (b) còn liên đới ADR-007 (một nhà dân đổi từ "một ô" sang "một phần thửa" là đổi bộ sinh).
 - **Review Trigger**: mỗi lần chạm `BLOCK_MAX_CELLS`, `MIN_UNIT_CELLS`, hoặc cột
   `units`/`cols`/`rows` của `blockStyle.js`.
-- **Owner**: chưa giao · **Status**: MỞ
+- **Owner**: chưa giao · **Status**: MỞ — re-read in round 47 (2026-09-08), deliberately NOT taken
 
+
+> **Round 47 (ADR-087) read this entry and left it open, on purpose.** Options (a) and (b) change the
+> shape of every dwelling and need Đàm's eye on top-down views (this entry's own Blocking Condition);
+> option (c) only tidies a table. Round 47 spent its budget on ground · colour · light · rounding, where
+> one era's before/after already reads as a different game. The skyline's century is carried by
+> `massScale`/`storey` per era (era 15 towers vs era 1 huts), not by plots per block — which stay at 4.
 ---
 
 
@@ -2238,7 +2262,7 @@ hai con số. Việc *nâng* 9 kỷ kia lên trên 5% nếu có làm thì thuộ
   không vá riêng kỷ 6.
 - **Review Trigger**: mỗi lần chạm `block.js`, `blockStyle.js`, cột `storey`, `ROOFTOP_MIN_SPAN`,
   **hoặc bảng `networkStyle.js`** (cột `parcels`/`minSide` — xem cập nhật bên dưới).
-- **Owner**: chưa giao · **Status**: MỞ (đã thu hẹp hai lần, xem bên dưới)
+- **Owner**: round 47 (2026-09-08) · **Status**: (a) ✅ **CLOSED 2026-09-08 (ADR-087)** · (b) still OPEN
 
 ### ⚠️ CẬP NHẬT 2026-08-24 (Phase 21) — CẢ HAI NỬA ĐỀU THU HẸP, VÀ CẢ HAI ĐỀU KHÔNG PHẢI DO AI ĐI CHỮA CHÚNG
 
@@ -2265,6 +2289,13 @@ giữ nguyên. Cửa sổ GHIM quanh kỷ tệ nhất dịch theo giá trị th�
 một cái ghim chứ không phải một cái sàn. Trần trôi hình bao thì **SIẾT** 0,13 → 0,10 (giá trị thật
 0,1259 → 0,0919) — siết một cái trần thì không bao giờ giấu được khuyết tật.
 
+
+> **(a) closed in round 47 — at the root cause this entry named.** `emitRoof` takes the roof rise on the
+> FULL-plot footprint (`ctx.plotFx / plotFz` undo the block unit's shrink), so a split block's roofs are
+> as tall as the single house's. `block.test.js` («CAO LÊN, KHÔNG THẤP ĐI»): the list of eras that got
+> LOWER after the split is now **`[]`** — era 5 (0,9942) and era 12 (0,97 once its dwellings gained a
+> gable) both left it, threshold still 1, floor per plot still 0,75. **(b)** era 6's rooftop detail loss
+> (`ROOFTOP_MIN_SPAN`) is untouched and stays open.
 ---
 
 

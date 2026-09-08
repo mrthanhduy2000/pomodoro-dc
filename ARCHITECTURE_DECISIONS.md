@@ -73,6 +73,42 @@ roughly 44%. Titles below are the lookup key; read one with
 
 ---
 
+## ADR-087 — Round 47: the city is redrawn on the same map — each era stands on its own ground, its colours are dense, its edges are rounded, and the 3D city stops being a black box
+
+**Date**: 2026-09-08 · **Order**: *"ĐỘT PHÁ MỸ THUẬT. Vẽ lại thành phố từ đầu, trên đúng tấm bản đồ cũ. … Tôi mở khoá thành phố 3D — hộp đen không còn. … bớt góc cạnh · bo tròn nhiều hơn · trông 3D hơn · màu tươi hơn, sáng hơn, tương phản hơn · bám sát lịch sử hơn. Và tôi muốn đột phá, không phải chỉnh sửa."* · **ADR-007 locks POSITION, not SHAPE** (Đàm's own reading, this round).
+
+### Context — one ground for fifteen centuries
+Since Phase 9 every era stood on the same `GROUND_ANCHOR` (hue 58°, saturation 22%): Ur, Florence, Stalingrad and Dubai all sat on one olive-khaki lawn, and the road palette carried the whole burden of "which century is this". Measured on the 15-era noon sweep before this round: median saturation of the 14 largest colours per era **0,06–0,13 in 13/15 eras** (only China's gold roofs and Singapore's glass broke 0,30); closest era pair in `sweep-score` **22,4**, median **36,2**. Bevels existed (`BEVEL_MAX` 0,035, `BEVEL_RATIO` 0,15) but were invisible at the default camera: a 0,035 chamfer on a 1,3-unit house is about one pixel at 1400 px.
+
+### Decision
+1. **Ground is a per-era fact, declared where the era is declared.** `ERA_STYLES[n]` gains `groundKind` (one of `GROUND_KINDS`: sand · clay · steppe · meadow · paddy · paving · cinder · snow — each a hue/saturation/lightness WINDOW, not a colour) and `groundColor`. `palette3d.js` builds `ground`/`groundAlt`/`groundShades`/outskirts from that colour in HSL, in the same relations as before (shade spread ≤ 0,018 L — the checkerboard lesson; outskirts +6° −0,05 s +0,035 L mixed 0,15 to the horizon; night 0,62 s × 0,75 L). Eras that declare nothing fall back to the legacy anchor, byte for byte. Tests: every era must declare a real kind and sit inside its window (`eraStyle.test.js`); ≥ 5 kinds and every pair of grounds apart by ≥ 6° or ≥ 0,05 L or ≥ 0,10 s (`palette3d.test.js`).
+2. **Walls are a per-era material too** (`wallColor` → `wall`/`wall2`/`trim`, s ≤ 0,55, lightness spread ≥ 0,35 across eras). Roads keep their own law (lightness = ground ± `roadContrastGap`); the closest-pair test is restated per paving FAMILY (cut stone may neighbour cut stone; brick, asphalt and dirt may not coincide).
+3. **Rounding that can be seen.** `BEVEL_MAX` 0,035 → **0,060**, `BEVEL_RATIO` 0,15 → 0,22, gables get a rounded ridge cap (12 tris), and — the part that actually moved the eye — **plan-corner rounding** (`cornerRadius`, `CORNER_SEGMENTS` 2) on every 4-sided prism whose plan is ≥ 0,25 unit, INCLUDING wide thin plates (cornices, plinths, piers): the box look lived in those plates, not in the walls. Sill-sized parts keep 12 triangles. `countTriangles` mirrors the factory exactly ("the budget must not lie" test): a rounded beveled box is 92, a rounded plate 44. Per-building ceiling 8 000 → 12 000; city totals per era re-based in `triangleBudget.test.js`.
+4. **Light.** Contact AO deeper (`CONTACT_FLOOR` 0,58 → 0,44 · `CONTACT_REACH` 0,38 → 0,52) and ONE rim/back `DirectionalLight` (0,22 × sun, sky-coloured, no shadow) opposite the sun — allowed by the order; **no fourth fill light, tone mapping and DPR untouched.** `PCFShadowMap` was tried (renders differ from soft, `cmp` confirmed) and REJECTED by eye: at 1400 px the edges are not visibly harder, so the softer map stays.
+5. **Fifteen looks.** `ROOF_KINDS` += `hip`, `mansard`; `vernacularRoof` now 5 values (China hip · Tuscany low hip · Paris mansard with dormers · Stalingrad snow gable) and may carry its own `vernacularPitch`; domes 8 → 12 sides; the smallest common house of every windowed era has windows (`storyHeight × 0,36` ratio, closes `TECH_DEBT_3D #25`).
+6. **Roof rise is taken on the full-plot footprint** (`ctx.plotFx/plotFz` in `emitRoof`) — the root cause `TECH_DEBT_3D #90` named: a steep vernacular gable on a split block lost more height than `plot.storey` gave back (era 12: 0,69× the reference house, under the 0,75 floor). Now **no era is lower after the split** — `block.test.js`'s named list went `[5]` → `[]` (era 5 fixed as a by-product).
+7. **The black-box rule is retired** in `CLAUDE.md`, `START_HERE.md`, `docs/TECH_DEBT_3D.md`. ADR-007 (position) stays; the 15 × 120 position test and the block-position test ran green before every commit.
+
+### Consequences — measured after (same tools, same camera)
+| | Before | After |
+|---|---|---|
+| Eras with their own ground | 0 (one anchor) | **15 / 15 · 8 kinds** |
+| Median saturation ≥ 0,20 (top-14 colours, noon) | 2 / 15 | **10 / 15** — stone/asphalt/soot/snow eras (8 · 10 · 11 · 12 · 13) stay honest greys |
+| Closest era pair / median (`sweep-score`) | 22,4 / 36,2 | **24,9 / 51,6** · 0/105 below 12 |
+| Rounding visible at default camera | ❌ | ✅ (bevel off/on photo, ×3 crop of the same frame) |
+| Triangles, whole city (sum of 15 eras) | 1 925 908 | **1 877 928 (−2,5 %)** · era 8 124 348 → 118 508 · worst era 6 198 388 → 199 252 |
+| Eras lower after block split | 1 (era 5) | **0** |
+| 3D debts closed | — | #25 · #76 · #90(a) |
+
+**Not done, on purpose:** `#88` (plots per block stay 4 — options change every dwelling's shape and need Đàm's eye on top-down views) · `#73` (camera not moved: every photo this round compares at the default eye) · `#90(b)`.
+
+### Tool lessons
+- `city-preview.mjs --all` and `--era N` rendered era 12 differently in the same minute (flat vernacular roofs vs the gables the code declares). Not root-caused this round; the 15 final renders were taken with `--era N` one by one. Suspect the tool before the code — again.
+- A saturation gate on the FULL frame is dominated by the largest surfaces (sky, outskirts, plaza), so a ground that is right in `eraStyle` can still read 0,16 in the photo; fix the ground, not the metric.
+- Frame time in the sandbox (SwiftShader) is not a device number; the 8 ms veto is judged on triangle count and on Đàm's Mac.
+
+---
+
 ## ADR-086 — Round 46: the City tab catches up with the city's three roles — the picture is the biggest thing on its own screen, the screen says what the city pays, and a museum piece is lit once
 
 **Date**: 2026-09-08 · **Order**: *"THÀNH PHỐ PHẢI TRÔNG NHƯ THỨ ĐÁNG NHẤT TRONG APP. Vòng 43 cho nó một cái đích (75 công trình). Vòng 44 biến nó thành ngân hàng (1 công trình = 1 điểm kỹ năng). Vòng này làm cho màn hình của nó nói ra cả hai."* · Acceptance, in his words: *"tôi mở tab Thành Phố trên iPhone, chưa cuộn một lần nào, và tôi thấy ba thứ — thành phố của tôi, nó còn cách đích bao xa, và nó vừa trả tôi bao nhiêu điểm kỹ năng."*

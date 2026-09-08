@@ -174,7 +174,7 @@ here. Never let this file grow back: it is the only thing billed in **every** se
 ## 🎨 3D city art lessons → **`docs/LESSONS_3D.md`**
 89 top-level lessons + 96 sub-entries (152k tokens), verbatim — the most expensive knowledge here;
 each cost a whole phase. ⚠️ **Touching the 3D city means `grep`-ing that file FIRST** (it opens with
-its own index). The 3D city is a **finished black box — Đàm forbids touching it.**
+its own index). **Unlocked 2026-09-08 (ADR-087)**: its art may change — **ADR-007 still locks POSITION.**
 
 Five laws kept here because they apply to **every** task, not just 3D:
 1. **Suspect the MEASURING TOOL before the code** — it has lied 28 times.

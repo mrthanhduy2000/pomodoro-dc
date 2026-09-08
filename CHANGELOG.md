@@ -10,6 +10,38 @@
 > **Muốn hiểu VÌ SAO một quyết định được chọn** → `ARCHITECTURE_DECISIONS.md`. **Muốn biết migration
 > cụ thể nào cần chạy** → `MIGRATION.md`.
 
+## 2026-09-08 — Round 47: the city is redrawn on the same map (ADR-087)
+
+**Purpose.** Đàm unlocked the 3D city ("hộp đen không còn") and asked for a breakthrough, not a touch-up:
+fewer hard edges, more rounding, more depth, denser and brighter colour, closer to history — with
+**ADR-007 still locking every building's position**. Measured before on the 15-era noon sweep: one
+olive ground under all fifteen centuries, median saturation of the 14 largest colours **≥ 0,20 in only
+2/15 eras**, closest era pair 22,4, bevels of 0,035 unit invisible at the default camera.
+
+**Scope.** `src/engine/city3d/` (eraStyle · palette3d · parts · buildingSpec · roofStyle · materials ·
+budget) and `src/components/city/render3d/` (geometryFactory · sceneGraph). No UI, no store, no sync.
+- **Ground per era**: `GROUND_KINDS` (8 material windows) + `groundKind`/`groundColor`/`wallColor` on every
+  era; palette derives ground shades, outskirts, walls and trim from them. 15/15 eras have their own
+  ground; grounds pairwise ≥ 6° / 0,05 L / 0,10 s apart; road law restated per paving family.
+- **Rounding that shows**: `BEVEL_MAX` 0,035 → 0,06, rounded gable ridge, and PLAN-corner rounding
+  (`cornerRadius`) on every 4-sided part ≥ 0,25 unit including cornices and plinths. Bevel off/on differs
+  by eye at the default camera. Per-building triangle ceiling 8 000 → 12 000; era totals re-based.
+- **Light**: deeper contact AO (`CONTACT_FLOOR` 0,44 · `CONTACT_REACH` 0,52), one sky-coloured rim light
+  opposite the sun. Tone mapping, DPR, fill-light count and the soft shadow map unchanged (hard PCF tried
+  and rejected by eye).
+- **Fifteen looks**: `hip` and `mansard` roofs, `vernacularRoof` 3 → 5 values with its own
+  `vernacularPitch`, 12-sided domes, windows on the smallest house of every windowed era.
+- **Roof rise on the full-plot footprint** (`emitRoof`): split blocks are no longer lower than the single
+  house in ANY era (`block.test.js` list `[5]` → `[]`).
+- **Docs**: black-box wording retired in `CLAUDE.md`, `START_HERE.md`, `docs/TECH_DEBT_3D.md`; debts
+  #25 · #76 · #90(a) closed; #88 · #73 annotated; lessons 101–103 in `docs/LESSONS_3D.md`.
+
+**Impact / compatibility.** Pure rendering: saves, sync and the 2D City screen of round 46 untouched.
+Measured after: median saturation ≥ 0,20 in **10/15** eras (the grey five are stone, soot, asphalt,
+snow, concrete — on purpose); `sweep-score` closest pair **24,9**, median **51,6**, 0/105 below the eye
+threshold; whole-city triangles 1 925 908 → 1 877 928 (−2,5 %), era 8 124 348 → 118 508, worst era 6 198 388 → 199 252. ADR-007 position tests green
+before every commit. Gates: `npm run test:quiet` **1 687 pass · 0 fail · skipped 1** (+5 tests vs round 46) · lint 0 · build ✓.
+
 ## 2026-09-08 — Round 46: the City tab catches up with the city's three roles (ADR-086)
 
 **Purpose.** Round 43 made the city the destination, round 44 made it the bank, ADR-007 makes it the

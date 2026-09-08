@@ -16,7 +16,7 @@ grep -n 'CÔNG CỤ ĐO NÓI DỐI' docs/LESSONS_3D.md   # 28 lần công cụ t
 grep -n 'GÁNH HAI VIỆC' docs/LESSONS_3D.md        # 7 lần một trường gánh hai việc
 ```
 
-## Mục lục (100 bài học cấp 1)
+## Mục lục (103 bài học cấp 1)
 
 1. QUÉT XONG PHẢI CHẤM BẰNG SỐ
 2. CÔNG CỤ ĐO NÓI DỐI LẦN THỨ 20 VÀ 21
@@ -118,6 +118,9 @@ grep -n 'GÁNH HAI VIỆC' docs/LESSONS_3D.md        # 7 lần một trường g
 98. LỚP NỀN THÀNH PHỐ Ở TRANG CHỦ NUỐT GẦN HẾT VÒNG NGÀY (đo 2026-08-13, CHƯA xử lý
 99. MỘT PHÉP ĐO CHẶN ĐƯỜNG CHỈ CHẶN ĐÚNG THỨ NÓ NÓI TỚI
 100. MỘT LÁT CẮT KHÔNG CÓ HÌNH DẠNG THEO CHIỀU DỌC
+101. THE BOX LOOK LIVES IN THE THIN PLATES, NOT IN THE WALLS (round 47)
+102. A GROUND IS A WINDOW PER ERA, NOT ONE ANCHOR FOR FIFTEEN (round 47)
+103. `--all` AND `--era N` DREW THE SAME ERA DIFFERENTLY IN THE SAME MINUTE (round 47)
 
 ---
 
@@ -321,6 +324,12 @@ grep -n 'GÁNH HAI VIỆC' docs/LESSONS_3D.md        # 7 lần một trường g
   - ⚠️ **KÈM THEO — MỘT CÔNG CỤ ĐO PHẢI CÓ ĐỐI CHỨNG TRÊN DỮ LIỆU THẬT, KHÔNG CHỈ TRÊN DỮ LIỆU BỊA.** `road-bend.mjs` có 5 mục tự kiểm thuần (đường thẳng ra 1,000, zigzag 45° ra đúng √2…) và **cả 5 đều xanh trong khi công cụ đang đo sai**. Thứ bắt được là mục thứ 6: *"kỷ 4 (khai thẳng tuyệt đối) phải đo ra đúng 1,0000"* — nó đỏ, và nó chỉ đúng chỗ hỏng: bản đầu lấy **trọng tâm mọi tam giác trong một ô** làm tim đường, mà ở ngã ba thì cái cánh tay cụt KÉO trọng tâm về phía nó, nên con số phản ánh *hình dạng ngã ba* chứ không phải *tim đường*. Đo ở **RANH GIỚI** (nơi chỉ có đúng một cánh tay đi qua) thì hết. ⇒ **Mỗi công cụ đo phải có ít nhất một ca đối chứng chạy trên DỮ LIỆU THẬT mà ta biết trước đáp án** — dữ liệu bịa chỉ kiểm được công thức, không kiểm được việc nó có nhìn đúng chỗ không.
   - ⚠️ **KÈM THEO — CON SỐ "CẢ KHUNG HÌNH ĐỔI 0,67%" SUÝT LÀM TÔI KẾT LUẬN BẢN VÁ VÔ DỤNG.** Mặt đường chỉ chiếm **1,38% khung hình** ở góc nhìn mặc định, nên lấy cả khung làm mẫu số là pha loãng tín hiệu gần 70 lần. Đo trong **vùng mặt đường** (mặt nạ `--mask road`, tức do bên DỰNG khai chứ không đoán bằng màu): **≈47% diện tích mặt đường đã đổi chỗ**. ⇒ *Trước khi đọc một tỉ lệ, hỏi mẫu số có lẫn thứ không thuộc câu hỏi không* — và với mọi phase chỉ đụng MỘT lớp của cảnh, con số đáng đọc gần như luôn là con số đo TRONG lớp ấy.
   - ⚠️ **KÈM THEO — HAI CON SỐ ĐỨNG YÊN VÌ HAI LÝ DO KHÁC HẲN NHAU.** Sau khi thêm hạng đường thứ ba, `city-preview` in ra **đúng cùng một số tam giác** như trước. Suýt kết luận *"hạng thứ ba không có tác dụng"*. Sự thật: mặt đường là một khối RIÊNG (`road`), không nằm trong con số "tam giác thành phố" (khối `city`) cũng không nằm trong con số nền (44.126 = vòm trời + rặng núi). Đếm riêng bằng `buildRoadSurface(...).kinds` thì thấy **+52% ở kỷ 6**. ⇒ **Trước khi đọc một con số tổng, hỏi *"thứ tôi vừa sửa có nằm TRONG con số này không?"*** — cùng họ với bài học "một phần con số KHÔNG ĐỔI qua mọi trường hợp thì phải tách ra", nhưng ở dạng khó thấy hơn: thứ mình sửa **chưa bao giờ** nằm trong đó.
+
+- ⚠️ **101. THE BOX LOOK LIVES IN THE THIN PLATES, NOT IN THE WALLS** (round 47, 2026-09-08, ADR-087). Raising `BEVEL_MAX` (0,035 → 0,060) on the walls changed NOTHING the eye could find in a bevel-off/on pair at the default camera — the thinnest-dimension rule excluded every cornice, plinth and pier, and those wide thin plates are what read as "cardboard boxes". Rounding their PLAN corners (`cornerRadius`, plan ≥ 0,25 unit, 2 segments) is what made the two photos differ by eye. Lesson: when a shape change is invisible, ask which PART carries the look before turning the same knob harder.
+  - ⚠️ **KÈM THEO — a visibility floor is the only thing standing between "rounded" and a triangle explosion.** With `BEVEL_MIN_VISIBLE` at 0,006 the window reliefs (0,03 wide) also got bevels and rounded corners: era 6 went 198 k → 640 k triangles for detail under one pixel. 0,014 kept the counts at 93 k–199 k. A rounding rule needs a size floor exactly as `eaveOverhang` needed a ratio.
+- ⚠️ **102. A GROUND IS A WINDOW PER ERA, NOT ONE ANCHOR FOR FIFTEEN** (round 47, ADR-087). One `GROUND_ANCHOR` (58°, 22%) under Ur, Florence, Stalingrad and Dubai made every noon photo the same olive lawn; the road palette carried the whole century alone. `GROUND_KINDS` declares eight materials as hue/saturation/lightness WINDOWS and every era must land inside one — the test fails on a colour that is "nice" but not that material (astroturf on a desert). Measured: eras with median saturation ≥ 0,20 went 2/15 → 10/15; the five that stay grey (calçada · soot · asphalt · snow · concrete) are grey on purpose, and the report must say so instead of counting them as failures.
+  - ⚠️ **KÈM THEO — a full-frame saturation gate is dominated by whatever is LARGEST in the frame.** Era 3's ground was right in `eraStyle` yet read 0,16 in the photo, because the pale outskirts plain and the empty-plot frames covered more pixels than the city. Fix the colour that covers the pixels (deepen the ground), never the metric.
+- ⚠️ **103. `--all` AND `--era N` DREW THE SAME ERA DIFFERENTLY IN THE SAME MINUTE** (round 47). `city-preview.mjs --all` rendered era 12's dwellings with flat, parapeted roofs while `--era 12` — same code, one minute later — drew the snow gables the code declares. Not root-caused this round (out of budget); the 15 final photos were taken with `--era N` one at a time, and every before/after pair in the report comes from the same path. Rule: two photos are comparable only if they came out of the SAME tool path — the measuring tool lied for the 29th time.
 
 ---
 

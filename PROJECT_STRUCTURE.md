@@ -1131,7 +1131,7 @@ tới **190.700 token = 95% cửa sổ 200k**. Cách chữa **duy nhất** là t
 |---|---|---|
 | `docs/LESSONS_3D.md` | 89 bài học cấp 1 + 96 mục "KÈM THEO" về mỹ thuật thành phố 3D (261.236 ký tự ≈ 152k token) | **`grep`, KHÔNG đọc trọn**; có mục lục 89 dòng ở đầu |
 | `docs/AI_COACH.md` | Chi tiết Gemini · chuỗi model · `tier:'deep'` · lưới chống-bịa · CoachChat/Offline/Nudge · `coach-digest` | `grep` khi sửa AI Coach |
-| **`docs/TECH_DEBT_3D.md`** | *(ADR-075)* 52 nợ kỹ thuật của Thành phố 3D — VẪN MỞ, tách theo HỆ THỐNG con chứ không theo trạng thái; 3D là hộp đen Đàm cấm đụng nên chúng không phải việc làm được hôm nay | khi 3D được mở khoá |
+| **`docs/TECH_DEBT_3D.md`** | *(ADR-075)* 49 open 3D-city debts (3 closed in round 47, ADR-087) — split by SUBSYSTEM, not by status; the 3D city's art was unlocked on 2026-09-08, so these are live work again (ADR-007 still locks positions) | khi 3D được mở khoá |
 | **`docs/UI_INVARIANTS.md`** | *(ADR-075)* Bất biến giao diện có test canh | trước MỌI thay đổi `src/components/` |
 | **`docs/GOVERNANCE.md`** | *(ADR-073; tiếng Anh từ ADR-074)* Nguyên văn PROJECT GOVERNANCE PROTOCOL + AI ENGINEERING PLAYBOOK: bảng "loại thay đổi → tài liệu phải sửa" · Definition of Done · quy trình 7 giai đoạn · **mẫu TECHNICAL ADVISOR REPORT 11 mục** | mở khi làm task đáng kể / cần mẫu báo cáo |
 | **`docs/OPERATIONS.md`** | *(ADR-073; tiếng Anh từ ADR-074)* Nguyên văn hạ tầng: Vercel 12 Serverless Functions · sync CAS/`version` + bản vá C1 · Web Push iPhone · 4 cái bẫy Electron tray · quy trình deploy · MCP giữ cái nào | mở khi đụng sync/deploy/`api/`/push/tray |

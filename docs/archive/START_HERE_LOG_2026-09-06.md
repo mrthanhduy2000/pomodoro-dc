@@ -489,3 +489,24 @@ stated twice drifts.
   `rollNightBuilder`). No silence over 15 minutes at any session length. Inspect: `--preview arc-gift`
   (and `arc-day-open` · `arc-day-close` · `arc-week-open` · `arc-week-close`), `--preview loot-lucky
   --card project --dilate 0.05 --watch "HÔM NAY MAY" --snap --frames 2`.
+
+## Rotated out of `START_HERE.md` on 2026-09-08 (round 47 arrived; keep the 3 most recent)
+
+- **Loop — ROUND 44 (2026-09-08): THE CITY FUNDS THE SKILL TREE (ADR-084).**
+  ⚠️ **A finished building pays 1 SKILL POINT — `engine/skillPointEconomy.js` owns the rate and the
+  arithmetic behind it.** Do not "round it up to 2": 75 buildings × 1 + ~50/weekly chain + ~14/levels
+  = ~139 SP against a tree costing exactly 138, so all three sources matter and the tree finishes as
+  the city does. ⚠️ **It is a LEDGER, not an event** (`player.spFromCity` vs what the city has
+  earned): that is what makes the credit retroactive with no migration, impossible to double-pay,
+  self-healing after a rejected CAS write, and safe to settle both on hydration
+  (`normalizePersistedGameState` — the ONE door all external data passes) and after every session.
+  It never subtracts, and it rides through Thăng Hoa or prestige becomes an SP printer.
+  ⚠️ **The 360-badge system is GONE (TECH_DEBT #103 closed).** Do not rebuild it. Paying it in XP was
+  measured — 126.030 XP ≈ 21 levels ≈ 42 SP over the game — and refused as a second faucet. The
+  Hành trang sub-tab is now **Di vật**; `resolveTabTarget` still translates the old `achievements`
+  id because saved notifications carry it.
+  ⚠️ Two floors were lowered ONLY because a system was deleted: glyph coverage 513 → 139
+  (`utils/glyph.test.js`) and toast density 5 → 4 (`engine/rewardFeed.test.js`). Any other reason to
+  lower them is muting the alarm.
+  ⚠️ Never put a `/* … */` comment straight after the `{` of an object literal — it makes the JSX
+  comment stripper in `components/journeyWiring.test.js` eat real code in a different file.

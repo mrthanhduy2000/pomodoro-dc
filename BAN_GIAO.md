@@ -1,4 +1,47 @@
-> Last update: **2026-09-08** — **ROUND 46: THE CITY TAB CATCHES UP WITH THE CITY'S THREE ROLES (ADR-086).**
+> Last update: **2026-09-08** — **ROUND 47: THE CITY IS REDRAWN ON THE SAME MAP (ADR-087).**
+> Order: *"ĐỘT PHÁ MỸ THUẬT. Vẽ lại thành phố từ đầu, trên đúng tấm bản đồ cũ. Tôi mở khoá thành phố 3D
+> — hộp đen không còn."* Everything on `main`, on top of round 46.
+>
+> ### Measured before (15-era noon sweep, `city-preview.mjs`, default camera)
+> one `GROUND_ANCHOR` (58°, 22%) under all 15 eras · median saturation of the 14 largest colours ≥ 0,20 in
+> **2/15** eras (China's gold roofs, Singapore's glass) · `sweep-score` closest pair **22,4**, median **36,2**
+> · `BEVEL_MAX` 0,035 — a bevel-off/on pair at the default camera is identical to the eye · 15-era city
+> total 1 925 908 triangles (era 8: 124 348).
+>
+> ### Done
+> 1. **Ground per era** — `GROUND_KINDS` (sand · clay · steppe · meadow · paddy · paving · cinder · snow, each
+>    a hue/sat/light WINDOW) + `groundKind` / `groundColor` / `wallColor` on all 15 `ERA_STYLES`; `palette3d`
+>    derives ground shades (spread ≤ 0,018 L), outskirts, night, walls/trim from them; legacy path byte-identical
+>    when an era declares nothing. Tests: window per era · ≥ 5 kinds · pairwise distinct · walls real materials.
+> 2. **Rounding that shows** — `BEVEL_MAX` 0,06 · `BEVEL_RATIO` 0,22 · `BEVEL_MIN_VISIBLE` 0,014 (0,006 blew
+>    era 6 to 640 k triangles) · rounded gable ridge · **plan-corner rounding** (`cornerRadius`, ≥ 0,25 unit,
+>    `CORNER_SEGMENTS` 2) on walls AND wide thin plates. `countTriangles` mirrors the factory (92 / 44 / 12).
+> 3. **Light** — `CONTACT_FLOOR` 0,58 → 0,44 · `CONTACT_REACH` 0,38 → 0,52 · one rim `DirectionalLight` (0,22 ×
+>    sun, sky colour, no shadow). `PCFShadowMap` tried, renders differ (`cmp`), REJECTED by eye. No 4th fill,
+>    tone mapping Neutral, DPR untouched.
+> 4. **Fifteen looks** — `hip` + `mansard` roofs; `vernacularRoof` 3 → 5 values; `vernacularPitch` (4: 0,42 ·
+>    7: 0,30 · 9: 0,62 · 12: 0,62) applied by `getVernacularStyle`; domes 12 sides; `emitWindows` floor
+>    `storyHeight × 0,36` (closes `TECH_DEBT_3D #25`).
+> 5. **Roof rise on the full-plot footprint** — `emitRoof` reads `ctx.plotFx/plotFz`; `block.test.js` «CAO LÊN»
+>    list `[5]` → `[]` (era 12 had dropped to 0,69× with its new gable; now no era is lower). Closes #90(a).
+> 6. **Docs** — black box retired (`CLAUDE.md` · `START_HERE.md` · `docs/TECH_DEBT_3D.md` header ·
+>    `PROJECT_STRUCTURE.md`); #25 · #76 · #90(a) closed, #88 · #73 annotated; `docs/LESSONS_3D.md` 101–103;
+>    START_HERE round 44 rotated to the archive log.
+>
+> ### Measured after (same tools, same camera)
+> 15/15 eras own ground (8 kinds) · saturation ≥ 0,20 in **10/15** (8 · 10 · 11 · 12 · 13 stay honest greys) ·
+> `sweep-score` closest **24,9**, median **51,6**, **0/105** below 12 · bevel off/on differs by eye (×3 crop
+> of the default frame) · triangles 15-era total **1 877 928 (−2,5 %)**, era 8 **118 508**, worst era 6 **199 252** (+0,4 %), worst building 8 520/12 000 ·
+> ADR-007 15 kỷ × 120 mốc: **0 moved**. Gates: `npm run test:quiet` **1 687 pass · 0 fail · skipped 1** (+5 tests vs round 46) · lint 0 · build ✓.
+>
+> ### Not done · why
+> `#88` plots per block stay 4 (options reshape every dwelling, need Đàm's top-down eye) · `#73` camera not
+> moved (every photo compares at the default eye) · `#90(b)` era 6 rooftop detail loss · the `--all` vs
+> `--era N` render discrepancy of `city-preview.mjs` (lesson 103) is recorded, not root-caused.
+>
+> ---
+>
+> Previous update: **2026-09-08** — **ROUND 46: THE CITY TAB CATCHES UP WITH THE CITY'S THREE ROLES (ADR-086).**
 > Order: *"THÀNH PHỐ PHẢI TRÔNG NHƯ THỨ ĐÁNG NHẤT TRONG APP … làm cho màn hình của nó nói ra cả hai."*
 > Acceptance: *"mở tab Thành Phố trên iPhone, chưa cuộn một lần nào, và tôi thấy ba thứ."*
 > Everything on `main`, on top of round 45.

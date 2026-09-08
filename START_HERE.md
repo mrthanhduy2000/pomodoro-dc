@@ -11,8 +11,8 @@
 Supabase sync · Vercel. Live: `https://pomodoro-dc.vercel.app`.
 Current front: **main loop + upgrades + a Stats screen that answers questions**
 (ADR-068/069/070/071, `src/components/` + `src/engine/`).
-The 3D city (`src/engine/city3d/` + `src/components/city/render3d/`) is a **finished black box —
-Đàm forbids touching it.**
+The 3D city (`src/engine/city3d/` + `src/components/city/render3d/`) was **unlocked on 2026-09-08
+(round 47, ADR-087)**: its art may change; **ADR-007 still locks every building's position.**
 
 ## Laws that bite here — the ones NOT already in `CLAUDE.md`
 `CLAUDE.md` §Infrastructure owns the operational laws (only `main` ships · confirm Vercel "Ready" ·
@@ -32,7 +32,23 @@ Production branch `main` carries **both** work streams (merged 2026-08-28 on Đ�
 ⚠️ Phase 21 therefore shipped **before** Đàm reviewed its screenshots — the "waiting on Đàm's eyes"
 item below is still live, it just now reviews something already running.
 
-- **Loop — ROUND 46 (2026-09-08, LATEST): THE CITY TAB CATCHES UP WITH THE CITY'S THREE ROLES (ADR-086).**
+- **Loop — ROUND 47 (2026-09-08, LATEST): THE CITY IS REDRAWN ON THE SAME MAP (ADR-087).**
+  Order: *"ĐỘT PHÁ MỸ THUẬT … hộp đen không còn."* The 3D city's ART is open again (shapes · colours ·
+  materials · lights · ground · sky · camera); **ADR-007 still locks every building's position** — run its two
+  tests (`cityPlan.test.js` «15 kỷ × 120 mốc», `block.test.js` «QUA THỜI GIAN») before every 3D commit.
+  Measured: one ground for 15 eras → **15 own grounds (8 `GROUND_KINDS`)**; saturation ≥ 0,20 in 2/15 → **10/15**
+  (stone · soot · asphalt · snow · concrete eras are grey on purpose); `sweep-score` 22,4/36,2 → **24,9/51,6**.
+  ⚠️ **Ground and wall are per-era FACTS in `eraStyle.js`** (`groundKind` = a material WINDOW the colour must
+  sit in; the test fails on astroturf in a desert). Legacy anchor only for an era that declares nothing.
+  ⚠️ **Rounding lives in `parts.js`**: `bevelWidth` (edges) and `cornerRadius` (plan corners, ≥ 0,25 unit,
+  INCLUDING thin plates — that is what the eye sees); `BEVEL_MIN_VISIBLE` 0,014 is the floor that keeps
+  window reliefs from tripling the triangle count. `countTriangles` must mirror the factory (test).
+  ⚠️ **Roof rise is taken on the full-plot footprint** (`emitRoof`, `ctx.plotFx/plotFz`) — no era is lower
+  after a block split any more; the named list in `block.test.js` is `[]` and must stay so.
+  ⚠️ **Photos come from `--era N`, one at a time** — `--all` drew era 12 differently the same minute
+  (`docs/LESSONS_3D.md` 103). Bevel proof = off/on at the SAME default camera, ×3 crop of the same frame.
+  Rejected by eye: `PCFShadowMap`. Untouched on purpose: tone mapping · DPR · a 4th light · the round-46 2D screen.
+- **Loop — ROUND 46 (2026-09-08): THE CITY TAB CATCHES UP WITH THE CITY'S THREE ROLES (ADR-086).**
   Order: *"THÀNH PHỐ PHẢI TRÔNG NHƯ THỨ ĐÁNG NHẤT TRONG APP."* Measured before (390×844, 12 eras): picture
   **201 px = 23,8 %** at y = 494 · header 202 px · 12 chips = 6 rows · «SP» said 0 times · museum 2,5× darker
   at night. After: picture **268 px = 31,8 %** at y = 190 · header 77 · **15 eras = 2 rows @390, 1 @1280** ·
@@ -83,25 +99,10 @@ item below is still live, it just now reviews something already running.
   ⚠️ **Hành trang keeps all three sub-tabs.** «Đã xây» is not a copy of the Thành Phố tab: it is the
   only place that names what a built building's perk does.
 
-- **Loop — ROUND 44 (2026-09-08): THE CITY FUNDS THE SKILL TREE (ADR-084).**
-  ⚠️ **A finished building pays 1 SKILL POINT — `engine/skillPointEconomy.js` owns the rate and the
-  arithmetic behind it.** Do not "round it up to 2": 75 buildings × 1 + ~50/weekly chain + ~14/levels
-  = ~139 SP against a tree costing exactly 138, so all three sources matter and the tree finishes as
-  the city does. ⚠️ **It is a LEDGER, not an event** (`player.spFromCity` vs what the city has
-  earned): that is what makes the credit retroactive with no migration, impossible to double-pay,
-  self-healing after a rejected CAS write, and safe to settle both on hydration
-  (`normalizePersistedGameState` — the ONE door all external data passes) and after every session.
-  It never subtracts, and it rides through Thăng Hoa or prestige becomes an SP printer.
-  ⚠️ **The 360-badge system is GONE (TECH_DEBT #103 closed).** Do not rebuild it. Paying it in XP was
-  measured — 126.030 XP ≈ 21 levels ≈ 42 SP over the game — and refused as a second faucet. The
-  Hành trang sub-tab is now **Di vật**; `resolveTabTarget` still translates the old `achievements`
-  id because saved notifications carry it.
-  ⚠️ Two floors were lowered ONLY because a system was deleted: glyph coverage 513 → 139
-  (`utils/glyph.test.js`) and toast density 5 → 4 (`engine/rewardFeed.test.js`). Any other reason to
-  lower them is muting the alarm.
-  ⚠️ Never put a `/* … */` comment straight after the `{` of an object literal — it makes the JSX
-  comment stripper in `components/journeyWiring.test.js` eat real code in a different file.
-
+- **Loop — ROUND 44 (2026-09-08): THE CITY FUNDS THE SKILL TREE (ADR-084).** Moved verbatim to
+  `docs/archive/START_HERE_LOG_2026-09-06.md` on 2026-09-08 (round 47 arrived; keep the 3 most recent) —
+  `grep -n 'ROUND 44'` there. Still-live rules: 1 building = 1 SP owned by `engine/skillPointEconomy.js`;
+  the SP counter is a LEDGER, not an event; never a `/* … */` right after an object literal's `{`.
 - **Loop — ROUNDS 43 & 41 (2026-09-08): ONE DESTINATION, EVERY DISTANCE IN SESSIONS (ADR-082) · THE LONG
   RHYTHMS, AND A TOOL THAT CAN SEE (ADR-081).** Moved verbatim to
   `docs/archive/START_HERE_LOG_2026-09-06.md` on 2026-09-08 (round 46 arrived; keep the 3 most recent) —
@@ -128,8 +129,9 @@ item below is still live, it just now reviews something already running.
   3D with `--settle 600`* and *`--click` matches a button's FULL text*. Nothing was deleted.
 - 📚 **Rounds 20 → 38 moved to `docs/archive/START_HERE_LOG_2026-09-06.md`** (verbatim), together
   with the 3D city details (BSP skeleton · `reach` 0.8 · two-layer shadows · 15 eras/`country` ·
-  12×12 grid · 3.2× perf headroom) — a finished black box is not worth paying tokens for every
-  session. **Keep at most 3 rounds here**; a new round pushes the oldest down.
+  12×12 grid · 3.2× perf headroom) — the city's mechanics are stable and not worth paying tokens for
+  every session (its ART was reopened in round 47). **Keep at most 3 rounds here**; a new round pushes
+  the oldest down.
   Older rounds: `grep -n 'VÒNG 2[0-9]\|VÒNG 33\|ROUND 3[4-8]' docs/archive/START_HERE_LOG_2026-09-06.md`.
 
 ### UI invariants — read before touching the UI
@@ -143,15 +145,14 @@ stated twice drifts.
 
 ## Next up
 ### A. Đàm must choose — do not decide these alone
-- **"More 3D-looking" — needs Đàm's taste, not code.** Both cheap levers are spent (shadow map
-  2048 → **4096** ✓, `sun.shadow.camera` tightened). What is left is purely artistic: (a) deeper /
-  taller contact shadows (`CONTACT_FLOOR` 0.58 · `CONTACT_REACH` 0.38) · (b) harder shadow edges
-  (`PCFSoftShadowMap` → `PCFShadowMap`) · (c) dimmer fill light — but (c) risks the "milky pale"
-  warning in `PHASE_RULES` §2.
+- **The 3D city after round 47 — does the before/after pair say "wow"?** Round 47 spent the artistic
+  levers (deeper contact AO ✓ · rim light ✓ · hard shadow edges tried and rejected by eye). What is left
+  is taste: `#88` (plots per block, reshapes every dwelling) and `#73` (move the camera) — both need
+  Đàm's eye on photos before any code.
 
 ### B. Ready to build
-1. **Pyramids / ziggurats** — eras 2 (Egypt) and 3 (Iraq) currently produce many-sided cone roofs
-   with no four-sided pyramid mass. `prism` with `sides: 4` + `taper: 0` is exactly the shape needed.
+1. **`TECH_DEBT_3D #90(b)`** — era 6 loses rooftop detail on split blocks (`ROOFTOP_MIN_SPAN`); (a) was
+   closed in round 47, (b) is the same absolute-vs-relative shape and is now unblocked.
 2. **`TECH_DEBT #88`** — the one-cell ceiling (`BLOCK_MAX_CELLS = 1`) pins the plot count at 4 across
    all 15 eras, making the `units`/`cols`/`rows` columns of the district table a dead axis. Three
    options already measured.

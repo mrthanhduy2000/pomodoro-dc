@@ -73,6 +73,59 @@ roughly 44%. Titles below are the lookup key; read one with
 
 ---
 
+## ADR-085 — Round 45: a bonus that cannot be seen is not a bonus — every source names itself, and unlocking a skill becomes a moment
+
+**Date**: 2026-09-08 · **Order**: *"Vòng 44 mở van cho tôi kiếm được điểm. Vòng này trả lời câu kế tiếp: tiêu vào đó có đáng không?"* · *"Tôi mở một kỹ năng, và tôi biết ngay app vừa khác đi ở chỗ nào. Nếu tôi mở xong mà không thấy gì đổi thì vòng này chưa đạt."*
+
+**Context — round 44 opened a valve onto an empty warehouse, and the measurement says exactly how empty.** Round 44 made the city pay skill points, which handed a real save ~40 SP at once: twelve skills, twelve taps, 29% of a 138 SP tree spent in two minutes. Đàm's question was whether those twelve taps were a pleasure or twelve taps. Walking all 36 skills against *"can he feel it, where and when?"*:
+
+| the 36 skills | count | what the screen shows |
+|---|---|---|
+| a silent `+X% XP/EP` inside the reward formula | **27** | nothing, ever, anywhere |
+| genuinely felt (breaks +5′, streak shield, combo window, multiplier tier, two manual activations) | 6 | a visible state change |
+| prestige-only | 3 | dead on a save that has never prestiged |
+
+One skill is worth roughly **3–7 XP on a 48-minute session**. So twelve taps bought twelve numbers nobody could see, folded into one headline that was already the sum of eleven other things. That is not a balance problem — no change to the percentages could fix it, because the percentages were never the part that failed.
+
+**Decision 1 — a CREDIT LEDGER that runs alongside the arithmetic, never inside it (`engine/sessionCredits.js`).** Every place `gameMath.js` adds a bonus now also writes one line naming who paid it (25 sites), and `challengeEngine`/`wonderEffects` return a `sources` list beside their pre-summed percentages, so ranks, relics and building perks arrive with names instead of as three anonymous totals. The ending card prints the top three as chips (`✦ Vào Guồng +18 XP`) and counts the rest (`+2 nguồn nữa`).
+
+⚠️ **The ledger is a passenger, not a driver.** It reads the same locals the formula uses and never feeds a value back, so a bug in the ledger can make the CARD wrong but can never move the PAYOUT. At the hard cap (`XP_FACTOR_HARD_CAP`) the credits are rescaled proportionally, because chips that add up to more than the headline above them destroy the credibility of the whole breakdown in one glance.
+
+**Decision 2 — unlocking a skill is a 4,2-second moment stating the gain in sessions and XP (`engine/skillPreview.js` + `components/focus/SkillMoment.jsx`).** Round 40's law says a static thing is noise and a transient thing is a reward, so this is a banner that arrives, says its number, and leaves.
+
+⚠️ **The number is MEASURED, not looked up.** `previewSkillGain` runs the real `calculateRewards` twice — once with the skill, once without, at the player's own median session length — and prints the difference: *"Phiên 48 phút, khi đủ điều kiện: +5 XP."* A hardcoded table would be a second copy of 36 formulas and would drift the first time one changes. Skills whose payoff is a dice roll (`VAN_MAY`) are **refused, not averaged** — printing an expected value as if it were a promise is the same lie the old headline told.
+
+**Decision 3 — the three-skill choice must be a decision, not a button with three labels.** Each choice on the level-up card now carries its measured worth (`≈ +5 XP / phiên 48′`), computed by the same double-run, and `null` where the honest answer is "it depends on a roll". Three different shapes of value beat three variations of `+x%`.
+
+**Decision 4 — the week becomes ONE line on the day card, where the week card is absent.** Three daily missions plus a weekly chain is four things to remember for an app Đàm only wants to open and press Start. Rather than cut either kind, the phone Focus screen's day card ends with one line — which step the week is on, what finishing it pays. Gated on `showDaily && !showWeekly` so it never ships alongside the full card on desktop or on Tiến trình: *two places saying one thing means the shorter one yields*. No `truncate` — the longest step today is 30 characters and wraps rather than ending in "…", per the veto table.
+
+**Decision 5 — Hành trang keeps all three sub-tabs, and «Đã xây» survives the duplication charge.** The three are three different verbs — *spend points* (Kỹ năng) · *choose what to build next* (Công trình) · *read what is running* (Di vật) — not three views of one dataset. «Đã xây» looked like a copy of the Thành Phố tab until the tap was traced: selecting a built tile is the ONLY place in the app that names what that building's perk does (`PerkSummary`). Deleting it would have made perks *less* felt in the same round that set out to make them felt.
+
+**Decision 6 — the spend rhythm does NOT change; what was missing was a sentence, not a rate.** Đàm read the rhythm as 5,6 sessions per point. That is the city tap alone. All three taps together are 139 SP over ~420 build-sessions ≈ **3 sessions per point** — his felt number was nearly twice too slow because two of the three taps were invisible from where he stood. The 1 SP/building ratio is load-bearing (it is what makes the tree finish as the city finishes), so instead `nextSkillPointETA` prints the NEARER of the two taps that can honestly be counted in sessions.
+
+⚠️ **This fixes a line that was almost always blank.** The skill-tree header only ever knew one distance — the next level — and on a real save that was **~155 sessions**, above `STAGE_COUNTDOWN_MAX_SESSIONS`, so it printed nothing at all while the city was three sessions from paying. The week is deliberately excluded: a chain closes on a calendar, and converting "2 steps left" into "~N sessions" would be inventing a number.
+
+**Consequences.**
+- The ending card can now be audited against the payout by eye: three named chips plus a count, all rescaled to sum to what was actually paid.
+- 27 silent skills become 27 nameable ones without touching a single percentage — the economy round 44 balanced is untouched.
+- `sessionCredits.test.js` holds a guard that no future buff can move `expBonus`/`epBonus` without also merging its `sources`; that failure is invisible to any assertion on the payout, because the payout stays right.
+- Two banners collided at `top: 96px`. The direct response to a tap (a skill unlock) wins over the ambient greeting (the day/week arc), pinned by a test rather than by luck of mount order.
+- `SkillTree` stopped importing `SP_PER_LEVEL`: the header's payout number now comes from the ETA, so the constant is read once, in the engine.
+
+**What the CAMERA caught, and the code review did not.** The first perk chip read
+*«🏛 +5% XP mọi phiên +8 XP»* — `WONDER_EFFECT_REGISTRY[id].label` is the EFFECT, so the chip printed
+a percentage next to the amount that percentage had already produced: one fact, twice, in eight
+characters of space. Nothing in the tests could see it, because both halves were correct. A perk is
+now credited by the **building that grants it** (*«🏛 Thờ Phổ Linh Hồn +8 XP»*) — the half Đàm owns,
+one of his 75 — and a test refuses any source label containing `%`. ⚠️ This is the round-41 law
+paying for itself again: *do not hand over a moment before you have a photograph of it.*
+
+**A measuring-tool lesson, the 29th (project law #1).** The skill-moment screenshot kept showing the day banner instead. A render trace proved the moment rendered at t=13.138 ms and dismissed at t=17.440 ms — exactly its 4,2 s — so nothing was broken: the sandbox takes ~13 s to hydrate, and `--settle` had been fired outside the window. `--watch "KỸ NĂNG MỚI"` (uppercase, because `--watch` matches `innerText` after CSS uppercasing) catches it every time. **The tool was late, not the code.**
+
+**Alternatives considered.** Printing an expected value for the luck skills (rejected: an average presented as a promise is the very lie being fixed). A lookup table of per-skill descriptions (rejected: a second copy of 36 formulas, guaranteed to drift). Cutting daily missions or the weekly chain outright (rejected: both pay real currency — the chain pays the only spendable one — so the fault was the presentation, and merging cost one line where deleting would have cost a faucet). Raising SP per building to shorten the wait (rejected: it breaks the 75-building/138-SP alignment round 44 derived, and Đàm's brief forbids it).
+
+---
+
 ## ADR-084 — Round 44: the CITY funds the skill tree, and the 360-badge system is deleted outright
 
 **Date**: 2026-09-08 · **Order**: *"tôi kiếm được gì, và tôi tiêu nó vào đâu?"* · *"360 thứ không thưởng gì thì tệ hơn 20 thứ thưởng thật."*

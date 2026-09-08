@@ -13,7 +13,12 @@
 > mà không được refactor triệt để, phải CHỦ ĐỘNG đề xuất mở một "Maintenance Sprint" (nêu rõ mục
 > tiêu/phạm vi/lợi ích/rủi ro/tiêu chí hoàn thành) thay vì tiếp tục cộng thêm tính năng mới.
 >
-> **Threshold status (2026-09-08, after ADR-084 "round 44")**: **#103 CLOSED by deletion** — the
+> **Threshold status (2026-09-08, after ADR-085 "round 45")**: one entry OPENED (**#104**, Medium —
+> 27 of 36 skills are the same mechanic wearing 27 labels). Round 45 made them all *visible*, which
+> is what made the sameness legible; it did not make them *different*. No High/Critical opened or
+> closed, so no Maintenance Sprint is due.
+>
+> *(previous)* **Threshold status (2026-09-08, after ADR-084 "round 44")**: **#103 CLOSED by deletion** — the
 > 360-badge system is gone from code, state and docs. None opened. High/Critical count unchanged,
 > so no Maintenance Sprint is due.
 >
@@ -557,6 +562,41 @@ Look one up: `grep -n '^## #<n>' docs/TECH_DEBT_3D.md`.
   Thứ tự nhường ở phần mô tả: `stageHint` (hiếm nhất) > `buildHint` > danh sách tài nguyên.
   ⇒ Tỉ lệ phiên có LỄ MỪNG vẫn ~5%; tỉ lệ phiên có một câu **nói được điều gì đó về tiến độ** nay
   là 100% khi hàng đợi không rỗng. Mục này giữ **Open** cho phần gốc.
+
+---
+
+## #104 — 27/36 kỹ năng là CÙNG MỘT cơ chế mang 27 cái nhãn
+
+**Mở**: 2026-09-08 (round 45, ADR-085) · **Priority**: Medium · **Severity**: Medium
+· **Module**: `src/engine/constants.js` (`SKILL_TREE`) + `src/engine/gameMath.js`
+
+**Sự thật đã đo (đi hết 36 kỹ năng, ba câu hỏi mỗi cái).**
+
+| loại | số | người chơi thấy gì |
+|---|---|---|
+| `+X% XP/EP` im lặng bên trong công thức thưởng | **27** | không màn nào, không lúc nào |
+| đổi thật một trạng thái (nghỉ +5′, khiên chuỗi, cửa sổ combo, bậc nhân, hai nút kích hoạt tay) | 6 | thấy được |
+| chỉ chạy sau Thăng Hoa | 3 | chết trên bản lưu chưa Thăng Hoa bao giờ |
+
+Một kỹ năng đáng **3–7 XP** trên phiên 48 phút.
+
+**Vòng 45 đã làm gì, và CỐ Ý không làm gì.** Nó chữa phần *nhìn thấy được*: mỗi khoản cộng nay tự
+xưng tên trên thẻ kết phiên (`engine/sessionCredits.js`), và mở một kỹ năng là một khoảnh khắc 4,2
+giây nói ra con số đo được (`engine/skillPreview.js`). Nó KHÔNG đổi một phần trăm nào — đúng phạm vi
+được giao. Nhưng chính việc làm cho 27 thứ ấy hiện ra mới cho thấy chúng **giống hệt nhau**: ba lựa
+chọn khi lên cấp có thể mang ba con số khác nhau mà vẫn là *"một cái nút có ba nhãn"*, theo đúng chữ
+của Đàm.
+
+**Vì sao chưa sửa ngay.** Đổi cơ chế của 27 kỹ năng là đổi nền kinh tế mà vòng 44 vừa cân
+(75 công trình + tuần + cấp = ~139 SP đối lại cây 138). Đó là một vòng riêng, không phải một việc
+chen ngang — và nó cần Đàm nhìn thấy vòng 45 chạy trước khi quyết định 27 kỹ năng nên biến thành
+những động từ gì.
+
+**Hình dạng một lời giải, để phiên sau không phải nghĩ lại từ đầu.** Sáu kỹ năng "cảm thấy được"
+hiện có là bằng chứng tồn tại: chúng đổi một TRẠNG THÁI (thời lượng nghỉ, một cái khiên, một cửa sổ
+thời gian, một nút bấm được) chứ không đổi một hệ số. Chuyển một phần trong 27 sang hình dạng ấy —
+giữ nguyên tổng giá trị kinh tế để không phải cân lại — là con đường rẻ nhất.
+⚠️ Ba kỹ năng chỉ-Thăng-Hoa nằm ngoài phạm vi này; chúng đã có mục riêng ở **#3**.
 
 ---
 

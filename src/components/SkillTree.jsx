@@ -32,12 +32,13 @@ import {
   SIEU_TAP_TRUNG_CHARGES,
   SO_DO_CHARGES,
   EXP_PER_LEVEL,
-  SP_PER_LEVEL,
 } from '../engine/constants';
 import { getLevelProgress, getEffectiveSkillCost } from '../engine/gameMath';
 import { STAGE_COUNTDOWN_MAX_SESSIONS, medianSessionXP, sessionsToStageEnd } from '../engine/eraStage';
 import { RELIC_ELITE_RESONANCE } from '../engine/constants';
 import { giaCaChuoi } from './skillChainCost';
+import { nextSkillPointETA } from '../engine/skillPointEconomy';
+import { describeProject } from '../engine/buildChoices';
 
 const NODE_STATE = {
   LOCKED:          'LOCKED',
@@ -151,6 +152,7 @@ export default function SkillTree() {
   const relics             = useGameStore((s) => s.relics);
   const relicEvolutions    = useGameStore((s) => s.relicEvolutions);
   const history            = useGameStore((s) => s.history);
+  const craftingQueue      = useGameStore((s) => s.craftingQueue);
 
   const { progressPct, currentLevelEXP, nextLevelEXP } = getLevelProgress(totalEXP);
   // ADR-082 — the distance to the next level is told in SESSIONS, not in XP. `sessionsToStageEnd`
@@ -171,6 +173,22 @@ export default function SkillTree() {
   const sessionsToNextLevel = (rawSessionsToNextLevel !== null && rawSessionsToNextLevel <= STAGE_COUNTDOWN_MAX_SESSIONS)
     ? rawSessionsToNextLevel
     : null;
+
+  // ⚠️ ROUND 45 (ADR-085) — THE LINE ABOVE WAS RIGHT AND ALMOST ALWAYS EMPTY.
+  // Read the note once more: on a real save the next level was **~155 sessions** away, over the
+  // `STAGE_COUNTDOWN_MAX_SESSIONS` ceiling, so this header printed NOTHING about when the next point
+  // arrives — while the city was three sessions from paying one. Round 44 opened three taps into the
+  // same bucket and each announces itself somewhere else, so Đàm read only the one on the ending
+  // card and concluded the rhythm was 5,6 sessions per point, nearly twice too slow.
+  // `nextSkillPointETA` answers the question once, with the NEARER of the two taps that can honestly
+  // be counted in sessions. It REPLACES the level line rather than sitting under it: when the level
+  // is nearest it says exactly what the old line said, so this is a de-duplication, not an addition.
+  const nextPoint = nextSkillPointETA({
+    craftingQueue,
+    sessionsToNextLevel,
+    nextLevel: level + 1,
+    projectLabel: (bpId) => describeProject(bpId)?.label ?? null,
+  });
 
   // Ô đang chọn trên bản đồ. `null` = chưa chạm gì ⇒ rơi về ô mặc định (rẻ nhất trong số mở
   // được ngay) — xem `pickDefaultCell`. Giữ ID chứ không giữ cả ô: ô được DỰNG LẠI mỗi lần
@@ -298,11 +316,13 @@ export default function SkillTree() {
           tonight. Not enough history to estimate ⇒ fall back to the XP number rather than invent
           a session count (the honesty rule of `medianSessionEP`).
         */}
-        {sessionsToNextLevel !== null && (
+        {nextPoint !== null && (
           <p className="mt-1.5 text-[11px]" style={{ color: 'var(--muted)' }}>
             Còn <strong style={{ color: 'var(--ink)' }}>{
-              sessionsToNextLevel <= 1 ? 'một phiên' : `~${sessionsToNextLevel} phiên`
-            }</strong> nữa lên cấp {level + 1} → +{SP_PER_LEVEL} SP
+              nextPoint.sessions <= 1 ? 'một phiên' : `~${nextPoint.sessions} phiên`
+            }</strong> nữa {nextPoint.source === 'building'
+              ? `xong ${nextPoint.label ?? 'công trình đang xây'}`
+              : `lên ${nextPoint.label ?? `cấp ${level + 1}`}`} → +{nextPoint.sp} SP
           </p>
         )}
       </div>

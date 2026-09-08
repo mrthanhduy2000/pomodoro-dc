@@ -172,6 +172,19 @@ export function aggregateActiveBuffs(activeBook, ranks, relics = [], prestigeBon
     comboWindowHours:  0,
     xpSeal:            0,
   };
+  /*
+    ⚠️ ADR-085 — BẢN KÊ DỰNG CÙNG LÚC VỚI PHÉP CỘNG, KHÔNG DỰNG LẠI SAU.
+    Hàm này gộp bậc danh xưng + mọi di vật + prestige thành ba con số (`expBonus`/`epBonus`/
+    `allBonus`), và ba con số ấy là TẤT CẢ những gì `calculateSessionRewards` nhìn thấy. Nghĩa là
+    sau khi ra khỏi đây, "+8% XP" không còn tên. Thẻ kết phiên vì thế chưa bao giờ kể được di vật
+    nào đang chạy — mà một phần thưởng không cảm thấy được thì không phải phần thưởng (luật vòng 43).
+    Dựng bản kê Ở ĐÂY, trong đúng vòng lặp đang cộng, là cách duy nhất khiến tên và số không lệch
+    nhau. Đừng suy lại nó ở màn hình bằng cách duyệt `relics` lần thứ hai: đó là hai công thức cho
+    một sự thật, và chúng sẽ trôi khỏi nhau ở đúng ca tiến hoá di vật.
+    ⚠️ Bản kê KHÔNG chịu trần. Trần (`RELIC_EXP_BONUS_CAP`…) áp lên TỔNG ở cuối hàm; phần chia lại
+    khi chạm trần do `settleCredits` lo, để mọi nguồn (kể cả kỹ năng) chịu chung một phép chia.
+  */
+  const sources = [];
 
   // Buff từ bậc danh xưng hiện tại của quyển đang chơi
   const bookKey   = `book${activeBook}`;
@@ -181,6 +194,13 @@ export function aggregateActiveBuffs(activeBook, ranks, relics = [], prestigeBon
     for (const [key, val] of Object.entries(rankDef.passiveBuff)) {
       accumulated[key] = (accumulated[key] ?? 0) + val;
     }
+    sources.push({
+      id: `rank:${activeBook}:${rankIdx}`,
+      kind: 'rank',
+      label: rankDef.label ?? 'Bậc',
+      xpPct: (rankDef.passiveBuff.expBonus ?? 0) + (rankDef.passiveBuff.allBonus ?? 0),
+      epPct: (rankDef.passiveBuff.epBonus ?? 0) + (rankDef.passiveBuff.allBonus ?? 0),
+    });
   }
 
   // Buff từ tất cả di vật đã nhận (tất cả quyển, cộng dồn vĩnh viễn)
@@ -193,6 +213,13 @@ export function aggregateActiveBuffs(activeBook, ranks, relics = [], prestigeBon
       for (const [key, val] of Object.entries(effectiveBuff)) {
         accumulated[key] = (accumulated[key] ?? 0) + val;
       }
+      sources.push({
+        id: `relic:${relic.id}`,
+        kind: 'relic',
+        label: relic.label ?? relic.id,
+        xpPct: (effectiveBuff.expBonus ?? 0) + (effectiveBuff.allBonus ?? 0),
+        epPct: (effectiveBuff.epBonus ?? 0) + (effectiveBuff.allBonus ?? 0),
+      });
     }
   }
 
@@ -215,5 +242,5 @@ export function aggregateActiveBuffs(activeBook, ranks, relics = [], prestigeBon
   accumulated.epBonus           = Math.min(accumulated.epBonus,           RELIC_EP_BONUS_CAP);
   accumulated.expBonus          = Math.min(accumulated.expBonus,          RELIC_EXP_BONUS_CAP);
 
-  return accumulated;
+  return { ...accumulated, sources };
 }

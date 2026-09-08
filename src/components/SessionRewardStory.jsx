@@ -22,6 +22,7 @@ import notificationManager from '../engine/notifications';
 import { countSessionsOnDay, getDailyGoalProgress, getEffectiveSkillCost } from '../engine/gameMath';
 import { listAvailableSkills, nextReachableSkill } from '../engine/opportunities';
 import { describeSessionBrick } from '../engine/sessionBrick';
+import { previewSkillGain } from '../engine/skillPreview';
 import BrickRow from './focus/BrickRow';
 import { describeCrisisQuest } from '../engine/rankLadder';
 import { getGlyph, hasGlyphIcon } from '../utils/labelMark';
@@ -66,6 +67,9 @@ export default function SessionRewardStory({ onDone }) {
   // ADR-069: ba nguồn mới cho ba thẻ mới — công trình đang xây, kỹ năng chọn được, thử thách kỷ.
   const craftingQueue = useGameStore((s) => s.craftingQueue);
   const activeBook = useGameStore((s) => s.progress.activeBook);
+  // ADR-085: `previewSkillGain` chạy phép tính thưởng thật, nên nó cần đúng hai thứ đầu vào của
+  // phép tính ấy — EP tổng (để biết kỷ) và lịch sử (để lấy phút trung vị).
+  const totalEP = useGameStore((s) => s.progress.totalEP);
   const eraCrisis = useGameStore((s) => s.eraCrisis);
   const sp = useGameStore((s) => s.player.sp);
   const unlockedSkills = useGameStore((s) => s.player.unlockedSkills);
@@ -109,13 +113,13 @@ export default function SessionRewardStory({ onDone }) {
       missionXp: (xp) => scaleMissionXP(xp, multiplier),
       bonusXP: dailyAllBonusXP({ list: missions?.list, multiplier, strategist }),
       project: describeProjectAfterSession({ reward, craftingQueue, buildings, activeBook }),
-      skills: describeSkillChoices({ sp, unlockedSkills, relics, relicEvolutions }),
+      skills: describeSkillChoices({ sp, unlockedSkills, relics, relicEvolutions, totalEP, history }),
       crisisQuest: describeQuestAfterSession({ reward, eraCrisis, history }),
     });
   }, [
     reward, streak, missions, completedMissionIds, history, dailyTracking, buildings, strategist,
     dailyGoalType, dailyGoalSessions, dailyGoalMinutes, todayKey, mondayKey,
-    craftingQueue, activeBook, eraCrisis, sp, unlockedSkills, relics, relicEvolutions,
+    craftingQueue, activeBook, eraCrisis, sp, unlockedSkills, relics, relicEvolutions, totalEP,
   ]);
 
   // Kỹ năng vừa chọn trên thẻ lên cấp — giữ cục bộ, vì sau khi mở thì `sp` đổi và thẻ dựng lại.
@@ -567,8 +571,15 @@ function describeProjectAfterSession({ reward, craftingQueue, buildings, activeB
   });
 }
 
-/** Tối đa 3 kỹ năng mở được ngay, rẻ trước, ưu tiên mỗi nhánh một cái để có LỰA CHỌN thật. */
-function describeSkillChoices({ sp, unlockedSkills, relics, relicEvolutions }) {
+/**
+ * Tối đa 3 kỹ năng mở được ngay, rẻ trước, ưu tiên mỗi nhánh một cái để có LỰA CHỌN thật.
+ *
+ * ⚠️ ADR-085: mỗi lựa chọn nay mang thêm `worth` — con số ĐO ĐƯỢC của nó trên phiên trung vị của
+ * Đàm. Ba lần chạy `previewSkillGain` là sáu lần chạy `calculateRewards`, và nó chỉ chạy khi thẻ
+ * lên-cấp/điểm-kỹ-năng dựng ra (hiếm, và không trong lúc đồng hồ chạy), nên cái giá ấy là chấp
+ * nhận được để đổi lấy việc ba lựa chọn thôi đọc giống hệt nhau.
+ */
+function describeSkillChoices({ sp, unlockedSkills, relics, relicEvolutions, totalEP = 0, history = [] }) {
   const snapshot = { sp, unlockedSkills: unlockedSkills ?? {}, relics: relics ?? [], relicEvolutions: relicEvolutions ?? {} };
   const available = listAvailableSkills(snapshot)
     .map((skill) => ({ ...skill, cost: getEffectiveSkillCost(skill.id, skill.spCost, snapshot.relics, snapshot.relicEvolutions) }))
@@ -585,7 +596,16 @@ function describeSkillChoices({ sp, unlockedSkills, relics, relicEvolutions }) {
     if (choices.length >= 3) break;
     if (!choices.includes(skill)) choices.push(skill);
   }
-  return { sp, choices, next: nextReachableSkill(snapshot) };
+  const withWorth = choices.map((skill) => {
+    const preview = previewSkillGain({ skillId: skill.id, unlockedSkills: unlockedSkills ?? {}, totalEP, history });
+    // Kỹ năng may rủi (`measured: false`) KHÔNG được gán một con số — mô tả của nó đã nói đúng
+    // xác suất, còn một con số trung bình ở đây là một lời hứa mà nó không giữ được.
+    const worth = preview?.measured
+      ? `≈ +${preview.xp > 0 ? `${preview.xp} XP` : ''}${preview.xp > 0 && preview.ep > 0 ? ' · ' : ''}${preview.ep > 0 ? `${preview.ep} EP` : ''} / phiên ${preview.minutes}′`
+      : null;
+    return { ...skill, worth };
+  });
+  return { sp, choices: withWorth, next: nextReachableSkill(snapshot) };
 }
 
 function describeQuestAfterSession({ reward, eraCrisis, history }) {
@@ -815,7 +835,18 @@ function LevelCard({ card, picked, onPick }) {
               </span>
               <span className="min-w-0 flex-1">
                 <span className="block text-[14px] font-semibold leading-tight" style={{ color: 'var(--ink)' }}>{choice.label}</span>
+                {/*
+                  ⚠️ ADR-085 — BA LỰA CHỌN PHẢI KHÁC NHAU ĐỦ ĐỂ PHẢI NGHĨ. Trước vòng này cả ba đều
+                  đọc thành «+x% một cái gì đó», tức không phải một quyết định mà là một cái nút có
+                  ba nhãn. `worth` là con số ĐO ĐƯỢC của chính kỹ năng ấy trên phiên trung vị của
+                  Đàm (`engine/skillPreview.js` chạy phép tính thưởng thật hai lần rồi trừ), nên ba
+                  dòng nay mang ba con số khác nhau bên cạnh ba điều kiện khác nhau — chọn cái này
+                  là bỏ cái kia, và cả hai đều nói rõ mình đáng bao nhiêu.
+                */}
                 <span className="mt-0.5 block text-[11.5px] leading-snug" style={{ color: 'var(--muted)' }}>{choice.description}</span>
+                {choice.worth ? (
+                  <span className="mono mt-0.5 block text-[11px] font-semibold tabular-nums" style={{ color: 'var(--accent2)' }}>{choice.worth}</span>
+                ) : null}
               </span>
               <span className="mono shrink-0 text-[11px] font-semibold tabular-nums" style={{ color: 'var(--accent2)' }}>{choice.cost} SP</span>
             </motion.button>

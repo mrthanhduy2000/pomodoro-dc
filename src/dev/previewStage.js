@@ -59,6 +59,9 @@ const PHIEN_THUONG = {
   spGained: 0,
   // ADR-084: điểm kỹ năng do THÀNH PHỐ trả (một công trình xong = 1 SP). 0 = phiên thường.
   citySP: 0,
+  // ADR-085: ai đã trả cho phiên này (kỹ năng · di vật · đặc quyền công trình). Cảnh soi mặc định
+  // để rỗng; cảnh `loot-credits` bên dưới mới là chỗ soi hàng chip ấy.
+  credits: [],
   newLevel: 5,
   eraChanged: false,
   buildingPerkRewards: [],
@@ -109,6 +112,7 @@ const PHIEN_DINH = {
   levelsGained: 1,
   spGained: 1,
   citySP: 0,
+  credits: [],
   newLevel: 6,
   buildingPerkRewards: [{ label: 'Nhà Kho · lộc công trình', xp: 12 }],
   rankUp: { label: 'Thủy Thủ', icon: '⚓', buffLabel: '+12% EP' },
@@ -148,6 +152,30 @@ export const PREVIEW_SCENES = {
   'loot-built': { lootModalOpen: true, pendingReward: { ...PHIEN_THUONG, newlyBuiltIds: [QUEUE_HEAD] } },
   /* ADR-084: a finished building pays a skill point, and the card offers the skills to spend it on
      right there. This is the scene for photographing that card — the whole economy in one frame. */
+  /* ADR-085: khoảnh khắc vừa mở một kỹ năng — băng-rôn 4,2 giây, nói bằng con số của chính Đàm
+     (`engine/skillPreview.js` chạy phép tính thưởng thật hai lần rồi trừ). */
+  'skill-moment': {
+    skillUnlocked: {
+      id: 'chuyen_can',
+      label: 'Chuyên Cần',
+      line: 'Phiên 48 phút, khi đủ điều kiện: +5 XP.',
+    },
+  },
+  /* ADR-085: thẻ kết phiên kể tên ai đã trả — ba chip + "còn N nguồn nữa". Đây là cảnh soi hàng
+     chip đó, vì nó chỉ hiện khi người chơi đã mở kỹ năng / có di vật / có đặc quyền. */
+  'loot-credits': {
+    lootModalOpen: true,
+    pendingReward: {
+      ...PHIEN_THUONG,
+      credits: [
+        { id: 'chuyen_can', kind: 'skill', label: 'Chuyên Cần', icon: '✦', xp: 21, epPct: 0 },
+        { id: 'relic:ngoc', kind: 'relic', label: 'Ngọc Bằng Hà', icon: '✨', xp: 13, epPct: 0 },
+        { id: 'perk:xp_all_5', kind: 'perk', label: 'Thờ Phổ Linh Hồn', icon: '🏛', xp: 8, epPct: 0 },
+        { id: 'chuoi_ngay', kind: 'skill', label: 'Chuỗi Ngày', icon: '✦', xp: 5, epPct: 0 },
+        { id: 'tich_phien', kind: 'skill', label: 'Tích Phiên', icon: '✦', xp: 4, epPct: 0 },
+      ],
+    },
+  },
   'loot-city-sp': {
     lootModalOpen: true,
     pendingReward: { ...PHIEN_THUONG, newlyBuiltIds: [QUEUE_HEAD], citySP: 1 },

@@ -16,6 +16,7 @@ import EraStageBar from './components/shared/EraStageBar';
 import useJourney from './hooks/useJourney';
 import SessionRewardStory from './components/SessionRewardStory';
 import DayMoment from './components/focus/DayMoment';
+import SkillMoment from './components/focus/SkillMoment';
 import { getEraStage } from './engine/eraStage';
 import { calculateStreakMilestoneProgress, evaluateStreakAtRisk } from './engine/gameMath';
 import FocusCoachMobile from './components/FocusCoachMobile';
@@ -602,6 +603,9 @@ export default function App() {
     !!s.player.unlockedSkills?.la_chan_streak && s.streak?.skipShieldUsedWeekKey !== localWeekMondayStr()
   ));
   const lootModalOpen = useGameStore((s) => s.ui.lootModalOpen);
+  // ⚠️ BOOLEAN, không phải cả object: `App` là gốc cây và nó bọc cả cảnh 3D — cho nó render lại
+  // theo danh tính một object mà store trả mới mỗi lượt là trả một cái giá không ai đo được.
+  const skillUnlockedOpen = useGameStore((s) => Boolean(s.ui.skillUnlocked));
   const prestigeModalOpen = useGameStore((s) => s.ui.prestigeModalOpen);
   const weeklyReportPending = useGameStore((s) => s.ui.weeklyReportPending);
   const lastWeeklyReportSeenDate = useGameStore((s) => s.lastWeeklyReportSeenDate);
@@ -1330,7 +1334,18 @@ export default function App() {
           It stays silent while any timer runs or the reward chain is up (`anyTimerRunning`), so the
           round-39 screen is never touched.
         */}
-        <DayMoment quiet={timerSessionRunning || isOnBreak || lootModalOpen} />
+        {/* ⚠️ `skillUnlocked` LÀM IM BĂNG-RÔN NGÀY/TUẦN (ADR-085). Hai khoảnh khắc này dùng CHUNG
+            một chỗ đứng (`top: 96px`) — soi bằng ảnh mới thấy: cảnh soi «vừa mở kỹ năng» lại chụp
+            ra tấm «Tuần mới», vì băng-rôn ngày nổ lúc nạp trang và chiếm chỗ trước. Cái nào nhường
+            là một quyết định, không phải một tai nạn: mở kỹ năng là TRẢ LỜI TRỰC TIẾP cho cú bấm
+            Đàm vừa làm, còn băng-rôn ngày là lời chào của khung cảnh — thứ đáp lại một hành động
+            phải thắng thứ tự nói. Băng-rôn ngày không mất, nó chỉ đợi lượt sau. */}
+        <DayMoment quiet={timerSessionRunning || isOnBreak || lootModalOpen || skillUnlockedOpen} />
+        {/* ADR-085: mở một kỹ năng là một khoảnh khắc. Cùng lý do đặt NGOÀI `GlobalOverlays` như
+            `DayMoment` — component ấy early-return null khi không có gì chặn màn hình, nên bất cứ
+            thứ gì nằm trong nó KHÔNG BAO GIỜ hiện trên một màn hình bình thường (bẫy đã giấu tấm
+            băng-rôn của vòng 41 cho tới khi soi bằng ảnh mới thấy). */}
+        <SkillMoment />
         <GlobalOverlays
           lootModalOpen={lootModalOpen}
           prestigeModalOpen={prestigeModalOpen}

@@ -435,3 +435,26 @@ stated twice drifts.
   ⚠️ Lesson: *the three "strongest" lines only have numbers when sessions SET A GOAL* — the 599-session
   fixture has no goals so all three were empty; the screen now says what to do instead of going quiet.
   Inspect: `node scripts/shot.mjs --phone --fixture <fx> --tab "Thống kê" --full`.
+
+
+## Rotated out of `START_HERE.md` on 2026-09-08 (round 45 arrived; keep the 3 most recent)
+
+- **Loop — ROUND 42 (2026-09-08): SPACE — ONE NUMBER FOR A SHAPE, ONE AXIS FOR A STACK
+  (ADR-083).** Order: *"VÒNG 42 = KHÔNG GIAN: cái gì nằm ở đâu, to bao nhiêu, có vừa khung không"*, with three
+  photographs. Root cause, one sentence: the ring was DRAWN at `min(canvas, cap) × transform: scale()` while the
+  room under it was RESERVED from a SECOND expression — a transform does not change layout, so once the cap bit
+  the drawing was bigger than the hole (390 px full screen: **427 drawn, 281 reserved, the goal line 32 px inside
+  the arc**); and `timerStageVisual` is a FRAGMENT of stacked blocks that desktop full screen mounted into a ROW
+  flex, so the same line flew onto the digits at 1280/2000. **`src/components/focus/ringMetrics.js` is now the ONE
+  owner** of the ring's geometry: `ringSizeCss()` → one CSS length for `width`, `aspect-ratio: 1` for the height,
+  three terms (px ceiling · 94 % of the column · `calc(100svh − min(<reserve>px, <reserve>svh))`); the slot has NO
+  height of its own, so reserved ≡ drawn; nine constants and the scaling wrapper deleted. Text inside the disc is
+  `cqw` (a fraction of the ring) instead of eleven rem values. `timerStageContent` carries its own column and is
+  the only mount point. Full screen is `h-[100svh] overflow-hidden` with the 890 px notebook behind a disclosure;
+  `min-h-[76/84/88vh]` only while idle. Sidebar rail: labels under icons, dots carry their reason
+  («Có việc» · «Tuần mới»). Gate: **`focus/ringText.test.js`** — 25 % clearance for every clock string at every
+  ring size 160–720 px, identical ratio at every size, red on a 10-character clock. Measured after: vertical
+  scroll **0** in every running/break/full-screen cell at 375/390/1280/2000; gap ring→line **+12 px** everywhere.
+  ⚠️ Inspect a running/break state with a seeded `timerSession`/`breakSession` fixture (ms timestamps, **regenerate
+  it right before each shot — a 25-minute session in a stale fixture has already ENDED and you photograph the
+  reward card instead**) and `--settle 900`.

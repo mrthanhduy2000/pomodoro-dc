@@ -124,6 +124,7 @@ import {
   WARMUP_REDUCED_THRESHOLD,
   STREAK_MILESTONES,
 } from './constants';
+import { makeCreditLedger, settleCredits } from './sessionCredits.js';
 
 // ─── Hàm ngẫu nhiên ──────────────────────────────────────────────────────────
 const rand    = () => Math.random();
@@ -364,6 +365,11 @@ export function calculateRewards(
     expBonus      = 0,
     allBonus      = 0,
     xpSeal        = 0,
+    // ADR-085: `sources` là BẢN KÊ của chính ba con số trên — bậc danh xưng, từng di vật, từng đặc
+    // quyền công trình. `aggregateActiveBuffs` dựng nó cùng lúc với phép cộng, nên hai bên không
+    // thể lệch. Vắng mặt (mọi lời gọi cũ, mọi bài test cũ) thì thẻ kết phiên chỉ thiếu mấy con chip
+    // — không con số nào đổi.
+    sources: buffSources = [],
   } = activeBuffs;
 
   // ── Session context V2 ────────────────────────────────────────────────────
@@ -454,6 +460,18 @@ export function calculateRewards(
     THIEN_DINH: 0, Y_CHI: 0, NGHI_NGOI: 0,
     VAN_MAY: 0, CHIEN_LUOC: 0, THANG_HOA: 0,
   };
+  /*
+    ⚠️ ADR-085 — SỔ GHI CÔNG, CHẠY SONG SONG, KHÔNG BAO GIỜ ĐI VÀO PHÉP TÍNH.
+    Mỗi `if (kỹ_năng && điều_kiện)` bên dưới cộng một phần trăm vào `branchXp` — và cùng lúc ghi
+    MỘT dòng vào sổ này. Sổ chỉ để màn hình kể tên; không dòng nào của nó quay ngược lại `branchXp`,
+    `skillEPBonus` hay `xpFactor`. Nghĩa là một lỗi ở đây làm SAI THẺ KỂ CHUYỆN chứ không bao giờ
+    làm sai số XP Đàm nhận — và đó là lý do vòng này không đụng vào cấu trúc của chính hàm này,
+    hàm thuần load-bearing nhất của cả app.
+    ⚠️ Đo được (vòng 45): 27/36 kỹ năng là một khoản "+x% XP" chưa từng hiện ở BẤT KỲ đâu trên màn
+    hình. Thẻ kết phiên vốn đã kể chuỗi · combo · vận may · guồng vàng — chỉ thiếu đúng nhóm đông
+    nhất. Xem `engine/sessionCredits.js`.
+  */
+  const ledger = makeCreditLedger();
   let skillEPBonus = 0;        // EP only
   let skillAllBonus = 0;       // both XP và EP
   // ADR-069: phần thưởng NGẪU NHIÊN của nhánh Vận May — cộng thẳng vào hệ số XP/EP (không qua
@@ -464,16 +482,21 @@ export function calculateRewards(
   // — THIỀN ĐỊNH —
   if (vaoGuong && minutesFocused >= VAO_GUONG_MIN_MINUTES) {
     branchXp.THIEN_DINH += VAO_GUONG_XP_BONUS;
+    ledger.add('vao_guong', 'skill', VAO_GUONG_XP_BONUS);
   }
   if (chuyenCan && minutesFocused >= CHUYEN_CAN_MIN_MINUTES) {
     branchXp.THIEN_DINH += CHUYEN_CAN_XP_BONUS;
+    ledger.add('chuyen_can', 'skill', CHUYEN_CAN_XP_BONUS);
   }
   if (daTapTrung && consecutiveSessionsToday > 0) {
-    branchXp.THIEN_DINH += Math.min(consecutiveSessionsToday, DA_TAP_TRUNG_MAX_STACKS) * DA_TAP_TRUNG_STACK_BONUS;
+    const daTapTrungPct = Math.min(consecutiveSessionsToday, DA_TAP_TRUNG_MAX_STACKS) * DA_TAP_TRUNG_STACK_BONUS;
+    branchXp.THIEN_DINH += daTapTrungPct;
+    ledger.add('da_tap_trung', 'skill', daTapTrungPct);
   }
   if (tapTrungSieuViet && minutesFocused >= TAP_TRUNG_SV_MIN_MIN) {
     branchXp.THIEN_DINH += TAP_TRUNG_SV_XP_BONUS;
     skillEPBonus += TAP_TRUNG_SV_EP_BONUS;
+    ledger.add('tap_trung_sieu_viet', 'skill', TAP_TRUNG_SV_XP_BONUS, TAP_TRUNG_SV_EP_BONUS);
   }
 
   // — Ý CHÍ —
@@ -481,50 +504,62 @@ export function calculateRewards(
   // ngưỡng phút thấp hơn; Phục Hồi cộng thêm chứ không thay thế.
   if (suThaThu && lastSessionCancelled && minutesFocused >= SU_THA_THU_MIN_MINUTES) {
     branchXp.Y_CHI += SU_THA_THU_XP_BONUS;
+    ledger.add('su_tha_thu', 'skill', SU_THA_THU_XP_BONUS);
   }
   if (phucHoi && lastSessionCancelled && minutesFocused >= PHUC_HOI_MIN_MINUTES) {
     branchXp.Y_CHI += PHUC_HOI_XP_BONUS;
     skillEPBonus += PHUC_HOI_EP_BONUS;
+    ledger.add('phuc_hoi', 'skill', PHUC_HOI_XP_BONUS, PHUC_HOI_EP_BONUS);
   }
   if (chuoiNgay && currentStreak > 0) {
     // Chuỗi Ngày là streak-based (trigger phụ) — áp dụng mọi phiên
-    branchXp.Y_CHI += Math.min(currentStreak, CHUOI_NGAY_MAX_DAYS) * CHUOI_NGAY_XP_PER_DAY;
+    const chuoiNgayPct = Math.min(currentStreak, CHUOI_NGAY_MAX_DAYS) * CHUOI_NGAY_XP_PER_DAY;
+    branchXp.Y_CHI += chuoiNgayPct;
+    ledger.add('chuoi_ngay', 'skill', chuoiNgayPct);
   }
   if (benVung && benVungActive && minutesFocused >= BEN_VUNG_MIN_MINUTES) {
     skillAllBonus += BEN_VUNG_PERMANENT_ALLBONUS;
+    ledger.add('ben_vung', 'skill', BEN_VUNG_PERMANENT_ALLBONUS, BEN_VUNG_PERMANENT_ALLBONUS);
   }
 
   // — NGHỈ NGƠI —
   if (napNangLuong && breakCompletedOnTime && minutesFocused >= NAP_NANG_LUONG_MIN_MINUTES) {
     branchXp.NGHI_NGOI += NAP_NANG_LUONG_XP_BONUS;
+    ledger.add('nap_nang_luong', 'skill', NAP_NANG_LUONG_XP_BONUS);
   }
   if (tichPhien && sessionsCompletedToday >= TICH_PHIEN_AFTER_SESSIONS) {
     branchXp.NGHI_NGOI += TICH_PHIEN_XP_BONUS;
+    ledger.add('tich_phien', 'skill', TICH_PHIEN_XP_BONUS);
   }
   if (phienVangSang && isFirstSessionToday && minutesFocused >= PHIEN_VANG_SANG_MIN_MINUTES) {
     branchXp.NGHI_NGOI += PHIEN_VANG_SANG_XP_BONUS;
     skillEPBonus += PHIEN_VANG_SANG_EP_BONUS;
+    ledger.add('phien_vang_sang', 'skill', PHIEN_VANG_SANG_XP_BONUS, PHIEN_VANG_SANG_EP_BONUS);
   }
   if (nhipSinhHoc
       && (sessionsCompletedToday + 1) >= NHIP_SINH_HOC_MIN_SESSIONS
       && minutesFocused >= NHIP_SINH_HOC_MIN_MINUTES) {
     branchXp.NGHI_NGOI += NHIP_SINH_HOC_XP_BONUS;
+    ledger.add('nhip_sinh_hoc', 'skill', NHIP_SINH_HOC_XP_BONUS);
   }
   if (nhipHoanHao && nhipHoanHaoActiveToday && minutesFocused >= NHIP_HOAN_HAO_MIN_MINUTES) {
     branchXp.NGHI_NGOI += NHIP_HOAN_HAO_XP_BONUS;
     skillEPBonus += NHIP_HOAN_HAO_EP_BONUS;
+    ledger.add('nhip_hoan_hao', 'skill', NHIP_HOAN_HAO_XP_BONUS, NHIP_HOAN_HAO_EP_BONUS);
   }
 
   // — VẬN MAY —  (ADR-069: quay ra XP/EP, không còn quay ra nguyên liệu/tinh luyện)
   if (banTayVang && minutesFocused >= BAN_TAY_VANG_MIN_MINUTES && rand() < BAN_TAY_VANG_CHANCE) {
     luckXpBonus += BAN_TAY_VANG_XP_BONUS;
+    ledger.add('ban_tay_vang', 'skill', BAN_TAY_VANG_XP_BONUS);
   }
   if (nhanQuan && minutesFocused >= NHAN_QUAN_MIN_MINUTES && rand() < NHAN_QUAN_CHANCE) {
     luckEpBonus += NHAN_QUAN_EP_BONUS;
+    ledger.add('nhan_quan', 'skill', 0, NHAN_QUAN_EP_BONUS);
   }
   if (linhCam && minutesFocused >= LINH_CAM_MIN_MINUTES) {
-    if (rand() < LINH_CAM_CHANCE) luckXpBonus += LINH_CAM_XP_BONUS;
-    if (rand() < LINH_CAM_BIG_CHANCE) luckXpBonus += LINH_CAM_BIG_XP_BONUS;
+    if (rand() < LINH_CAM_CHANCE) { luckXpBonus += LINH_CAM_XP_BONUS; ledger.add('linh_cam', 'skill', LINH_CAM_XP_BONUS); }
+    if (rand() < LINH_CAM_BIG_CHANCE) { luckXpBonus += LINH_CAM_BIG_XP_BONUS; ledger.add('linh_cam', 'skill', LINH_CAM_BIG_XP_BONUS); }
   }
   // Lộc Ban Tặng: counter handled by store, không cộng vào reward ở đây.
 
@@ -534,38 +569,49 @@ export function calculateRewards(
     for (const buff of nextSessionBuffs) {
       if (buff?.type === 'nguoi_lap_ke' && nguoiLapKe) {
         branchXp.CHIEN_LUOC += NGUOI_LAP_KE_XP_BONUS;
+        ledger.add('nguoi_lap_ke', 'skill', NGUOI_LAP_KE_XP_BONUS);
       }
       if (buff?.type === 'cu_tri' && cuTri) {
         branchXp.CHIEN_LUOC += CU_TRI_XP_BONUS;
+        ledger.add('cu_tri', 'skill', CU_TRI_XP_BONUS);
       }
     }
   }
   if (coVan && dailyGoalAchieved) {
     branchXp.CHIEN_LUOC += CO_VAN_XP_BONUS;
+    ledger.add('co_van', 'skill', CO_VAN_XP_BONUS);
   }
   if (lichDay && hasSession45Today && hasSession60Today) {
     skillAllBonus += LICH_DAY_ALLBONUS;
+    ledger.add('lich_day', 'skill', LICH_DAY_ALLBONUS, LICH_DAY_ALLBONUS);
   }
   if (bacThayCL && allDailyMissionsDone && minutesFocused >= BAC_THAY_CHIEN_LUOC_MIN_MIN) {
     branchXp.CHIEN_LUOC += BAC_THAY_CHIEN_LUOC_XP_BONUS;
     skillEPBonus += BAC_THAY_CHIEN_LUOC_EP_BONUS;
+    ledger.add('bac_thay_chien_luoc', 'skill', BAC_THAY_CHIEN_LUOC_XP_BONUS, BAC_THAY_CHIEN_LUOC_EP_BONUS);
   }
   if (keHoachWeeklyBuffActive) {
     skillAllBonus += KE_HOACH_HOAN_HAO_NEXT_WEEK_BONUS;
+    ledger.add('ke_hoach_hoan_hao', 'skill', KE_HOACH_HOAN_HAO_NEXT_WEEK_BONUS, KE_HOACH_HOAN_HAO_NEXT_WEEK_BONUS);
   }
 
   // — THĂNG HOA —
   if (kyUcKyNguyen && isFirstSessionInNewEra && minutesFocused >= KY_UC_KY_NGUYEN_MIN_MINUTES) {
     branchXp.THANG_HOA += KY_UC_KY_NGUYEN_XP_BONUS;
     skillEPBonus += KY_UC_KY_NGUYEN_EP_BONUS;
+    ledger.add('ky_uc_ky_nguyen', 'skill', KY_UC_KY_NGUYEN_XP_BONUS, KY_UC_KY_NGUYEN_EP_BONUS);
   }
   if (triTueTichLuy && erasCompleted > 0) {
     // Trí Tuệ Tích Luỹ là era-based (trigger phụ) — áp dụng mọi phiên
-    branchXp.THANG_HOA += Math.min(erasCompleted, TRI_TUE_TICH_LUY_MAX_ERAS) * TRI_TUE_TICH_LUY_XP_PER_ERA;
+    const triTuePct = Math.min(erasCompleted, TRI_TUE_TICH_LUY_MAX_ERAS) * TRI_TUE_TICH_LUY_XP_PER_ERA;
+    branchXp.THANG_HOA += triTuePct;
+    ledger.add('tri_tue_tich_luy', 'skill', triTuePct);
   }
   if (bacThayKyNguyen && sessionsInCurrentEra > 0) {
     const stacks = Math.floor(sessionsInCurrentEra / BAC_THAY_KY_NGUYEN_SESSIONS);
-    branchXp.THANG_HOA += Math.min(stacks * BAC_THAY_KY_NGUYEN_BONUS, BAC_THAY_KY_NGUYEN_MAX);
+    const bacThayPct = Math.min(stacks * BAC_THAY_KY_NGUYEN_BONUS, BAC_THAY_KY_NGUYEN_MAX);
+    branchXp.THANG_HOA += bacThayPct;
+    ledger.add('bac_thay_ky_nguyen', 'skill', bacThayPct);
   }
 
   // ── 5b. Synergy bonus V2 (length-gated) ─────────────────────────────────
@@ -592,6 +638,7 @@ export function calculateRewards(
     if (active) {
       synergyBonus += syn.bonus;
       activeSynergies.push(syn.id);
+      ledger.add(syn.id, 'synergy', syn.bonus, 0, syn.label ?? syn.id);
     }
   }
   // D1: fold XP% mỗi nhánh qua softcap rồi cộng; synergyBonus KHÔNG fold.
@@ -634,11 +681,32 @@ export function calculateRewards(
   //    đồng tiền duy nhất là PHIÊN (ADR-069). ──
   const activeBook = getActiveBook(totalEP);
 
+  /*
+    ⚠️ GHI SỔ CHO BÊN NGOÀI SAU CÙNG, KHI ĐÃ BIẾT `xpFactor` BỊ TRẦN CẮT HAY CHƯA. Bậc danh xưng,
+    di vật và đặc quyền công trình đi vào phép tính qua `expBonus`/`epBonus`/`allBonus` — ba con số
+    ĐÃ CỘNG DỒN, nên tên của chúng chỉ có thể đến từ bản kê mà nơi gọi dựng kèm. Ghi ở đây (chứ
+    không ở đầu hàm) để chúng đi qua đúng phép quy đổi và đúng phép chia lại khi chạm trần.
+  */
+  for (const src of Array.isArray(buffSources) ? buffSources : []) {
+    ledger.add(src.id, src.kind ?? 'relic', src.xpPct ?? 0, src.epPct ?? 0, src.label ?? src.id);
+  }
+  const credits = settleCredits({
+    credits: ledger.list,
+    baseXP,
+    multiplier: finalMultiplier,
+    rawXpFactor,
+    cappedXpFactor: xpFactor,
+    rawEpFactor,
+    cappedEpFactor: epFactor,
+  });
+
   return {
     baseXP,
     finalXP,
     finalEP,
     finalEXP,
+    // ADR-085 — ai đã trả cho phiên này. CHỈ để kể chuyện; không phép tính nào ở trên đọc nó.
+    credits,
     multiplier: finalMultiplier,
     tierLabel: applyJackpot ? `ĐẠI TRÚNG THƯỞNG! ${tierLabel}` : tierLabel,
     effectiveMinutes,

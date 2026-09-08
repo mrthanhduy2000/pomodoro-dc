@@ -63,3 +63,58 @@ test('hàng bước chỉ mã hoá trạng thái MỘT lần — cột "%" khôn
     '`currentIndex` quay lại — đó là biểu thức thứ hai đã nói ngược biểu thức thứ nhất',
   );
 });
+
+// ⚠️ ROUND 45 — THE WEEK-AT-A-GLANCE LINE ON THE DAY CARD.
+// Đàm's round-45 brief: "Ba nhiệm vụ ngày cộng một nhiệm vụ tuần là bốn thứ để nhớ, với một app
+// tôi chỉ muốn mở lên bấm Bắt đầu." The fix is a merge, not a deletion: the phone Focus screen's
+// day card ends with one line naming the week's current step. The failure mode a merge invites is
+// DOUBLE VISION — the same line shipping next to the full weekly card on desktop and on Tiến
+// trình, which would turn one memory into two. That gate is what these tests hold.
+// THỬ-CHO-ĐỎ: đổi `showDaily && !showWeekly` thành `showDaily` ⇒ bài 4 đỏ.
+test('dòng "Tuần này" chỉ mọc ở nơi KHÔNG có thẻ tuần đầy đủ', () => {
+  const ma = stripComments(readFileSync(new URL('./DailyMissions.jsx', import.meta.url), 'utf8'));
+  assert.ok(/const\s+weeklyGlance\s*=/.test(ma), 'không còn cờ `weeklyGlance` — phép đo chạy rỗng');
+  const dieuKien = ma.match(/const\s+weeklyGlance\s*=\s*([^;]+);/)[1];
+  assert.ok(
+    /showDaily/.test(dieuKien) && /!\s*showWeekly/.test(dieuKien),
+    'cờ phải là `showDaily && !showWeekly`: có thẻ tuần đầy đủ ở đâu thì dòng tóm tắt phải im ở đó, '
+    + `hiện đang là: ${dieuKien.trim()}`,
+  );
+  assert.ok(/\{weeklyGlance\s*&&/.test(ma), 'cờ được tính nhưng không ai dùng để chặn phần vẽ');
+});
+
+// THỬ-CHO-ĐỎ: thêm `truncate` vào class của `glanceLine` ⇒ bài 5 đỏ.
+test('dòng tóm tắt tuần không được cắt chữ — bảng phủ quyết cấm chữ bị cắt', () => {
+  const ma = stripComments(readFileSync(new URL('./DailyMissions.jsx', import.meta.url), 'utf8'));
+  const khoi = ma.match(/\{weeklyGlance\s*&&\s*\(([\s\S]*?)\n\s*\)\}/);
+  assert.ok(khoi, 'không tìm thấy khối vẽ dòng tóm tắt tuần');
+  assert.ok(
+    !/truncate|text-ellipsis|whitespace-nowrap/.test(khoi[1]),
+    'dòng tóm tắt bị cắt bằng "…" — bước dài nhất hôm nay là 30 ký tự, nó phải XUỐNG DÒNG chứ '
+    + 'không được biến mất',
+  );
+  // Hai con số, không hơn: "n/N" của tuần và tiền công của tuần. Tiến độ trong TỪNG bước ở lại
+  // thẻ đầy đủ bên Tiến trình — chỗ có đủ diện tích cho nó.
+  assert.ok(
+    !/stepProgress/.test(khoi[1]),
+    'tiến độ từng bước lọt vào dòng tóm tắt — thành ba con số trên một dòng ở khổ 390px',
+  );
+});
+
+// THỬ-CHO-ĐỎ: bỏ `.split('—')` (in nguyên `activeStep.label`) ⇒ bài 6 đỏ.
+test('dòng tóm tắt lấy NỬA VIỆC CẦN LÀM của nhãn bước, không lấy nửa tên gọi', () => {
+  const ma = stripComments(readFileSync(new URL('./DailyMissions.jsx', import.meta.url), 'utf8'));
+  const cat = ma.match(/const\s+glanceTask\s*=\s*([\s\S]*?);\n/);
+  assert.ok(cat, 'không còn `glanceTask` — phép đo chạy rỗng');
+  assert.ok(
+    /split\('—'\)/.test(cat[1]) && /pop\(\)/.test(cat[1]),
+    'phải tách nhãn ở dấu — và lấy vế SAU: "Nhóm lửa" là tên, "hoàn thành phiên đầu tiên" mới là '
+    + 'thứ trả lời được câu "giờ tôi phải làm gì"',
+  );
+  // Nhãn không có dấu — thì vẫn phải in ra được nguyên câu, không được thành chuỗi rỗng.
+  const tach = (nhan) => (nhan.split('—').pop() ?? '').trim() || nhan;
+  assert.equal(tach('Nhóm lửa — hoàn thành phiên đầu tiên'), 'hoàn thành phiên đầu tiên');
+  assert.equal(tach('Khánh thành — chinh phục 150 phút trong tuần'), 'chinh phục 150 phút trong tuần');
+  assert.equal(tach('Một bước không dấu gạch'), 'Một bước không dấu gạch');
+  assert.equal(tach('Chỉ có tên — '), 'Chỉ có tên — ');
+});

@@ -102,6 +102,26 @@ export default function DailyMissions({ section = 'all' }) {
     ? `+${weeklyBonusXP.toLocaleString('vi-VN')} XP`
     : 'thưởng chuỗi';
 
+  // ⚠️ ROUND 45 — THE WEEK IS A LINE ON THE DAY CARD, NOT A FOURTH THING TO REMEMBER.
+  // ADR-068 split this screen in two: the DAY block under the clock on Tập trung, the WEEK block on
+  // Tiến trình. That was right for the week's DETAIL — four steps, a bonus header, four progress
+  // bars, none of which belongs above a Start button. But it left the phone with three daily rows
+  // here and a fourth obligation two taps away, and an obligation you must walk to another screen
+  // to recall is an obligation you MEMORISE. So where the full week card is absent — `section="daily"`,
+  // which is the phone Focus screen and nowhere else — the day card ends with ONE line: which step
+  // the week is on, and what finishing it pays. Desktop (`all`) and the Tiến trình tab already draw
+  // the real card, so they must NOT also draw this; two places saying one thing means the shorter
+  // one yields, the same rule the streak line follows above.
+  const weeklyGlance = Boolean(chain) && showDaily && !showWeekly;
+  // A step label is "Nhóm lửa — hoàn thành phiên đầu tiên": a name, then the instruction. At 390px
+  // only one half fits on a line, and the instruction is the half that says what to do.
+  // ⚠️ NO `truncate` HERE — the veto table forbids cut text, so a long step wraps to two lines
+  // instead of ending in "…". Longest step today is 30 chars; wrapping is the safety net, not the plan.
+  const glanceTask = activeStep
+    ? (activeStep.label.split('—').pop() ?? '').trim() || activeStep.label
+    : '';
+  const glanceLine = chainDone ? 'Đã xong chuỗi tuần này' : glanceTask;
+
   const streakMissionEligible = (streak.currentStreak ?? 0) >= STREAK_MISSION_MIN_STREAK;
   const streakMissionBaseXP = Math.min(
     STREAK_MISSION_BASE_XP + ((streak.currentStreak ?? 0) - STREAK_MISSION_MIN_STREAK) * STREAK_MISSION_XP_PER_DAY,
@@ -166,6 +186,20 @@ export default function DailyMissions({ section = 'all' }) {
               amount={missions.bonusClaimedToday ? `✓ +${bonusShownXP} XP` : `+${allMissionBonusXP} XP`}
             />
           </div>
+
+          {weeklyGlance && (
+            <div className="border-t pt-4" style={{ borderColor: 'var(--line)' }}>
+              <div className="flex items-baseline justify-between gap-3">
+                <span className="mono text-[10px] uppercase tracking-[0.16em]" style={{ color: 'var(--muted)' }}>
+                  Tuần này · {chainStepsCompleted}/{chain.steps.length}
+                </span>
+                <span className="mono text-[12px] font-semibold tabular-nums" style={{ color: 'var(--accent2)' }}>
+                  {weeklyBonusSP > 0 ? `+${weeklyBonusSP} SP` : `+${weeklyBonusXP} XP`}
+                </span>
+              </div>
+              <div className="mt-1 text-[12px] leading-snug" style={{ color: 'var(--ink)' }}>{glanceLine}</div>
+            </div>
+          )}
         </div>
       </QuietSection>
       )}

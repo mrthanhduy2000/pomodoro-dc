@@ -9,7 +9,7 @@ import {
   aggregateWonderEffects, missionXpMultiplier, streakBonusCapDays,
   wonderCrisisWindowBonusHours, wonderPassiveBuffs, wonderRelicEvolveFactor,
 } from './wonderEffects.js';
-import { BUILDING_EFFECTS, STREAK_MAX_BONUS_DAYS, WONDER_EFFECT_REGISTRY } from './constants.js';
+import { BLUEPRINT_CATALOG, BUILDING_EFFECTS, STREAK_MAX_BONUS_DAYS, WONDER_EFFECT_REGISTRY } from './constants.js';
 
 const kyQuanCua = (hieuUng) => {
   const found = Object.entries(BUILDING_EFFECTS).find(([, e]) => e?.type === 'wonder' && e.wonderEffect === hieuUng);
@@ -62,7 +62,16 @@ test('BUFF THỤ ĐỘNG đọc đúng bảng: ngưỡng phút gác XP/EP/flatXp
   // Cộng dồn khi có nhiều kỳ quan (di sản trùng tu), và không có kỳ quan thì toàn 0.
   const hai = wonderPassiveBuffs([kyQuanCua('xp_all_5'), kyQuanCua('xp_all_8')], 25);
   assert.ok(Math.abs(hai.expBonus - 0.13) < 1e-9);
-  assert.deepEqual(wonderPassiveBuffs([], 60), { expBonus: 0, epBonus: 0, comboWindowHours: 0, flatXp: 0 });
+  // ADR-085: `sources` là bản kê tên đi kèm — rỗng khi không có kỳ quan nào, đúng như bốn số kia.
+  assert.deepEqual(wonderPassiveBuffs([], 60), { expBonus: 0, epBonus: 0, comboWindowHours: 0, flatXp: 0, sources: [] });
+  // ⚠️ Và bản kê phải KHỚP con số: một đặc quyền cộng XP mà không khai tên thì thẻ kết phiên lại
+  // im lặng đúng như trước vòng 45.
+  const keKhai = wonderPassiveBuffs([kyQuanCua('xp_all_5')], 25);
+  assert.equal(keKhai.sources.length, 1, 'đặc quyền có cộng XP mà không có tên trong bản kê');
+  assert.equal(keKhai.sources[0].xpPct, keKhai.expBonus);
+  assert.equal(keKhai.sources[0].kind, 'perk');
+  // Chưa đủ phút ⇒ không cộng gì ⇒ cũng không được khai tên (không hứa suông trên thẻ).
+  assert.deepEqual(wonderPassiveBuffs([kyQuanCua('xp_deep_10')], 30).sources, []);
 });
 
 test('BỐN LUẬT RIÊNG — cùng một phép kiểm kỳ quan, trả về SỐ chứ không trả boolean', () => {
@@ -84,5 +93,32 @@ test('KHÔNG CÒN BẢN CHÉP TAY NÀO — store và giao diện không tự h�
     const src = doc(f);
     assert.equal(/wonderEffect\s*===/.test(src), false, `${f} hỏi wonderEffect trực tiếp — bản chép tay`);
     assert.equal(/wonders\.has\(/.test(src), false, `${f} tự gom tập kỳ quan rồi hỏi — bản chép tay`);
+  }
+});
+
+// ⚠️ ADR-085 — A CHIP MUST NAME WHO PAID, NOT REPEAT WHAT WAS PAID.
+// The first version credited the perk with `WONDER_EFFECT_REGISTRY[id].label`, which is the EFFECT,
+// so the ending card printed «🏛 +5% XP mọi phiên +8 XP» — a percentage sitting next to the amount
+// it had already produced. The screenshot is what caught it: two numbers, one fact.
+// THỬ-CHO-ĐỎ: đổi `WONDER_BUILDING_LABEL[id] ?? …` về `WONDER_EFFECT_REGISTRY[id]?.label` ⇒ đỏ.
+test('a perk is credited by the BUILDING that grants it, never by its own percentage', () => {
+  const wonders = Object.entries(BUILDING_EFFECTS)
+    .filter(([, eff]) => eff?.type === 'wonder' && eff.wonderEffect)
+    .map(([bpId]) => bpId);
+  assert.ok(wonders.length >= 3, 'không còn kỳ quan nào — phép đo chạy rỗng');
+
+  const { sources } = wonderPassiveBuffs(wonders, 120);
+  assert.ok(sources.length >= 3, 'kỳ quan có cộng phần trăm mà không ai được nêu tên');
+  for (const src of sources) {
+    assert.doesNotMatch(
+      src.label, /%/,
+      `chip «${src.label}» in lại chính con số nó vừa sinh ra — tên công trình mới là thứ Đàm sở hữu`,
+    );
+    assert.ok(src.label && src.label !== src.id, `nguồn «${src.id}» không có tên người đọc được`);
+  }
+  // Và cái tên ấy phải là một công trình CÓ THẬT trong 75 bản vẽ, không phải một chuỗi bịa.
+  const tenCongTrinh = new Set(Object.values(BLUEPRINT_CATALOG).flat().map((bp) => bp.label));
+  for (const src of sources) {
+    assert.ok(tenCongTrinh.has(src.label), `«${src.label}» không phải tên của bản vẽ nào`);
   }
 });

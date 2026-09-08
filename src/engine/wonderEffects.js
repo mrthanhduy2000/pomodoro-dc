@@ -12,7 +12,23 @@
  * (constants) và đọc ở đây — bảng nói GÌ, hàm nói BAO NHIÊU, không chép lại con số ở nơi thứ hai.
  */
 
-import { BUILDING_EFFECTS, STREAK_MAX_BONUS_DAYS, WONDER_EFFECT_REGISTRY } from './constants.js';
+import {
+  BLUEPRINT_CATALOG, BUILDING_EFFECTS, STREAK_MAX_BONUS_DAYS, WONDER_EFFECT_REGISTRY,
+} from './constants.js';
+
+/**
+ * ⚠️ ADR-085 — A PERK IS CREDITED BY THE BUILDING THAT GRANTS IT, NOT BY WHAT IT DOES.
+ * `WONDER_EFFECT_REGISTRY[id].label` is the EFFECT (`"+5% XP mọi phiên"`), so a chip built from it
+ * reads *"🏛 +5% XP mọi phiên +8 XP"* — the same fact twice, a percentage next to the amount it
+ * already produced, which is exactly the "one truth, one place" law this project keeps. The building
+ * NAME is the half Đàm actually owns: he watched it go up, it is one of his 75. `"🏛 Kim Tự Tháp
+ * +8 XP"` answers *who paid*; the effect text stays where it belongs, on the building's own card.
+ */
+const WONDER_BUILDING_LABEL = Object.fromEntries(
+  Object.values(BLUEPRINT_CATALOG).flat()
+    .map((bp) => [BUILDING_EFFECTS[bp.id]?.wonderEffect, bp.label])
+    .filter(([effectId]) => Boolean(effectId)),
+);
 
 /** Tập đặc quyền kỳ quan đang bật. ⚠️ CHỈ tính công trình khai `type === 'wonder'`. */
 export function aggregateWonderEffects(buildings = []) {
@@ -30,7 +46,10 @@ export function aggregateWonderEffects(buildings = []) {
  * Đặc quyền khai `minMinutes` chỉ nổ khi phiên đủ dài — kiểm ở ĐÂY một lần, không ở từng nơi gọi.
  */
 export function wonderPassiveBuffs(buildings = [], minutesFocused = 0) {
-  const out = { expBonus: 0, epBonus: 0, comboWindowHours: 0, flatXp: 0 };
+  // ⚠️ ADR-085: `sources` là BẢN KÊ đi kèm — tên của từng đặc quyền đã cộng vào `expBonus`/`epBonus`.
+  // Dựng ngay trong vòng lặp đang cộng, cùng luật với `aggregateActiveBuffs`: một đặc quyền "+8% XP
+  // mọi phiên" mà không bao giờ hiện tên thì với Đàm nó không tồn tại.
+  const out = { expBonus: 0, epBonus: 0, comboWindowHours: 0, flatXp: 0, sources: [] };
   for (const id of aggregateWonderEffects(buildings)) {
     const passive = WONDER_EFFECT_REGISTRY[id]?.passive;
     if (!passive) continue;
@@ -43,6 +62,15 @@ export function wonderPassiveBuffs(buildings = [], minutesFocused = 0) {
     out.epBonus += passive.epBonus ?? 0;
     out.comboWindowHours += passive.comboWindowHours ?? 0;
     out.flatXp += passive.flatXp ?? 0;
+    if ((passive.expBonus ?? 0) > 0 || (passive.epBonus ?? 0) > 0) {
+      out.sources.push({
+        id: `perk:${id}`,
+        kind: 'perk',
+        label: WONDER_BUILDING_LABEL[id] ?? WONDER_EFFECT_REGISTRY[id]?.label ?? id,
+        xpPct: passive.expBonus ?? 0,
+        epPct: passive.epBonus ?? 0,
+      });
+    }
   }
   return out;
 }

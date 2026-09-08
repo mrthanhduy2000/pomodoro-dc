@@ -32,7 +32,32 @@ Production branch `main` carries **both** work streams (merged 2026-08-28 on Đ�
 ⚠️ Phase 21 therefore shipped **before** Đàm reviewed its screenshots — the "waiting on Đàm's eyes"
 item below is still live, it just now reviews something already running.
 
-- **Loop — ROUND 44 (2026-09-08, LATEST): THE CITY FUNDS THE SKILL TREE (ADR-084).**
+- **Loop — ROUND 45 (2026-09-08, LATEST): A BONUS THAT CANNOT BE SEEN IS NOT A BONUS (ADR-085).**
+  The audit that decided it: of 36 skills, **27 are a silent `+X% XP/EP`** shown on no screen ever, 6
+  are genuinely felt, 3 are prestige-only. One skill is worth 3–7 XP on a 48-minute session, so round
+  44's twelve taps bought twelve numbers nobody could see.
+  ⚠️ **`engine/sessionCredits.js` is a PASSENGER, never a driver.** It collects one line per bonus as
+  `gameMath.js` adds it (25 sites) and reads the formula's locals without ever feeding one back — so a
+  bug there can make the ENDING CARD wrong and never the PAYOUT. Keep it that way. At
+  `XP_FACTOR_HARD_CAP` the credits are rescaled, or the chips would sum to more than the headline.
+  `challengeEngine`/`wonderEffects` must return `sources` alongside their percentages: a test fails any
+  buff that moves `expBonus`/`epBonus` without merging its names.
+  ⚠️ **`engine/skillPreview.js` MEASURES, it does not look up.** It runs the real `calculateRewards`
+  twice, with and without the skill, at the player's median session length. Never replace it with a
+  table — that is 36 formulas copied. Dice skills (`VAN_MAY`) are REFUSED, not averaged.
+  ⚠️ **Two banners share the 96px slot.** `SkillMoment` (a direct answer to a tap) outranks
+  `DayMoment` (an ambient greeting) via App's `quiet` prop; both are mounted OUTSIDE `GlobalOverlays`,
+  which early-returns null on exactly the quiet screens they are for.
+  ⚠️ **The 1 SP/building rate did NOT change and must not.** Đàm's felt "5,6 sessions per point" is
+  the city tap alone; all three taps are ~139 SP over ~420 build-sessions ≈ **3 sessions per point**.
+  The fix was a sentence: `nextSkillPointETA` prints the nearer of the two taps countable in sessions,
+  because the header previously printed NOTHING whenever the next level was past
+  `STAGE_COUNTDOWN_MAX_SESSIONS` (~155 sessions on a real save). The week is excluded on purpose — a
+  chain closes on a calendar, so "~N phiên" would be invented.
+  ⚠️ **Hành trang keeps all three sub-tabs.** «Đã xây» is not a copy of the Thành Phố tab: it is the
+  only place that names what a built building's perk does.
+
+- **Loop — ROUND 44 (2026-09-08): THE CITY FUNDS THE SKILL TREE (ADR-084).**
   ⚠️ **A finished building pays 1 SKILL POINT — `engine/skillPointEconomy.js` owns the rate and the
   arithmetic behind it.** Do not "round it up to 2": 75 buildings × 1 + ~50/weekly chain + ~14/levels
   = ~139 SP against a tree costing exactly 138, so all three sources matter and the tree finishes as
@@ -66,25 +91,6 @@ item below is still live, it just now reviews something already running.
   Also: `components/journeyWiring.test.js` reads call sites, because an engine test proves a function
   RUNS and never that anyone CALLS it — this project has now shipped three finished-but-uncalled ones.
 
-- **Loop — ROUND 42 (2026-09-08): SPACE — ONE NUMBER FOR A SHAPE, ONE AXIS FOR A STACK
-  (ADR-083).** Order: *"VÒNG 42 = KHÔNG GIAN: cái gì nằm ở đâu, to bao nhiêu, có vừa khung không"*, with three
-  photographs. Root cause, one sentence: the ring was DRAWN at `min(canvas, cap) × transform: scale()` while the
-  room under it was RESERVED from a SECOND expression — a transform does not change layout, so once the cap bit
-  the drawing was bigger than the hole (390 px full screen: **427 drawn, 281 reserved, the goal line 32 px inside
-  the arc**); and `timerStageVisual` is a FRAGMENT of stacked blocks that desktop full screen mounted into a ROW
-  flex, so the same line flew onto the digits at 1280/2000. **`src/components/focus/ringMetrics.js` is now the ONE
-  owner** of the ring's geometry: `ringSizeCss()` → one CSS length for `width`, `aspect-ratio: 1` for the height,
-  three terms (px ceiling · 94 % of the column · `calc(100svh − min(<reserve>px, <reserve>svh))`); the slot has NO
-  height of its own, so reserved ≡ drawn; nine constants and the scaling wrapper deleted. Text inside the disc is
-  `cqw` (a fraction of the ring) instead of eleven rem values. `timerStageContent` carries its own column and is
-  the only mount point. Full screen is `h-[100svh] overflow-hidden` with the 890 px notebook behind a disclosure;
-  `min-h-[76/84/88vh]` only while idle. Sidebar rail: labels under icons, dots carry their reason
-  («Có việc» · «Tuần mới»). Gate: **`focus/ringText.test.js`** — 25 % clearance for every clock string at every
-  ring size 160–720 px, identical ratio at every size, red on a 10-character clock. Measured after: vertical
-  scroll **0** in every running/break/full-screen cell at 375/390/1280/2000; gap ring→line **+12 px** everywhere.
-  ⚠️ Inspect a running/break state with a seeded `timerSession`/`breakSession` fixture (ms timestamps, **regenerate
-  it right before each shot — a 25-minute session in a stale fixture has already ENDED and you photograph the
-  reward card instead**) and `--settle 900`.
 - **Loop — ROUND 41 (2026-09-08): THE LONG RHYTHMS, AND A TOOL THAT CAN SEE (ADR-081).**
   ⚠️ **`shot.mjs --dilate <rate>` is how a transient moment is photographed now.** One framer animation
   runs on TWO clocks (`opacity` on WAAPI, `x/y/scale` on framer's own rAF loop); `--dilate` slows both,

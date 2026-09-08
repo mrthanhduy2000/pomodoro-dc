@@ -17,6 +17,7 @@
  * ADR-060 đã chọn và `rewardFeed.js` đang dùng.
  */
 import { calculateStreakMilestoneProgress } from '../engine/gameMath';
+import { topCredits } from '../engine/sessionCredits.js';
 import { tierFromSessionMultiplier } from '../engine/rewardTiers';
 import { ERA_METADATA, RELIC_EVOLUTION, RELIC_EVOLVE_SESSIONS, STREAK_MILESTONES } from '../engine/constants';
 import { describeBuff } from '../engine/buffLabel';
@@ -62,6 +63,29 @@ function buildXpCard(reward) {
     chips.push({ id: 'golden', label: '🌟 Guồng vàng', value: `+${Math.round(toNumber(reward.goldenBonusXP))} XP` });
   }
   if (toNumber(reward.overclockBonus) > 0) chips.push({ id: 'overclock', label: 'Giam cầm', value: `+${reward.overclockBonus} XP` });
+
+  /*
+    ⚠️ ADR-085 — AI ĐÃ TRẢ CHO PHIÊN NÀY. Đây là mảnh còn thiếu của thẻ này suốt từ đầu: nó vốn đã
+    kể chuỗi · combo · vận may · guồng vàng, nhưng KHÔNG kể kỹ năng, di vật hay đặc quyền công
+    trình — tức 27/36 kỹ năng nổ đúng, mỗi phiên, và chưa từng hiện tên ở bất kỳ đâu. Đàm mở một
+    kỹ năng rồi không thấy gì đổi, vì thật sự không có gì để thấy.
+    ⚠️ CHỈ BA CHIP, phần dư đếm chứ không giấu (`topCredits`): một người mở hai mươi kỹ năng có thể
+    nổ tám cái một phiên, và tám chip dưới một con số lớn là bức tường huy hiệu quay lại dưới hình
+    dạng khác. Ba là đúng bằng hàng chip đã có ở trên (kỷ nguyên · chuỗi · combo).
+  */
+  const { shown: creditChips, hiddenCount } = topCredits(
+    Array.isArray(reward.credits) ? reward.credits : [],
+  );
+  for (const c of creditChips) {
+    chips.push({
+      id: `credit:${c.id}`,
+      label: `${c.icon} ${c.label}`,
+      // Phần lớn nguồn trả XP; nguồn CHỈ trả EP thì nói bằng phần trăm, vì EP của phiên không đi
+      // qua hệ số nhân bậc nên quy ra số tuyệt đối ở đây sẽ là một con số thứ hai không khớp thẻ.
+      value: c.xp > 0 ? `+${c.xp} XP` : `+${Math.round(c.epPct * 100)}% EP`,
+    });
+  }
+  if (hiddenCount > 0) chips.push({ id: 'credit-more', label: `+${hiddenCount} nguồn nữa` });
 
   const event = reward.positiveEvent?.label
     ? {

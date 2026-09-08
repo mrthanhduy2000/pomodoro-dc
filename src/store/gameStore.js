@@ -25,6 +25,7 @@
 import { create } from 'zustand';
 import { tinhGiuLai } from '../engine/prestigeCarryover';
 import { countBuiltBuildings } from '../engine/journey';
+import { describeSkillUnlock, previewSkillGain } from '../engine/skillPreview';
 import { settleCitySP } from '../engine/skillPointEconomy';
 import { wonderPassiveBuffs } from '../engine/wonderEffects.js';
 import { withCanonicalRelicText } from '../engine/relicGrowth';
@@ -506,6 +507,8 @@ function normalizeStoredCombo(combo = {}) {
 
 const makeDefaultUiState = () => ({
   lootModalOpen: false,
+  // ADR-085: khoảnh khắc «vừa mở một kỹ năng» — { id, label, line } hoặc null.
+  skillUnlocked: null,
   pendingReward: null,
   // ADR-078: the building the LAST session completed — the Focus postcard keeps its camera on it
   // until the next session starts. In-memory only (`ui` is not persisted): a reload looks at the brick.
@@ -2223,16 +2226,41 @@ const useGameStore = create(
         const prereqsMet = requires.every((req) => unlockedSkills[req]);
         if (!prereqsMet) return false;
 
+        /*
+          ⚠️ ADR-085 — ĐO GIÁ TRỊ **TRƯỚC** KHI MỞ, KHÔNG PHẢI SAU. `previewSkillGain` chạy phép tính
+          thưởng thật hai lần: một lần với bộ kỹ năng HIỆN TẠI, một lần với đúng kỹ năng này thêm
+          vào. Gọi nó sau khi `set()` đã chạy thì "bộ hiện tại" đã có kỹ năng ấy rồi và hiệu số ra 0
+          — cả khoảnh khắc sẽ im lặng, đúng cái im lặng vòng này sinh ra để chữa.
+          ⚠️ Đây là một phép tính THUẦN trên trạng thái đã có trong tay, không đọc `Date`, không
+          chạm mạng. Nó chỉ tốn hai lần chạy `calculateRewards` cho MỘT cú bấm hiếm.
+        */
+        const gain = previewSkillGain({
+          skillId,
+          unlockedSkills,
+          totalEP: state.progress.totalEP,
+          history: state.history,
+        });
+        const moment = describeSkillUnlock(gain);
+
         set((prev) => ({
           player: {
             ...prev.player,
             sp: prev.player.sp - effectiveCost,
             unlockedSkills: { ...prev.player.unlockedSkills, [skillId]: true },
           },
+          // ⚠️ `ui` KHÔNG nằm trong `partialize` — khoảnh khắc này không lên Supabase, tức không
+          // thêm một byte nào vào khối JSONB đang chịu CAS, và mở kỹ năng trên Mac không làm
+          // iPhone nháy một tấm băng-rôn về việc nó không chứng kiến.
+          ui: moment ? { ...prev.ui, skillUnlocked: { id: skillId, ...moment } } : prev.ui,
           latestSessionUndo: null,
         }));
         return true;
       },
+
+      /** Khoảnh khắc mở kỹ năng đã xem xong — luật vòng 40: thứ xảy-rồi-biến-mất, không đứng lại. */
+      dismissSkillUnlocked: () => set((prev) => (prev.ui.skillUnlocked
+        ? { ui: { ...prev.ui, skillUnlocked: null } }
+        : prev)),
 
       // ─── Kích hoạt kỹ năng chủ động ─────────────────────────────────────
 

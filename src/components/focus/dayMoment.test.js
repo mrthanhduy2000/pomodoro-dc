@@ -35,8 +35,20 @@ test('it happens and it is gone: a visible window, a dismiss timer, and no state
 test('silent while any timer runs — the round-39 screen outranks every long rhythm', () => {
   assert.match(SRC, /if \(quiet \|\| moment\) return undefined;/, 'a running timer must stop it before it decides anything');
   assert.match(SRC, /\{moment && !quiet &&/, 'and stop it rendering even if the state survived a transition');
-  assert.match(APP, /<DayMoment quiet=\{timerSessionRunning \|\| isOnBreak \|\| lootModalOpen\} \/>/,
-    'App must pass a focus session, a break AND the reward chain as quiet');
+  // ⚠️ ROUND 45: this used to string-match the whole `quiet={…}` expression, which made it go red
+  // the moment a FOURTH silencer was added legitimately (the skill-unlock moment, which owns the
+  // same 96px slot and must win — a direct answer to a tap outranks an ambient greeting). Matching
+  // the whole expression tested the punctuation, not the rule. Now each silencer is asserted on its
+  // own, so removing any of them is still red while adding one is allowed.
+  const quietExpr = /<DayMoment quiet=\{([^}]*)\}/.exec(APP);
+  assert.ok(quietExpr, 'App no longer passes a `quiet` prop to the day banner');
+  for (const silencer of ['timerSessionRunning', 'isOnBreak', 'lootModalOpen']) {
+    assert.ok(
+      quietExpr[1].includes(silencer),
+      `\`${silencer}\` no longer silences the day banner — a focus session, a break and the reward `
+      + `chain must all outrank it (round-39 screen law). Currently: ${quietExpr[1]}`,
+    );
+  }
   // ⚠️ And it must NOT live inside `GlobalOverlays`: that component early-returns null whenever
   // nothing is blocking and no toast is queued — i.e. on exactly the quiet morning this banner is for.
   const mount = APP.indexOf('<DayMoment');

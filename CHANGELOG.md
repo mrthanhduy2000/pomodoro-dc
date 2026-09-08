@@ -10,6 +10,38 @@
 > **Muốn hiểu VÌ SAO một quyết định được chọn** → `ARCHITECTURE_DECISIONS.md`. **Muốn biết migration
 > cụ thể nào cần chạy** → `MIGRATION.md`.
 
+## 2026-09-08 — Round 45: every bonus names itself at the ending, and opening a skill becomes a moment (ADR-085)
+
+**Purpose.** Answer the question round 44 created: *"is it worth spending points on?"*. Walking all
+36 skills found **27 that are a silent `+X% XP/EP`** — never shown on any screen — 6 genuinely felt,
+and 3 dead until a prestige. So the twelve taps round 44 paid for bought twelve numbers nobody could
+see, folded into one headline already summing eleven other things.
+
+**Scope.** New pure `engine/sessionCredits.js`: a credit ledger runs alongside the reward arithmetic
+(25 sites in `gameMath.js`, plus `sources` lists from `challengeEngine` and `wonderEffects`), so the
+ending card names the top three contributors as chips and counts the rest. It is a passenger — it
+reads the formula's locals and never feeds one back, so a bug there can make the card wrong but never
+the payout; at `XP_FACTOR_HARD_CAP` the credits are rescaled so the chips can never claim more than
+the headline. New pure `engine/skillPreview.js` + `components/focus/SkillMoment.jsx`: unlocking a
+skill is a 4,2-second banner stating the gain in the player's own numbers, **measured** by running
+the real `calculateRewards` twice at the median session length rather than read from a table; chance
+skills are refused, not averaged. The same measurement gives each of the three level-up choices its
+worth, so the card is a decision rather than three labels on one button. The phone Focus screen's day
+card ends with one line naming the week's current step (gated so it never ships beside the full weekly
+card). The skill-tree header now prints the NEARER of the two SP taps countable in sessions
+(`nextSkillPointETA`) — it previously printed nothing at all whenever the next level was over the
+printable ceiling, which on a real save was ~155 sessions away.
+
+**Impact.** No percentage, rate or price changed: the 1 SP/building ratio and the 75-building
+destination are untouched, and the whole round is presentation plus one new honest sentence. Đàm read
+the spend rhythm as 5,6 sessions per point (the city tap alone); all three taps together are ~139 SP
+over ~420 build-sessions ≈ **3 sessions per point**. Hành trang keeps all three sub-tabs: «Đã xây»
+looked like a copy of the Thành Phố tab until the tap was traced — it is the only place that names
+what a built building's perk does.
+
+**Compatibility.** No migration, no persisted-state change beyond a transient `ui.skillUnlocked`
+(not in `partialize`). Saves written before this round load unchanged.
+
 ## 2026-09-08 — Round 44: the city funds the skill tree, and the 360-badge system is deleted (ADR-084)
 
 **Purpose.** Answer *"what do I earn, and where do I spend it?"*. The economy had stopped running:

@@ -43,6 +43,7 @@
  *
  * PURE: no store, no `Date`, no DOM.
  */
+import { SP_PER_LEVEL } from './constants.js';
 
 /**
  * What one finished building is worth in skill points.
@@ -73,4 +74,72 @@ export function settleCitySP({ builtTotal = 0, credited = 0 } = {}) {
   const paid = Math.max(0, Math.floor(Number(credited) || 0));
   const owed = Math.max(0, earned - paid);
   return { owed, credited: paid + owed };
+}
+
+/**
+ * ⚠️ ROUND 45 — "WHEN DO I GET TO OPEN ANOTHER ONE?" (ADR-085)
+ *
+ * Round 44 opened three taps into the same bucket — a finished building (1 SP), a level (2 SP), a
+ * finished week (1–2 SP) — and each one announces itself in its own place: the building on the
+ * ending card, the level on this header, the week on the mission card. Đàm read only the first and
+ * concluded the rhythm was **5,6 sessions per point**. Across the whole journey it is
+ * 139 SP over ~420 build-sessions ≈ **3 sessions per point** — his felt number was nearly twice
+ * too slow because two of the three taps were invisible from where he was standing.
+ *
+ * ⚠️ THE FIX IS NOT A RATE CHANGE. The 1 SP/building ratio is load-bearing: it is what makes the
+ * tree finish as the city finishes, and Đàm's own brief forbids breaking it. What was missing was a
+ * single honest answer to "how far to the next point", so this returns the NEAREST of the two taps
+ * that can be stated in sessions.
+ *
+ * ⚠️ THE WEEK IS DELIBERATELY NOT HERE. A weekly chain closes on a calendar, not on a session
+ * count; converting "2 steps left" into "~N sessions" would be inventing a number, which is exactly
+ * what `medianSessionEP`'s honesty rule forbids. The week states itself on the mission card, in
+ * steps, where that is the truth.
+ *
+ * ⚠️ RETURNS `null` WHEN NEITHER IS KNOWN — a fresh save with an empty queue and no history has no
+ * honest answer, and a made-up one is worse than a blank line.
+ *
+ * PURE: no store, no `Date`, no DOM.
+ *
+ * @param {{ craftingQueue?: Array<{ bpId?: string, sessionsRemaining?: number }>,
+ *           sessionsToNextLevel?: number|null, nextLevel?: number|null,
+ *           projectLabel?: (bpId: string) => string|null }} input
+ * @returns {{ sessions: number, sp: number, source: 'building'|'level', label: string|null }|null}
+ */
+export function nextSkillPointETA({
+  craftingQueue = [], sessionsToNextLevel = null, nextLevel = null, projectLabel = null,
+} = {}) {
+  const queue = Array.isArray(craftingQueue) ? craftingQueue : [];
+  const head = queue
+    .map((item) => ({ bpId: item?.bpId, left: Number(item?.sessionsRemaining) }))
+    .filter((item) => Number.isFinite(item.left) && item.left > 0)
+    .sort((a, b) => a.left - b.left)[0] ?? null;
+  const levelLeft = Number.isFinite(Number(sessionsToNextLevel)) && Number(sessionsToNextLevel) > 0
+    ? Math.ceil(Number(sessionsToNextLevel))
+    : null;
+
+  const options = [];
+  if (head) {
+    options.push({
+      sessions: Math.ceil(head.left),
+      sp: SP_PER_BUILDING,
+      source: 'building',
+      label: (typeof projectLabel === 'function' ? projectLabel(head.bpId) : null) || null,
+    });
+  }
+  if (levelLeft !== null) {
+    options.push({
+      sessions: levelLeft,
+      sp: SP_PER_LEVEL,
+      source: 'level',
+      label: Number.isFinite(Number(nextLevel)) ? `cấp ${Number(nextLevel)}` : null,
+    });
+  }
+  if (options.length === 0) return null;
+  // ⚠️ TIE GOES TO THE BUILDING, not to the bigger payout. At an equal distance the building is the
+  // one he can SEE getting closer — the brick strip fills in front of him every session — while the
+  // level is an XP bar that moved by an amount he never watches. Naming the visible one keeps the
+  // sentence checkable against the screen he is already looking at.
+  options.sort((a, b) => (a.sessions - b.sessions) || (a.source === 'building' ? -1 : 1));
+  return options[0];
 }

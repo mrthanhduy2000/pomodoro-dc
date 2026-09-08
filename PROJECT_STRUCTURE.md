@@ -36,6 +36,11 @@
 │   │   │   ├── BrickRow.jsx          # Brick cells (laid · laying · new · empty), shared with the ending's project card; new bricks DROP (ADR-080)
 │   │   │   ├── BeatRipple.jsx        # The visible half of a session/break beat: two rings out of the clock, ~2 s (ADR-080)
 │   │   │   ├── DayMoment.jsx         # The LONG rhythms on screen (ADR-081): day/week open+close as a 7-second banner; stamps in localStorage
+│   │   │   ├── SkillMoment.jsx       # ADR-085: opening a skill is a 4,2-second banner saying what changed,
+│   │   │   │                         #   in measured XP ("Phiên 48 phút, khi đủ điều kiện: +5 XP").
+│   │   │   │                         #   Owns the same 96px slot as DayMoment and WINS it — a direct
+│   │   │   │                         #   answer to a tap outranks an ambient greeting (App passes it
+│   │   │   │                         #   into DayMoment's `quiet`). Mounted outside GlobalOverlays.
 │   │   │   ├── QuickPresets.jsx      # 25/5 · 50/10 … presets (+ `CHU_KY_NGHI_CO_KHAC_NHAU`)
 │   │   │   ├── ModeSwitch.jsx        # Pomodoro ↔ Stopwatch
 │   │   │   ├── StrictModeToggle.jsx  # strict mode switch
@@ -184,6 +189,22 @@
 │   │   │                     #   double-pay, and self-healing after a rejected CAS write. Never
 │   │   │                     #   subtracts. Settled in `normalizePersistedGameState` (the one door
 │   │   │                     #   external data passes) AND in `sessionRewards.js`.
+│   │                     #   ADR-085: `nextSkillPointETA` answers "when do I get to open another
+│   │                     #   one?" with the NEARER of the two taps countable in sessions (the
+│   │                     #   queue head, or the next level). The week is excluded on purpose —
+│   │                     #   a chain closes on a calendar, so "~N phiên" would be invented.
+│   ├── sessionCredits.js  # ADR-085 — THE LEDGER THAT NAMES WHO PAID, PURE. `makeCreditLedger`
+│   │                     #   collects one line per bonus as `gameMath` adds it; `settleCredits`
+│   │                     #   turns percentages into XP and RESCALES them at XP_FACTOR_HARD_CAP so
+│   │                     #   the chips can never claim more than the headline; `topCredits` shows
+│   │                     #   3 and counts the rest. ⚠️ A PASSENGER: it reads the formula's locals
+│   │                     #   and never feeds one back, so a bug here can make the CARD wrong and
+│   │                     #   never the PAYOUT.
+│   ├── skillPreview.js    # ADR-085 — WHAT ONE SKILL IS WORTH, MEASURED NOT LOOKED UP, PURE.
+│   │                     #   `previewSkillGain` runs the real `calculateRewards` twice (with and
+│   │                     #   without the skill) at the player's median session length and returns
+│   │                     #   the difference. Chance skills (VAN_MAY) are REFUSED, not averaged.
+│   │                     #   Feeds both the unlock moment and the three-choice card.
 │   │   ├── journey.js         # ADR-082 — THE DESTINATION, PURE. 15 eras x 5 blueprints = 75
 │   │   │                     #   buildings, SUMMED from BLUEPRINT_CATALOG (never a literal, so a
 │   │   │                     #   16th era moves the destination by itself). describeJourney →

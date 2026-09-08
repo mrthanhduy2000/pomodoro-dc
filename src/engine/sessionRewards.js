@@ -125,6 +125,9 @@ export function assembleSessionReward({
   const wonderBuffs = wonderPassiveBuffs(state.buildings, minutesFocused);
   activeBuffs.expBonus += wonderBuffs.expBonus;
   activeBuffs.epBonus += wonderBuffs.epBonus;
+  // ADR-085: bản kê đi cùng con số — đặc quyền công trình nối vào cùng danh sách với bậc và di vật,
+  // để thẻ kết phiên kể được đủ ba nguồn bằng một cơ chế thay vì ba.
+  activeBuffs.sources = [...(activeBuffs.sources ?? []), ...(wonderBuffs.sources ?? [])];
 
   // ─── Xây dựng sessionCtx cho gameMath ───────────────────────────
   const dt                = state.dailyTracking;

@@ -484,7 +484,7 @@ export default function App() {
     if (!storesHydrated) return;
     const scene = readPreviewScene(window.location.search);
     if (!scene) return;
-    const patch = buildPreviewUi(scene);
+    const patch = buildPreviewUi(scene, useGameStore.getState());
     if (patch) useGameStore.setState((prev) => ({ ui: { ...prev.ui, ...patch } }));
   }, [storesHydrated]);
 

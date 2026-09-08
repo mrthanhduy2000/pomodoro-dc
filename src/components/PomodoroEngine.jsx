@@ -2,7 +2,7 @@ import React, { useState, useCallback, useEffect, useMemo } from 'react';
 import { tomTatThietLap } from './pomodoroSetupSummary.js';
 import { AnimatePresence, motion } from 'framer-motion';
 
-import { useCustomMotion, useEnterMotion, useSnapMotion } from '../lib/motionPresets';
+import { useCustomMotion, useEnterMotion, useRewardMotion, useSnapMotion } from '../lib/motionPresets';
 import useGameStore from '../store/gameStore';
 import { pushNow } from '../lib/syncService';
 import useSettingsStore from '../store/settingsStore';
@@ -37,6 +37,8 @@ import {
   getSessionWorkedMinutes,
   parseFocusMinutesInput,
 } from '../engine/timerSession';
+import { planBreakBeats, planSessionBeats, resolveBeat } from '../engine/sessionBeats';
+import BeatRipple from './focus/BeatRipple';
 import ModeSwitch from './focus/ModeSwitch';
 import QuickPresets from './focus/QuickPresets';
 import StrictModeToggle from './focus/StrictModeToggle';
@@ -206,7 +208,8 @@ export default function PomodoroEngine({
   const [extendButtonGrace, setExtendButtonGrace] = useState(null);
   useEffect(() => {
     if (!isOnBreak) return;
-    document.title = `${formatTime(breakSecsLeft)} · DC Pomodoro`;
+    // ADR-080: ☕ while resting, ⏰ in the last minute — the tab strip says "come back" without a digit.
+    document.title = `${breakSecsLeft <= 60 ? '⏰' : '☕'} ${formatTime(breakSecsLeft)} · DC Pomodoro`;
     return () => {
       document.title = 'DC Pomodoro';
     };
@@ -458,13 +461,27 @@ export default function PomodoroEngine({
   // ADR-079: the number wears the ring's colour and nothing else — one accent per state (the last
   // ten seconds used to flash red, a fourth colour for a fact the ring already shows).
   const timerValueToneClass = isBreakMode ? 'text-[var(--good)]' : 'text-[var(--ink)]';
+  // ADR-080: the BEATS of the session and of the break — a few seconds each, then silence again.
+  // Derived from elapsed time, never from ticks: a background tab catches up on its first tick and a
+  // beat it slept through is simply gone. No sound of their own (the last-minute bell already rings).
+  const focusElapsedSeconds = Math.max(0, totalSeconds - displaySeconds);
+  const focusBeatsLive = !isBreakMode && timerState === TIMER_STATES.RUNNING && !isStopwatchMode;
+  const sessionBeat = focusBeatsLive ? resolveBeat(planSessionBeats(totalSeconds), focusElapsedSeconds) : null;
+  const breakBeat = isBreakMode
+    ? resolveBeat(planBreakBeats(breakTotalSeconds), Math.max(0, breakTotalSeconds - breakSecsLeft))
+    : null;
+  const beat = sessionBeat ?? breakBeat;
+  const whisperMotion = useRewardMotion();
+  // ADR-080: the ring WARMS UP as the session advances (glow 60 % → 120 % of its round-39 strength) —
+  // the one thing that "grows slowly and completes", and it adds nothing to the screen.
+  const warmth = focusBeatsLive ? 0.6 + 0.6 * Math.max(0, Math.min(1, progressPct / 100)) : 1;
   // ADR-079: the glow behind the ring is the ring's own colour, mixed from tokens (it used to be a
   // blue glow under a green break ring and a green glow under an orange focus ring).
   const glowOf = (token, a1, a2) => `radial-gradient(circle, color-mix(in srgb, ${token} ${a1}%, transparent) 0%, color-mix(in srgb, ${token} ${a2}%, transparent) 38%, transparent 72%)`;
   const immersiveGlow = isBreakMode
     ? glowOf('var(--good)', lightTheme ? 8 : 14, lightTheme ? 3 : 6)
     : isActive
-      ? glowOf('var(--accent)', lightTheme ? 10 : 14, lightTheme ? 3.5 : 6)
+      ? glowOf('var(--accent)', (lightTheme ? 10 : 14) * warmth, (lightTheme ? 3.5 : 6) * warmth)
       : glowOf('var(--ink)', lightTheme ? 4.5 : 8, lightTheme ? 1.5 : 3);
   const manualBreakWorkedMinutes = isStopwatchMode
     ? (completedSessionWorkedMinutes ?? (elapsedSeconds / 60))
@@ -612,7 +629,7 @@ export default function PomodoroEngine({
   const ringColor = isBreakMode ? breakRingColor : baseRingColor;
   // Quầng sáng quanh vòng: cùng màu vòng, pha loãng. Nhạt hơn ở theme sáng vì nền sáng thì một
   // quầng đậm đọc ra thành vệt bẩn, còn nền tối thì nó là thứ làm vòng "phát sáng".
-  const ringGlowColor = `color-mix(in srgb, ${ringColor} ${lightTheme ? 22 : 45}%, transparent)`;
+  const ringGlowColor = `color-mix(in srgb, ${ringColor} ${Math.round((lightTheme ? 22 : 45) * warmth)}%, transparent)`;
   // ── BA NHỊP CHUNG + NHỮNG NGOẠI LỆ CÓ LÝ DO ────────────────────────────────────────────────
   // Ba nhịp ở `src/lib/motionPresets.js`. Mỗi `useSnapMotion`/`useCustomMotion` bên dưới là một
   // ngoại lệ, và mỗi ngoại lệ phải tự khai lý do — không có dòng lý do thì nó đáng lẽ là `enter`.
@@ -1031,6 +1048,9 @@ export default function PomodoroEngine({
               style={{ background: immersiveGlow }}
             />
           )}
+          {beat && (
+            <BeatRipple key={`${isBreakMode ? 'break' : 'focus'}-${beat.id}`} color={isBreakMode ? 'var(--good)' : 'var(--accent)'} />
+          )}
           <motion.div className="relative" {...timerBreathMotion}>
           <svg
             width="100%"
@@ -1046,7 +1066,7 @@ export default function PomodoroEngine({
               // còn chạy nhờ hai mã hex cứng, mà hai mã ấy vừa bị gỡ. `color-mix` giữ được `var()`
               // nên quầng sáng đi theo skin — dự án đã dùng cách này ở `RewardCard.jsx`.
               filter: isBreakMode || timerState === TIMER_STATES.RUNNING
-                ? `drop-shadow(0 0 12px ${ringGlowColor})`
+                ? `drop-shadow(0 0 ${Math.round(12 * warmth)}px ${ringGlowColor})`
                 : 'none',
               transition: 'filter 0.4s ease',
             }}
@@ -1082,6 +1102,13 @@ export default function PomodoroEngine({
 
           <div className="absolute inset-0 flex flex-col items-center justify-center">
             <span className={`mono text-[10px] uppercase tracking-[0.22em] text-[var(--muted)]`}>
+              {/* ADR-080: during a beat the label WHISPERS the beat (a few seconds, no digit) — the same
+                  slot, the arc's colour, then the state label returns. Nothing is added to the screen. */}
+              {beat ? (
+                <motion.span key={beat.id} {...whisperMotion} className="inline-block" style={{ color: isBreakMode ? 'var(--good)' : 'var(--accent)' }}>
+                  {beat.label}
+                </motion.span>
+              ) : (<>
               {isBreakMode && (breakIsLong ? 'Giải lao dài' : 'Giải lao')}
               {/*
                 ⚠️ "Sẵn sàng" TỪNG NÓI DỐI. Nhãn này hiện ở MỌI trạng thái chờ, kể cả khi app đang
@@ -1101,6 +1128,7 @@ export default function PomodoroEngine({
               )}
               {!isBreakMode && timerState === TIMER_STATES.FINISHED && 'Hoàn thành'}
               {!isBreakMode && timerState === TIMER_STATES.CANCELLED && 'Đã hủy'}
+              </>)}
             </span>
             <motion.span
               key={`${isBreakMode ? 'break' : runtimeTimerMode}-${displayRingSeconds}`}

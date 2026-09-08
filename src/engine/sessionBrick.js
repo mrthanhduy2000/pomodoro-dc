@@ -15,7 +15,7 @@
  * composition layer already consumes.
  */
 import { describeProject, describeQueue, eraBuildProgress, listNextProjects } from './buildChoices';
-import { CRAFT_QUEUE_SLOTS } from './constants';
+import { CRAFT_QUEUE_SLOTS, LUCKY_BRICK_CHANCE, LUCKY_BRICK_MIN_MINUTES } from './constants';
 import { countActiveCrafting } from './eraLegacy';
 import { describeCraftProgress } from './craftProgress';
 
@@ -73,22 +73,25 @@ function brickStates(total, done, { laying = false, fresh = 0 } = {}) {
  * @param {number}  [p.progressRatio]   0..1 of the running session
  * @param {string[]} [p.newlyBuiltIds]  landed: buildings finished by this session
  * @param {string[]} [p.acceleratedIds] landed: buildings that got a second brick from a haste perk
+ * @param {string|null} [p.luckyBrickId] landed: the project that got the LUCKY second brick (ADR-080)
  * @param {string|null} [p.autoQueuedId] landed: project the game queued by itself this session
  */
 export function describeSessionBrick({
   craftingQueue = [], activeBook = 1, buildings = [], phase = 'idle', progressRatio = 0,
-  newlyBuiltIds = [], acceleratedIds = [], autoQueuedId = null,
+  newlyBuiltIds = [], acceleratedIds = [], autoQueuedId = null, luckyBrickId = null,
 } = {}) {
   if (phase === 'landed') {
     const builtId = (Array.isArray(newlyBuiltIds) ? newlyBuiltIds : []).find((id) => describeProject(id));
     if (builtId) {
       const project = describeProject(builtId);
       const total = Math.max(1, project.sessions);
-      const fresh = acceleratedIds.includes(builtId) ? 2 : 1;
+      const lucky = luckyBrickId != null && luckyBrickId === builtId;
+      const fresh = (acceleratedIds.includes(builtId) ? 2 : 1) + (lucky ? 1 : 0);
       return {
         status: 'built', phase, bpId: builtId, label: project.label, icon: project.icon, total, done: total,
-        remaining: 0, auto: false, bricks: brickStates(total, total, { fresh: Math.min(fresh, total) }),
-        headline: `${project.label} hoàn thành!`, sub: 'Đứng trong thành phố từ hôm nay.',
+        remaining: 0, auto: false, lucky, bricks: brickStates(total, total, { fresh: Math.min(fresh, total) }),
+        headline: `${project.label} hoàn thành!`,
+        sub: lucky ? 'Gạch đôi may mắn đặt nốt viên cuối — đứng trong thành phố từ hôm nay.' : 'Đứng trong thành phố từ hôm nay.',
       };
     }
   }
@@ -105,11 +108,13 @@ export function describeSessionBrick({
   const auto = pick.source === 'auto' || (autoQueuedId != null && autoQueuedId === project.bpId);
   const base = { status: 'building', phase, bpId: project.bpId, label: project.label, icon: project.icon, total, auto };
   if (phase === 'landed') {
-    const fresh = Math.min(done, acceleratedIds.includes(project.bpId) ? 2 : 1);
+    const lucky = luckyBrickId != null && luckyBrickId === project.bpId;
+    const fresh = Math.min(done, (acceleratedIds.includes(project.bpId) ? 2 : 1) + (lucky ? 1 : 0));
     const remaining = total - done;
     return {
-      ...base, done, remaining, bricks: brickStates(total, done, { fresh }),
-      headline: fresh >= 2 ? `Hai viên gạch đã đặt · ${done}/${total}` : `Viên gạch ${done}/${total} đã đặt`,
+      ...base, done, remaining, lucky, bricks: brickStates(total, done, { fresh }),
+      // ADR-080: the lucky brick is named FIRST — it is the surprise, and it must read at a glance.
+      headline: lucky ? `Gạch đôi — hôm nay may! · ${done}/${total}` : fresh >= 2 ? `Hai viên gạch đã đặt · ${done}/${total}` : `Viên gạch ${done}/${total} đã đặt`,
       sub: auto
         ? `Tự chọn ${project.label} cho bạn.`
         : remaining === 1 ? `Một phiên nữa là ${project.label} mọc lên.` : `Còn ${remaining} phiên nữa ${project.label} mọc lên.`,
@@ -204,4 +209,37 @@ export function listSessionProjectChoices({ craftingQueue = [], activeBook = 1, 
     .filter((p) => p.bpId !== head?.bpId)
     .map((p) => ({ ...p, total: p.sessions, done: 0, remaining: p.sessions, queued: false }));
   return [...queued, ...fresh].slice(0, Math.max(0, Math.floor(limit) || 0));
+}
+
+/**
+ * THE LUCKY BRICK (ADR-080). Sometimes a session lays two bricks instead of one.
+ *
+ * Đàm: "I can predict 100 % of what happens when a session ends — so much XP, so many bricks."
+ * The one unpredictable thing the game can give without a fourth currency is the thing it already
+ * counts in: a brick. Rules, all from his order — never negative (a miss is "bình thường", never a
+ * loss), no countdown or spin (the roll is silent and the odds are not shown), understandable at
+ * first sight ("two bricks landed"), on the SESSION axis only (ADR-069: the only currency is a
+ * session — this changes `sessionsRemaining`, nothing else).
+ *
+ * The extra brick goes to the project the session's own brick went to — the queue head — never to
+ * a building that just finished (that ending is already the bigger moment; `sessionRewards.js`
+ * skips the roll then). Short sessions are not eligible: a 5-minute session laying two bricks
+ * would make the lucky brick worth more than the work.
+ *
+ * `random` is injected so the reward assembly stays deterministic under test.
+ */
+export function rollLuckyBrick({
+  craftingQueue = [], minutesFocused = 0, random = Math.random, chance = LUCKY_BRICK_CHANCE,
+} = {}) {
+  const queue = Array.isArray(craftingQueue) ? craftingQueue : [];
+  const miss = { craftingQueue: queue, luckyBrickId: null, builtId: null };
+  const head = queue[0];
+  if (!head?.bpId || !(Number(head.sessionsRemaining) >= 1)) return miss;
+  if (!(Number(minutesFocused) >= LUCKY_BRICK_MIN_MINUTES)) return miss;
+  if (!(random() < chance)) return miss;
+  const remaining = Number(head.sessionsRemaining) - 1;
+  if (remaining <= 0) {
+    return { craftingQueue: queue.slice(1), luckyBrickId: head.bpId, builtId: head.bpId };
+  }
+  return { craftingQueue: [{ ...head, sessionsRemaining: remaining }, ...queue.slice(1)], luckyBrickId: head.bpId, builtId: null };
 }

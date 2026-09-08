@@ -15,6 +15,7 @@
 │   │   │                     #   z dưới 50, kẻo chuông nổi lên trên lớp mờ và bấm được
 │   │   ├── shared/           # Component/style dùng chung GIỮA NHIỀU file components khác
 │   │   │   ├── BadgeKit.jsx      # TypeBadge/RarityBadge/PerkSummary (BuildScreen dùng PerkSummary; hai màn cũ đã gỡ)
+│   │   │   ├── RewardBurst.jsx   # Burst behind a reward, THREE sizes = three tiers of the ending (ADR-080): brick · building · rare
 │   │   │   └── RewardCard.jsx    # THẺ PHẦN THƯỞNG DUY NHẤT của app (ADR-060). Chỉ VẼ, không đọc
 │   │   │                         #   store, không biết luật chơi ⇒ dùng được cả trong hộp thoại
 │   │   │                         #   lẫn trong toast. Độ hiếm lấy từ `engine/rewardTiers.js` và
@@ -28,7 +29,8 @@
 │   │   │   │                     #   alive when idle, camera on this session's brick; caption = greeting + EraStageBar
 │   │   │   ├── cityPostcard.js    # PURE: layout input (phantom scaffold for the auto-pick) · focus target · selection resolve
 │   │   │   ├── SessionBrickStrip.jsx # "This session's brick" above the ring — reads craftingQueue/buildings, engine/sessionBrick.js
-│   │   │   ├── BrickRow.jsx          # Brick cells (laid · laying · new · empty), shared with the ending's project card
+│   │   │   ├── BrickRow.jsx          # Brick cells (laid · laying · new · empty), shared with the ending's project card; new bricks DROP (ADR-080)
+│   │   │   ├── BeatRipple.jsx        # The visible half of a session/break beat: two rings out of the clock, 1.9 s (ADR-080)
 │   │   │   ├── QuickPresets.jsx      # 25/5 · 50/10 … presets (+ `CHU_KY_NGHI_CO_KHAC_NHAU`)
 │   │   │   ├── ModeSwitch.jsx        # Pomodoro ↔ Stopwatch
 │   │   │   ├── StrictModeToggle.jsx  # strict mode switch
@@ -61,9 +63,7 @@
 │   │   ├── city/             # Màn hình Thành Phố. Luật: KHUNG tách khỏi BỘ VẼ (ADR-008)
 │   │   │   ├── CityViewShell.jsx # KHUNG: chuyển kỷ, số liệu, trạng thái rỗng. KHÔNG biết bộ vẽ
 │   │   │   │                     #   nào đang chạy — bộ vẽ vào qua `children` và TỰ định kích thước
-│   │   │   ├── EraSwitcher.jsx   # Thanh chuyển giữa các kỷ trong bảo tàng
-│   │   │   │                     #   ⚠️ Tự cuộn kỷ đang xem vào tầm mắt, và phải căn LẠI qua
-│   │   │   │                     #   ResizeObserver (font nạp xong mới tràn) — xem BAN_GIAO 3J
+│   │   │   ├── EraSwitcher.jsx   # Era chips of the museum — a WRAPPING grid since ADR-080 (no horizontal scroll, no align machinery)
 │   │   │   ├── BuildingCard.jsx  # Thẻ hiện ra khi CHẠM vào một công trình trong cảnh 3D.
 │   │   │   │                     #   Thuần trình bày — nhận sẵn phần tử của layout, không tra cứu
 │   │   │   ├── cityTokens.js     # Token DÙNG CHUNG mọi bộ vẽ: eraTint/eraSolid/cardStyle
@@ -167,7 +167,8 @@
 │   │   ├── feedNotifications.js · achievementState.js · streak.js · overclock.js · trackingDefaults.js · eraScope.js
 │   │   ├── buildingPerks.js · historyStats.js · longBreakCycle.js · savedNotes.js   # ten helper clusters moved verbatim
 │   │   │                     #   out of gameStore.js (ADR-078); each header says what it owns. Pure, no store.
-│   │   ├── sessionBrick.js    # "This session's brick" (ADR-077): pickSessionProject · autoQueueSessionProject · chooseSessionProject · describeSessionBrick
+│   │   ├── sessionBrick.js    # "This session's brick" (ADR-077): pickSessionProject · autoQueueSessionProject · chooseSessionProject · describeSessionBrick · rollLuckyBrick (ADR-080)
+│   │   ├── sessionBeats.js    # Session + break BEATS, PURE (ADR-080): planSessionBeats · planBreakBeats · resolveBeat · sessionPhaseGlyph
 │   │   ├── missions.js        # Daily missions, PURE (ADR-077): roll · normalize · snapshot progress · tickDailyMissions (live = reload)
 │   │   ├── weeklyChain.js     # Weekly step chain, PURE (`now` param): refreshWeeklyChain · autoClaimWeeklySteps · rebuild
 │   │   ├── seededRng.js       # String-seeded PRNG shared by missions.js + weeklyChain.js

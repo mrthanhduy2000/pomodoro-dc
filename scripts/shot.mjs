@@ -133,6 +133,10 @@ const FIXTURE = arg('--fixture', null);
 // / lên cấp / chuỗi toast, vì `ui` nằm ngoài `partialize` (gieo localStorage không tới) và bấm
 // "Bắt đầu" thì bị cấm trên dev. Tên cảnh: xem `PREVIEW_SCENES`.
 const PREVIEW = arg('--preview', null);
+// `--card <id>` jumps the reward chain straight to one card (`?dc-preview-card=`, see `readPreviewCard`)
+// — the project card is the second card, and a transient burst on it cannot be caught after 2.6 s of
+// auto-advance. ADR-080.
+const PREVIEW_CARD = arg('--card', null);
 // `--ls khoá=giá-trị` (lặp được) — gieo thêm khoá localStorage tuỳ ý trước khi app chạy.
 // ⚠️ VÌ SAO CẦN: nhiều tính năng của app nhớ trạng thái "đã xem" bằng một khoá localStorage RIÊNG,
 // ngoài hai khoá lớn ở dưới — `dc-nav-seen-v1` (thành tích đã xem), `dc-stage-seen-v1` (mốc đã ăn
@@ -175,7 +179,9 @@ const GAME = FIXTURE ? JSON.parse(readFileSync(FIXTURE, 'utf8')) : {
 const SETTINGS = {
   state: {
     uiTheme: THEME, uiSkin: SKIN, cityHomeBackdrop: true,
-    cityRenderMode: '3d', hasViewedInitialOnboarding: true,
+    // `--city2d`: the 2D renderer keeps the main thread quiet — needed when photographing a transient
+    // moment, because the 3D loop delays every CDP round-trip by hundreds of ms (ADR-080).
+    cityRenderMode: has('--city2d') ? '2d' : '3d', hasViewedInitialOnboarding: true,
   },
   version: 8,
 };
@@ -198,6 +204,9 @@ const clockPatch = FAKE_EPOCH === null ? '' : `<script>(function(){
   thoáng qua: thẻ thưởng · huy hiệu mốc 25/50/75% · lễ mừng thành phố.
 */
 const WATCH = arg('--watch', null);
+// `--watch-delay <ms>`: after the watched text appears, wait this long before shooting — a burst or a
+// ripple is mid-flight a few hundred ms after the card/label it rides on mounts (ADR-080).
+const WATCH_DELAY = Number(arg('--watch-delay', 0));
 const watchPatch = !WATCH ? '' : `<script>(function(){
   var CAN=${JSON.stringify(WATCH)}, t0=Date.now(), log=[], dang=false;
   window.__dcWatch=log;
@@ -217,10 +226,13 @@ const MIME = {
 };
 
 const seedPage = `<!doctype html><meta charset="utf-8"><body><script>
-localStorage.setItem('dc-pomodoro-v1', ${JSON.stringify(JSON.stringify(GAME))});
+// ADR-080: a fixture may write a timestamp as "__NOW-751__" (seconds relative to NOW); it is resolved
+// HERE, in the browser, a moment before the app loads — the only way to land a shot inside an
+// 8-second beat window, since launching the browser alone takes ~20 s.
+localStorage.setItem('dc-pomodoro-v1', ${JSON.stringify(JSON.stringify(GAME))}.replace(/"__NOW([+-]\\d+)__"/g, (m, d) => String(Date.now() + Number(d) * 1000)));
 localStorage.setItem('dc-pomodoro-settings-v2', ${JSON.stringify(JSON.stringify(SETTINGS))});
 ${EXTRA_LS.map(([k, v]) => `localStorage.setItem(${JSON.stringify(k)}, ${JSON.stringify(v)});`).join('\n')}
-location.replace('/index.html' + ${JSON.stringify(PREVIEW ? `?dc-preview=${PREVIEW}` : '')});
+location.replace('/index.html' + ${JSON.stringify(PREVIEW ? `?dc-preview=${PREVIEW}${PREVIEW_CARD ? `&dc-preview-card=${PREVIEW_CARD}` : ''}` : '')});
 </script></body>`;
 
 const server = createServer((req, res) => {
@@ -294,6 +306,23 @@ const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 
 await cdp('Page.enable');
 await cdp('Runtime.enable');
+// `--slow <rate>` (ADR-080): play every animation at this fraction of speed. A burst lasts under a
+// second and the screenshot pipeline in this sandbox is slower than that, so at full speed a
+// photograph always lands after the confetti is gone — the same "clean picture that reads as
+// feature-not-running" the note at the top of this file warns about. framer-motion 12 drives
+// transform/opacity through WAAPI, which honours the document's playback rate.
+// With `--watch`, the rate is applied only AFTER the watched text appears (+ `--watch-delay` of
+// real time, so the card's own entrance finishes) and the shot waits `--slow-hold` ms more: the
+// burst is then mid-flight while everything around it is already in place. Without `--watch` the
+// rate applies from the start (every entrance is slow too — useful only for a still page).
+const SLOW = Number(arg('--slow', 1));
+const SLOW_HOLD = Number(arg('--slow-hold', 900));
+const slowDown = async () => {
+  if (SLOW === 1) return;
+  await cdp('Animation.enable');
+  await cdp('Animation.setPlaybackRate', { playbackRate: SLOW });
+};
+if (!WATCH) await slowDown();
 // ⚠️ ĐÂY là thứ `--window-size` không làm được: đặt bề ngang bố cục THẬT.
 await cdp('Emulation.setDeviceMetricsOverride', {
   width: WIDTH, height: HEIGHT, deviceScaleFactor: DPR, mobile: PHONE,
@@ -349,6 +378,26 @@ const waitForSteadyDom = async () => {
   Nên khi có `--watch`, ta bỏ qua cả `--settle` lẫn cổng đứng-yên, và chụp NGAY LÚC chuỗi ấy đang
   hiện. Vẫn giữ cổng "≥3 nút" (đó là cổng CÓ NỘI DUNG, không phải cổng đứng yên).
 */
+/*
+  What happens the moment the watched text is on screen (ADR-080, transient moments):
+    · `--slow <rate>` FIRST (two CDP round-trips, ~150 ms after the text appeared) — WAAPI animations
+      (opacity, the ripple's scale) then crawl; framer's rAF-driven x/y/scale do not, so a confetti
+      burst still cannot be photographed here — its DOM was verified instead (`--ask`).
+    · then `--watch-delay` ms, then `--slow-hold` ms: at rate r the animation advances r × (delay + hold).
+    · `--snap`: capture RIGHT HERE, skipping every probe between this point and the normal capture
+      (each probe is a CDP round-trip; together they cost ~800 ms — longer than a burst lives).
+*/
+async function afterWatchHit() {
+  if (SLOW !== 1) await slowDown();
+  if (WATCH_DELAY > 0) await sleep(WATCH_DELAY);
+  if (SLOW !== 1 && SLOW_HOLD > 0) await sleep(SLOW_HOLD);
+  if (!has('--snap')) return;
+  const snap = await cdp('Page.captureScreenshot', { format: 'png' });
+  writeFileSync(OUT, Buffer.from(snap.data, 'base64'));
+  console.log(`✓ ${OUT} (snap; watch ${await evaluate('JSON.stringify(window.__dcWatch||[])')})`);
+  ws.close(); chrome.kill(); server.close();
+  process.exit(0);
+}
 if (WATCH) {
   let thay = false;
   for (let i = 0; i < 300; i += 1) {
@@ -358,6 +407,7 @@ if (WATCH) {
     if (dangHien === 'true') { thay = true; break; }
     await sleep(100);
   }
+  if (thay) await afterWatchHit();
   if (!thay) {
     const nhatKy = await evaluate('JSON.stringify(window.__dcWatch||[])');
     console.error(`✗ KHÔNG THẤY ${JSON.stringify(WATCH)} trong 30 giây. Nhật ký: ${nhatKy}`);
@@ -376,7 +426,9 @@ if (WATCH) {
   }
 }
 
-if (TAB) {
+// With `--watch` the watched text proves the screen is the right one; a tab click here would only add
+// latency between the moment and the capture.
+if (TAB && !WATCH) {
   // ⚠️ PHẢI THỬ LẠI, không bấm một phát. App còn phải nạp chunk + hydrate; bấm sớm một nhịp thì
   // nút chưa tồn tại, mà lần chụp vẫn "thành công" — ra ảnh MÀN HÌNH KHÁC mà trông vẫn hợp lý.
   // Đúng họ với những lời nói dối ở đầu file: hỏng im lặng, không có gì báo động.
@@ -401,7 +453,10 @@ if (TAB) {
     ws.close(); chrome.kill(); server.close();
     process.exit(1);   // thà hỏng to còn hơn giao một tấm ảnh sai màn hình
   }
-  await sleep(SETTLE);
+  // ⚠️ With `--watch` the thing being photographed is TRANSIENT (ADR-080): a settle here of 3.5 s
+  // lands the shot after every burst is gone. Measured: the watch saw the card at 13.1 s and the
+  // capture ran at 18.4 s — five seconds of "settling" on a screen that was already there.
+  await sleep(WATCH ? 0 : SETTLE);
 }
 
 // ⚠️ KHỚP CẢ `aria-label` VÀ `title`, KHÔNG CHỈ CHỮ HIỂN THỊ (thêm 2026-08-30).
@@ -806,6 +861,10 @@ if (CROP) {
   console.log(`  cắt vùng x=${Math.round(box[0])} y=${Math.round(box[1])} w=${Math.round(box[2])} h=${Math.round(box[3])}`);
 }
 
+// `--ask <js>`: evaluate an expression in the page right before the capture and print it — the
+// cheapest way to ask the page a question the picture cannot answer (a media query, a style value).
+const ASK = arg('--ask', null);
+if (ASK) console.log('ask →', await evaluate(ASK));
 const shot = await cdp('Page.captureScreenshot', { format: 'png', ...(clip ? { clip } : {}) });
 writeFileSync(OUT, Buffer.from(shot.data, 'base64'));
 

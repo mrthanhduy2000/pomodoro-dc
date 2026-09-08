@@ -295,3 +295,11 @@ test('thẻ thử thách kỷ nguyên: chỉ khi vừa mở hoặc phiên này v
   assert.equal(mo.opened, true, 'vừa mở thì phải kể, dù phiên này chưa được tính');
   assert.ok(!buildRewardStoryCards({ reward: REWARD, crisisQuest: { ...quest, passed: true, countedThisSession: true } }).some((c) => c.id === 'quest'));
 });
+
+test('project card (ADR-080): carries the lucky flag from the engine, false by default', () => {
+  const brick = { status: 'building', label: 'Hải Đăng', icon: '🗼', total: 6, done: 3, bricks: ['laid', 'new', 'new', 'empty', 'empty', 'empty'], headline: 'Gạch đôi — hôm nay may! · 3/6', sub: 'x' };
+  const [, lucky] = buildRewardStoryCards({ reward: REWARD, project: { ...brick, lucky: true } });
+  assert.equal(lucky.lucky, true);
+  const [, plain] = buildRewardStoryCards({ reward: REWARD, project: brick });
+  assert.equal(plain.lucky, false);
+});

@@ -2239,6 +2239,12 @@ export const COMBO_DECAY_MS        = 4 * 3_600_000; // 4 giờ giữa các phiê
 // ─── SỰ KIỆN TÍCH CỰC NGẪU NHIÊN ────────────────────────────────────────────
 // Khi kết thúc phiên đủ dài, một sự kiện ngẫu nhiên có thể kích hoạt → bonus XP.
 export const POSITIVE_EVENT_XP_SCALE = 0.55;
+// ─── VIÊN GẠCH MAY MẮN (ADR-080) ───────────────────────
+// Sometimes a session lays TWO bricks. On the session axis only (no currency), never negative, no
+// countdown to the next one: "bình thường" or "hôm nay may". Rolled with the injected dice in
+// `assembleSessionReward`; ~1 session in 8, only for sessions long enough to be a real brick.
+export const LUCKY_BRICK_CHANCE = 0.12;
+export const LUCKY_BRICK_MIN_MINUTES = 15;
 export const POSITIVE_EVENTS = [
   { id: 'momentum',    label: 'Đà Tốt',                icon: '🚀', desc: 'Mọi thứ theo quán tính tốt.',            bonusPct: 0.15, minMinutes: 10, chance: 0.18 },
   { id: 'breakthrough',label: 'Đột Phá!',              icon: '💡', desc: 'Khoảnh khắc hiểu sâu bất ngờ.',          bonusPct: 0.25, minMinutes: 20, chance: 0.12 },

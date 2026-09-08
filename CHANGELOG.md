@@ -10,6 +10,20 @@
 > **Muốn hiểu VÌ SAO một quyết định được chọn** → `ARCHITECTURE_DECISIONS.md`. **Muốn biết migration
 > cụ thể nào cần chạy** → `MIGRATION.md`.
 
+## 2026-09-08 — Round 40: things that happen and vanish (ADR-080)
+
+**Purpose.** *"Dọn xong thì lộ ra chỗ trống — vòng này lấp chỗ trống ấy."* Give the 125 silent minutes a rhythm, make the ending burst by tier, add one real surprise, design the break — while round 39's screen stays exactly as it is (1 indicator · ≤2 numbers · ≤3 colours · 0 cut text). Static budget: zero.
+
+**Scope.**
+- **Session beats** (`engine/sessionBeats.js`, `focus/BeatRipple.jsx`): Vào guồng · Nửa đường · Đoạn cuối · Phút cuối — an 8-second whisper in the ring label plus a ripple out of the ring; derived from elapsed time (background-safe), no new sound. The ring's glow warms with progress; the tab title carries a phase glyph ○ ◔ ◑ ◕ ● (☕/⏰ on a break).
+- **Break beats**: Đứng dậy · Uống nước · Sắp hết nghỉ, in `--good`; the existing break-over cue and notification stay.
+- **Tiered ending** (`shared/RewardBurst.jsx`, `focus/BrickRow.jsx`): the brick drops with a squash and a dust puff; a finished building gets a light ring and confetti; rare cards (streak milestone · level · rank · relic · era · finished chain) burst full-screen. Never blocks.
+- **Lucky brick** (`rollLuckyBrick`, `LUCKY_BRICK_CHANCE` 0.12, ≥ 15 min): sometimes a session lays two bricks — «Gạch đôi — hôm nay may!»; never negative, no odds, no countdown; `pendingReward.luckyBrickId`; preview scenes `loot-lucky` · `loot-built` (queue-head placeholder), shot tool `--card`.
+- **Leftovers**: reward tiers recoloured into the three-colour family; era chip strip wraps (scroll machinery deleted); era colours on the City tab kept; clock subline unchanged.
+- Tests: `sessionBeats` 6 · `sessionBrickLucky` 4 · `sessionRewards` +2 · `sessionRewardStory` +1; `cityRenderers` era-strip test rewritten. Full suite 1,623 tests · 1,622 pass · 0 fail · 1 skipped.
+
+**Compatibility.** No save migration: `luckyBrickId` lives in `ui.pendingReward` (not persisted); the queue shape is unchanged. Reduce-motion users get the whisper and the drop-less brick, no particles.
+
 ## 2026-09-07 — Round 39: while a timer runs, the Focus screen is the timer (ADR-079)
 
 **Purpose.** *"Dọn giao diện màn Tập trung — mở app lên, liếc một cái, biết ngay còn bao lâu và đang làm gì."* No feature added, none deleted: what competes with the time left is hidden while a timer runs and returns when it stops.

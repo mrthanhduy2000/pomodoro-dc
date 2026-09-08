@@ -45,6 +45,7 @@ import WeekStrip from './WeekStrip';
 import { buildWeekStrip } from './todayHero';
 import { dailyAllBonusXP, scaleMissionXP } from '../engine/missions';
 import { STORY_LAST_CARD_MS, buildRewardStoryCards, storyCardDurationMs } from './sessionRewardStory';
+import RewardBurst from './shared/RewardBurst';
 
 const DISPLAY_FONT = 'var(--skin-font-display)';
 const eyebrowClass = 'mono text-[10px] uppercase tracking-[0.24em]';
@@ -150,6 +151,12 @@ export default function SessionRewardStory({ onDone }) {
 
   // Thẻ đang HỎI (chọn kỹ năng) thì đứng yên cho tới khi chọn xong hoặc bấm "Để sau".
   const holding = Boolean(card?.hold) && !pickedSkill;
+  // ADR-080: the RARE tier — streak milestone · level · rank · relic · era · a finished weekly chain —
+  // bursts across the whole screen behind the card. Bigger than a brick, bigger than a building.
+  const rare = Boolean(card) && (
+    card.id === 'level' || card.id === 'era' || card.id === 'rank' || card.id === 'relic' || card.id === 'evolve'
+    || (card.id === 'streak' && card.justHit) || (card.id === 'chain' && card.finished)
+  );
 
   // Tự lật. Đứng yên khi đang soi (`frozen`) hoặc đang hỏi (`holding`).
   useEffect(() => {
@@ -195,6 +202,7 @@ export default function SessionRewardStory({ onDone }) {
       role="dialog"
       aria-label="Phần thưởng phiên vừa xong"
     >
+      {rare && <RewardBurst key={card.id} size="rare" className="absolute inset-0" />}
       <div
         className="mx-auto flex h-full w-full max-w-[460px] flex-col px-6"
         style={{
@@ -555,6 +563,7 @@ function describeProjectAfterSession({ reward, craftingQueue, buildings, activeB
     newlyBuiltIds: Array.isArray(reward?.newlyBuiltIds) ? reward.newlyBuiltIds : [],
     acceleratedIds: Array.isArray(reward?.acceleratedCraftingIds) ? reward.acceleratedCraftingIds : [],
     autoQueuedId: reward?.autoQueuedId ?? null,
+    luckyBrickId: reward?.luckyBrickId ?? null,
   });
 }
 
@@ -593,17 +602,32 @@ function ProjectCard({ card, onChoose }) {
   const enterMotion = useEnterMotion();
   const pressMotion = usePressMotion();
   const built = card.status === 'built';
+  // ADR-080: three tiers, three bursts — a brick puffs dust, a building (or a lucky double brick)
+  // sends a light ring and confetti. The burst sits behind the glyph and is gone in under a second.
+  const burst = built || card.lucky ? 'building' : 'brick';
   return (
     <div>
-      <p className={eyebrowClass} style={{ color: 'var(--muted)' }}>{built ? 'Thành phố · công trình mới' : 'Viên gạch của phiên này'}</p>
-      <motion.div {...rewardMotion} className={`mt-3 leading-none ${hasGlyphIcon(card.icon) ? (built ? 'text-[72px]' : 'text-[56px]') : 'mono text-[22px] uppercase tracking-[0.2em]'}`} aria-hidden="true">
-        {getGlyph(card.icon, card.label, 'BP')}
-      </motion.div>
+      <p className={eyebrowClass} style={{ color: 'var(--muted)' }}>{built ? 'Thành phố · công trình mới' : card.lucky ? 'Hôm nay may' : 'Viên gạch của phiên này'}</p>
+      <div className="relative mx-auto mt-3 inline-block">
+        <RewardBurst key={`${card.status}-${card.lucky ? 'lucky' : 'plain'}`} size={burst} className="absolute inset-0" />
+        <motion.div {...rewardMotion} className={`relative leading-none ${hasGlyphIcon(card.icon) ? (built ? 'text-[72px]' : 'text-[56px]') : 'mono text-[22px] uppercase tracking-[0.2em]'}`} aria-hidden="true">
+          {getGlyph(card.icon, card.label, 'BP')}
+        </motion.div>
+      </div>
       <p className="mt-3 text-[22px] font-semibold leading-tight" style={{ color: 'var(--ink)', fontFamily: DISPLAY_FONT }}>
         {card.headline}
       </p>
       <BrickRow className="mt-4" bricks={card.bricks} size={built ? 30 : 26} label={`${card.done}/${card.total} viên gạch · ${card.label}`} />
-      <motion.p {...withDelay(enterMotion, 0.5)} className="mt-4 text-[15px] font-semibold" style={{ color: built ? 'var(--accent2)' : 'var(--ink-2)' }}>
+      {card.lucky && (
+        <motion.p
+          {...withDelay(rewardMotion, 0.35)}
+          className="mono mt-3 inline-block rounded-full px-3 py-1.5 text-[11px] font-semibold uppercase tracking-[0.18em]"
+          style={{ background: 'rgba(var(--accent-rgb), 0.12)', color: 'var(--accent2)' }}
+        >
+          🍀 Gạch đôi
+        </motion.p>
+      )}
+      <motion.p {...withDelay(enterMotion, 0.5)} className="mt-4 text-[15px] font-semibold" style={{ color: built || card.lucky ? 'var(--accent2)' : 'var(--ink-2)' }}>
         {card.sub}
       </motion.p>
       {card.auto && !built && (

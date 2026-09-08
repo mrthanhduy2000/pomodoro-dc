@@ -13,7 +13,10 @@
 > mà không được refactor triệt để, phải CHỦ ĐỘNG đề xuất mở một "Maintenance Sprint" (nêu rõ mục
 > tiêu/phạm vi/lợi ích/rủi ro/tiêu chí hoàn thành) thay vì tiếp tục cộng thêm tính năng mới.
 >
-> **Threshold status (2026-09-07, after ADR-079 "round 39")**: no entry opened or closed; a UI-only round
+> **Threshold status (2026-09-08, after ADR-080 "round 40")**: no entry opened or closed; a moments-only round
+> (beats · tiered ending · lucky brick · break beats · round-39 leftovers). Counts unchanged.
+>
+> *(previous)* **Threshold status (2026-09-07, after ADR-079 "round 39")**: no entry opened or closed; a UI-only round
 > (one indicator · three colours · no cut text on the Focus screen). Two things seen and NOT fixed are in
 > the round report, not here: the City tab's per-era colours and its era-chip scroller — design calls for Đàm.
 >

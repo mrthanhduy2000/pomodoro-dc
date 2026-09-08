@@ -32,6 +32,8 @@
 export const PREVIEW_PARAM = 'dc-preview';
 /** Thẻ nào của chuỗi thẻ thưởng cần đứng yên để chụp (`xp` · `project` · `streak` · `today` · `quests` · `chain` · `quest` · `level` · `rank` · `relic` · `evolve` · `era`). */
 export const PREVIEW_CARD_PARAM = 'dc-preview-card';
+/** Placeholder a scene may use for "the project at the head of the inspected save's queue" (ADR-080). */
+export const QUEUE_HEAD = '__queue_head__';
 
 /** Một phiên 25 phút bình thường, không có gì đặc biệt — ca HAY GẶP NHẤT. */
 const PHIEN_THUONG = {
@@ -75,6 +77,8 @@ const PHIEN_THUONG = {
   // ADR-077: the ending's project card reads these three (brick landed / building finished / auto-queued).
   newlyBuiltIds: [],
   autoQueuedId: null,
+  // ADR-080: the lucky second brick (null = a normal session).
+  luckyBrickId: null,
 };
 
 /** Ca ĐỈNH: jackpot + rương lớn + lên cấp + sự kiện tốt. Dùng để soi lúc màn đông nhất. */
@@ -127,6 +131,13 @@ export const PREVIEW_SCENES = {
   'loot-max': { lootModalOpen: true, pendingReward: PHIEN_DINH },
   /** Lên kỷ nguyên: thẻ cuối là «Kỷ nguyên mới» với nút xem thành phố (ADR-070: không còn hộp thoại chi tiết). */
   era: { lootModalOpen: true, pendingReward: { ...PHIEN_DINH, eraChanged: true, newBook: 9 } },
+  /**
+   * ADR-080: the two project-card moments that depend on the SAVE being inspected — the lucky second
+   * brick and a building finished. `QUEUE_HEAD` is swapped for the real queue head at apply time
+   * (`buildPreviewUi(scene, state)`), so the scenes stay plain data the fidelity tests can read.
+   */
+  'loot-lucky': { lootModalOpen: true, pendingReward: { ...PHIEN_THUONG, luckyBrickId: QUEUE_HEAD } },
+  'loot-built': { lootModalOpen: true, pendingReward: { ...PHIEN_THUONG, newlyBuiltIds: [QUEUE_HEAD] } },
   /** Lên cấp. */
   level: { levelUpQueue: [{ levelsGained: 1, newLevel: 6, spGained: 1 }] },
   /** Chuỗi toast: nhiều tin cùng lúc, ca dễ chồng chéo nhất. */
@@ -148,9 +159,18 @@ export function readPreviewScene(search) {
 }
 
 /** Mảnh `ui` của một cảnh. Trả `null` nếu tên lạ. */
-export function buildPreviewUi(scene) {
+export function buildPreviewUi(scene, state = null) {
   const patch = PREVIEW_SCENES[scene];
-  return patch ? { ...patch } : null;
+  if (!patch) return null;
+  const out = { ...patch };
+  if (out.pendingReward) {
+    const head = state?.craftingQueue?.[0]?.bpId ?? null;
+    const pr = { ...out.pendingReward };
+    if (pr.luckyBrickId === QUEUE_HEAD) pr.luckyBrickId = head;
+    if (Array.isArray(pr.newlyBuiltIds)) pr.newlyBuiltIds = pr.newlyBuiltIds.map((id) => (id === QUEUE_HEAD ? head : id)).filter(Boolean);
+    out.pendingReward = pr;
+  }
+  return out;
 }
 
 /**

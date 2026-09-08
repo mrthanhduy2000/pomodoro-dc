@@ -180,6 +180,8 @@ function buildProjectCard(project) {
     headline: project.headline ?? '',
     sub: project.sub ?? '',
     auto: !!project.auto,
+    // ADR-080: the lucky second brick — the card names it first and the row lands two.
+    lucky: !!project.lucky,
   };
 }
 

@@ -35,10 +35,12 @@ export const REWARD_TIER_KEYS = ['thuong', 'tot', 'hiem', 'huyenThoai'];
  * Nhãn chữ mới là thứ bảo đảm điều đó; `pips` chỉ là lớp thứ ba cho dễ liếc.
  */
 export const REWARD_TIER = {
-  thuong:     { key: 'thuong',     label: 'Thường',      colorVar: 'var(--muted)',  rank: 0, pips: 1 },
-  tot:        { key: 'tot',        label: 'Tốt',         colorVar: 'var(--good)',   rank: 1, pips: 2 },
-  hiem:       { key: 'hiem',       label: 'Hiếm',        colorVar: 'var(--warn)',   rank: 2, pips: 3 },
-  huyenThoai: { key: 'huyenThoai', label: 'Huyền thoại', colorVar: 'var(--accent)', rank: 3, pips: 4 },
+  // ADR-080: the four tiers live inside the Focus screen's three colours (canvas · ink · one accent):
+  // muted → accent2 → accent → ink. The pips and the label carry the rank; colour is the third signal.
+  thuong:     { key: 'thuong',     label: 'Thường',      colorVar: 'var(--muted)',   rank: 0, pips: 1 },
+  tot:        { key: 'tot',        label: 'Tốt',         colorVar: 'var(--accent2)', rank: 1, pips: 2 },
+  hiem:       { key: 'hiem',       label: 'Hiếm',        colorVar: 'var(--accent)',  rank: 2, pips: 3 },
+  huyenThoai: { key: 'huyenThoai', label: 'Huyền thoại', colorVar: 'var(--ink)',     rank: 3, pips: 4 },
 };
 
 export const DEFAULT_REWARD_TIER = 'thuong';

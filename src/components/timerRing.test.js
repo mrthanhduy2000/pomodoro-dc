@@ -15,6 +15,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { readFile, readdir } from 'node:fs/promises';
+import { readFileSync } from 'node:fs';
 
 const SOURCE = await readFile(new URL('./PomodoroEngine.jsx', import.meta.url), 'utf8');
 
@@ -117,4 +118,25 @@ test('THREE COLOURS (ADR-079): the Focus screen files use no Tailwind palette co
     codeOnly(src).split('\n').forEach((line, i) => { if (PALETTE.test(line)) hits.push(`${name}:${i + 1}: ${line.trim()}`); });
   }
   assert.deepEqual(hits, [], `palette colours on the Focus screen (background · ink · one accent is the rule):\n${hits.join('\n')}`);
+});
+
+test('BEATS (ADR-080): the clock whispers a beat in its own label slot and ripples once — nothing static, no digit', () => {
+  // The beat is resolved from ELAPSED time through the pure engine, for the session and for the break.
+  assert.match(CODE, /resolveBeat\(planSessionBeats\(totalSeconds\), focusElapsedSeconds\)/, 'session beats come from engine/sessionBeats.js');
+  assert.match(CODE, /resolveBeat\(planBreakBeats\(breakTotalSeconds\)/, 'break beats too');
+  assert.match(CODE, /focusBeatsLive = !isBreakMode && timerState === TIMER_STATES\.RUNNING && !isStopwatchMode/, 'beats only while a Pomodoro session runs — a stopwatch has no total');
+  // The whisper REPLACES the state label (same slot) and wears the arc's colour; the ripple is keyed by beat.
+  assert.match(CODE, /\{beat \? \(\s*<motion\.span key=\{beat\.id\} \{\.\.\.whisperMotion\}/, 'the whisper takes the label slot, keyed per beat');
+  assert.match(CODE, /<BeatRipple key=\{`\$\{isBreakMode \? 'break' : 'focus'\}-\$\{beat\.id\}`\} color=\{isBreakMode \? 'var\(--good\)' : 'var\(--accent\)'\}/, 'one ripple per beat, in the arc colour');
+  // The glow warms with progress — a property of the ring, never a new element.
+  assert.match(CODE, /const warmth = focusBeatsLive \? 0\.6 \+ 0\.6 \* /, 'the glow warms from 60 % to 120 % across the session');
+  assert.match(CODE, /Math\.round\(12 \* warmth\)\}px/, 'the ring shadow follows the warmth');
+  // Still ONE dashed arc (the round-39 count) — a beat adds no indicator.
+  assert.equal((CODE.match(/strokeDasharray=/g) ?? []).length, 1);
+});
+
+test('TAB TITLE (ADR-080): a number-free phase glyph while focusing, ☕ / ⏰ on a break', () => {
+  const timer = codeOnly(readFileSync(new URL('../hooks/useTimer.js', import.meta.url), 'utf8'));
+  assert.match(timer, /sessionPhaseGlyph\(totalSecondsRef\.current - visibleDisplaySeconds, totalSecondsRef\.current\)/, 'the running title carries the phase glyph');
+  assert.match(CODE, /document\.title = `\$\{breakSecsLeft <= 60 \? '⏰' : '☕'\} \$\{formatTime\(breakSecsLeft\)\} · DC Pomodoro`;/, 'the break title says rest, then come back');
 });

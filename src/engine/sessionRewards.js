@@ -43,7 +43,7 @@ import { heSoXpSieuViet } from './prestigeCarryover';
 import { describeCrisisQuest, evaluateRankPromotion, openCrisisQuest, settleCrisisQuest } from './rankLadder';
 import { applyRelicEvolutions, evaluateRelicEvolutions } from './relicGrowth';
 import { upsertSavedNoteEntry } from './savedNotes';
-import { autoQueueSessionProject } from './sessionBrick';
+import { autoQueueSessionProject, rollLuckyBrick } from './sessionBrick';
 import { advanceStreak, refreshStreakIfExpired, streakBonusRate } from './streak';
 import { localDateStr, localWeekMondayStr } from './time';
 import { makeDefaultDailyTracking, makeDefaultSkillActivations } from './trackingDefaults';
@@ -303,10 +303,17 @@ export function assembleSessionReward({
     craftingQueue: state.craftingQueue ?? [], activeBook, buildings: state.buildings, now: now_ts,
   });
   const {
-    nextQueue,
-    newlyBuilt,
+    nextQueue: queueAfterPerks,
+    newlyBuilt: builtByTheSession,
     acceleratedIds: acceleratedCraftingIds,
   } = advanceCraftingQueueWithPerks(queueBeforeAdvance, craftingAccelerationMode);
+  // ADR-080: the lucky brick — sometimes the session lays TWO. Rolled with the injected dice, on the
+  // queue head, never when a building just finished (that is already the bigger moment).
+  const lucky = builtByTheSession.length === 0
+    ? rollLuckyBrick({ craftingQueue: queueAfterPerks, minutesFocused, random })
+    : { craftingQueue: queueAfterPerks, luckyBrickId: null, builtId: null };
+  const nextQueue = lucky.craftingQueue;
+  const newlyBuilt = lucky.builtId ? [...builtByTheSession, lucky.builtId] : builtByTheSession;
   const newBuildings = [...state.buildings, ...newlyBuilt];
 
   // ─── Cập nhật category tracking ──────────────────────────────────
@@ -731,6 +738,8 @@ export function assembleSessionReward({
         buildingPerkBonusXP: buildingPerkReward.xp,
         acceleratedCraftingIds,
         autoQueuedId,
+        // ADR-080: which project got the lucky second brick (null = a normal session).
+        luckyBrickId: lucky.luckyBrickId,
         // ⚠️ CHỈ để KHOẢNH KHẮC THÀNH PHỐ (`engine/cityMoment.js`) biết công trình nào vừa
         // xong. `ui` KHÔNG nằm trong `partialize` nên trường này không lên Supabase, tức
         // không thêm một byte nào vào JSONB đang tranh chấp CAS.

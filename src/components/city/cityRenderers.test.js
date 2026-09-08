@@ -151,36 +151,22 @@ test('mặt trời KHÔNG được đứng sau lưng camera — đây là bẫy 
   assert.ok(sy / slen > 0.2, `mặt trời quá thấp hoặc nằm dưới mặt đất (y = ${(sy / slen).toFixed(2)})`);
 });
 
-test('THANH CHUYỂN KỶ phải tự kéo kỷ đang xem vào tầm mắt — và đo cho đúng', () => {
-  // ⚠️ Bài này khoá lại một lỗi CHỈ LỘ RA KHI CHƠI LÂU, nên gần như không thể bắt bằng mắt lúc
-  // phát triển: các kỷ đã đi qua xếp TRƯỚC kỷ hiện tại trong thanh cuộn ngang, nên càng nhiều kỷ
-  // thì nút DUY NHẤT Đàm quan tâm càng bị đẩy ra ngoài. Đo trên bản build ở kỷ 7: nội dung 999px
-  // trong khung 952px ⇒ nút "Kỷ 7 · đang xây" cụt mất 47px ở MỌI lần mở tab. Tới kỷ 15 thì khuất
-  // hẳn, mở tab lên chỉ thấy một dãy "thất truyền" xám.
+test('THANH CHUYỂN KỶ xếp lưới, không cuộn ngang (ADR-080) — không chip nào bị cắt', () => {
+  // ⚠️ Lịch sử: thanh này từng CUỘN NGANG và mang cả một cơ chế tự kéo kỷ đang xem vào tầm mắt
+  // (`scrollTo` + `getBoundingClientRect` + `ResizeObserver`), vì các kỷ đã qua xếp trước kỷ hiện
+  // tại và đẩy nút duy nhất Đàm quan tâm ra ngoài khung. Cơ chế ấy chữa triệu chứng: chip đầu tiên
+  // vẫn bị cắt nửa ở mép trái, và mọi kỷ ngoài khung vẫn vô hình. Vòng 40 đổi thanh thành LƯỚI
+  // XUỐNG DÒNG — mười lăm chip đều trọn vẹn ở 390px lẫn 1280px — và cả cơ chế cuộn đi theo.
   const found = SOURCES.find((f) => f.path === 'components/city/EraSwitcher.jsx');
   assert.ok(found, 'không thấy EraSwitcher.jsx');
-  const rail = { source: codeOnly(found.source) };
+  const rail = codeOnly(found.source);
 
-  assert.match(rail.source, /scrollTo\(/, 'thanh chuyển kỷ không tự cuộn tới kỷ đang xem');
-
-  // ⚠️ KHÔNG được dùng `scrollIntoView`: thanh này nằm trong một khung cuộn khác, và
-  // `scrollIntoView` kéo luôn cả khung cha ⇒ mở tab Thành Phố thì trang tự nhảy xuống giữa chừng.
-  assert.doesNotMatch(rail.source, /scrollIntoView/,
-    'scrollIntoView kéo cả khung cha — phải tự tính scrollLeft của riêng thanh này');
-
-  // ⚠️ KHÔNG được đo bằng `offsetLeft`: thanh này `position: static` nên `offsetParent` là một
-  // khung cha ở tận ngoài, và số đo CỘNG THÊM khoảng cách từ mép trang (đo thật: 1151 trong khi
-  // toàn bộ nội dung thanh chỉ rộng 999). Ở kỷ cuối sai số đó bị kẹp về mép phải nên trông vẫn
-  // đúng — nên nếu ai đó "đơn giản hoá" lại thành offsetLeft, thử ở kỷ hiện tại sẽ KHÔNG thấy sai.
-  assert.doesNotMatch(rail.source, /\.offsetLeft/,
-    'offsetLeft tính từ offsetParent chứ không từ thanh cuộn ⇒ cuộn quá tay ở các kỷ giữa');
-  assert.match(rail.source, /getBoundingClientRect/, 'phải đo bằng getBoundingClientRect');
-
-  // Và phải căn LẠI khi kích thước đổi: lần chạy đầu rơi vào lúc font riêng của skin chưa nạp
-  // xong, các nút còn hẹp, thanh chưa tràn ⇒ không có gì để cuộn. Font nạp xong thì chữ nở ra,
-  // thanh mới tràn — nếu không ai gọi lại thì lỗi quay về nguyên vẹn.
-  assert.match(rail.source, /ResizeObserver/,
-    'căn một lần rồi thôi ⇒ font nạp xong là hỏng lại (đã trả giá đúng một lần)');
+  assert.match(rail, /flex-wrap/, 'thanh chuyển kỷ phải xuống dòng — cuộn ngang là cắt chip');
+  assert.doesNotMatch(rail, /overflow-x-auto|overflow-x-scroll/, 'cuộn ngang quay lại ⇒ chip đầu lại bị cắt nửa');
+  // Không còn gì để cuộn thì không được còn mã cuộn: mã chết ở đây là một cái bẫy cho lần "sửa" sau.
+  assert.doesNotMatch(rail, /scrollTo\(|scrollIntoView|ResizeObserver|\.offsetLeft/, 'cơ chế cuộn cũ còn sót — thanh đã là lưới');
+  // Mỗi chip vẫn KHÔNG được xuống dòng bên trong: "Kỷ 8 · 4/5 · đang xây" gãy làm đôi thì hết đọc được.
+  assert.match(rail, /whitespace-nowrap/, 'nội dung một chip phải đứng trên một dòng');
 });
 
 test('THẺ THÔNG TIN nổi trên cảnh không được nuốt thao tác kéo xoay', () => {

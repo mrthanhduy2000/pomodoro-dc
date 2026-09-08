@@ -1,3 +1,40 @@
+> Last update: **2026-09-08** — **ROUND 40: THINGS THAT HAPPEN AND VANISH (ADR-080).**
+> Order: *"Build lớn. Simplify mạnh. Làm game vui hơn và đầy dopamine hơn … Ngân sách thứ đứng yên: 0.
+> TOÀN QUYỀN."* Five jobs + the gate; everything on `main`. Round 39's counts are untouched.
+>
+> ### Done
+> 1. **Session beats** — `engine/sessionBeats.js` (pure: `planSessionBeats` · `planBreakBeats` · `resolveBeat` ·
+>    `sessionPhaseGlyph`), `focus/BeatRipple.jsx`; PomodoroEngine whispers the beat in the ring label
+>    (`useRewardMotion`, arc colour, no digit) and mounts the ripple keyed by beat id; the glow warms with
+>    `progressPct`; `useTimer` puts the phase glyph in the tab title; the break title reads ☕ / ⏰.
+> 2. **Break beats** — same machinery on `breakTotalSeconds − breakSecondsLeft`, colour `--good`.
+> 3. **Tiered ending** — `shared/RewardBurst.jsx` (brick · building · rare; particles through
+>    `useCustomMotion` inside child components so hook counts stay fixed; deterministic pattern);
+>    `BrickRow` new bricks DROP (`useCustomMotion` keyframes, staggered); `SessionRewardStory` mounts the
+>    rare burst behind rare cards and the brick/building burst behind the project glyph.
+> 4. **Lucky brick** — `rollLuckyBrick` (+ constants), rolled in `assembleSessionReward` after the perk
+>    advance with the injected `random`, skipped when a building just finished; `describeSessionBrick`
+>    reads `luckyBrickId` (headline «Gạch đôi — hôm nay may!», two fresh bricks, `lucky` flag);
+>    `buildProjectCard` passes it; the card shows a 🍀 chip. Preview scenes `loot-lucky` / `loot-built`
+>    use `QUEUE_HEAD`, resolved in `buildPreviewUi(scene, state)`; `shot.mjs --card <id>`.
+> 5. **Leftovers** — `rewardTiers.js` colours muted · accent2 · accent · ink; `EraSwitcher` wraps
+>    (scroll effect deleted, `cityRenderers.test.js` rewritten); era colours on the City tab kept
+>    (decision in ADR-080); clock subline unchanged.
+>
+> ### Gates
+> lint clean · build green · `npm run test:fast` 1,623 tests · 1,622 pass · 0 fail · 1 skipped (`# skipped 1`).
+>
+> ### Lessons
+> - **A line printed with `cut -c1-170` is not the file.** Two edit anchors failed on a trailing
+>   `aria-hidden="true"` the cut had hidden. Print the exact lines (`cat -A`) before anchoring.
+> - **Preview scenes must stay plain data**: a scene as a function skipped every fidelity test
+>   silently (`patch.pendingReward` undefined ⇒ `continue`). A placeholder resolved at apply time
+>   keeps the scenes checkable.
+> - **Hooks in a `.map` are not allowed, and a particle count that follows a prop changes the hook
+>   count** — one child component per particle is the honest shape.
+
+---
+
 > Last update: **2026-09-07** — **ROUND 39: WHILE A TIMER RUNS, THE FOCUS SCREEN IS THE TIMER (ADR-079).**
 > Order: *"Một chủ đề duy nhất: DỌN GIAO DIỆN MÀN TẬP TRUNG. Không thêm tính năng. Không tách file.
 > Không đóng nợ kỹ thuật … TOÀN QUYỀN."* Six jobs, one theme; everything on `main`.

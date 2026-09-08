@@ -2,6 +2,7 @@ import { useState, useEffect, useRef, useCallback } from 'react';
 import useGameStore from '../store/gameStore';
 import useSettingsStore from '../store/settingsStore';
 import soundEngine from '../engine/soundEngine';
+import { sessionPhaseGlyph } from '../engine/sessionBeats';
 import { getBreakPlan } from '../engine/breaks';
 import { BREAK_EXTENSION_MINUTES } from '../engine/constants';
 import {
@@ -253,7 +254,12 @@ export function useTimer({ focusMinutes, mode = TIMER_MODES.POMODORO }) {
 
   useEffect(() => {
     if (timerState === TIMER_STATES.RUNNING) {
-      document.title = `${formatTime(visibleDisplaySeconds)} ⏱ DC Pomodoro`;
+      // ADR-080: a number-free phase glyph (○ ◔ ◑ ◕ ●) — the tab strip shows where the session is
+      // without a digit; it is the one thing that moves while the tab sits in the background.
+      const glyph = modeRef.current === TIMER_MODES.POMODORO
+        ? `${sessionPhaseGlyph(totalSecondsRef.current - visibleDisplaySeconds, totalSecondsRef.current)} `
+        : '';
+      document.title = `${glyph}${formatTime(visibleDisplaySeconds)} ⏱ DC Pomodoro`;
     } else if (timerState === TIMER_STATES.PAUSED) {
       document.title = `${formatTime(visibleDisplaySeconds)} ⏸ DC Pomodoro`;
     } else {

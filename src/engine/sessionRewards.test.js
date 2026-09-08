@@ -109,3 +109,34 @@ test('the store wrapper applies exactly the engine patch and returns its result'
   assert.deepEqual(after.ui.pendingReward, expected.patch.ui.pendingReward);
   assert.equal(after.ui.postcardFocusBpId, expected.patch.ui.postcardFocusBpId);
 });
+
+// ADR-080: the dice also decide the LUCKY BRICK — on the session axis only, never negative.
+test('lucky brick: a low roll lays two bricks on the queue head and names it in the reward; a high roll lays one', () => {
+  freshState();
+  // A 4-session project, so two bricks do not finish it (the first era-1 blueprints need only 2).
+  const first = listNextProjects({ activeBook: 1, buildings: [], craftingQueue: [] }).find((p) => p.sessions >= 4);
+  useGameStore.setState({ craftingQueue: [{ bpId: first.bpId, sessionsRemaining: first.sessions, startedAt: NOW - 1000 }] });
+  const state = useGameStore.getState();
+  // `random` is consumed by the positive-event loop first (one call per eligible event until a hit),
+  // then by the lucky brick. A roll of 0 hits the first event AND the lucky brick.
+  const lucky = assembleSessionReward({ state, minutesFocused: 25, ...CLOCK, dailyGoal: GOAL, random: () => 0 });
+  assert.equal(lucky.patch.ui.pendingReward.luckyBrickId, first.bpId);
+  assert.equal(lucky.patch.craftingQueue[0]?.sessionsRemaining, first.sessions - 2, 'two bricks laid');
+  assert.equal(lucky.patch.progress.sessionsCompleted, 1, 'still ONE session — the currency is untouched');
+
+  const plain = assembleSessionReward({ state, minutesFocused: 25, ...CLOCK, dailyGoal: GOAL, random: NO_EVENT });
+  assert.equal(plain.patch.ui.pendingReward.luckyBrickId, null);
+  assert.equal(plain.patch.craftingQueue[0]?.sessionsRemaining, first.sessions - 1);
+
+  const short = assembleSessionReward({ state, minutesFocused: 10, ...CLOCK, dailyGoal: GOAL, random: () => 0 });
+  assert.equal(short.patch.ui.pendingReward.luckyBrickId, null, 'a 10-minute session is not eligible');
+});
+
+test('lucky brick: never rolled when the session just finished a building — that ending is the bigger moment', () => {
+  freshState();
+  const first = listNextProjects({ activeBook: 1, buildings: [], craftingQueue: [] })[0];
+  useGameStore.setState({ craftingQueue: [{ bpId: first.bpId, sessionsRemaining: 1, startedAt: NOW - 1000 }] });
+  const { patch } = assembleSessionReward({ state: useGameStore.getState(), minutesFocused: 25, ...CLOCK, dailyGoal: GOAL, random: () => 0 });
+  assert.ok(patch.buildings.includes(first.bpId));
+  assert.equal(patch.ui.pendingReward.luckyBrickId, null);
+});

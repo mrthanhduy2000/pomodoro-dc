@@ -32,7 +32,19 @@ Production branch `main` carries **both** work streams (merged 2026-08-28 on Đ�
 ⚠️ Phase 21 therefore shipped **before** Đàm reviewed its screenshots — the "waiting on Đàm's eyes"
 item below is still live, it just now reviews something already running.
 
-- **Loop — ROUND 39 (2026-09-07, LATEST): WHILE A TIMER RUNS, THE FOCUS SCREEN IS THE TIMER (ADR-079).**
+- **Loop — ROUND 40 (2026-09-08, LATEST): THINGS THAT HAPPEN AND VANISH (ADR-080).** Order: fill the
+  gap round 39 exposed, with a static budget of ZERO — only things that happen and are gone. Session
+  beats (`engine/sessionBeats.js`: settled · halfway · final stretch · last minute — an 8-second whisper
+  in the ring label + `focus/BeatRipple.jsx`, from elapsed time, background-safe, no new sound); the glow
+  warms with progress; the tab title carries a phase glyph ○ ◔ ◑ ◕ ● (☕/⏰ on a break); break beats
+  (stand up · water · come back). Tiered ending (`shared/RewardBurst.jsx`: brick dust · building ring +
+  confetti · rare full-screen; bricks DROP in `BrickRow`). Lucky brick (`rollLuckyBrick`, 12 %, ≥ 15 min,
+  never negative, `pendingReward.luckyBrickId`, the card names the double brick first). Leftovers: reward
+  tiers in the three-colour family, era chips wrap, era colours on the City tab kept. Round-39 counts
+  unchanged (1 · 2 · 3 · 0). Inspect: `--preview loot-lucky --card project` · `--preview loot-built --card
+  project` · `--preview loot-max --card level`; a beat: seed `timerSession.startedAt` so elapsed = 751 s
+  (`tools/timerFixtures.mjs <base> <run> <break> 751`) and shoot with `--settle 600`.
+- **Loop — ROUND 39 (2026-09-07): WHILE A TIMER RUNS, THE FOCUS SCREEN IS THE TIMER (ADR-079).**
   Order: *"Dọn giao diện màn Tập trung — không thêm tính năng."* One indicator while running (daily-goal
   ring deleted, brick strip = one headline, postcard `quiet`, no pill, voice line silent); one line under
   the clock on every device (`describeClockSubline`: «Phiên thứ N hôm nay»; the goal fraction lives on the

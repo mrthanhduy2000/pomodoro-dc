@@ -6,16 +6,24 @@
  *   laying — the brick THIS session is laying; its fill follows the timer (`progressRatio`)
  *   new    — laid by the session that just ended (springs in on the ending card)
  *   empty  — still to come
- * Motion goes through the shared presets only: `useRewardMotion` for the new brick, `useSnapMotion`
- * for the fill because its width IS the progress (returning `{}` there would blank the bar).
+ * Motion goes through the shared presets only: `useSnapMotion` for the fill because its width IS the
+ * progress (returning `{}` there would blank the bar), and `useCustomMotion` for the new brick's DROP
+ * (ADR-080: it falls from above and lands with a squash — a brick has weight; under Reduce motion it
+ * simply appears, which is the same brick).
  */
 import { motion } from 'framer-motion';
-import { useRewardMotion, useSnapMotion, withDelay } from '../../lib/motionPresets';
+import { useCustomMotion, useSnapMotion } from '../../lib/motionPresets';
 
 const EASE = [0.22, 1, 0.36, 1];
 
 function Brick({ state, index, progressRatio, size }) {
-  const rewardMotion = useRewardMotion();
+  // ADR-080: the landing — a drop from above, a squash on impact, then settle. Staggered per brick so
+  // a double brick (lucky / haste) lands as two thuds, not one.
+  const dropMotion = useCustomMotion({
+    initial: { y: -18, scaleY: 1.2, scaleX: 0.9, opacity: 0 },
+    animate: { y: [-18, 0, -3, 0], scaleY: [1.2, 0.82, 1.06, 1], scaleX: [0.9, 1.14, 0.98, 1], opacity: 1 },
+    transition: { duration: 0.55, ease: EASE, delay: 0.25 + index * 0.12 },
+  });
   const fillMotion = useSnapMotion({
     initial: { width: '0%' },
     animate: { width: `${Math.round((state === 'laying' ? progressRatio : state === 'empty' ? 0 : 1) * 100)}%` },
@@ -35,7 +43,7 @@ function Brick({ state, index, progressRatio, size }) {
     flex: '0 0 auto',
   };
   const Tag = isNew ? motion.span : 'span';
-  const motionProps = isNew ? withDelay(rewardMotion, 0.25 + index * 0.05) : {};
+  const motionProps = isNew ? dropMotion : {};
   return (
     <Tag aria-hidden="true" style={base} {...motionProps}>
       {isLaying && (

@@ -10,6 +10,27 @@
 > **Muốn hiểu VÌ SAO một quyết định được chọn** → `ARCHITECTURE_DECISIONS.md`. **Muốn biết migration
 > cụ thể nào cần chạy** → `MIGRATION.md`.
 
+## 2026-09-08 — Round 43: one destination, and every distance told in sessions (ADR-082)
+
+**Purpose.** Answer *"làm cái này để đi tới đâu?"* in one sentence. The app spoke twelve units of
+progress and only two were spendable; none of the twelve ever ends, so none could be a destination.
+
+**Scope.** New pure `engine/journey.js` (destination = 15 eras x 5 blueprints = 75 buildings, summed
+from `BLUEPRINT_CATALOG`) and its single store seam `hooks/useJourney.js`. The top rail and the Focus
+postcard caption stop printing raw EP: they say the distance in sessions, or the destination when a
+session estimate would be a guess — never EP. The city's fourth stat cell changes from `Cư dân` to
+`Thành phố 38/75 · còn 37`. The rank card's `3.955 / 672` becomes `Đã đủ`; the level card hides its
+countdown past the same reach ceiling the stage countdown uses; badge thresholds over two hours say
+hours; the weekly chain bonus gains its unit and a session comparison; daily mission rows gain their
+unit. Day-close and week-close cards now name the city total.
+
+**Impact.** No game formula changed and no reward value moved. Residents are no longer counted in a
+stat cell — they still walk the 3D city above it. Adding XP rewards to the 360 achievements was
+measured (about 126.030 XP, 21 levels, 42 SP over the whole game) and rejected as a second faucet.
+
+**Compatibility.** No state shape change, no migration. `journey.test.js` (8) and
+`journeyWiring.test.js` (6) are new; `achievementUnit.test.js` gained the hours rule.
+
 ## 2026-09-08 — Round 41: the long rhythms, three kinds of surprise, and a tool that photographs a moment (ADR-081)
 
 **Purpose.** Close the hole that ended three rounds in a row (a feature nobody could see), then give the app the rhythms it still lacked: a day and a week that open and close.

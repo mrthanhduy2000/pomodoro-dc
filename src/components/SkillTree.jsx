@@ -37,6 +37,7 @@ import {
   ACHIEVEMENT_TIERS,
 } from '../engine/constants';
 import { getLevelProgress, getEffectiveSkillCost } from '../engine/gameMath';
+import { STAGE_COUNTDOWN_MAX_SESSIONS, medianSessionXP, sessionsToStageEnd } from '../engine/eraStage';
 import { RELIC_ELITE_RESONANCE } from '../engine/constants';
 import { giaCaChuoi } from './skillChainCost';
 
@@ -152,8 +153,27 @@ export default function SkillTree({ _onOpenAchievements }) {
   const activateLuckyMode  = useGameStore((s) => s.activateLuckyMode);
   const relics             = useGameStore((s) => s.relics);
   const relicEvolutions    = useGameStore((s) => s.relicEvolutions);
+  const history            = useGameStore((s) => s.history);
 
   const { progressPct, currentLevelEXP, nextLevelEXP } = getLevelProgress(totalEXP);
+  // ADR-082 — the distance to the next level is told in SESSIONS, not in XP. `sessionsToStageEnd`
+  // is the project's one "how far, in sessions" formula; it is named for eras but the arithmetic is
+  // `ceil(remaining / per-session)` and copying it here under a new name is how two answers drift.
+  // `null` = not enough history to estimate, and then the XP number is still the honest fallback.
+  const xpToNextLevel = Math.max(0, nextLevelEXP - currentLevelEXP);
+  const rawSessionsToNextLevel = sessionsToStageEnd(xpToNextLevel, medianSessionXP(history));
+  // ⚠️ CÙNG TRẦN VỚI ĐẾM NGƯỢC CHẶNG, VÀ ĐO RỒI MỚI BIẾT VÌ SAO CẦN. Converting this line into
+  // sessions is what finally made the level ladder legible — and what it said was *"còn ~155
+  // phiên"*. That is the exact number `STAGE_COUNTDOWN_MAX_SESSIONS` exists to refuse to print:
+  // a target nobody can reach discourages instead of pulling (`eraStage.js` documents the measured
+  // case). The old XP wording hid this behind a unit Đàm could not convert; the honest response is
+  // not to print the wall in a friendlier unit, it is to SAY NOTHING about distance and let the
+  // card above — «2 điểm chưa tiêu · mở được 8 kỹ năng ngay bây giờ» — be the line that acts.
+  // ⚠️ SP is not the bottleneck here anyway (measured on a 617-session save: 2 unspent points and
+  // 8 skills already affordable), so a level countdown was never the thing standing in his way.
+  const sessionsToNextLevel = (rawSessionsToNextLevel !== null && rawSessionsToNextLevel <= STAGE_COUNTDOWN_MAX_SESSIONS)
+    ? rawSessionsToNextLevel
+    : null;
 
   // Ô đang chọn trên bản đồ. `null` = chưa chạm gì ⇒ rơi về ô mặc định (rẻ nhất trong số mở
   // được ngay) — xem `pickDefaultCell`. Giữ ID chứ không giữ cả ô: ô được DỰNG LẠI mỗi lần
@@ -272,9 +292,22 @@ export default function SkillTree({ _onOpenAchievements }) {
           của dự án: *một con số không có mẫu số thì không phải mục tiêu* — ở đây còn đi thêm một
           bước, nói luôn cái mẫu số ấy đổi lấy được gì.
         */}
-        <p className="mt-1.5 text-[11px]" style={{ color: 'var(--muted)' }}>
-          Còn <strong style={{ color: 'var(--ink)' }}>{Math.max(0, nextLevelEXP - currentLevelEXP).toLocaleString()} XP</strong> nữa lên cấp {level + 1} → +{SP_PER_LEVEL} SP
-        </p>
+        {/*
+          ⚠️ ĐỔI LẦN HAI, TỪ "XP" SANG "PHIÊN" (round 43, ADR-082). The 2026-08-30 rewrite above got
+          the SHAPE right — a distance, not a rule — but kept the unit wrong: «Còn 5.438 XP nữa».
+          Đàm cannot pace himself in XP. He has never chosen to do a session because it was worth
+          260 XP; he chooses in sessions, which is the only currency ADR-069 recognises. Same line,
+          same place, same length — one unit changed, and the sentence becomes a plan he can act on
+          tonight. Not enough history to estimate ⇒ fall back to the XP number rather than invent
+          a session count (the honesty rule of `medianSessionEP`).
+        */}
+        {sessionsToNextLevel !== null && (
+          <p className="mt-1.5 text-[11px]" style={{ color: 'var(--muted)' }}>
+            Còn <strong style={{ color: 'var(--ink)' }}>{
+              sessionsToNextLevel <= 1 ? 'một phiên' : `~${sessionsToNextLevel} phiên`
+            }</strong> nữa lên cấp {level + 1} → +{SP_PER_LEVEL} SP
+          </p>
+        )}
       </div>
 
       {/* ── Bố cục 2 cột: cây kỹ năng (trái) · ngữ cảnh (phải) ──────────── */}

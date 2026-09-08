@@ -69,10 +69,17 @@ export function describeDayOpen({
  * The close of a day. Only ever called with at least one session done — a day with none is left
  * alone. `goalMet` decides the tone, but both tones are good news.
  */
-export function describeDayClose({ sessions = 0, minutes = 0, goalMet = false } = {}) {
+export function describeDayClose({ sessions = 0, minutes = 0, goalMet = false, journeyLine = null } = {}) {
   const done = sessionsPhrase(sessions, minutes) ?? '';
-  if (goalMet) return { id: 'day-close', title: 'Xong mục tiêu hôm nay', line: `${done}.`, tone: 'met' };
-  return { id: 'day-close', title: 'Ngày hôm nay khép lại', line: `${done}.`, tone: 'some' };
+  // ⚠️ A CLOSE IS THE ONE MOMENT THAT MAY NAME THE DESTINATION (round 43, ADR-082). Round 41 built
+  // these cards to say what just happened; what they never said is what it was FOR. `journeyLine`
+  // is the city's running total (`engine/journey.js` → `38/75 công trình`) and it belongs here and
+  // nowhere else in the arc: an OPEN is an invitation and must stay light, while a close is the
+  // moment Đàm is already looking back — the only second in the day when a total is a reward
+  // rather than a demand. Absent (null) it simply does not print: no empty parenthesis, no dash.
+  const tail = journeyLine ? ` Thành phố: ${journeyLine}.` : '';
+  if (goalMet) return { id: 'day-close', title: 'Xong mục tiêu hôm nay', line: `${done}.${tail}`, tone: 'met' };
+  return { id: 'day-close', title: 'Ngày hôm nay khép lại', line: `${done}.${tail}`, tone: 'some' };
 }
 
 /** The first open of a new week. */
@@ -87,8 +94,9 @@ export function describeWeekOpen({ lastWeekSessions = 0, lastWeekMinutes = 0 } =
 }
 
 /** The close of a week, Sunday evening. Only with at least one session in the week. */
-export function describeWeekClose({ sessions = 0, minutes = 0 } = {}) {
-  return { id: 'week-close', title: 'Tuần này khép lại', line: `${sessionsPhrase(sessions, minutes) ?? ''}.`, tone: 'met' };
+export function describeWeekClose({ sessions = 0, minutes = 0, journeyLine = null } = {}) {
+  const tail = journeyLine ? ` Thành phố: ${journeyLine}.` : '';
+  return { id: 'week-close', title: 'Tuần này khép lại', line: `${sessionsPhrase(sessions, minutes) ?? ''}.${tail}`, tone: 'met' };
 }
 
 /** The hour after which a day is considered ready to close if the goal was not reached. */
@@ -108,7 +116,7 @@ export const WEEK_CLOSE_HOUR = 18;
 export function pickArcMoment({
   dayKey = '', weekKey = '', hour = 12, weekday = 1, seen = {},
   yesterday = {}, today = {}, lastWeek = {}, thisWeek = {},
-  goalMet = false, streakDays = 0, nightGiftLabel = null,
+  goalMet = false, streakDays = 0, nightGiftLabel = null, journeyLine = null,
 } = {}) {
   const todaySessions = Math.max(0, Math.round(n(today.sessions)));
   const weekSessions = Math.max(0, Math.round(n(thisWeek.sessions)));
@@ -116,14 +124,14 @@ export function pickArcMoment({
   // 1 · The day is done — either the goal fell, or the evening came with work behind it.
   if (seen.dayClose !== dayKey && todaySessions >= 1 && (goalMet || hour >= DAY_CLOSE_HOUR)) {
     return {
-      moment: describeDayClose({ sessions: todaySessions, minutes: today.minutes, goalMet }),
+      moment: describeDayClose({ sessions: todaySessions, minutes: today.minutes, goalMet, journeyLine }),
       stamps: { dayClose: dayKey },
     };
   }
   // 2 · Sunday evening, with a week behind it.
   if (seen.weekClose !== weekKey && weekday === 0 && hour >= WEEK_CLOSE_HOUR && weekSessions >= 1) {
     return {
-      moment: describeWeekClose({ sessions: weekSessions, minutes: thisWeek.minutes }),
+      moment: describeWeekClose({ sessions: weekSessions, minutes: thisWeek.minutes, journeyLine }),
       stamps: { weekClose: weekKey },
     };
   }

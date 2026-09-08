@@ -13,6 +13,7 @@ import FocusMoment from './components/FocusMoment';
 import TodayHero from './components/TodayHero';
 import CityPostcard from './components/focus/CityPostcard';
 import EraStageBar from './components/shared/EraStageBar';
+import useJourney from './hooks/useJourney';
 import SessionRewardStory from './components/SessionRewardStory';
 import DayMoment from './components/focus/DayMoment';
 import { getEraStage } from './engine/eraStage';
@@ -613,6 +614,8 @@ export default function App() {
   // kỷ. `eraProgress` vẫn giữ vì nó là con số ĐÚNG cho câu hỏi "còn bao xa tới kỷ sau", chỉ là
   // nó không phải con số nên đặt ở chỗ liếc mắt.
   const eraStage = getEraStage(activeBook, totalEP);
+  // ADR-082: the rail's right-hand number is a SESSION COUNT (or the destination), never raw EP.
+  const { rail: railProgress } = useJourney();
   const { progressPct: levelPct } = getLevelProgress(totalEXP);
 
   const [activeTab, setActiveTab] = useState('focus');
@@ -838,6 +841,7 @@ export default function App() {
         currentStreak={currentStreak}
         streakMilestoneTarget={streakMilestoneTarget}
         totalEP={totalEP}
+        railProgressText={railProgress.text}
         notificationControl={<NotificationCenter onNavigate={handleNotificationNavigate} />}
         hideStats={hideStats}
         hideEra={hideEra}
@@ -921,6 +925,7 @@ export default function App() {
                           eraProgress={eraProgress}
                           totalEP={totalEP}
                           eraEnd={eraEnd}
+                          railProgressText={railProgress.text}
                         />
                         {/*
                           ADR-077: the one-line city tease that lived here moved INTO the timer card as the
@@ -1627,6 +1632,7 @@ function TopRail({
   currentStreak,
   streakMilestoneTarget,
   totalEP,
+  railProgressText = null,
   notificationControl,
   hideStats = false,
   // ADR-078: on the Focus tab the era bar lives on the city postcard's caption.
@@ -1683,7 +1689,7 @@ function TopRail({
           >
             {/* Stage bar (label · EP in stage · bar · dots): `shared/EraStageBar.jsx`, shared with the
                 Focus postcard (ADR-078). The why of measuring STAGES, not eras, is in that file. */}
-            <EraStageBar eraStage={eraStage} eraProgress={eraProgress} totalEP={totalEP} eraEnd={eraEnd} />
+            <EraStageBar eraStage={eraStage} eraProgress={eraProgress} totalEP={totalEP} eraEnd={eraEnd} progressText={railProgressText} />
           </div>
         )}
 
@@ -1818,6 +1824,7 @@ function FocusIntro({
   eraProgress,
   totalEP,
   eraEnd,
+  railProgressText = null,
 }) {
   /*
     ADR-078: the opening block of the Focus screen is the CITY POSTCARD — the same 3D city as the
@@ -1857,6 +1864,7 @@ function FocusIntro({
       eraProgress={eraProgress}
       totalEP={totalEP}
       eraEnd={eraEnd}
+      railProgressText={railProgressText}
     />
   );
 }

@@ -23,6 +23,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import useGameStore from '../../store/gameStore';
 import useSettingsStore from '../../store/settingsStore';
 import { describeDayOpen, pickArcMoment } from '../../engine/dayArc';
+import useJourney from '../../hooks/useJourney';
 import { readPreviewArc } from '../../dev/previewStage';
 import { getDailyGoalProgress, getHistoryEntryTimestampMs, isCancelledHistoryEntry } from '../../engine/gameMath';
 import { getVietnamHour, localDateStr, localWeekMondayStr } from '../../engine/time';
@@ -71,6 +72,8 @@ export default function DayMoment({ quiet = false }) {
   const dailyGoalType = useSettingsStore((s) => s.dailyGoalType);
   const dailyGoalSessions = useSettingsStore((s) => s.dailyGoalSessions);
   const dailyGoalMinutes = useSettingsStore((s) => s.dailyGoalMinutes);
+  const { journey } = useJourney();
+  const journeyLine = journey.line;
 
   const [moment, setMoment] = useState(null);
   const dismissRef = useRef(null);
@@ -117,6 +120,8 @@ export default function DayMoment({ quiet = false }) {
         thisWeek: sumBy(history, weekOf, weekKey),
         goalMet: Boolean(goal.hasGoal && goal.goalMet),
         streakDays,
+        // ADR-082: a CLOSE names the destination; `pickArcMoment` drops it on every other moment.
+        journeyLine,
       });
       if (!picked) return;
 
@@ -137,7 +142,7 @@ export default function DayMoment({ quiet = false }) {
     return () => window.clearTimeout(openTimer);
   }, [
     quiet, moment, history, dailyTracking, streakDays, rollNightBuilder,
-    dailyGoalType, dailyGoalSessions, dailyGoalMinutes,
+    dailyGoalType, dailyGoalSessions, dailyGoalMinutes, journeyLine,
   ]);
 
   useEffect(() => () => window.clearTimeout(dismissRef.current), []);

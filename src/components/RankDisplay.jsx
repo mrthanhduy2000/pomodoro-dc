@@ -7,11 +7,21 @@
  * nên không có gì để bấm, không có hạn để trễ. Đủ là lên, ngay trong chuỗi thẻ thưởng.
  *
  * Kèm thử thách kỷ nguyên (khủng hoảng cũ) dưới dạng nhiệm vụ mềm, cùng một phép đếm.
+ *
+ * ⚠️ THE FIRST CONDITION DOES NOT PRINT EP ANY MORE (round 43, ADR-082). It used to read
+ * `✓ 3.955 / 672` — a met condition, shown as a fraction bigger than its own denominator, which
+ * looks exactly like a bug and is the single most confusing number on the screen. Worse, both
+ * halves were EP, and ADR-069 fixed the only currency of this game as a SESSION: Đàm cannot spend
+ * EP, aim at it, or feel the difference between 672 and 3.955. So the row now says either "Đã đủ"
+ * (met — the number was never the point, the ✓ was) or the distance IN SESSIONS, using the same
+ * `medianSessionEP` the Focus screen's countdown uses. The bar underneath still carries the
+ * fraction visually, where a fraction belongs.
  */
 import React, { useState } from 'react';
 import useGameStore from '../store/gameStore';
 import { RANK_SYSTEM } from '../engine/constants';
 import { describeCrisisQuest, describeRankStep } from '../engine/rankLadder';
+import { medianSessionEP, sessionsToStageEnd } from '../engine/eraStage';
 
 const CARD = {
   background: 'var(--card-bg-solid)',
@@ -64,6 +74,14 @@ export default function RankDisplay() {
   if (!step.current) return null;
 
   const epPct = step.epRequired > 0 ? (step.epInEra / step.epRequired) * 100 : 100;
+  // EP → phiên. `sessionsToStageEnd` trả `null` khi chưa đủ mẫu để ước lượng; lúc ấy nói "chưa
+  // tới" còn thật thà hơn là bịa ra một con số phiên.
+  const epSessionsLeft = step.epGateMet
+    ? null
+    : sessionsToStageEnd(Math.max(0, step.epRequired - step.epInEra), medianSessionEP(history));
+  const epConditionValue = step.epGateMet
+    ? 'Đã đủ'
+    : (epSessionsLeft === null ? 'Chưa tới' : (epSessionsLeft <= 1 ? 'Một phiên nữa' : `Còn ~${epSessionsLeft} phiên`));
   const sessionsPct = step.sessionsRequired > 0 ? (step.sessionsDone / step.sessionsRequired) * 100 : 100;
 
   return (
@@ -103,8 +121,8 @@ export default function RankDisplay() {
             </div>
             <div className="mt-3 space-y-3">
               <Condition
-                label="EP trong kỷ"
-                value={`${step.epInEra.toLocaleString()} / ${step.epRequired.toLocaleString()}`}
+                label="Tiến trình trong kỷ"
+                value={epConditionValue}
                 pct={epPct}
                 met={step.epGateMet}
               />

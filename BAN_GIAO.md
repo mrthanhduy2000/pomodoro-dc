@@ -1,4 +1,60 @@
-> Last update: **2026-09-08** — **ROUND 41: THE LONG RHYTHMS, AND A TOOL THAT CAN SEE (ADR-081).**
+> Last update: **2026-09-08** — **ROUND 43: ONE DESTINATION, AND EVERY DISTANCE IN SESSIONS (ADR-082).**
+> Order: *"tôi đang tiến tới cái gì, và vì sao tôi nên quan tâm"* · *"một đơn vị mà tôi không làm gì
+> được với nó thì nó không phải tiền tệ, nó là tiếng ồn."*
+> Everything on `main`. Round 42 (layout and space) was UNMERGED while this ran, so nothing here
+> moves, resizes or re-spaces anything — every change is text inside an element that already existed.
+>
+> ### The audit that decided the round
+> Twelve units of progress were found, not the eight Đàm counted. Column three — *what can he DO with
+> it?* — is empty for six of them: EP, level, era, rank title, day streak, and the 360 badges.
+> Only TWO are spendable: SP (skill tree) and the bricks that become a building. And **not one of the
+> twelve ever ends**, which is why none of them could answer "where am I going".
+>
+> ### Done
+> 1. **The destination** — `engine/journey.js` (pure): 15 eras x 5 blueprints = **75 buildings**, and
+>    then the city is finished. The denominator is SUMMED from `BLUEPRINT_CATALOG`, never typed, so a
+>    16th era moves the destination by itself (`journey.test.js` goes red on a literal). No ninth unit:
+>    the numerator is `summarizeMuseum().builtTotal`, the same bricks already counted one cell away.
+>    `hooks/useJourney.js` is the ONLY seam between that pure module and the store.
+> 2. **The top rail stops printing EP** — on every tab, and in the Focus postcard's caption. It says
+>    the distance in SESSIONS while that estimate is honest, and falls through to `38/75 công trình`
+>    when it is not. ⚠️ It never falls back to EP: `describeStageCountdown` has an EP-phrased branch
+>    for the no-sample case, and `describeRailProgress` drops it. Removing that guard is a RED test.
+> 3. **`Cư dân 28` → `Thành phố 38/75 · còn 37`** in the city's four-cell stat grid. Residents were
+>    derived, unspendable and unaimable — the only decorative cell of the four. They did not leave the
+>    app: they still walk the streets in the picture directly above the cell.
+> 4. **Distances that changed unit** — rank card `✓ 3.955 / 672` → `✓ Đã đủ` (a met condition printed
+>    as a fraction bigger than its own denominator read like a bug); badge thresholds ≥120 minutes say
+>    `còn ~27 giờ` instead of `còn 1.627 phút`; weekly chain `+328` → `+328 XP` with `≈ 6 phiên` under
+>    it; daily mission rows now carry a unit at all.
+> 5. **The level countdown is silent past the reach ceiling.** Converting it to sessions is what made
+>    the ladder legible — and it said *"còn ~155 phiên"* (6.000 XP/level against a measured median of
+>    ~35 XP/session). `STAGE_COUNTDOWN_MAX_SESSIONS` exists to refuse that number, so the line hides.
+>    SP is not the bottleneck anyway: the 617-session save has 2 unspent points and 8 affordable skills.
+> 6. **A close names the destination, an open never does** — `describeDayClose`/`describeWeekClose`
+>    take a `journeyLine`. A total is a reward when he is looking back and a demand when he is starting.
+>
+> ### Decided and NOT done, with the number
+> **XP for achievements — rejected.** 360 badges grant nothing; that is the emptiest third column in
+> the app. Tier-scaled XP would have filled it with an existing unit, and the cost was measured first:
+> bronze 64 · silver 87 · gold 89 · platinum 61 · diamond 59, at 60/120/250/500/1.000, is **126.030 XP
+> ≈ 21 levels ≈ 42 SP** across the game, against a tree of 36 skills. A second XP faucet that large
+> dissolves the one-currency rule this whole round enforces. Left open in `TECH_DEBT.md`.
+>
+> ### The finding worth keeping
+> `describeStageCountdown` — the EP→sessions converter, written with a threshold, a silence rule and
+> its own tests — had been reachable from exactly ONE screen since the day it was written, while the
+> top rail printed raw EP on every tab all day. **Third time** this project has shipped a finished
+> engine function nobody called (`summarizeMuseum` was the first two). `components/journeyWiring.test.js`
+> now reads the call sites: an engine test proves a function RUNS, never that anyone CALLS it.
+>
+> ### Gates
+> lint ✅ · build ✅ · `npm run test:quiet` **1.652 tests · 1.651 pass · 0 fail · skipped 1** ✅
+> Shots at 390px: before/after of Thành Phố · Tiến trình · Hành trang · Tập trung, in `.city-preview/`.
+
+---
+
+> Previous: **2026-09-08** — **ROUND 41: THE LONG RHYTHMS, AND A TOOL THAT CAN SEE (ADR-081).**
 > Order: *"Ba lần liên tiếp có thứ không nghiệm thu được là đủ rồi … Chữa cái công cụ, đừng chữa từng ca."*
 > Everything on `main`. Round 39's counts and round 40's seven moments are untouched.
 >

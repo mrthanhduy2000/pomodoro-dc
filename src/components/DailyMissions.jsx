@@ -6,6 +6,7 @@ import useGameStore from '../store/gameStore';
 import useSettingsStore from '../store/settingsStore';
 import { missionXpMultiplier } from '../engine/wonderEffects.js';
 import { dailyAllBonusXP, scaleMissionXP } from '../engine/missions';
+import { medianSessionXP } from '../engine/eraStage';
 import RewardCard from './shared/RewardCard';
 import { DAILY_BONUS_COPY } from './dailyBonusCopy';
 import { useSnapMotion } from '../lib/motionPresets';
@@ -43,6 +44,7 @@ export default function DailyMissions({ section = 'all' }) {
   const buildings = useGameStore((s) => s.buildings);
   const unlockedSkills = useGameStore((s) => s.player.unlockedSkills);
   const refreshDailyMissions = useGameStore((s) => s.refreshDailyMissions);
+  const history = useGameStore((s) => s.history);
   const uiTheme = useSettingsStore((s) => s.uiTheme);
 
   React.useEffect(() => {
@@ -85,6 +87,16 @@ export default function DailyMissions({ section = 'all' }) {
         ),
       )
     : 0;
+  // ADR-082: the same bonus said in sessions. `null` when there is no history to compare against.
+  const weeklyBonusMedianXP = medianSessionXP(history);
+  // Làm tròn về SỐ NGUYÊN phiên: "≈ 6,4 phiên" xuống dòng ở khổ 390px và cái dấu phẩy thập phân
+  // giả vờ chính xác hơn mức một số trung vị có thể hứa.
+  // ⚠️ ĐƠN VỊ Ở DÒNG CAPTION, KHÔNG DÍNH VÀO CON SỐ LỚN. Đo bằng ảnh 390px: «+328 XP» ở cỡ 15px
+  // trong cột phải hẹp (tiêu đề chuỗi tuần chiếm bên trái) XUỐNG DÒNG thành ba dòng chồng nhau.
+  // Caption ngay dưới đã có sẵn chỗ cho cả đơn vị lẫn phép so sánh, trên MỘT dòng.
+  const weeklyBonusCaption = (weeklyBonusMedianXP && weeklyBonusXP > 0)
+    ? `XP · ≈ ${Math.max(1, Math.round(weeklyBonusXP / weeklyBonusMedianXP))} phiên`
+    : 'XP thưởng chuỗi';
 
   const streakMissionEligible = (streak.currentStreak ?? 0) >= STREAK_MISSION_MIN_STREAK;
   const streakMissionBaseXP = Math.min(
@@ -182,7 +194,17 @@ export default function DailyMissions({ section = 'all' }) {
               <div className="mono text-[15px] font-semibold tabular-nums" style={{ color: 'var(--accent2)' }}>
                 +{weeklyBonusXP}
               </div>
-              <div className="mono mt-0.5 text-[10px] uppercase tracking-[0.16em]" style={{ color: 'var(--muted)' }}>thưởng chuỗi</div>
+              {/*
+                ⚠️ THE CAPTION IS NOW A COMPARISON, NOT A LABEL (round 43, ADR-082). It used to read
+                «thưởng chuỗi» — a word that repeats what the card's own title already said, on
+                every render, forever. Meanwhile the number above it («+328») had no unit at all,
+                which is worse than a wrong unit: Đàm could not tell whether finishing four steps
+                across a whole week was worth a lot or nothing. Saying it in SESSIONS answers that
+                in one glance, in the only currency this game has (ADR-069) — and it is the same
+                sentence a person would say out loud: *"a week's chain is worth about one session."*
+                No history to compare against ⇒ fall back to the old label rather than guess.
+              */}
+              <div className="mono mt-0.5 text-[10px] uppercase tracking-[0.16em]" style={{ color: 'var(--muted)' }}>{weeklyBonusCaption}</div>
             </div>
           </div>
 
@@ -347,8 +369,14 @@ function TodayMissionRow({ mission, rewardXP }) {
           <div className="mono text-[11px] font-semibold tabular-nums" style={{ color: done ? 'var(--good)' : 'var(--muted)' }}>
             {done ? 'xong' : `${mission.progress}/${mission.goal}`}
           </div>
+          {/*
+            ⚠️ CÓ ĐƠN VỊ, KHÔNG PHẢI SỐ TRẦN (round 43, ADR-082). This cell printed «+38» directly
+            under «0/45» — two numbers, two different quantities, and only one of them labelled.
+            A bare number is worse than a number in a unit Đàm cannot spend: he cannot even tell
+            WHICH game it belongs to. Three characters buy the whole answer.
+          */}
           <div className="mono mt-1 text-[11px] font-semibold tabular-nums" style={{ color: 'var(--accent2)' }}>
-            +{rewardXP}
+            +{rewardXP} XP
           </div>
         </div>
       </div>

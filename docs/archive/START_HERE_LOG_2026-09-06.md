@@ -1,7 +1,58 @@
-# NHẬT KÝ VÒNG 20 → 32 (tách khỏi START_HERE.md ngày 2026-09-06)
+# NHẬT KÝ VÒNG 20 → 32, VÀ VÒNG 37 (tách khỏi START_HERE.md ngày 2026-09-06; vòng 37 thêm ngày 2026-09-08)
 
 > Chuyển ra đây để `START_HERE.md` về đúng lời hứa của chính nó ("file ngắn, đọc mỗi phiên").
 > Nguyên văn, không xoá chữ nào. `grep` khi cần truy một vòng cũ.
+
+---
+
+- **Loop — ROUND 37 (2026-09-06): A SESSION ALWAYS LAYS A BRICK (ADR-077).** Order: *"Build
+  lớn. Simplify mạnh. Làm game vui hơn. Tập trung nhiều hơn vào UX/UI. TOÀN QUYỀN."* Seven streams, all
+  on `main`. (1) **The brick**: `engine/sessionBrick.js` names the building THIS session pushes; the
+  strip above the ring (`focus/SessionBrickStrip.jsx`, replacing the milestone toast + combo badges +
+  city tease) fills the current brick with the timer; the ending's project card lands it (`BrickRow`,
+  `playBrickLaid`); an empty queue is auto-filled before the queue advances (`autoQueueSessionProject`)
+  — changeable on the Build screen. (2) **Stats never asks for homework**: the three "strongest" lines
+  rank on the WHOLE-SESSION rate (`started`/`whole` in `buildFocusProfile`), goal reviews only sharpen
+  it; Monday 04:00 compares last full week vs the week before (`WEEK_SCOPE`); the session goal is
+  OPTIONAL (chips in the goal card, same task type first). (3) **Sound**: last-minute bell ·
+  break-over cue · brick landing; dead tick + 5-minute chime deleted; no haptics (iOS has no API).
+  (4) `PomodoroEngine.jsx` 2,958 → 1,922 (`shared/ActionButton.jsx` = the #86 door, seven controls in
+  `components/focus/`). (5) `gameStore.js` 5,413 → 4,696 (`engine/missions.js` + `engine/weeklyChain.js`
+  + `engine/seededRng.js`; live mission tick = reload path; `forgiveness` removed). (6) **Weekly report
+  dialog deleted** — Stats answers it; the unseen dot sits on the Thống kê tab. (7) First open: no
+  overlay; Focus + City name the first project. ⚠️ Lessons: *the shot tool's default seed is era 7 with
+  5/5 built — a fresh save needs `--fixture` with `{"state":{},"version":4}`*; *`$SP` does not survive
+  between Bash calls*. Inspect: `--fixture <fx> --tab "Tập trung"` · `--preview "loot&dc-preview-card=project"`.
+- **Stats + economy — ROUND 36 (2026-09-06): STATS ANSWER, THEY DO NOT PRESENT; #99 CLOSED
+  (ADR-071).** Order: *"build lớn · simplify mạnh · vui hơn · UX/UI · TOÀN QUYỀN"*.
+  (1) `StatsDashboard.jsx` **3,792 → 294 lines**: opening it shows three cards — *am I improving?*
+  (this week vs the SAME span last week, 7 column pairs) · *when am I strongest?* (hour · length ·
+  task type, each line carrying its sample size) · *what next?* (ONE button «Bắt đầu N phút · type»
+  jumping straight to Focus). The «Điều đáng chú ý» strip stays; Journal · Notes fold below
+  (`StatsJournal.jsx` · `StatsNotes.jsx`). Numbers come from `engine/statsAnswers.js` (pure, composes
+  `coachIntel`/`gameMath`). Deleted: 3 tabs · 6 periods · charts · heat map · `statsPeriod.js` ·
+  `statsFocus.js`. (2) **#99 closed**: resources · RP · refining stopped accruing (keys stay in the
+  save — no migration), cancelling a session neither deducts nor spends forgiveness,
+  `cancelCrafting` refunds nothing, the «Kiếm N RP» quest is gone, cards dropped
+  «Rương Lớn/+resources/+RP». (3) Era-crisis text in saves is re-read from `ERA_CRISES` on load
+  (`withCanonicalCrisisText`) — general law: *saves store ids + numbers, text comes from the table*.
+  ⚠️ Lesson: *the three "strongest" lines only have numbers when sessions SET A GOAL* — the 599-session
+  fixture has no goals so all three were empty; the screen now says what to do instead of going quiet.
+  Inspect: `node scripts/shot.mjs --phone --fixture <fx> --tab "Thống kê" --full`.
+- 📚 **Rounds 20 → 35 moved to `docs/archive/START_HERE_LOG_2026-09-06.md`** (verbatim), together
+  with the 3D city details (BSP skeleton · `reach` 0.8 · two-layer shadows · 15 eras/`country` ·
+  12×12 grid · 3.2× perf headroom) — a finished black box is not worth paying tokens for every
+  session. **Keep at most 3 rounds here**; a new round pushes the oldest down.
+  Older rounds: `grep -n 'VÒNG 2[0-9]\|VÒNG 33\|ROUND 3[45]' docs/archive/START_HERE_LOG_2026-09-06.md`.
+
+### UI invariants — read before touching the UI
+⚠️ **Changing anything under `src/components/` or `src/store/uiSkins.js` means reading
+[`docs/UI_INVARIANTS.md`](docs/UI_INVARIANTS.md) FIRST.** It holds the rules that are guarded by
+tests: one shared reward card and exactly four rarity tiers · the no-exceptions interruption law
+(`lastWeeklyReportDate` vs `…SeenDate`) · exactly three motion presets · 5 sidebar items / 4 iPhone
+buttons + "Thêm" · 5 skins and the one-time migration that must never run again · the three-way
+choice for notifying Đàm · the era-stage progress bar. They are not repeated here because a rule
+stated twice drifts.
 
 ---
 

@@ -16,7 +16,7 @@ import { pickSessionProject } from '../../engine/sessionBrick';
 import { useEnterMotion, useSnapMotion } from '../../lib/motionPresets';
 
 import { summarizeMuseum } from '../../engine/cityCompletion';
-import { deriveResidentCount } from '../../engine/city3d/residents';
+import { describeJourney } from '../../engine/journey';
 import { getEraStyle } from '../../engine/city3d/eraStyle';
 import EraSwitcher from './EraSwitcher';
 import { cardStyle, eraSolid } from './cityTokens';
@@ -133,17 +133,18 @@ export default function CityViewShell({
   // phố, còn sưu tập là chuyện của catalog.
   const levelOf = new Map(layout.buildings.map((building) => [building.bpId, building.level]));
 
-  // ⚠️ CÙNG CÔNG THỨC với dân số trong cảnh 3D (`buildResidents` gọi đúng hàm này). Tự nhân chia
-  // lại ở đây thì sớm muộn hai chỗ nói hai con số khác nhau về cùng một thành phố.
-  const residents = deriveResidentCount({
-    buildingCount: layout.buildings.length,
-    sessionCount:  stats.sessionCount,
-    streakLength:  stats.streakLength,
-  });
+  // ⚠️ DÂN SỐ KHÔNG CÒN ĐƯỢC ĐẾM Ở ĐÂY (round 43). The stat cell that printed it is gone — see the
+  // `Thành phố` cell below for why — and `deriveResidentCount` was imported for that cell alone.
+  // The residents themselves did NOT go anywhere: `buildResidents` in the 3D scene calls the same
+  // engine function and they still walk the streets in the picture right above these cells. What
+  // was removed is the NUMBER, not the reward — a crowd you can watch says "28" better than the
+  // digits did, and the digits were costing a quarter of the only four stat slots this screen has.
 
   // ĐIỂM TỔNG CỦA CẢ BẢO TÀNG — "tôi đã đi được bao xa" trên toàn hành trình, không phải trong kỷ
   // này. Suy ra từ chính danh sách kỷ đã có, không lưu một byte nào.
   const museum = summarizeMuseum(eras);
+  // ADR-082: the destination — 75 buildings across 15 eras. See the `Thành phố` cell below.
+  const journey = describeJourney({ museum, activeBook: era });
 
   // ĐẤT NƯỚC BIỂU TƯỢNG của kỷ đang xem. Lấy thẳng từ bảng ngữ pháp đang dựng hình, KHÔNG chép lại
   // thành một bảng riêng ở tầng giao diện: chép ra là ngày nào đó đổi kiểu mái mà quên đổi nhãn,
@@ -291,7 +292,25 @@ export default function CityViewShell({
             // gì. Hai chỗ nói cùng một chuyện thì chỗ nói ít hơn phải nhường. Và vì công trường
             // gần như LÚC NÀO cũng có, ô đổi-nghĩa đó khiến dân số thực tế vẫn vô hình.
             // ("Cảnh vật" — số cây cối — thì đã nhường chỗ từ trước: con số chẳng nói lên điều gì.)
-            { label: 'Cư dân', value: residents },
+            //
+            // ⚠️ VÀ NAY CHÍNH "CƯ DÂN" PHẢI NHƯỜNG (round 43, ADR-082) — by the same law it once
+            // used to win the slot. Column three of the unit audit was: *what can Đàm DO with this
+            // number?* For residents the answer is nothing: it is derived (`deriveResidentCount`),
+            // it cannot be spent, aimed at, or finished, and 28 → 29 changes no decision he makes.
+            // It was the only cell of the four that was pure decoration.
+            //
+            // What takes it is the one number this app had never printed: **the destination**.
+            // 15 eras × 5 blueprints = 75 buildings, and then the city is DONE. Every other unit in
+            // the game only grows; this one ENDS, which is what makes it an answer to "where am I
+            // going?" rather than another "keep going". The numerator is `museum.builtTotal` — the
+            // same bricks already counted one cell to the left — so no new unit was invented
+            // (round-43 rule: no ninth unit), only the denominator that was always in the catalog.
+            //
+            // ⚠️ Sống ở kỷ nào cũng ĐÚNG SỐ ẤY: the journey is the whole city, not the era on
+            // screen, so this cell does NOT switch source when Đàm browses a sealed era. That is
+            // deliberate — the destination is the one thing that must not move while he looks
+            // around.
+            { label: 'Thành phố', value: journey.short, hint: journey.remaining > 0 ? `còn ${journey.remaining}` : 'trọn vẹn ★' },
           ].map((stat) => (
             <div key={stat.label} className="px-3 py-2.5" style={cardStyle}>
               <Stat label={stat.label} value={stat.value} hint={stat.hint ?? null} />

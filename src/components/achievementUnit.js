@@ -89,5 +89,14 @@ export const DON_VI_NGUONG = {
 export function cauConLai(con, dem) {
   const donVi = DON_VI_NGUONG[dem];
   if (!donVi || !Number.isFinite(con) || con <= 0) return '';
+  // ⚠️ GIỜ, KHÔNG PHẢI PHÚT, KHI CON SỐ ĐÃ QUÁ LỚN ĐỂ HÌNH DUNG (round 43, ADR-082). The badge
+  // hero read *"còn 1.627 phút"* — a true number that nobody can picture. Đàm plans his week in
+  // hours and sessions, never in four-digit minutes, and a distance he cannot picture is not a
+  // distance, it is a wall. 120 is the threshold on purpose: below two hours "còn 90 phút" is
+  // still one sitting and reads fine; above it the minutes stop meaning anything.
+  if (donVi === 'phút' && con >= 120) {
+    const gio = Math.round(con / 60);
+    return `còn ~${gio.toLocaleString('vi-VN')} giờ`;
+  }
   return `còn ${con.toLocaleString('vi-VN')} ${donVi}`;
 }

@@ -73,6 +73,35 @@ roughly 44%. Titles below are the lookup key; read one with
 
 ---
 
+## ADR-082 — Round 43: the app names ONE destination, and stops telling distances in units nobody can spend
+
+**Date**: 2026-09-08 · **Order**: *"không phải cái gì xảy ra lúc nào (vòng 41 làm rồi), không phải cái gì nằm ở đâu (vòng 42 đang làm), mà: tôi đang tiến tới cái gì, và vì sao tôi nên quan tâm."*
+
+**Context.** Đàm counted at least eight units of progress on screen at once — XP · EP 222/1.867 · Cấp 5 · Kỷ 8 · gạch 4/6 · chuỗi ngày · nhiệm vụ ngày 0/3 · nhiệm vụ tuần +328 — while ADR-069 had already declared the only currency of this game to be a SESSION. He set the test that decides the round: *"Cột thứ ba là cột giết người: một đơn vị mà tôi không làm gì được với nó thì nó không phải tiền tệ, nó là tiếng ồn."* The audit found **twelve** units, not eight, and only two of them spendable (SP, and the bricks that become a building).
+
+Worse, none of the twelve ENDS. Every one only grows, and a number that only grows cannot answer *"where am I going?"* — at 222 EP and at 22.000 EP the screen says the same thing, "keep going", which is the sentence a slot machine says.
+
+**Decision.**
+
+1. **The destination is the city, and the city is finite: 15 eras x 5 blueprints = 75 buildings.** `engine/journey.js` is the one place that says so; the denominator is summed from `BLUEPRINT_CATALOG`, never typed, so a 16th era moves the destination by itself. No ninth unit was created — the numerator is `summarizeMuseum().builtTotal`, the same bricks already counted.
+2. **The top rail stops printing EP.** `describeRailProgress` answers in SESSIONS while a session estimate is honest, and falls through to the destination when it is not. It never falls back to EP, and `journey.test.js` fails if that guard is removed — `describeStageCountdown` has an EP-phrased branch, and letting it through would quietly restore the exact number this round removed.
+3. **Every remaining distance changes unit.** The rank card's `3.955 / 672` (a met condition shown as a fraction larger than its own denominator) became `Đã đủ`; badge thresholds over two hours say hours, not four-digit minutes; the weekly chain's unlabelled `+328` says `+328 XP` with `≈ 6 phiên` under it; daily mission rows carry their unit at all.
+4. **The city's fourth stat cell moved from decoration to destination.** `Cư dân 28` became `Thành phố 38/75 · còn 37`. Residents were derived, unspendable, and unaimable; and they did not leave the app — they still walk the streets in the picture directly above the cell, which says "28" better than the digits did.
+5. **A close names the destination; an open never does.** `describeDayClose` / `describeWeekClose` take a `journeyLine`; the arc's opening moments stay light. A total is a reward when Đàm is already looking back and a demand when he is starting.
+6. **The level countdown obeys the same reach ceiling as the stage countdown, and is silent past it.** Converting the old line into sessions is what finally made the level ladder legible, and what it said was *"còn ~155 phiên"* — 6.000 XP per level against a measured median of ~35 XP per session. `STAGE_COUNTDOWN_MAX_SESSIONS` exists to refuse exactly that number, so the line now hides instead of restating a wall in a friendlier unit.
+
+**Rejected: paying XP for achievements.** 360 badges grant nothing, which is the emptiest third column in the app. Tier-scaled XP would have filled it using an existing unit — and it was measured before being rejected: bronze 64 · silver 87 · gold 89 · platinum 61 · diamond 59, at a modest 60/120/250/500/1.000, is **126.030 XP, about 21 levels, about 42 SP** across the whole game, against a tree of 36 skills. That is a second XP faucet large enough to dissolve the very one-currency rule this ADR enforces everywhere else. Badges stay a RECORD; the decision to reward them or delete them is left open and named in `TECH_DEBT.md`.
+
+**Consequences.**
+- `engine/journey.js` (pure) plus `hooks/useJourney.js` (the single store seam) are now the only source of the destination; a second hand-rolled fraction is a drift bug waiting to happen, and `components/journeyWiring.test.js` reads the call sites to catch it.
+- `medianSessionEP` and the new `medianSessionXP` share one private `medianSessionField` — one median rule, two fields.
+- `describeStageCountdown`, written with a threshold and a silence rule and its own tests, had been reachable from exactly ONE screen since it was written. That is the third time this project has shipped a finished engine function nobody called (`summarizeMuseum` was the first two). `journeyWiring.test.js` is the standing answer: **an engine test proves a function RUNS; it never proves anyone CALLS it.**
+- Round 42 (layout and space) was unmerged while this ran, so nothing here moves, resizes or re-spaces anything: every change is text inside an element that already existed, or one stat cell changing what it reads.
+
+**Alternatives considered.** Deleting the 360-badge grid (rejected: a real deletion of content in the one round that could not reshape the screen around it); showing the destination as a percentage (rejected: `51%` hides both ends, and the round-43 brief required a sentence that names what is done AND what is left).
+
+---
+
 ## ADR-081 — Round 41: a day and a week that open and close; three kinds of surprise at three different beats; and the tool that finally photographs a moment
 
 **Date**: 2026-09-08 · **Order**: *"Build lớn. Simplify mạnh. Làm game vui hơn và đầy dopamine hơn … Ba lần liên tiếp có thứ không nghiệm thu được là đủ rồi."*

@@ -10,6 +10,26 @@
 > **Muốn hiểu VÌ SAO một quyết định được chọn** → `ARCHITECTURE_DECISIONS.md`. **Muốn biết migration
 > cụ thể nào cần chạy** → `MIGRATION.md`.
 
+## 2026-09-08 — Round 42: space — one number for a shape, one axis for a stack (ADR-081)
+
+- **Purpose**: close the three layout faults Đàm photographed in a real session — the session-goal
+  line landing ON the ring in full screen and on iPhone, and the Focus screen needing a scroll to
+  reach «Tạm dừng» on desktop — by removing their single root cause rather than the three symptoms.
+- **Scope**: `src/components/focus/ringMetrics.js` (new, the one owner of the ring's geometry) ·
+  `focus/ringText.test.js` (new gate) · `PomodoroEngine.jsx` (nine size constants and the scaling
+  wrapper deleted; the stage carries its own column; full screen is one bounded screen; the session
+  notebook is a disclosure) · `focus/CityPostcard.jsx` (height gives way on a short screen) ·
+  `App.jsx` (the collapsed sidebar rail gains labels; attention dots gain their reason in words) ·
+  `timerFold.test.js` / `timerRing.test.js` / `appNavigation.test.js` / `rewardToastWiring.test.js`
+  follow the new shape.
+- **Effect**: no screen scrolls while a timer runs, at 375×667 · 375×812 · 390×844 · 1280×900 ·
+  2000×1080; the line under the ring clears it by 12 px in every cell (it was 32–452 px inside);
+  the space reserved for the ring is now the space it occupies, by construction; every string inside
+  the disc scales with the ring. Table 1 unchanged: 1 indicator · 2 numbers · 3 colours · 0 cut text.
+- **Compatibility**: layout only. No stored state, no save-file field, no engine formula touched.
+  `container-type: inline-size` requires Safari 16+ / Chrome 105+; the layout itself never depends
+  on it, only the type sizes inside the disc.
+
 ## 2026-09-08 — Round 40: things that happen and vanish (ADR-080)
 
 **Purpose.** *"Dọn xong thì lộ ra chỗ trống — vòng này lấp chỗ trống ấy."* Give the 125 silent minutes a rhythm, make the ending burst by tier, add one real surprise, design the break — while round 39's screen stays exactly as it is (1 indicator · ≤2 numbers · ≤3 colours · 0 cut text). Static budget: zero.

@@ -16,8 +16,23 @@
   `lastWeeklyReportDate` = *invited*, `lastWeeklyReportSeenDate` = *seen*. Law: **opening = seen,
   an expired toast writes nothing**. Since ADR-077 the weekly report dialog is gone — the Stats
   screen answers "this week vs last" — so *opening* means `markWeeklyReportSeen()` + the Stats
-  tab, and the never-expiring safety-net dot sits on the **Thống kê tab** (`attentionTabIds`), which
+  tab, and the never-expiring safety-net dot sits on the **Thống kê tab** (`attentionByTab`, which
+  since round 42 carries the REASON in words — «Có việc» · «Tuần mới» — not just the id: a mark on a
+  screen must be able to say what it reports), which
   exists on both platforms by construction.
+- **The ring's size is ONE number, and the space reserved for it is that same number** (ADR-081,
+  round 42). `src/components/focus/ringMetrics.js` owns it: `ringSizeCss()` is the ring's `width`,
+  `aspect-ratio: 1` gives the height, and the slot around it has NO height of its own. **Never put a
+  `minHeight`/`height` on that slot and never scale the ring by transform** — those two are exactly
+  how a drawing came to be bigger than the hole reserved for it (427 drawn vs 281 reserved at 390 px
+  in full screen), which put the session-goal line 32 px inside the arc. Every string INSIDE the disc
+  is sized in `cqw`, a fraction of the ring, never in absolute rem. Guarded by `timerFold.test.js`
+  (the structure) and `focus/ringText.test.js` (25 % clearance at every ring size, red on a
+  10-character clock).
+- **A stack declares its own axis.** `timerStageContent` wraps the Focus stage in `flex-col` and is
+  the ONLY place `timerStageVisual` is mounted. A fragment of stacked blocks has no layout of its
+  own, so a caller that mounts it into a row lays the stack out side by side — that is how the goal
+  line ended up on the digits at 1280 and 2000. `timerFold.test.js` fails if either changes.
 - **Motion: EXACTLY THREE presets**, single source `src/lib/motionPresets.js` — `enter` · `press` ·
   `reward`. All three self-silence under "Reduce motion", so callers must not check it themselves.
   Never hand-write `initial`/`animate`, never add a fourth preset (`motionPresets.test.js` counts).
@@ -44,7 +59,7 @@
   "fix" this into comparing `uiSkin === 'editorial'` — value comparison re-forces on every later
   version bump.
 - **Anything new that wants to "tell Đàm" picks ONE of three, never opens a dialog by itself**:
-  toast (`engine/rewardFeed.js`) · attention dot (`engine/navAttention.js` → `attentionTabIds`) ·
+  toast (`engine/rewardFeed.js`) · attention dot (`engine/navAttention.js` → `attentionByTab`) ·
   notification bell (`ui.notificationFeed`). `rewardToastWiring.test.js` guards this.
 - **Era stages**: the milestone is real (`src/engine/eraStage.js`) — the header bar measures the
   stage (~3%/session, fills 3× per era) plus a "còn ~N phiên nữa tới «…»" countdown on Focus.

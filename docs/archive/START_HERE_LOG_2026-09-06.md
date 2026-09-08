@@ -314,3 +314,58 @@
   not delete what Đàm earned, do not touch synced state). ⚠️ Lesson: a Rank card printed «+12% Tài
   Nguyên» — *a valid reward table with green tests can still grant something nobody can see; only a
   SCREENSHOT catches it.*
+
+---
+
+## Rounds 36 → 38 — moved out of `START_HERE.md` on 2026-09-08 (round 42), verbatim
+
+- **Loop — ROUND 38 (2026-09-07): THE CITY LIVES ON THE FOCUS SCREEN (ADR-078).** Order:
+  *"Thôi dọn, bắt đầu xây"* + a permanent report law (A for Đàm first, B for the advisor). (1) **City
+  postcard** (`focus/CityPostcard.jsx` + pure `focus/cityPostcard.js`): the same `CityStage` framed at
+  full opacity at the top of Focus — still in a session, alive when idle, camera on this session's
+  scaffold (phantom at session 1) or on the building just finished (`ui.postcardFocusBpId`); the ghost
+  `CityBackdrop` is deleted; streak card under the timer (`belowTimer`), era bar in the caption
+  (`shared/EraStageBar.jsx`, hidden in the top rail on Focus). (2) **«Đổi công trình»** on the brick strip
+  (`chooseSessionProject`, store `setSessionProject`). (3) **`engine/sessionRewards.js`** —
+  `assembleSessionReward` is the whole session-end computation, pure (`now`/`today`/`weekKey`/
+  `dailyGoal`/`random` params); ten helper clusters moved to `engine/`; `gameStore.js` 4,677 → 2,879.
+  (4) `COACH_BUCKET_MIN_SAMPLE` 4 → 3, one definition. (5) **#86 gate**: ESLint rejects palette classes
+  and hex/rgb literals on any button (0 violations; 11 action buttons through `ActionButton`).
+  (6) `soundEngine.cues.test.js` proves the five cues differ; no haptics by design (iOS has no API).
+  ⚠️ Lessons: *the sandbox's software GL trips the FPS watchdog in ~3 s — shoot 3D with `--settle 600`*;
+  *`--click` matches a button's FULL text, emoji included*. Inspect: `--fixture <fx> --tab "Tập trung"
+  --settle 600` · `--fixture fresh.json --tab "Tập trung" --click "Đổi công trình" --settle 600`.
+- **Loop — ROUND 37 (2026-09-06): A SESSION ALWAYS LAYS A BRICK (ADR-077).** Order: *"Build
+  lớn. Simplify mạnh. Làm game vui hơn. Tập trung nhiều hơn vào UX/UI. TOÀN QUYỀN."* Seven streams, all
+  on `main`. (1) **The brick**: `engine/sessionBrick.js` names the building THIS session pushes; the
+  strip above the ring (`focus/SessionBrickStrip.jsx`, replacing the milestone toast + combo badges +
+  city tease) fills the current brick with the timer; the ending's project card lands it (`BrickRow`,
+  `playBrickLaid`); an empty queue is auto-filled before the queue advances (`autoQueueSessionProject`)
+  — changeable on the Build screen. (2) **Stats never asks for homework**: the three "strongest" lines
+  rank on the WHOLE-SESSION rate (`started`/`whole` in `buildFocusProfile`), goal reviews only sharpen
+  it; Monday 04:00 compares last full week vs the week before (`WEEK_SCOPE`); the session goal is
+  OPTIONAL (chips in the goal card, same task type first). (3) **Sound**: last-minute bell ·
+  break-over cue · brick landing; dead tick + 5-minute chime deleted; no haptics (iOS has no API).
+  (4) `PomodoroEngine.jsx` 2,958 → 1,922 (`shared/ActionButton.jsx` = the #86 door, seven controls in
+  `components/focus/`). (5) `gameStore.js` 5,413 → 4,696 (`engine/missions.js` + `engine/weeklyChain.js`
+  + `engine/seededRng.js`; live mission tick = reload path; `forgiveness` removed). (6) **Weekly report
+  dialog deleted** — Stats answers it; the unseen dot sits on the Thống kê tab. (7) First open: no
+  overlay; Focus + City name the first project. ⚠️ Lessons: *the shot tool's default seed is era 7 with
+  5/5 built — a fresh save needs `--fixture` with `{"state":{},"version":4}`*; *`$SP` does not survive
+  between Bash calls*. Inspect: `--fixture <fx> --tab "Tập trung"` · `--preview "loot&dc-preview-card=project"`.
+- **Stats + economy — ROUND 36 (2026-09-06): STATS ANSWER, THEY DO NOT PRESENT; #99 CLOSED
+  (ADR-071).** Order: *"build lớn · simplify mạnh · vui hơn · UX/UI · TOÀN QUYỀN"*.
+  (1) `StatsDashboard.jsx` **3,792 → 294 lines**: opening it shows three cards — *am I improving?*
+  (this week vs the SAME span last week, 7 column pairs) · *when am I strongest?* (hour · length ·
+  task type, each line carrying its sample size) · *what next?* (ONE button «Bắt đầu N phút · type»
+  jumping straight to Focus). The «Điều đáng chú ý» strip stays; Journal · Notes fold below
+  (`StatsJournal.jsx` · `StatsNotes.jsx`). Numbers come from `engine/statsAnswers.js` (pure, composes
+  `coachIntel`/`gameMath`). Deleted: 3 tabs · 6 periods · charts · heat map · `statsPeriod.js` ·
+  `statsFocus.js`. (2) **#99 closed**: resources · RP · refining stopped accruing (keys stay in the
+  save — no migration), cancelling a session neither deducts nor spends forgiveness,
+  `cancelCrafting` refunds nothing, the «Kiếm N RP» quest is gone, cards dropped
+  «Rương Lớn/+resources/+RP». (3) Era-crisis text in saves is re-read from `ERA_CRISES` on load
+  (`withCanonicalCrisisText`) — general law: *saves store ids + numbers, text comes from the table*.
+  ⚠️ Lesson: *the three "strongest" lines only have numbers when sessions SET A GOAL* — the 599-session
+  fixture has no goals so all three were empty; the screen now says what to do instead of going quiet.
+  Inspect: `node scripts/shot.mjs --phone --fixture <fx> --tab "Thống kê" --full`.

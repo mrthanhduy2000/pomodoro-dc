@@ -86,9 +86,12 @@ export const RING_HEIGHT_RESERVE_PX = Object.freeze({
   // block above runs 2 or 3 lines depending on the day — round 20 lost a whole ceiling to that)
   wide: 610,
   // pt-4 (16) + postcard (180) + mt-4 (16) + card py-5 (40) + brick strip (26) + goal line, two
-  // lines (44) + note row (56) + floating tab bar (118) + safety (70 — the greeting block runs 2 or
-  // 3 lines depending on the day, and round 20 lost a whole ceiling to exactly that)
-  compact: 566,
+  // lines (44) + note row (56) + floating tab bar (118) + safety (24)
+  // ⚠️ 566 → 520 (round 42, Việc 2). Đàm: «~35% màn hình phía dưới hai nút đang bỏ trống, trong khi
+  // vòng ở trên thì chật» — space taken from the one thing the screen is for and given to nothing.
+  // Measured at 390×844 after the fix: 79 px of the band below the note row served nothing but
+  // clearance over the floating tab bar, where ~30 px does the job.
+  compact: 520,
 });
 
 /**

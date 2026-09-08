@@ -32,7 +32,26 @@ Production branch `main` carries **both** work streams (merged 2026-08-28 on Đ�
 ⚠️ Phase 21 therefore shipped **before** Đàm reviewed its screenshots — the "waiting on Đàm's eyes"
 item below is still live, it just now reviews something already running.
 
-- **Loop — ROUND 40 (2026-09-08, LATEST): THINGS THAT HAPPEN AND VANISH (ADR-080).** Order: fill the
+- **Loop — ROUND 42 (2026-09-08, LATEST): SPACE — ONE NUMBER FOR A SHAPE, ONE AXIS FOR A STACK
+  (ADR-081).** Order: *"VÒNG 42 = KHÔNG GIAN: cái gì nằm ở đâu, to bao nhiêu, có vừa khung không"*, with three
+  photographs. Root cause, one sentence: the ring was DRAWN at `min(canvas, cap) × transform: scale()` while the
+  room under it was RESERVED from a SECOND expression — a transform does not change layout, so once the cap bit
+  the drawing was bigger than the hole (390 px full screen: **427 drawn, 281 reserved, the goal line 32 px inside
+  the arc**); and `timerStageVisual` is a FRAGMENT of stacked blocks that desktop full screen mounted into a ROW
+  flex, so the same line flew onto the digits at 1280/2000. **`src/components/focus/ringMetrics.js` is now the ONE
+  owner** of the ring's geometry: `ringSizeCss()` → one CSS length for `width`, `aspect-ratio: 1` for the height,
+  three terms (px ceiling · 94 % of the column · `calc(100svh − min(<reserve>px, <reserve>svh))`); the slot has NO
+  height of its own, so reserved ≡ drawn; nine constants and the scaling wrapper deleted. Text inside the disc is
+  `cqw` (a fraction of the ring) instead of eleven rem values. `timerStageContent` carries its own column and is
+  the only mount point. Full screen is `h-[100svh] overflow-hidden` with the 890 px notebook behind a disclosure;
+  `min-h-[76/84/88vh]` only while idle. Sidebar rail: labels under icons, dots carry their reason
+  («Có việc» · «Tuần mới»). Gate: **`focus/ringText.test.js`** — 25 % clearance for every clock string at every
+  ring size 160–720 px, identical ratio at every size, red on a 10-character clock. Measured after: vertical
+  scroll **0** in every running/break/full-screen cell at 375/390/1280/2000; gap ring→line **+12 px** everywhere.
+  ⚠️ Inspect a running/break state with a seeded `timerSession`/`breakSession` fixture (ms timestamps, **regenerate
+  it right before each shot — a 25-minute session in a stale fixture has already ENDED and you photograph the
+  reward card instead**) and `--settle 900`.
+- **Loop — ROUND 40 (2026-09-08): THINGS THAT HAPPEN AND VANISH (ADR-080).** Order: fill the
   gap round 39 exposed, with a static budget of ZERO — only things that happen and are gone. Session
   beats (`engine/sessionBeats.js`: settled · halfway · final stretch · last minute — an 8-second whisper
   in the ring label + `focus/BeatRipple.jsx`, from elapsed time, background-safe, no new sound); the glow
@@ -54,61 +73,11 @@ item below is still live, it just now reviews something already running.
   indicators 6 → 1 · numbers 13 → 2 · colours 6 → 3 · cut texts ≥ 3 → 0. Guards: `timerRing.test.js` (one
   dashed arc · tokens · palette gate), `focusFoldReach.test.js`. Inspect the running state with a seeded
   `timerSession` fixture (ms timestamps) + `--settle 600`.
-- **Loop — ROUND 38 (2026-09-07): THE CITY LIVES ON THE FOCUS SCREEN (ADR-078).** Order:
-  *"Thôi dọn, bắt đầu xây"* + a permanent report law (A for Đàm first, B for the advisor). (1) **City
-  postcard** (`focus/CityPostcard.jsx` + pure `focus/cityPostcard.js`): the same `CityStage` framed at
-  full opacity at the top of Focus — still in a session, alive when idle, camera on this session's
-  scaffold (phantom at session 1) or on the building just finished (`ui.postcardFocusBpId`); the ghost
-  `CityBackdrop` is deleted; streak card under the timer (`belowTimer`), era bar in the caption
-  (`shared/EraStageBar.jsx`, hidden in the top rail on Focus). (2) **«Đổi công trình»** on the brick strip
-  (`chooseSessionProject`, store `setSessionProject`). (3) **`engine/sessionRewards.js`** —
-  `assembleSessionReward` is the whole session-end computation, pure (`now`/`today`/`weekKey`/
-  `dailyGoal`/`random` params); ten helper clusters moved to `engine/`; `gameStore.js` 4,677 → 2,879.
-  (4) `COACH_BUCKET_MIN_SAMPLE` 4 → 3, one definition. (5) **#86 gate**: ESLint rejects palette classes
-  and hex/rgb literals on any button (0 violations; 11 action buttons through `ActionButton`).
-  (6) `soundEngine.cues.test.js` proves the five cues differ; no haptics by design (iOS has no API).
-  ⚠️ Lessons: *the sandbox's software GL trips the FPS watchdog in ~3 s — shoot 3D with `--settle 600`*;
-  *`--click` matches a button's FULL text, emoji included*. Inspect: `--fixture <fx> --tab "Tập trung"
-  --settle 600` · `--fixture fresh.json --tab "Tập trung" --click "Đổi công trình" --settle 600`.
-- **Loop — ROUND 37 (2026-09-06): A SESSION ALWAYS LAYS A BRICK (ADR-077).** Order: *"Build
-  lớn. Simplify mạnh. Làm game vui hơn. Tập trung nhiều hơn vào UX/UI. TOÀN QUYỀN."* Seven streams, all
-  on `main`. (1) **The brick**: `engine/sessionBrick.js` names the building THIS session pushes; the
-  strip above the ring (`focus/SessionBrickStrip.jsx`, replacing the milestone toast + combo badges +
-  city tease) fills the current brick with the timer; the ending's project card lands it (`BrickRow`,
-  `playBrickLaid`); an empty queue is auto-filled before the queue advances (`autoQueueSessionProject`)
-  — changeable on the Build screen. (2) **Stats never asks for homework**: the three "strongest" lines
-  rank on the WHOLE-SESSION rate (`started`/`whole` in `buildFocusProfile`), goal reviews only sharpen
-  it; Monday 04:00 compares last full week vs the week before (`WEEK_SCOPE`); the session goal is
-  OPTIONAL (chips in the goal card, same task type first). (3) **Sound**: last-minute bell ·
-  break-over cue · brick landing; dead tick + 5-minute chime deleted; no haptics (iOS has no API).
-  (4) `PomodoroEngine.jsx` 2,958 → 1,922 (`shared/ActionButton.jsx` = the #86 door, seven controls in
-  `components/focus/`). (5) `gameStore.js` 5,413 → 4,696 (`engine/missions.js` + `engine/weeklyChain.js`
-  + `engine/seededRng.js`; live mission tick = reload path; `forgiveness` removed). (6) **Weekly report
-  dialog deleted** — Stats answers it; the unseen dot sits on the Thống kê tab. (7) First open: no
-  overlay; Focus + City name the first project. ⚠️ Lessons: *the shot tool's default seed is era 7 with
-  5/5 built — a fresh save needs `--fixture` with `{"state":{},"version":4}`*; *`$SP` does not survive
-  between Bash calls*. Inspect: `--fixture <fx> --tab "Tập trung"` · `--preview "loot&dc-preview-card=project"`.
-- **Stats + economy — ROUND 36 (2026-09-06): STATS ANSWER, THEY DO NOT PRESENT; #99 CLOSED
-  (ADR-071).** Order: *"build lớn · simplify mạnh · vui hơn · UX/UI · TOÀN QUYỀN"*.
-  (1) `StatsDashboard.jsx` **3,792 → 294 lines**: opening it shows three cards — *am I improving?*
-  (this week vs the SAME span last week, 7 column pairs) · *when am I strongest?* (hour · length ·
-  task type, each line carrying its sample size) · *what next?* (ONE button «Bắt đầu N phút · type»
-  jumping straight to Focus). The «Điều đáng chú ý» strip stays; Journal · Notes fold below
-  (`StatsJournal.jsx` · `StatsNotes.jsx`). Numbers come from `engine/statsAnswers.js` (pure, composes
-  `coachIntel`/`gameMath`). Deleted: 3 tabs · 6 periods · charts · heat map · `statsPeriod.js` ·
-  `statsFocus.js`. (2) **#99 closed**: resources · RP · refining stopped accruing (keys stay in the
-  save — no migration), cancelling a session neither deducts nor spends forgiveness,
-  `cancelCrafting` refunds nothing, the «Kiếm N RP» quest is gone, cards dropped
-  «Rương Lớn/+resources/+RP». (3) Era-crisis text in saves is re-read from `ERA_CRISES` on load
-  (`withCanonicalCrisisText`) — general law: *saves store ids + numbers, text comes from the table*.
-  ⚠️ Lesson: *the three "strongest" lines only have numbers when sessions SET A GOAL* — the 599-session
-  fixture has no goals so all three were empty; the screen now says what to do instead of going quiet.
-  Inspect: `node scripts/shot.mjs --phone --fixture <fx> --tab "Thống kê" --full`.
-- 📚 **Rounds 20 → 35 moved to `docs/archive/START_HERE_LOG_2026-09-06.md`** (verbatim), together
+- 📚 **Rounds 20 → 38 moved to `docs/archive/START_HERE_LOG_2026-09-06.md`** (verbatim), together
   with the 3D city details (BSP skeleton · `reach` 0.8 · two-layer shadows · 15 eras/`country` ·
   12×12 grid · 3.2× perf headroom) — a finished black box is not worth paying tokens for every
   session. **Keep at most 3 rounds here**; a new round pushes the oldest down.
-  Older rounds: `grep -n 'VÒNG 2[0-9]\|VÒNG 33\|ROUND 3[45]' docs/archive/START_HERE_LOG_2026-09-06.md`.
+  Older rounds: `grep -n 'VÒNG 2[0-9]\|VÒNG 33\|ROUND 3[4-8]' docs/archive/START_HERE_LOG_2026-09-06.md`.
 
 ### UI invariants — read before touching the UI
 ⚠️ **Changing anything under `src/components/` or `src/store/uiSkins.js` means reading

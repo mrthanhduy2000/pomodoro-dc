@@ -28,6 +28,10 @@
 │   │   │   ├── CityPostcard.jsx   # THE CITY ON THE FOCUS SCREEN (ADR-078): framed CityStage tenant, still in a session,
 │   │   │   │                     #   alive when idle, camera on this session's brick; caption = greeting + EraStageBar
 │   │   │   ├── cityPostcard.js    # PURE: layout input (phantom scaffold for the auto-pick) · focus target · selection resolve
+│   │   │   ├── ringMetrics.js      # ⭐ ADR-081: the ONE owner of the clock ring's geometry — `ringSizeCss()`
+│   │   │   │                       #   (px ceiling · 94% of the column · 100svh − reserve), the `cqw` type ratios,
+│   │   │   │                       #   and `clockFitsRing()`. PURE. Its test is the anti-overlap gate.
+│   │   │   ├── ringText.test.js    # The Việc-3 gate: 25% clearance for every clock string at every ring size
 │   │   │   ├── SessionBrickStrip.jsx # "This session's brick" above the ring — reads craftingQueue/buildings, engine/sessionBrick.js
 │   │   │   ├── BrickRow.jsx          # Brick cells (laid · laying · new · empty), shared with the ending's project card; new bricks DROP (ADR-080)
 │   │   │   ├── BeatRipple.jsx        # The visible half of a session/break beat: two rings out of the clock, 1.9 s (ADR-080)

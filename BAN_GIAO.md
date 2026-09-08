@@ -1,3 +1,59 @@
+> Last update: **2026-09-08** — **ROUND 42: SPACE — ONE NUMBER FOR A SHAPE, ONE AXIS FOR A STACK (ADR-081).**
+> Order: *"Build lớn. Simplify mạnh… Tập trung nhiều hơn vào UX/UI. VÒNG 42 = KHÔNG GIAN. TOÀN QUYỀN."*
+> Reported with three photographs of a real session. Round 41 (TIME) ran in parallel on its own branch.
+>
+> ### The bug, in one paragraph
+> Round 39 put the session goal UNDER the ring. The ring was DRAWN at `min(canvas, cap) × transform: scale()`
+> and the room under it RESERVED from a SECOND expression, `min(canvas × scale + pad, cap)`. A transform does
+> not change layout, so once the cap bit, the drawing was bigger than the hole. **390 px, full screen: 427
+> drawn, 281 reserved, the goal line 32 px INSIDE the arc.** Separately, the stage is a FRAGMENT of stacked
+> blocks and desktop full screen mounted it into a ROW flex — so at 1280/2000 the same line flew to the ring's
+> right edge and landed on the digits. Nine constants described that one circle; a test pinned that two of them
+> shared a cap and stayed green through all of it, because it guarded the cap and not the multiplication after.
+>
+> ### Done
+> 1. **`focus/ringMetrics.js`** is the ONE owner of the ring's geometry. `ringSizeCss()` → one CSS length for
+>    `width`; `aspect-ratio: 1` gives the height. Three terms: a px ceiling · **94 %** of the column · `calc(100svh
+>    − min(<reserve>px, <reserve>svh))`. The slot around the ring has NO height of its own, so what is reserved
+>    IS what is drawn. Nine constants and the scaling wrapper deleted.
+> 2. **Text inside the disc is a fraction of the ring** (`cqw`, `container-type: inline-size`), replacing eleven
+>    rem values across four breakpoints. Label · clock · subline · the two stopwatch lines.
+> 3. **`timerStageContent` carries its own column** and is the only place `timerStageVisual` is mounted; the
+>    desktop full-screen docked-button branch is gone. No caller can pick the axis any more.
+> 4. **One screen while a timer owns it.** Full screen `h-[100svh] overflow-hidden`; the 890 px session notebook
+>    became a disclosure, closed by default. `min-h-[76/84/88vh]` only while idle. Card padding halves while
+>    running. City postcard `h-[min(168px,20svh)]`.
+> 5. **The gate (Việc 3): `focus/ringText.test.js`.** Glyph advance solved from ONE browser measurement of round
+>    39 and predicting two others within 1 px. Proves 25 % clearance for every clock string at every ring size
+>    160–720 px, that the clearance RATIO is identical at every size, label/subline against their own chord, the
+>    four frames × three contexts fitting one screen — and **goes red** on a 10-character clock.
+> 6. **Việc 4 — the collapsed sidebar** keeps its 144 px saving but not its silence: labels under every icon
+>    (wrapped, never truncated), and `attentionTabIds` (a Set) → `attentionByTab` (id → «Có việc» / «Tuần mới»).
+>
+> ### Measured (probe, `shot.mjs`)
+> | | before | after |
+> |---|---|---|
+> | goal line vs ring (390 FS · 375 FS · 1280 FS) | −32 · −36 · −423 px (on the arc) | **+12 px** everywhere |
+> | vertical scroll, running/break/full screen, 4 frames | 355 · 251 · 999 · 1038 · 1062 px | **0 in every cell** |
+> | ring reserved vs ring drawn | 281 vs 427 | **equal in every cell** |
+> | ring off the viewport edge (390 FS) | 19 px each side | **0** |
+> | horizontal scroll, 6 screens × 4 frames | 0 | **0** |
+> | Table 1 while running (indicators · numbers · colours · cut) | 1 · 2 · 3 · 0 | **1 · 2 · 3 · 0** |
+>
+> ### Not done / found, not fixed
+> - **375×667 idle still scrolls** (1 471 px) — by design: the goal card, the day's missions and the Coach live
+>   below the fold. «Bắt đầu phiên» ends at y=728 against a tab bar at y=774.
+> - **Thống kê at 1280** has a decorative `pointer-events-none … inset-x-[-6%] -z-10` band 9 px past the viewport;
+>   it is clipped, causes no scroll, and is deliberate bleed. Left alone.
+> - The reward-card rhythm and the session-end moment belong to **round 41** (time); its airy full-screen layout
+>   was checked (no cut text, no overlap, no horizontal scroll) and not restyled.
+>
+> ### Gate
+> `npm run lint` clean · `npm run build` green · `npm run test:quiet` **1 633 tests, 1 632 pass, 1 skipped**
+> (+10 from round 40: 8 new in `ringText.test.js`, `timerFold.test.js` rewritten around the new invariant).
+
+---
+
 > Last update: **2026-09-08** — **ROUND 40: THINGS THAT HAPPEN AND VANISH (ADR-080).**
 > Order: *"Build lớn. Simplify mạnh. Làm game vui hơn và đầy dopamine hơn … Ngân sách thứ đứng yên: 0.
 > TOÀN QUYỀN."* Five jobs + the gate; everything on `main`. Round 39's counts are untouched.

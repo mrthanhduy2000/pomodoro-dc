@@ -1637,7 +1637,9 @@ function SidebarItem({ active, attention = null, icon, isOpen, label, onClick })
               className="ml-auto mr-1 shrink-0 rounded-full px-1.5 py-[3px] text-[9.5px] font-semibold uppercase tracking-[0.06em]"
               style={{ background: 'rgba(var(--accent-rgb),0.16)', color: 'var(--accent)' }}
             >
-              {attention}
+              {/* Dấu cách ở đầu: tên gọi của nút là chuỗi văn bản của nó nối liền, nên không có nó
+                  trình đọc màn hình (và công cụ chụp) đọc ra «Thống kêTuần mới». */}
+              {` ${attention}`}
             </span>
           )}
         </>
@@ -1658,7 +1660,7 @@ function SidebarItem({ active, attention = null, icon, isOpen, label, onClick })
           {/* Lý do cái chấm, cũng viết ra thành chữ ở đây — 88px đủ cho «Có việc»/«Tuần mới». */}
           {attention && (
             <span className="w-full text-center text-[8.5px] font-semibold leading-[1.15]" style={{ color: 'var(--accent)' }}>
-              {attention}
+              {` ${attention}`}
             </span>
           )}
         </>

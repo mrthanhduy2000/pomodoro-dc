@@ -287,7 +287,7 @@ markWeeklyReportSeen() ── ghi lastWeeklyReportSeenDate = thứHai (đã XEM)
         ▼                                                    lastWeeklyReportSeenDate KHÔNG đổi
   màn THỐNG KÊ — thẻ «Tôi có đang khá lên không?»              ⇒ weeklyReportUnseen vẫn TRUE
   (ADR-077: WeeklyReportModal đã xoá; Stats trả lời câu ấy)  ⇒ CHẤM trên tab Thống kê, KHÔNG hết hạn
-                                                               (`attentionTabIds` — cả desktop lẫn iPhone)
+                                                               (`attentionByTab` — cả desktop lẫn iPhone; từ vòng 42 mang cả LÝ DO thành chữ)
 ```
 
 ⚠️ **CÁI CHẤM LÀ LƯỚI AN TOÀN, VÀ NÓ PHẢI CĂNG Ở CẢ HAI NỀN TẢNG.** Toast tự tắt sau 4 giây nên

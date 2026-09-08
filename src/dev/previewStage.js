@@ -57,6 +57,8 @@ const PHIEN_THUONG = {
   overclockBonus: 0,
   levelsGained: 0,
   spGained: 0,
+  // ADR-084: điểm kỹ năng do THÀNH PHỐ trả (một công trình xong = 1 SP). 0 = phiên thường.
+  citySP: 0,
   newLevel: 5,
   eraChanged: false,
   buildingPerkRewards: [],
@@ -106,6 +108,7 @@ const PHIEN_DINH = {
   overclockBonus: 15,
   levelsGained: 1,
   spGained: 1,
+  citySP: 0,
   newLevel: 6,
   buildingPerkRewards: [{ label: 'Nhà Kho · lộc công trình', xp: 12 }],
   rankUp: { label: 'Thủy Thủ', icon: '⚓', buffLabel: '+12% EP' },
@@ -143,6 +146,12 @@ export const PREVIEW_SCENES = {
    */
   'loot-lucky': { lootModalOpen: true, pendingReward: { ...PHIEN_THUONG, luckyBrickId: QUEUE_HEAD } },
   'loot-built': { lootModalOpen: true, pendingReward: { ...PHIEN_THUONG, newlyBuiltIds: [QUEUE_HEAD] } },
+  /* ADR-084: a finished building pays a skill point, and the card offers the skills to spend it on
+     right there. This is the scene for photographing that card — the whole economy in one frame. */
+  'loot-city-sp': {
+    lootModalOpen: true,
+    pendingReward: { ...PHIEN_THUONG, newlyBuiltIds: [QUEUE_HEAD], citySP: 1 },
+  },
   /** Lên cấp. */
   level: { levelUpQueue: [{ levelsGained: 1, newLevel: 6, spGained: 1 }] },
   /** Chuỗi toast: nhiều tin cùng lúc, ca dễ chồng chéo nhất. */
@@ -151,7 +160,6 @@ export const PREVIEW_SCENES = {
     pendingReward: PHIEN_THUONG,
     levelUpQueue: [{ levelsGained: 1, newLevel: 6, spGained: 1 }],
     relicNotification: { id: 'relic-preview', name: 'Mảnh Gốm Cổ', icon: '🏺' },
-    achievementQueue: [{ id: 'ach-preview', name: 'Bền Bỉ', icon: '🏅', description: 'Xong 50 phiên' }],
   },
 };
 

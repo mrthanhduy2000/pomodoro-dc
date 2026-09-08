@@ -1,7 +1,7 @@
 /**
  * RewardToastHost.jsx — MỘT chồng toast cho mọi phần thưởng "nhẹ" (2026-08-27, ADR-060).
  * ─────────────────────────────────────────────────────────────────────────────
- * Thay `AchievementToast.jsx` (chỉ biết thành tích, hiện MỘT cái một lúc, ở giữa
+ * Thay `AchievementToast.jsx` (chỉ biết huy hiệu — cả hệ ấy nay đã xoá, round 44 — hiện MỘT cái một lúc, ở giữa
  * mép trên). File này gom cả sáu kênh nhẹ vào một chồng ở GÓC màn hình.
  *
  * LUẬT (Đàm ra): chặn màn hình chỉ dành cho lên kỷ · thăng hoa · khủng hoảng kỷ ·
@@ -101,7 +101,6 @@ export default function RewardToastHost({ paused = false, onNavigate, onOpenDeta
   const dismissRelicNotification = useGameStore((s) => s.dismissRelicNotification);
   const dismissLevelUp = useGameStore((s) => s.dismissLevelUp);
   const dismissRankUpNotification = useGameStore((s) => s.dismissRankUpNotification);
-  const dismissAchievementNotification = useGameStore((s) => s.dismissAchievementNotification);
   const dismissMissionNotification = useGameStore((s) => s.dismissMissionNotification);
   const dismissWeeklyReportToast = useGameStore((s) => s.dismissWeeklyReportToast);
   const markWeeklyReportSeen = useGameStore((s) => s.markWeeklyReportSeen);
@@ -177,7 +176,6 @@ export default function RewardToastHost({ paused = false, onNavigate, onOpenDeta
       case 'relic':       return dismissRelicNotification();
       case 'level':       return dismissLevelUp();
       case 'rank':        return dismissRankUpNotification();
-      case 'achievement': return dismissAchievementNotification(toast.key);
       case 'mission':     return dismissMissionNotification(toast.key);
       default:            return undefined;
     }

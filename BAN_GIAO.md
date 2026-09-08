@@ -1,4 +1,54 @@
-> Last update: **2026-09-08** — **ROUND 43: ONE DESTINATION, AND EVERY DISTANCE IN SESSIONS (ADR-082).**
+> Last update: **2026-09-08** — **ROUND 44: THE CITY FUNDS THE SKILL TREE (ADR-084).**
+> Order: *"tôi kiếm được gì, và tôi tiêu nó vào đâu?"* · *"360 thứ không thưởng gì thì tệ hơn 20 thứ
+> thưởng thật."* Everything on `main`, on top of round 42 (layout) which landed while round 43 ran.
+>
+> ### The five numbers that decided the round
+> Tree = **138 SP** for all 36 skills · SP arrived at **~86 sessions each** (6.000 XP/level against a
+> measured median ~35 XP/session) · a real **617-session save had 2 unspent SP and 4/36 skills** ·
+> the other SP source (weekly chain) sat behind a tab that does not exist on desktop · and **360
+> badges paid nothing at all**. The one thing worth buying could not be earned; the thing that could
+> be earned endlessly bought nothing.
+>
+> ### Done
+> 1. **A finished building pays 1 SP** — `engine/skillPointEconomy.js`. The rate is DERIVED, not
+>    chosen for feel: 75 buildings × 1 + ~50 from the weekly chain + ~14 from levels = **~139 SP
+>    against a tree costing 138**, so the tree finishes as the city finishes and all three sources
+>    still matter. 2 SP/building would have covered the tree from the city alone. **~5,6 sessions per
+>    SP, down from ~86.**
+> 2. **It is a LEDGER, not an event.** `settleCitySP` compares what the city has EARNED against what
+>    `player.spFromCity` says it has PAID. ⚠️ That shape is the whole point: it pays an existing save
+>    RETROACTIVELY with no migration (38 buildings ⇒ 38 points on first load), it cannot double-pay
+>    so it is safe to settle on hydration AND after every session, and it self-heals after a rejected
+>    CAS write instead of losing a point forever. It NEVER subtracts — a city can shrink (a cloud
+>    pull from a device that is behind) and clawing back spent points is unforgivable. It rides
+>    through Thăng Hoa, because prestige does not reset the city and a reset ledger would turn
+>    prestige into an SP printer.
+> 3. **Đàm's save now opens with 40 points and 12 skills unlockable** (was 2 and 8).
+> 4. **The 360-badge system is DELETED — #103 closed.** Adding XP to it was measured first and
+>    refused: **126.030 XP ≈ 21 cấp ≈ 42 SP** over the game against a 138 SP tree, i.e. a second
+>    faucet big enough to dissolve the one-currency rule. Gone: the data + two tier tables, three
+>    engine modules, five components, the toast source, the localStorage "seen" bookkeeping, the
+>    persisted `achievements` slice, and the sub-tab (now **"Di vật"** — relics still buff, so they
+>    keep their job). ⚠️ `resolveTabTarget` translates the old `achievements` id on purpose: saved
+>    notifications in Đàm's localStorage still carry it and would otherwise be dead buttons.
+> 5. **The weekly chain finally says it pays SP.** It always had (1–2 per chain) and the screen only
+>    ever printed `+328`, an unlabelled XP number.
+> 6. **Two "lên cấp để tích thêm" captions removed** — at ~171 sessions per level that sentence
+>    pointed at the longest road on the board. They now point at the building being built.
+>
+> ### The trap worth remembering
+> A `/* … */` comment placed right after the `{` of an object literal turned `journeyWiring.test.js`
+> RED in a different file: its JSX-comment stripper `\{\s*\/\*[\s\S]*?\*\/\s*\}` backtracked past the
+> intended end and ate hundreds of lines of real code before the assertions ran. Use `//` there.
+>
+> ### Gates
+> lint ✅ · build ✅ · `npm run test:quiet` — see the run recorded with the commit.
+> ⚠️ Two floors were LOWERED, and both only because a system was deleted: glyph coverage 513 → 139
+> and toast density 5 → 4. Lowering either for any other reason is muting the alarm.
+
+---
+
+> Previous: **2026-09-08** — **ROUND 43: ONE DESTINATION, AND EVERY DISTANCE IN SESSIONS (ADR-082).**
 > Order: *"tôi đang tiến tới cái gì, và vì sao tôi nên quan tâm"* · *"một đơn vị mà tôi không làm gì
 > được với nó thì nó không phải tiền tệ, nó là tiếng ồn."*
 > Everything on `main`. Round 42 (layout and space) was UNMERGED while this ran, so nothing here

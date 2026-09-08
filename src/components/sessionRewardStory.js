@@ -195,11 +195,29 @@ function buildProjectCard(project) {
  *   `{ sp, choices: [{ id, label, icon, description, cost, requires, branchLabel }], next: { label, spNeeded } | null }`
  */
 function buildLevelCard(reward, skills) {
+  /*
+    ⚠️ ROUND 44 (ADR-084) — THIS CARD IS NO LONGER ABOUT LEVELS, IT IS ABOUT SKILL POINTS.
+    It was built for one source (a level-up) because that was the only source there was. Levels paid
+    2 SP per 6.000 XP, i.e. roughly one point per 86 sessions — so on a 617-session save this card
+    had appeared a handful of times in half a year, and the card that lets Đàm SPEND a point was
+    effectively unreachable. Now the CITY pays a point per finished building, and the same card does
+    the same job for it: the point arrives and is spent in the same breath, with one tap, instead of
+    becoming an errand to Hành trang. `source` is the only thing that differs, and it changes the
+    two lines of copy at the top, nothing else.
+    ⚠️ Returns null when nothing paid — previously the caller gated on `levelsGained > 0` and there
+    are now two ways to be paid, so the gate belongs HERE where both are visible at once.
+  */
+  const levelsGained = toNumber(reward.levelsGained);
+  const citySP = toNumber(reward.citySP);
+  const spGained = toNumber(reward.spGained) + citySP;
+  if (levelsGained <= 0 && citySP <= 0) return null;
   const choices = Array.isArray(skills?.choices) ? skills.choices.slice(0, 3) : [];
   return {
     id: 'level',
+    source: levelsGained > 0 ? 'level' : 'city',
     newLevel: toNumber(reward.newLevel),
-    spGained: toNumber(reward.spGained),
+    spGained,
+    citySP,
     sp: toNumber(skills?.sp),
     skillChoices: choices,
     nextSkill: choices.length === 0 && skills?.next ? { label: skills.next.label, spNeeded: toNumber(skills.next.spNeeded) } : null,
@@ -326,6 +344,16 @@ export function buildRewardStoryCards({
   const projectCard = buildProjectCard(project);
   if (projectCard) cards.push(projectCard);
 
+  /*
+    ⚠️ THE SKILL-POINT CARD SITS WHERE ITS CAUSE IS. A point paid by the CITY belongs immediately
+    after the card that just said which building finished — "Kho Gia Vị xong" → "+1 điểm kỹ năng,
+    chọn một cái" is one thought. Burying it six cards later, where the level-up card has always
+    lived, breaks the only causal link this round exists to draw. A point paid by a LEVEL keeps its
+    old position, because its cause (crossing an XP threshold) has no card of its own to follow.
+  */
+  const skillCard = buildLevelCard(reward, skills);
+  if (skillCard && skillCard.source === 'city') cards.push(skillCard);
+
   const streakCard = buildStreakCard(streak, weekDays);
   if (streakCard) cards.push(streakCard);
 
@@ -341,7 +369,7 @@ export function buildRewardStoryCards({
   const questCard = buildQuestCard(reward, crisisQuest);
   if (questCard) cards.push(questCard);
 
-  if (toNumber(reward.levelsGained) > 0) cards.push(buildLevelCard(reward, skills));
+  if (skillCard && skillCard.source === 'level') cards.push(skillCard);
 
   const rankCard = buildRankCard(reward);
   if (rankCard) cards.push(rankCard);

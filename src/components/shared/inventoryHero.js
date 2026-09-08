@@ -47,8 +47,12 @@ export function heroKyNang({ spChuaTieu = 0, daMo = 0, tongKyNang = 0, moDuoc = 
       nhan: 'Điểm kỹ năng',
       so: spChuaTieu,
       donVi: 'điểm chưa tiêu',
+      // ⚠️ "LÊN CẤP ĐỂ TÍCH THÊM" ĐÃ LÀ MỘT LỜI KHUYÊN VÔ DỤNG (round 44, ADR-084). Đo được: một
+      // cấp là 6.000 XP trên trung vị ~35 XP/phiên, tức ~171 phiên — bảo Đàm "lên cấp" là bảo anh
+      // đợi nửa năm. Nay điểm kỹ năng đến từ THÀNH PHỐ (1 điểm mỗi công trình, ~5,6 phiên) nên
+      // dòng này chỉ đúng chỗ có thật: xây nốt công trình đang dở.
       caption: reNhat > spChuaTieu
-        ? `Chưa đủ: ô rẻ nhất cần ${reNhat} SP. Lên cấp để tích thêm.`
+        ? `Chưa đủ: ô rẻ nhất cần ${reNhat} SP. Xây xong một công trình là +1.`
         : 'Chưa mở được ô nào — mở nút phía trên trong cùng cột trước.',
       pct: tiLe(spChuaTieu, Math.max(reNhat, spChuaTieu)),
       gap: false,
@@ -58,7 +62,9 @@ export function heroKyNang({ spChuaTieu = 0, daMo = 0, tongKyNang = 0, moDuoc = 
     nhan: 'Điểm kỹ năng',
     so: daMo,
     donVi: `/ ${tongKyNang} kỹ năng`,
-    caption: 'Hết điểm rồi. Lên cấp để nhận thêm.',
+    // ⚠️ Cũng đổi vì lý do trên (round 44): "lên cấp" là ~171 phiên, "xây xong một công
+    // trình" là ~6. Câu chỉ đường phải chỉ vào con đường THẬT SỰ ngắn hơn.
+    caption: 'Hết điểm rồi. Mỗi công trình xây xong trả thêm 1 điểm.',
     pct: tiLe(daMo, tongKyNang),
     gap: false,
   };
@@ -114,31 +120,6 @@ export function heroCongTrinh({
     donVi: `/ ${tongBanVe} bản vẽ`,
     caption: 'Mỗi phiên tập trung là một nhịp xây.',
     pct: tiLe(daXay, tongBanVe),
-    gap: false,
-  };
-}
-
-/**
- * Hero của tab HUY HIỆU.
- * ⚠️ Nếu có huy hiệu SẮP đạt thì nó dẫn đầu — đó là thứ duy nhất ở tab này còn "còn bao xa".
- */
-export function heroHuyHieu({ daMo = 0, tong = 0, ganDat = null } = {}) {
-  if (ganDat && Number.isFinite(ganDat.pct)) {
-    return {
-      nhan: 'Sắp đạt',
-      so: Math.round(ganDat.pct * 100),
-      donVi: '%',
-      caption: ganDat.conLai ? `${ganDat.ten} — ${ganDat.conLai}.` : `${ganDat.ten} — gần xong rồi.`,
-      pct: ganDat.pct,
-      gap: true,
-    };
-  }
-  return {
-    nhan: 'Huy hiệu',
-    so: daMo,
-    donVi: `/ ${tong}`,
-    caption: 'Mỗi phiên tập trung lại đẩy vài huy hiệu tiến thêm.',
-    pct: tiLe(daMo, tong),
     gap: false,
   };
 }

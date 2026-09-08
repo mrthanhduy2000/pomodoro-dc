@@ -15,6 +15,7 @@
  * composition layer already consumes.
  */
 import { describeProject, describeQueue, eraBuildProgress, listNextProjects } from './buildChoices';
+import { SP_PER_BUILDING } from './skillPointEconomy';
 import {
   CRAFT_QUEUE_SLOTS, LUCKY_BRICK_CHANCE, LUCKY_BRICK_MIN_MINUTES, LUCKY_BRICK_MIN_PROJECT_SESSIONS,
 } from './constants';
@@ -142,9 +143,19 @@ export function describeSessionBrick({
       : done === 0
         ? `Phiên này đặt viên gạch đầu cho ${project.label}.`
         : `Phiên này đặt viên gạch ${done + 1}/${total} cho ${project.label}.`,
+    /*
+      ⚠️ ADR-084 — Ở TRẠNG THÁI CHỜ, DÒNG NÀY NÓI LUÔN CÁI GIÁ. Round 43 gave the app a destination
+      (75 buildings); round 44 gives that destination a PAYOUT — một công trình xong là một điểm kỹ
+      năng. Nói ra ngay ở đây là chỗ rẻ nhất và đúng lúc nhất: Đàm đang nhìn nút "Bắt đầu phiên",
+      và câu trả lời cho "làm phiên này để làm gì" là một dòng chứ không phải một màn hình khác.
+      ⚠️ CHỈ ở nhánh CHỜ, không ở nhánh ĐANG CHẠY (ADR-079: lúc đồng hồ chạy, cái vòng là chỉ báo
+      duy nhất và dải gạch không được nói con số nào).
+    */
     sub: auto
       ? 'Tự chọn cho bạn · bấm «Đổi» nếu muốn công trình khác.'
-      : isFinal ? 'Hoàn thành ngay sau phiên này.' : `Còn ${remainingAfter} phiên sau phiên này.`,
+      : isFinal
+        ? `Hoàn thành ngay sau phiên này — thành phố trả +${SP_PER_BUILDING} SP.`
+        : `Còn ${remainingAfter} phiên sau phiên này · xong được +${SP_PER_BUILDING} SP.`,
   };
 }
 

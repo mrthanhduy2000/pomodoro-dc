@@ -32,7 +32,26 @@ Production branch `main` carries **both** work streams (merged 2026-08-28 on Đ�
 ⚠️ Phase 21 therefore shipped **before** Đàm reviewed its screenshots — the "waiting on Đàm's eyes"
 item below is still live, it just now reviews something already running.
 
-- **Loop — ROUND 43 (2026-09-08, LATEST): ONE DESTINATION, AND EVERY DISTANCE IN SESSIONS (ADR-082).**
+- **Loop — ROUND 44 (2026-09-08, LATEST): THE CITY FUNDS THE SKILL TREE (ADR-084).**
+  ⚠️ **A finished building pays 1 SKILL POINT — `engine/skillPointEconomy.js` owns the rate and the
+  arithmetic behind it.** Do not "round it up to 2": 75 buildings × 1 + ~50/weekly chain + ~14/levels
+  = ~139 SP against a tree costing exactly 138, so all three sources matter and the tree finishes as
+  the city does. ⚠️ **It is a LEDGER, not an event** (`player.spFromCity` vs what the city has
+  earned): that is what makes the credit retroactive with no migration, impossible to double-pay,
+  self-healing after a rejected CAS write, and safe to settle both on hydration
+  (`normalizePersistedGameState` — the ONE door all external data passes) and after every session.
+  It never subtracts, and it rides through Thăng Hoa or prestige becomes an SP printer.
+  ⚠️ **The 360-badge system is GONE (TECH_DEBT #103 closed).** Do not rebuild it. Paying it in XP was
+  measured — 126.030 XP ≈ 21 levels ≈ 42 SP over the game — and refused as a second faucet. The
+  Hành trang sub-tab is now **Di vật**; `resolveTabTarget` still translates the old `achievements`
+  id because saved notifications carry it.
+  ⚠️ Two floors were lowered ONLY because a system was deleted: glyph coverage 513 → 139
+  (`utils/glyph.test.js`) and toast density 5 → 4 (`engine/rewardFeed.test.js`). Any other reason to
+  lower them is muting the alarm.
+  ⚠️ Never put a `/* … */` comment straight after the `{` of an object literal — it makes the JSX
+  comment stripper in `components/journeyWiring.test.js` eat real code in a different file.
+
+- **Loop — ROUND 43 (2026-09-08): ONE DESTINATION, AND EVERY DISTANCE IN SESSIONS (ADR-082).**
   ⚠️ **`engine/journey.js` owns the destination and nothing else may compute it.** The city is finite —
   15 eras x 5 blueprints = **75 buildings** — and that is the app's answer to *"đi tới đâu?"*. The
   denominator is SUMMED from `BLUEPRINT_CATALOG`, never typed; `hooks/useJourney.js` is the only seam
@@ -79,18 +98,10 @@ item below is still live, it just now reviews something already running.
   `rollNightBuilder`). No silence over 15 minutes at any session length. Inspect: `--preview arc-gift`
   (and `arc-day-open` · `arc-day-close` · `arc-week-open` · `arc-week-close`), `--preview loot-lucky
   --card project --dilate 0.05 --watch "HÔM NAY MAY" --snap --frames 2`.
-- **Loop — ROUND 40 (2026-09-08): THINGS THAT HAPPEN AND VANISH (ADR-080).** Order: fill the
-  gap round 39 exposed, with a static budget of ZERO — only things that happen and are gone. Session
-  beats (`engine/sessionBeats.js`: settled · halfway · final stretch · last minute — an 8-second whisper
-  in the ring label + `focus/BeatRipple.jsx`, from elapsed time, background-safe, no new sound); the glow
-  warms with progress; the tab title carries a phase glyph ○ ◔ ◑ ◕ ● (☕/⏰ on a break); break beats
-  (stand up · water · come back). Tiered ending (`shared/RewardBurst.jsx`: brick dust · building ring +
-  confetti · rare full-screen; bricks DROP in `BrickRow`). Lucky brick (`rollLuckyBrick`, 12 %, ≥ 15 min,
-  never negative, `pendingReward.luckyBrickId`, the card names the double brick first). Leftovers: reward
-  tiers in the three-colour family, era chips wrap, era colours on the City tab kept. Round-39 counts
-  unchanged (1 · 2 · 3 · 0). Inspect: `--preview loot-lucky --card project` · `--preview loot-built --card
-  project` · `--preview loot-max --card level`; a beat: seed `timerSession.startedAt` so elapsed = 751 s
-  (`tools/timerFixtures.mjs <base> <run> <break> 751`) and shoot with `--settle 600`.
+- **Loop — ROUND 40 (2026-09-08): THINGS THAT HAPPEN AND VANISH (ADR-080).** Moved verbatim to
+  `docs/archive/START_HERE_LOG_2026-09-06.md` — `grep` it when you need that round. Its still-live
+  rules live in `docs/UI_INVARIANTS.md` (static budget zero); nothing was deleted.
+
 - **Loop — ROUND 39 (2026-09-07): WHILE A TIMER RUNS, THE FOCUS SCREEN IS THE TIMER (ADR-079).**
   Order: *"Dọn giao diện màn Tập trung — không thêm tính năng."* One indicator while running (daily-goal
   ring deleted, brick strip = one headline, postcard `quiet`, no pill, voice line silent); one line under

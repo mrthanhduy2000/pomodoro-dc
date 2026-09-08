@@ -755,17 +755,29 @@ function LevelCard({ card, picked, onPick }) {
   const rewardMotion = useRewardMotion();
   const enterMotion = useEnterMotion();
   const pressMotion = usePressMotion();
+  /*
+    ⚠️ HAI NGUỒN, HAI CÂU — VÀ CÂU SAI Ở ĐÂY LÀ MỘT LỜI NÓI DỐI (ADR-084). Thẻ này giờ nổ ra cho cả
+    điểm do LÊN CẤP lẫn điểm do THÀNH PHỐ trả. In "Thăng cấp · Cấp 5" khi cấp không hề đổi thì con
+    số lớn nhất trên thẻ là con số duy nhất sai — đúng cái bẫy mà thanh EP/XP đã sập một lần
+    (`shared/EraStageBar.jsx`). Ngôi sao ⭐ cũng nhường chỗ cho 🧱: thứ vừa xảy ra là một công trình
+    xong, không phải một cấp mới.
+  */
+  const fromCity = card.source === 'city';
   return (
     <div className="w-full">
-      <motion.div {...rewardMotion} className="text-[56px] leading-none" aria-hidden="true">⭐</motion.div>
-      <p className={`${eyebrowClass} mt-4`} style={{ color: 'var(--muted)' }}>Thăng cấp</p>
+      <motion.div {...rewardMotion} className="text-[56px] leading-none" aria-hidden="true">{fromCity ? '🧱' : '⭐'}</motion.div>
+      <p className={`${eyebrowClass} mt-4`} style={{ color: 'var(--muted)' }}>
+        {fromCity ? 'Thành phố trả công' : 'Thăng cấp'}
+      </p>
       <p
         className="mt-2 text-[44px] font-semibold leading-none tracking-[-0.03em]"
         style={{ color: 'var(--ink)', fontFamily: DISPLAY_FONT }}
       >
-        Cấp {card.newLevel}
+        {fromCity ? `+${card.spGained} SP` : `Cấp ${card.newLevel}`}
       </p>
-      {card.spGained > 0 && (
+      {/* ⚠️ Trên thẻ THÀNH PHỐ, tiêu đề đã LÀ con số ("+1 SP") — in lại nó ở đây là nói hai lần
+          cùng một chuyện trên cùng một thẻ, đúng luật mà ô "Cư dân" đã phải nhường chỗ vì nó. */}
+      {card.spGained > 0 && !fromCity && (
         <motion.p
           {...withDelay(enterMotion, 0.25)}
           className="mono mt-4 inline-block rounded-full px-4 py-2 text-[13px] font-semibold tabular-nums"

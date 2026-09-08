@@ -169,13 +169,21 @@
 │   │   │                     #   ⚠️ statsPeriod.js · statsFocus.js ĐÃ XOÁ 2026-09-06 cùng 3 tab cũ.
 │   │   ├── sessionRewards.js  # EVERYTHING a finished session changes, PURE (ADR-078): assembleSessionReward({state, …, now,
 │   │   │                     #   today, weekKey, dailyGoal, random}) → {patch, sessionResult}; the store only applies `patch`
-│   │   ├── feedNotifications.js · achievementState.js · streak.js · overclock.js · trackingDefaults.js · eraScope.js
+│   │   ├── feedNotifications.js · streak.js · overclock.js · trackingDefaults.js · eraScope.js
 │   │   ├── buildingPerks.js · historyStats.js · longBreakCycle.js · savedNotes.js   # ten helper clusters moved verbatim
 │   │   │                     #   out of gameStore.js (ADR-078); each header says what it owns. Pure, no store.
 │   │   ├── sessionBrick.js    # "This session's brick" (ADR-077): pickSessionProject · autoQueueSessionProject · chooseSessionProject · describeSessionBrick · rollLuckyBrick (ADR-080)
 │   │   ├── sessionBeats.js    # Session + break BEATS, PURE (ADR-080/081): planSessionBeats · planBreakBeats · resolveBeat · sessionPhaseGlyph · rollGoldenBeat
 │   │   ├── dayArc.js          # The LONG rhythms, PURE (ADR-081): describeDayOpen/Close · describeWeekOpen/Close · pickArcMoment. No failure branch.
 │   │   │                     #   ADR-082: the two CLOSE moments take a `journeyLine`; the opens never do.
+│   │   ├── skillPointEconomy.js # ADR-084 — THE CITY FUNDS THE TREE, PURE. SP_PER_BUILDING = 1
+│   │   │                     #   (derived: 75 buildings + ~50 weekly-chain + ~14 level = ~139 SP
+│   │   │                     #   against a tree costing 138 — do NOT round it to 2). `settleCitySP`
+│   │   │                     #   is a LEDGER (earned vs `player.spFromCity`), which is what makes
+│   │   │                     #   the credit retroactive with no migration, impossible to
+│   │   │                     #   double-pay, and self-healing after a rejected CAS write. Never
+│   │   │                     #   subtracts. Settled in `normalizePersistedGameState` (the one door
+│   │   │                     #   external data passes) AND in `sessionRewards.js`.
 │   │   ├── journey.js         # ADR-082 — THE DESTINATION, PURE. 15 eras x 5 blueprints = 75
 │   │   │                     #   buildings, SUMMED from BLUEPRINT_CATALOG (never a literal, so a
 │   │   │                     #   16th era moves the destination by itself). describeJourney →
@@ -183,6 +191,8 @@
 │   │   │                     #   describeRailProgress → sessions, else the destination. ⚠️ It must
 │   │   │                     #   NEVER fall back to EP: describeStageCountdown has an EP-phrased
 │   │   │                     #   branch for the no-sample case and this file drops it on purpose.
+│   │   │                     #   ADR-084: `countBuiltBuildings` here is also what the SKILL-POINT
+│   │   │                     #   LEDGER counts, so a second way of counting pays wrong money.
 │   │   ├── missions.js        # Daily missions, PURE (ADR-077): roll · normalize · snapshot progress · tickDailyMissions (live = reload)
 │   │   ├── weeklyChain.js     # Weekly step chain, PURE (`now` param): refreshWeeklyChain · autoClaimWeeklySteps · rebuild
 │   │   ├── seededRng.js       # String-seeded PRNG shared by missions.js + weeklyChain.js
@@ -747,7 +757,6 @@
 │   │   │   │                      #   MỘT mesh (1 lệnh vẽ), ném tia vào đó chỉ biết trúng "thành
 │   │   │   │                      #   phố" chứ không biết trúng CĂN NÀO (xem ARCHITECTURE.md)
 │   │   │   └── budget.js          # Trần tam giác — biến ngân sách hiệu năng thành test tự kiểm
-│   │   ├── achievementTimeline.js # Suy luận ngày mở khoá thành tích cũ (replay lịch sử)
 │   │   ├── audioContext.js    # Khởi tạo/resume AudioContext dùng chung cho soundEngine/ambientEngine
 │   │   ├── soundEngine.js / ambientEngine.js # Âm thanh 100% procedural (Web Audio API)
 │   │   ├── pushPayloads.js    # Nội dung thông báo push (title/body/tag) — dùng chung client+server
@@ -769,10 +778,6 @@
 │   │   │                     #   duy nhất "phiên ≥M′ trong N giờ gần đây" đọc thẳng `history`; không
 │   │   │                     #   deadline, không phạt. ⚠️ `now` truyền vào phải KHÔNG SỚM HƠN mốc của
 │   │   │                     #   chính phiên vừa xong (đã cắn: phiên bị coi là "tương lai" và bỏ qua).
-│   │   ├── navAttention.js    # Dấu "thành tích đã xem" (localStorage `dc-nav-seen-v1`). ⚠️ `null`
-│   │   │                     #   (chưa từng ghi) KHÁC `[]` (đã ghi, đang rỗng) — nhập hai thứ đó
-│   │   │                     #   làm một thì lần đầu mở app cái chấm sáng oan cho hàng chục thành
-│   │   │                     #   tích Đàm đã xem từ lâu
 │   │   ├── eraStage.js        # CHẶNG TRONG KỶ — mốc gần nhất người chơi đang đi tới. NGUỒN DUY
 │   │   │                     #   NHẤT của phép "EP này thuộc chặng nào": thanh tiêu đề (App.jsx),
 │   │   │                     #   màn Tập trung đọc đây (ResourceDisplay đã gỡ). ⚠️ `epStart` của
@@ -784,9 +789,10 @@
 │   │   ├── useTimer.js         # LỚN — toàn bộ state machine đồng hồ Pomodoro/Stopwatch
 │   │   ├── useMinWidth.js      # `matchMedia(min-width)` as a hook (from PomodoroEngine.jsx, ADR-077)
 │   │   ├── useCoachContext.js  # build bảng số liệu cho AI Coach (gọi engine/coach/coachContext.js)
-│   │   ├── useInventoryAttention.js # Chấm "có việc cần xem" trên tab Hành trang. Đọc engine/
-│   │   │                     #   opportunities.js (dùng CHUNG với chuông thông báo) + dấu "đã xem"
-│   │   │                     #   ở engine/navAttention.js. ⚠️ Selector trả về BOOLEAN, không phải
+│   │   ├── useInventoryAttention.js # Chấm "có việc cần xem" trên tab Hành trang. ADR-084: CHỈ còn
+│   │   │                     #   một nguồn — engine/opportunities.js (dùng CHUNG với chuông thông
+│   │   │                     #   báo). Nguồn "huy hiệu chưa xem" đi cùng cả hệ huy hiệu bị xoá, kèm
+│   │   │                     #   bộ dấu localStorage của nó. ⚠️ Selector trả về BOOLEAN, không phải
 │   │   │                     #   mảng — gốc app bọc cả cảnh 3D, cho nó render lại theo từng con số
 │   │   │                     #   tài nguyên là trả một cái giá không ai đo được cho một chấm 5px
 │   │   ├── useJourney.js      # ADR-082 — THE DESTINATION, and the ONLY seam between the pure

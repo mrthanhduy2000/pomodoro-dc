@@ -10,6 +10,32 @@
 > **Muốn hiểu VÌ SAO một quyết định được chọn** → `ARCHITECTURE_DECISIONS.md`. **Muốn biết migration
 > cụ thể nào cần chạy** → `MIGRATION.md`.
 
+## 2026-09-08 — Round 44: the city funds the skill tree, and the 360-badge system is deleted (ADR-084)
+
+**Purpose.** Answer *"what do I earn, and where do I spend it?"*. The economy had stopped running:
+the skill tree costs 138 SP and SP arrived at roughly one per 86 sessions, so a real 617-session save
+held 2 unspent points and 4 of 36 skills — while 360 badges could be earned endlessly and bought
+nothing.
+
+**Scope.** New pure `engine/skillPointEconomy.js`: a finished building pays **1 skill point**, booked
+through a LEDGER (`player.spFromCity`) rather than an event, so the credit is retroactive with no
+migration, cannot double-pay, never subtracts, and survives prestige. Settled at the single data
+entry point (`normalizePersistedGameState`) and again in the session reward assembly. The reward card
+that lets a point be spent on the spot now fires for city points, immediately after the card naming
+the building. The weekly chain finally says it pays SP. Two "go level up" captions removed as dead
+advice (~171 sessions per level). The 360-achievement system is deleted outright — data, three engine
+modules, five components, the toast source, the persisted slice and the Huy hiệu sub-tab, which is
+now "Di vật".
+
+**Impact.** ~5,6 sessions per skill point, down from ~86; the 617-session save opens the app with 40
+points and 12 skills unlockable, up from 2 and 8. No game formula changed and no reward value moved
+apart from the new city payout. Old saved notifications pointing at the `achievements` tab are
+translated rather than left dead.
+
+**Compatibility.** One new persisted field (`player.spFromCity`, defaulting to 0 — which is exactly
+what makes the first settle retroactive). The `achievements` slice is no longer read or written; old
+saves keep it harmlessly. No migration to run.
+
 ## 2026-09-08 — Round 43: one destination, and every distance told in sessions (ADR-082)
 
 **Purpose.** Answer *"làm cái này để đi tới đâu?"* in one sentence. The app spoke twelve units of

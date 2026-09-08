@@ -73,11 +73,18 @@ test('thanh dưới iPhone có ĐÚNG 3 nút chính, phần còn lại nằm sau
   );
 });
 
-test('"Hành trang" có đúng 3 tab con, và GIỮ NGUYÊN id của ba màn cũ', () => {
-  // ⚠️ Đây là bài test đắt giá nhất file: gộp tab là việc GOM NHÓM, không phải xoá màn. Ba id này
+test('"Hành trang" có đúng 3 tab con, và GIỮ NGUYÊN id của hai màn cũ', () => {
+  // ⚠️ Đây là bài test đắt giá nhất file: gộp tab là việc GOM NHÓM, không phải xoá màn. Hai id đầu
   // còn nằm trong thông báo ĐÃ LƯU ở localStorage của Đàm — đổi chúng thì thông báo cũ bấm vào
   // không đi đâu cả, và không có gì đỏ lên.
-  assert.deepEqual(INVENTORY_SUB_IDS, ['skills', 'collection', 'achievements']);
+  // ⚠️ `achievements` → `relics` (round 44, ADR-084) là NGOẠI LỆ DUY NHẤT, và nó phải trả giá:
+  // hệ huy hiệu bị xoá hẳn nên không thông báo mới nào còn trỏ vào id ấy, còn những cái CŨ thì
+  // `resolveTabTarget` dịch tường minh — bài ngay dưới kiểm đúng chỗ dịch đó.
+  assert.deepEqual(INVENTORY_SUB_IDS, ['skills', 'collection', 'relics']);
+  assert.match(
+    APP_SOURCE, /if \(tab === 'achievements'\) return \{ tab: 'inventory', sub: 'relics' \};/,
+    'id tab con cũ `achievements` không còn được dịch — mọi thông báo huy hiệu đã lưu thành nút chết.',
+  );
 });
 
 test('ba màn cũ KHÔNG còn là mục điều hướng chính ở cả hai khung', () => {
@@ -107,7 +114,7 @@ test('MỌI đích điều hướng mà thông báo trỏ tới đều còn tớ
   // Và id cũ phải đi qua đúng cái cửa dịch, chứ không phải trùng tên may mắn ở đâu đó.
   assert.ok(
     /function resolveTabTarget\([\s\S]*?INVENTORY_SUB_IDS\.includes\(tab\)[\s\S]*?tab: 'inventory'/.test(APP_SOURCE),
-    '`resolveTabTarget` không còn dịch id tab con sang tab "inventory" — `selectTab(\'achievements\')` sẽ đặt `activeTab` thành một giá trị không màn nào nhận, và màn hình trắng.',
+    '`resolveTabTarget` không còn dịch id tab con sang tab "inventory" — `selectTab(\'skills\')` sẽ đặt `activeTab` thành một giá trị không màn nào nhận, và màn hình trắng.',
   );
 });
 
@@ -180,7 +187,7 @@ test('MỌI `collectionTab` cũ trong thông báo đã lưu vẫn tới được
   const than = APP_SOURCE.slice(APP_SOURCE.indexOf('function resolveTabTarget'));
   const than1 = than.slice(0, than.indexOf('\n}\n'));
   assert.ok(/collectionTab\s*=\s*null/.test(than1), 'resolveTabTarget phải NHẬN `collectionTab`, không thì nó mù với ca `relics`.');
-  assert.ok(/'relics'[\s\S]*sub: 'achievements'/.test(than1), '`relics` phải được dịch sang tab con "achievements".');
+  assert.ok(/'relics'[\s\S]*sub: 'relics'/.test(than1), '`collectionTab: relics` phải được dịch sang tab con "relics".');
   assert.ok(/'history'[\s\S]*tab: 'stats'/.test(than1), '`history` phải được dịch sang màn Thống kê.');
   // Và `selectTab` phải TRUYỀN nó xuống — dịch đúng mà không ai gọi thì vô nghĩa.
   assert.ok(
@@ -193,7 +200,7 @@ test('không màn nào còn bảo người chơi đi sang một TAB đã bị g�
   // ⚠️ Bản vá gộp tab TỰ TẠO RA lỗi này: màn Xưởng vẫn in "Đi sang mục Bản vẽ để mở thêm công
   // trình" trong khi Bản vẽ nay nằm ngay bên dưới cùng màn. Một câu chỉ đường tới một cái tab
   // không còn tồn tại thì tệ hơn không có câu nào — và không cổng nào bắt được nó.
-  const MAN = ['BuildScreen', 'RelicInventory', 'Achievements', 'SkillTree'];
+  const MAN = ['BuildScreen', 'RelicInventory', 'SkillTree'];
   for (const ten of MAN) {
     const nguon = readFileSync(join(HERE, 'components', `${ten}.jsx`), 'utf8');
     const pham = [...nguon.matchAll(/(?:sang|qua|tới|đến)\s+(?:mục|tab)\s+([^.<{]{1,20})/gi)].map((h) => h[0].trim());

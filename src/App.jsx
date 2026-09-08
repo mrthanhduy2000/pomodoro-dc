@@ -38,7 +38,6 @@ import { readPreviewScene, buildPreviewUi } from './dev/previewStage';
 
 const SkillTree = createRecoverableLazy(() => import('./components/SkillTree.jsx'), 'skill-tree');
 const RelicInventory = createRecoverableLazy(() => import('./components/RelicInventory.jsx'), 'relic-inventory');
-const Achievements = createRecoverableLazy(() => import('./components/Achievements.jsx'), 'achievements');
 const StatsDashboard = createRecoverableLazy(() => import('./components/StatsDashboard.jsx'), 'stats-dashboard');
 const BuildScreen = createRecoverableLazy(() => import('./components/BuildScreen.jsx'), 'build-screen');
 const CityView = createRecoverableLazy(() => import('./components/CityView.jsx'), 'city-view');
@@ -221,7 +220,7 @@ const MOBILE_SECONDARY_TABS = MOBILE_TABS.filter((t) => !MOBILE_PRIMARY_IDS.incl
 
 // Ba màn cũ nay là ba TAB CON của "Hành trang".
 //
-// ⚠️ GIỮ NGUYÊN ID CŨ (`skills` · `collection` · `achievements`), đừng đổi cho "gọn". Thông báo đã
+// ⚠️ GIỮ NGUYÊN ID CŨ (`skills` · `collection`), đừng đổi cho "gọn". Thông báo đã
 // LƯU trong localStorage của Đàm vẫn mang `action: { tab: 'skills' }` và `{ tab: 'collection',
 // collectionTab: 'workshop' }`; đổi id ở đây thì mỗi thông báo cũ bấm vào sẽ không đi đâu cả, và
 // KHÔNG có gì đỏ lên — build xanh, test xanh, chỉ có một nút chết. `resolveTabTarget` bên dưới
@@ -237,10 +236,22 @@ const INVENTORY_TABS = [
     label: 'Công trình',
     subtitle: 'Chọn một công trình — mỗi phiên tập trung là một nhịp xây.',
   },
+  // ⚠️ ID ĐỔI `achievements` → `relics` (round 44, ADR-084), VÀ ĐÂY LÀ MỘT NGOẠI LỆ CÓ CHỦ Ý với
+  // luật "giữ nguyên id cũ" ngay phía trên. Lý do luật ấy tồn tại là thông báo ĐÃ LƯU trỏ vào id;
+  // nhưng thông báo duy nhất từng trỏ vào `achievements` là toast huy hiệu, và cả hệ huy hiệu vừa
+  // bị xoá nên không còn cái nào được sinh ra nữa. Những cái CŨ vẫn còn trong localStorage của Đàm
+  // thì `resolveTabTarget` dịch tường minh — xem ở đó. Giữ tên `achievements` cho một tab chỉ còn
+  // di vật mới là thứ nói dối.
+  //
+  // ⚠️ VÀ ĐỪNG ĐỔI KHỐI NÀY THÀNH `/* … */` NGAY SAU DẤU `{`. Bản đầu viết như vậy và nó làm ĐỎ
+  // một bài test ở tận `components/journeyWiring.test.js`: bộ lọc bỏ chú thích ở đó có mẫu
+  // `\{\s*\/\*[\s\S]*?\*\/\s*\}` (dành cho chú thích JSX `{/* … */}`), và một `{` mở object
+  // literal đi liền một chú thích khối khiến nó ăn lem sang tận dấu `}` xa phía dưới — nuốt mất
+  // hàng trăm dòng mã thật trước khi test kịp đọc. Chú thích dòng `//` không có cái bẫy ấy.
   {
-    id: 'achievements',
-    label: 'Huy hiệu',
-    subtitle: 'Những gì đã giành được, và cái sắp giành được nằm ngay trên đầu.',
+    id: 'relics',
+    label: 'Di vật',
+    subtitle: 'Những thứ đang chạy ngầm sau mỗi phiên — mỗi cái nói rõ nó cộng gì.',
   },
 ];
 
@@ -256,7 +267,12 @@ const INVENTORY_SUB_IDS = INVENTORY_TABS.map((tab) => tab.id);
  * dịch tường minh; không thì một nút cũ lặng lẽ dẫn sai chỗ mà build/lint/test đều không thấy.
  */
 function resolveTabTarget(tab, collectionTab = null) {
-  if (tab === 'collection' && collectionTab === 'relics') return { tab: 'inventory', sub: 'achievements' };
+  if (tab === 'collection' && collectionTab === 'relics') return { tab: 'inventory', sub: 'relics' };
+  // ⚠️ ĐƯỜNG SỐNG CỦA THÔNG BÁO CŨ (round 44). Hệ huy hiệu đã xoá và id tab con `achievements`
+  // theo nó, nhưng mọi thông báo huy hiệu đã LƯU trong localStorage vẫn mang `{ tab: 'achievements' }`.
+  // Không dịch thì mỗi nút cũ ấy bấm vào không đi đâu cả, và KHÔNG có gì đỏ lên — build xanh, test
+  // xanh, chỉ có một nút chết. Di vật là chỗ gần nhất còn ý nghĩa với chúng.
+  if (tab === 'achievements') return { tab: 'inventory', sub: 'relics' };
   // "Lịch sử" đã xoá — dữ liệu ấy nay chỉ còn ở màn Thống kê, nên đưa thẳng người bấm tới đó.
   if (tab === 'collection' && collectionTab === 'history') return { tab: 'stats', sub: null };
   if (INVENTORY_SUB_IDS.includes(tab)) return { tab: 'inventory', sub: tab };
@@ -596,7 +612,6 @@ export default function App() {
   // nào thì bản tổng kết rỗng, chấm vào đó là chỉ vào một trang trắng.
   const weeklyReportUnseen = history.length > 0 && lastWeeklyReportSeenDate !== localWeekMondayStr();
   const levelUpQueueLength = useGameStore((s) => s.ui.levelUpQueue.length);
-  const achievementQueueLength = useGameStore((s) => s.ui.achievementQueue.length);
   // Hai kênh phần thưởng nhẹ này store đã ghi từ lâu nhưng TRƯỚC 2026-08-27 không
   // màn hình nào đọc (xem chú thích đầu `engine/rewardFeed.js`) — chồng toast là
   // chỗ đọc đầu tiên, nên chúng phải nằm trong điều kiện dựng lớp phủ.
@@ -645,8 +660,6 @@ export default function App() {
   const activeInventoryTab = INVENTORY_TABS.find((tab) => tab.id === inventoryTab) ?? INVENTORY_TABS[0];
   const {
     hasAttention: inventoryNeedsAttention,
-    markAchievementsSeen,
-    unseenAchievementCount,
   } = useInventoryAttention();
   // Một TẬP chứ không phải một cờ `inventoryNeedsAttention` truyền thẳng: thanh bên và thanh dưới
   // đều chỉ hỏi "mục này có chấm không", nên ngày mai thêm chấm cho một tab khác thì không phải
@@ -674,7 +687,7 @@ export default function App() {
     [inventoryNeedsAttention, weeklyReportUnseen],
   );
   // ⚠️ MỌI đường vào điều hướng phải đi qua đây, kể cả khi nơi gọi truyền id CŨ
-  // (`skills`/`collection`/`achievements`) — `resolveTabTarget` dịch chúng thành
+  // (`skills`/`collection`/`relics`) — `resolveTabTarget` dịch chúng thành
   // "tab Hành trang + tab con", nên không nơi gọi nào phải biết chuyện gộp tab đã xảy ra.
   /**
    * BẤM "HÀNH TRANG" THÌ RƠI VÀO TAB CON CÓ VIỆC LÀM ĐƯỢC.
@@ -713,13 +726,6 @@ export default function App() {
     markWeeklyReportSeen();
     selectTab('stats');
   };
-
-  // Cái chấm tắt khi Đàm ĐÃ XEM, không phải khi anh đi ngang qua: chỉ mở tab con "Thành tích"
-  // mới ghi dấu. Mở "Hành trang" rồi ngồi ở "Kỹ năng" thì thành tích mới vẫn còn là chưa xem.
-  useEffect(() => {
-    if (activeTab !== 'inventory' || inventoryTab !== 'achievements') return;
-    markAchievementsSeen();
-  }, [activeTab, inventoryTab, markAchievementsSeen, unseenAchievementCount]);
 
   useEffect(() => {
     if (!focusFullscreen) return undefined;
@@ -1312,7 +1318,6 @@ export default function App() {
           prestigeModalOpen,
           weeklyReportPending,
           levelUpQueueLength,
-          achievementQueueLength,
           missionCompletedCount,
           relicPending,
         ]}
@@ -1331,7 +1336,6 @@ export default function App() {
           prestigeModalOpen={prestigeModalOpen}
           weeklyReportPending={weeklyReportPending}
           levelUpQueueLength={levelUpQueueLength}
-          achievementQueueLength={achievementQueueLength}
           missionCompletedCount={missionCompletedCount}
           relicPending={relicPending}
           onNavigate={handleNotificationNavigate}
@@ -1382,7 +1386,6 @@ function OverlayStack({
   prestigeModalOpen,
   weeklyReportPending,
   levelUpQueueLength,
-  achievementQueueLength,
   missionCompletedCount,
   relicPending,
   onNavigate,
@@ -1486,7 +1489,6 @@ function OverlayStack({
     lootModalOpen
     || relicPending
     || hasLevelUp
-    || achievementQueueLength > 0
     || missionCompletedCount > 0
     || weeklyReportPending
   );
@@ -2094,7 +2096,7 @@ function SubTabs({ items, onChange, value }) {
  *   Huy hiệu  → "tôi đã giành được gì" — gộp Thành tích + Di vật, cả hai đều là phần thưởng vĩnh
  *               viễn đã kiếm được.
  *
- * ⚠️ BA ID GIỮ NGUYÊN (`skills` · `collection` · `achievements`) — đổi nhãn và nội dung, KHÔNG đổi
+ * ⚠️ HAI ID GIỮ NGUYÊN (`skills` · `collection`) — đổi nhãn và nội dung, KHÔNG đổi
  * id. Thông báo đã LƯU trong localStorage của Đàm mang `{ tab: 'collection', collectionTab: … }`,
  * và `appNavigation.test.js` khoá đúng bộ ba id này.
  *
@@ -2110,7 +2112,7 @@ function InventoryView({ onChange, sub }) {
 
       {sub === 'skills' && (
         <DeferredTabContent>
-          <SkillTree onOpenAchievements={() => onChange?.('achievements')} />
+          <SkillTree />
         </DeferredTabContent>
       )}
       {sub === 'collection' && (
@@ -2120,15 +2122,10 @@ function InventoryView({ onChange, sub }) {
           <BuildScreen />
         </Suspense>
       )}
-      {sub === 'achievements' && (
-        <DeferredTabContent>
-          <Achievements />
-          <div className="mt-6">
-            <Suspense fallback={<TabLoadingState />}>
-              <RelicInventory />
-            </Suspense>
-          </div>
-        </DeferredTabContent>
+      {sub === 'relics' && (
+        <Suspense fallback={<TabLoadingState />}>
+          <RelicInventory />
+        </Suspense>
       )}
     </div>
   );

@@ -16,7 +16,8 @@
  *
  * Comments inside are the originals; the numbers and rules have not changed by moving.
  */
-import { appendAchievementUnlocks, buildAchievementSnapshot, checkAchievements } from './achievementState';
+import { countBuiltBuildings } from './journey';
+import { settleCitySP } from './skillPointEconomy';
 import { advanceCraftingQueueWithPerks, getBuildingPerkSessionRewards, getCraftingAccelerationMode, makeBuildingPerkRewardNotification } from './buildingPerks';
 import { aggregateActiveBuffs, createEraCrisisState, detectEraCrisis } from './challengeEngine';
 import { mergeCityArchive } from './cityArchive';
@@ -583,20 +584,6 @@ export function assembleSessionReward({
     ...(dailyBonusXP > 0 && state.player.unlockedSkills.nguoi_lap_ke ? [{ type: 'nguoi_lap_ke', sessionsRemaining: 1 }] : []),
     ...Array.from({ length: weeklyAuto.cuTriPushes }, () => ({ type: 'cu_tri', sessionsRemaining: 3 })),
   ];
-  const nextPlayer = {
-    ...state.player,
-    level:    newLevel,
-    totalEXP: newTotalEXP + locBanTangBonusXP,
-    sp:       state.player.sp + spGained + weeklyAuto.bonusSP,
-    ...(weeklyAuto.keHoachNextWeekKey ? { keHoachWeeklyBuffWeekKey: weeklyAuto.keHoachNextWeekKey } : {}),
-    // V2 fields
-    benVungUnlocked: state.player.benVungUnlocked || benVungJustUnlocked,
-    locBanTangCounter: nextLocBanTangCounter,
-    nhipHoanHaoStreakDays: nextNhipHoanHaoStreakDays,
-    nhipHoanHaoLastSixDate: nextNhipHoanHaoLastSixDate,
-    nhipHoanHaoBonusDay: nextNhipHoanHaoBonusDay,
-    skillBuffQueue: autoClaimBuffPushes.length > 0 ? [...decrementedBuffQueue, ...autoClaimBuffPushes] : decrementedBuffQueue,
-  };
 
   // ĐƯỜNG LÊN KỶ THẬT — chỗ DUY NHẤT được niêm phong thành phố kỷ cũ vào bảo tàng.
   // `sessionCount` phải chụp lại ở đây vì `eraTracking` chỉ giữ số liệu kỷ ĐANG chơi:
@@ -638,6 +625,42 @@ export function assembleSessionReward({
         sessionCount: state.eraTracking?.sessionsInCurrentEra ?? 0,
       }
     : null);
+  /*
+    ⚠️ ADR-084 — THE CITY PAYS THE SKILL TREE, AND IT PAYS FROM A LEDGER, NOT FROM THIS EVENT.
+    The obvious version of this line is "if a building finished, add a point". It is wrong for three
+    reasons this project has already been bitten by: it cannot pay a save that already had 38
+    buildings before the rule existed; it double-pays if the reward assembly is ever run twice for
+    one session; and it loses a point forever whenever a CAS write is rejected and the machine
+    re-pulls (`docs/OPERATIONS.md` — first action wins). Comparing what the CITY HAS EARNED against
+    what it HAS PAID has none of those failure modes, and it settles the retroactive case for free.
+    ⚠️ Counted AFTER `eraScopedState`, on the archive this session produced: sealing an era moves
+    its buildings out of `buildings` and into `cityArchive`, so counting `newBuildings` alone would
+    make the city look like it shrank by five the moment an era closed.
+  */
+  const citySettlement = settleCitySP({
+    builtTotal: countBuiltBuildings({
+      cityArchive: eraScopedState.cityArchive,
+      activeBook: finalBook,
+      buildings: eraScopedState.buildings,
+    }),
+    credited: state.player.spFromCity,
+  });
+  const nextPlayer = {
+    ...state.player,
+    level:    newLevel,
+    totalEXP: newTotalEXP + locBanTangBonusXP,
+    sp:       state.player.sp + spGained + weeklyAuto.bonusSP + citySettlement.owed,
+    spFromCity: citySettlement.credited,
+    ...(weeklyAuto.keHoachNextWeekKey ? { keHoachWeeklyBuffWeekKey: weeklyAuto.keHoachNextWeekKey } : {}),
+    // V2 fields
+    benVungUnlocked: state.player.benVungUnlocked || benVungJustUnlocked,
+    locBanTangCounter: nextLocBanTangCounter,
+    nhipHoanHaoStreakDays: nextNhipHoanHaoStreakDays,
+    nhipHoanHaoLastSixDate: nextNhipHoanHaoLastSixDate,
+    nhipHoanHaoBonusDay: nextNhipHoanHaoBonusDay,
+    skillBuffQueue: autoClaimBuffPushes.length > 0 ? [...decrementedBuffQueue, ...autoClaimBuffPushes] : decrementedBuffQueue,
+  };
+
   const activeNewlyBuilt = newlyBuilt.filter((bpId) => isCurrentEraBlueprint(bpId, finalBook));
   /*
     ⚠️ `celebrates` để `useTimer` biết có nên chờ 3,2 giây hay không (`TECH_DEBT #94`).
@@ -650,20 +673,6 @@ export function assembleSessionReward({
   sessionResult = { ...sessionResult, celebrates: activeNewlyBuilt.length > 0 || eraChanged };
   const activeAcceleratedCraftingIds = acceleratedCraftingIds.filter((bpId) => isCurrentEraBlueprint(bpId, finalBook));
 
-  // Kiểm tra thành tích mới mở khóa
-  const achSnapshot   = buildAchievementSnapshot(
-    { sessionsCompleted: newSessions, totalFocusMinutes: newTotalMinutes, totalEP: finalTotalEP, activeBook: finalBook },
-    newRelics,
-    eraScopedState.blueprints,
-    eraScopedState.research,
-    newHistory,
-    newRankSystem,
-    newStreak,
-    eraScopedState.buildings,
-    state.prestige,
-    nextPlayer,
-  );
-  const newlyUnlocked = checkAchievements(state.achievements.unlocked, achSnapshot);
 
   const syncedProgress = syncLongBreakCycleProgress(state.progress, now_ts);
   const sessionNotifications = [
@@ -697,7 +706,6 @@ export function assembleSessionReward({
     eraCrisis:     newEraCrisis,
     relics:        newRelics,
     blueprints:    eraScopedState.blueprints,
-    achievements:  appendAchievementUnlocks(state.achievements, newlyUnlocked, resolvedFinishedAt),
     history:       newHistory,
     historyStats:  nextHistoryStatsWithReview,
     savedNotes:    newSavedNotes,
@@ -737,6 +745,9 @@ export function assembleSessionReward({
         totalSessionXP:       finalSessionXP,
         levelsGained,
         spGained,
+        // ADR-084: skill points the CITY just paid — the reward card that finally answers
+        // "I earned something; what do I spend it on?".
+        citySP: citySettlement.owed,
         newLevel,
         eraChanged,
         newBook:              finalBook,
@@ -784,9 +795,6 @@ export function assembleSessionReward({
         : state.ui.rankUpNotification,
       // ADR-069: không còn hộp thoại khủng hoảng — thử thách kể trong chuỗi thẻ thưởng.
       eraCrisisModalOpen: false,
-      achievementQueue: newlyUnlocked.length > 0
-        ? [...state.ui.achievementQueue, ...newlyUnlocked]
-        : state.ui.achievementQueue,
       missionCompletedIds: newlyCompletedMissionIds.length > 0
         ? [...(state.ui.missionCompletedIds ?? []), ...newlyCompletedMissionIds]
         : (state.ui.missionCompletedIds ?? []),

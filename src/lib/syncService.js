@@ -26,7 +26,6 @@ function getExportableState() {
     eraCrisis: s.eraCrisis,
     relics: s.relics,
     blueprints: s.blueprints,
-    achievements: s.achievements,
     history: s.history,
     historyStats: s.historyStats,
     savedNotes: s.savedNotes,

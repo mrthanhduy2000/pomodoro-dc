@@ -131,7 +131,7 @@ test('mốc LUÔN tăng khi đi tới, kể cả lúc sang kỷ mới', () => {
 });
 
 test('máy chưa từng ghi dấu ⇒ IM LẶNG, không khen cho chặng đã qua từ lâu', () => {
-  // ⚠️ Cái bẫy đã cắn thật ở `navAttention.js`: không có luật này thì lần đầu mở app sau bản cập
+  // ⚠️ Cái bẫy đã cắn thật ở `navAttention.js` (nay đã xoá cùng hệ huy hiệu, round 44): không có luật này thì lần đầu mở app sau bản cập
   // nhật, Đàm nhận một lời chúc mừng cho việc anh làm xong từ nhiều tuần trước.
   const stage = getEraStage(8, 20340);
   assert.equal(pickStageCelebration(stage, 8, null), null);

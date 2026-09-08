@@ -64,7 +64,6 @@ function setupRichState() {
     },
     relics: [{ id: 'mam_song_bat_diet' }],
     relicEvolutions: { mam_song_bat_diet: 1 },
-    achievements: { ...s.achievements, unlocked: ['ach_x'], unlockTimes: { ach_x: 123 } },
     history: [{ id: 1, minutes: 25, timestamp: '2026-07-01T00:00:00.000Z', completed: true, status: 'completed', book: 1 }],
     historyStats: { ...s.historyStats, bestSessionMinutes: 90 },
     savedNotes: [{ id: 'n1', note: 'giữ tôi lại' }],
@@ -89,8 +88,6 @@ test('triggerPrestige: mọi tài sản whitelist sống sót nguyên vẹn', ()
 
   assert.deepEqual(s.relics, [{ id: 'mam_song_bat_diet' }]);
   assert.deepEqual(s.relicEvolutions, { mam_song_bat_diet: 1 });
-  assert.deepEqual(s.achievements.unlocked, ['ach_x']);
-  assert.equal(s.achievements.unlockTimes.ach_x, 123);
   assert.equal(s.history.length, 1);
   assert.equal(s.history[0].id, 1);
   assert.equal(s.historyStats.bestSessionMinutes, 90);

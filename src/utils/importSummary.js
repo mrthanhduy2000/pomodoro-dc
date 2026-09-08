@@ -40,6 +40,5 @@ export function extractImportSummary(data) {
     focusMinutes: Number.isFinite(progress.totalFocusMinutes) ? progress.totalFocusMinutes : 0,
     prestige: data?.prestige?.count ?? data?.prestige?.totalPrestiges ?? 0,
     relics: countUnlocked(data?.relics),
-    achievements: countUnlocked(data?.achievements?.unlocked ?? data?.achievements),
   };
 }

@@ -55,7 +55,6 @@ export default function ExportImport() {
       eraCrisis:    state.eraCrisis,
       relics:       state.relics,
       blueprints:   state.blueprints,
-      achievements: state.achievements,
       history:      state.history,
       historyStats: state.historyStats,
       savedNotes:   state.savedNotes,
@@ -274,7 +273,6 @@ export default function ExportImport() {
                 ['Tổng giờ tập trung', formatFocusMinutes(pendingImport.summary.focusMinutes)],
                 pendingImport.summary.prestige ? ['Lần prestige', String(pendingImport.summary.prestige)] : null,
                 pendingImport.summary.relics ? ['Di vật', String(pendingImport.summary.relics)] : null,
-                pendingImport.summary.achievements ? ['Thành tựu', String(pendingImport.summary.achievements)] : null,
               ].filter(Boolean).map(([label, value]) => (
                 <div key={label} className="flex items-center justify-between text-[13px]">
                   <span style={{ color: 'var(--muted, #6a6862)' }}>{label}</span>

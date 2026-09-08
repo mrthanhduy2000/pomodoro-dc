@@ -24,6 +24,8 @@
 
 import { create } from 'zustand';
 import { tinhGiuLai } from '../engine/prestigeCarryover';
+import { countBuiltBuildings } from '../engine/journey';
+import { settleCitySP } from '../engine/skillPointEconomy';
 import { wonderPassiveBuffs } from '../engine/wonderEffects.js';
 import { withCanonicalRelicText } from '../engine/relicGrowth';
 import { chooseSessionProject } from '../engine/sessionBrick';
@@ -46,7 +48,6 @@ import {
   SIEU_TAP_TRUNG_CHARGES,
   SO_DO_MIN_MINUTES,
   RANK_SYSTEM,
-  ACHIEVEMENTS,
   WEEKLY_CHAINS,
   BUILDING_SPECS,
   BUILDING_EFFECTS,
@@ -106,7 +107,6 @@ import { withCanonicalCrisisText } from '../engine/challengeEngine';
 import { openCrisisQuest } from '../engine/rankLadder';
 // ADR-078: helpers moved out of this file verbatim — see each module's header.
 import { assembleSessionReward } from '../engine/sessionRewards';
-import { achievementHydrationState, buildAchievementSnapshot, makeDefaultAchievements, normalizeAchievementsStateWithTimeline } from '../engine/achievementState';
 
 import { isCurrentEraBlueprint, makeDefaultResearch, normalizeStoredResearch, pickEraScopedBlueprintPatch, pruneEraScopedBlueprintState } from '../engine/eraScope';
 import { appendUiNotification, makeWorkshopQueuedNotification } from '../engine/feedNotifications';
@@ -387,6 +387,11 @@ function normalizeStoredPlayer(player = {}) {
     level: Number.isFinite(player?.level) ? player.level : 0,
     totalEXP: Number.isFinite(player?.totalEXP) ? player.totalEXP : 0,
     sp: Number.isFinite(player?.sp) ? player.sp : 0,
+    // ADR-084 — the city's SKILL-POINT LEDGER: how much SP the city has already paid out.
+    // ⚠️ 0 for a save that predates the rule is CORRECT, not a missing value: the first settle then
+    // owes one point per building already standing, which is exactly the retroactive credit
+    // (`engine/skillPointEconomy.js` explains why this is a ledger and not an event).
+    spFromCity: Number.isFinite(player?.spFromCity) ? Math.max(0, player.spFromCity) : 0,
     unlockedSkills: {
       ...makeDefaultSkills(),
       ...(isRecord(player?.unlockedSkills) ? player.unlockedSkills : {}),
@@ -511,7 +516,6 @@ const makeDefaultUiState = () => ({
   levelUpQueue: [],
   relicNotification: null,
   rankUpNotification: null,
-  achievementQueue: [],
   missionCompletedIds: [],
   prestigeModalOpen: false,
   isOnBreak: false,
@@ -523,22 +527,13 @@ const makeDefaultUiState = () => ({
   weeklyReportPending: false,
 });
 
-function normalizePersistedGameState(persistedState, currentState, options = {}) {
+function normalizePersistedGameState(persistedState, currentState) {
   const persisted = isRecord(persistedState) ? persistedState : {};
   const current = currentState;
-  const { trackAchievementBackfill = false } = options;
   const hasPersistedKey = (key) => Object.prototype.hasOwnProperty.call(persisted, key);
   const hasPersistedHistory = hasPersistedKey('history');
   const hasPersistedHistoryStats = hasPersistedKey('historyStats');
   const resolvedHistory = Array.isArray(persisted.history) ? persisted.history : current.history;
-  const hydratedAchievements = hasPersistedKey('achievements')
-    ? normalizeAchievementsStateWithTimeline(persisted.achievements, resolvedHistory)
-    : { achievements: current.achievements, didBackfill: false };
-
-  if (trackAchievementBackfill) {
-    achievementHydrationState.shouldPersistBackfilledTimeline = hydratedAchievements.didBackfill;
-  }
-
   const normalized = {
     ...current,
     ...persisted,
@@ -561,7 +556,6 @@ function normalizePersistedGameState(persistedState, currentState, options = {})
       : current.eraCrisis,
     relics: Array.isArray(persisted.relics) ? persisted.relics.map((r) => normalizeStoredRelic(r)) : current.relics,
     blueprints: Array.isArray(persisted.blueprints) ? persisted.blueprints : current.blueprints,
-    achievements: hydratedAchievements.achievements,
     history: resolvedHistory,
     historyStats: hasPersistedHistory || hasPersistedHistoryStats
       ? normalizeStoredHistoryStats(persisted.historyStats, resolvedHistory)
@@ -654,7 +648,43 @@ function normalizePersistedGameState(persistedState, currentState, options = {})
     latestSessionUndo: persisted.latestSessionUndo ?? current.latestSessionUndo,
   };
 
-  return pruneEraScopedBlueprintState(normalized, normalized.progress?.activeBook);
+  /*
+    ⚠️ ADR-084 — KẾT SỔ THÀNH PHỐ NGAY TẠI ĐÂY, VÀ CHỈ TẠI ĐÂY, cho mọi đường nạp.
+    `normalizePersistedGameState` là cửa DUY NHẤT mà dữ liệu ngoài đi qua (localStorage · kéo về từ
+    Supabase · nhập file — luật của `CLAUDE.md`), nên đặt phép kết sổ ở đây là cách duy nhất khiến
+    ba đường ấy không thể lệch nhau. Đặt ở `onRehydrateStorage` thì bản kéo từ đám mây không được
+    trả; đặt ở màn hình thì nó chạy nhiều lần và không có chỗ nào ghi lại là đã trả.
+
+    ⚠️ ĐÂY LÀ CHỖ TRẢ HỒI TỐ. Một bản lưu có sẵn 38 công trình mà sổ ghi 0 thì lần nạp đầu tiên sau
+    bản này nợ đúng 38 điểm — không cần bước migration, không cần cờ ngày tháng, không có gì phải
+    "chạy một lần rồi cầu mong". Lần nạp thứ hai nợ 0, vì sổ đã ghi. Xem `skillPointEconomy.js`.
+
+    ⚠️ KHÔNG BAO GIỜ TRỪ. `settleCitySP` chặn số âm: một bản kéo về có ít công trình hơn máy này
+    (hoặc một lần nhập bản lưu cũ) không được phép đòi lại số điểm Đàm đã tiêu thành kỹ năng.
+
+    ⚠️ ĐẾM TRÊN `normalized`, KHÔNG PHẢI `persisted`. Ở đây `buildings`/`cityArchive` đã qua chuẩn
+    hoá; đọc thẳng `persisted` là đếm một thành phố chưa được kiểm, và sổ sẽ trả tiền cho nó.
+  */
+  const citySettlement = settleCitySP({
+    builtTotal: countBuiltBuildings({
+      cityArchive: normalized.cityArchive,
+      activeBook: normalized.progress?.activeBook,
+      buildings: normalized.buildings,
+    }),
+    credited: normalized.player?.spFromCity,
+  });
+  const settled = citySettlement.owed > 0
+    ? {
+        ...normalized,
+        player: {
+          ...normalized.player,
+          sp: Math.max(0, (Number(normalized.player?.sp) || 0) + citySettlement.owed),
+          spFromCity: citySettlement.credited,
+        },
+      }
+    : normalized;
+
+  return pruneEraScopedBlueprintState(settled, settled.progress?.activeBook);
 }
 
 function migratePersistedGameState(persistedState, fromVersion) {
@@ -713,7 +743,6 @@ function createLatestSessionUndoSnapshot(state) {
       eraCrisis: state.eraCrisis,
       relics: state.relics,
       blueprints: state.blueprints,
-      achievements: state.achievements,
       historyStats: state.historyStats,
       streak: state.streak,
       missions: state.missions,
@@ -736,7 +765,7 @@ function createLatestSessionUndoSnapshot(state) {
 function makeProgressionResetState() {
   return {
     player: {
-      level: 0, totalEXP: 0, sp: 0, unlockedSkills: makeDefaultSkills(),
+      level: 0, totalEXP: 0, sp: 0, spFromCity: 0, unlockedSkills: makeDefaultSkills(),
       // V2 fields — reset all
       benVungUnlocked: false,
       locBanTangCounter: 0,
@@ -1290,6 +1319,7 @@ const useGameStore = create(
         level:          0,
         totalEXP:       0,
         sp:             0,         // Điểm Kỹ Năng chưa dùng
+        spFromCity:     0,         // ADR-084 — SP the city has already paid (the ledger, not a score)
         unlockedSkills: makeDefaultSkills(),
         // V2 — Bền Vững (lifetime trophy: streak 30 ngày → +5% allBonus vĩnh viễn)
         benVungUnlocked: false,
@@ -1332,7 +1362,6 @@ const useGameStore = create(
       blueprints: [],
 
       // ── Thành Tích đã mở khóa ────────────────────────────────────────────
-      achievements: makeDefaultAchievements(),
 
       // ── Nhật ký phiên (50 gần nhất) ──────────────────────────────────────
       history: [],
@@ -1746,7 +1775,6 @@ const useGameStore = create(
                 pendingReward: null,
                 relicNotification: null,
                 rankUpNotification: null,
-                achievementQueue: [],
                 missionCompletedIds: [],
                 isOnBreak: false,
                 breakSecondsLeft: 0,
@@ -2395,24 +2423,6 @@ const useGameStore = create(
       dismissRankUpNotification: () =>
         set((prev) => ({ ui: { ...prev.ui, rankUpNotification: null } })),
 
-      /**
-       * ⚠️ NHẬN ID TUỲ CHỌN (2026-08-27, ADR-060). Trước đây chỉ có `slice(1)` vì
-       * toast hiện MỘT cái một lúc, nên "bỏ cái đang hiện" và "bỏ cái đầu hàng"
-       * là cùng một việc. Nay chồng tối đa 3 thẻ cùng lúc và mỗi thẻ tự hết hạn
-       * theo đồng hồ riêng, nên thẻ thứ ba có thể hết trước thẻ thứ nhất —
-       * `slice(1)` lúc đó sẽ bỏ NHẦM một thành tích Đàm chưa kịp đọc.
-       * Không truyền id thì hành vi y hệt bản cũ.
-       */
-      dismissAchievementNotification: (id) =>
-        set((prev) => ({
-          ui: {
-            ...prev.ui,
-            achievementQueue: id === undefined
-              ? prev.ui.achievementQueue.slice(1)
-              : prev.ui.achievementQueue.filter((item) => item !== id),
-          },
-        })),
-
       dismissMissionNotification: (id) =>
         set((prev) => {
           const queue = prev.ui.missionCompletedIds ?? [];
@@ -2586,33 +2596,6 @@ const useGameStore = create(
         return true;
       },
 
-      /**
-       * Ảnh chụp số liệu mà `check()` của thành tích đọc — dựng từ TRẠNG THÁI HIỆN TẠI.
-       *
-       * ⚠️ VÌ SAO PHẢI CÓ. Màn "Huy hiệu" cần trả lời "còn bao nhiêu nữa", mà con số ấy chỉ tồn
-       * tại bên trong `buildAchievementSnapshot` — một hàm riêng của file này, xưa nay chỉ chạy
-       * đúng một lần mỗi khi xong phiên. Không có lối này thì giao diện buộc phải tự dựng lại
-       * một bản snapshot thứ hai, tức hai công thức cho một sự thật, và chúng sẽ trôi khỏi nhau.
-       *
-       * ⚠️ ĐẮT: nó quét lại TOÀN BỘ `history` (fixture 180 ngày = 624 phiên). Chỗ gọi PHẢI bọc
-       * `useMemo` theo đúng những lát state nó đọc, đừng gọi thẳng trong thân render.
-       */
-      buildAchievementSnapshotNow: () => {
-        const s = get();
-        return buildAchievementSnapshot(
-          s.progress,
-          s.relics,
-          s.blueprints,
-          s.research,
-          s.history,
-          s.rankSystem,
-          s.streak,
-          s.buildings,
-          s.prestige,
-          s.player,
-        );
-      },
-
       // ─── Overclock / Staking ─────────────────────────────────────────────
       activateOverclock: () => {
         const state = get();
@@ -2670,10 +2653,23 @@ const useGameStore = create(
 
         set({
           ...resetState,
-          player: { ...resetState.player, sp: giuLai.sp, unlockedSkills: giuLai.unlockedSkills },
+          /*
+            ⚠️ `spFromCity` PHẢI ĐI QUA THĂNG HOA (ADR-084). Thăng Hoa KHÔNG xoá thành phố —
+            `makeProgressionResetState()` cố ý không đụng `buildings`/`cityArchive`, nên sau khi
+            reset thì thành phố vẫn còn nguyên 38 công trình. Để sổ nợ về 0 ở đây nghĩa là lần kết
+            sổ kế tiếp lại trả thêm 38 SP cho đúng những công trình đã trả rồi — tức Thăng Hoa
+            thành một cái MÁY IN điểm kỹ năng, bấm bao nhiêu lần cũng được.
+            Ý nghĩa đúng: thành phố đã trả công cho những công trình ấy một lần; Thăng Hoa là thứ
+            lấy đi số điểm ấy (đổi lấy bonus vĩnh viễn), không phải thứ xoá khoản đã trả.
+          */
+          player: {
+            ...resetState.player,
+            sp: giuLai.sp,
+            spFromCity: state.player.spFromCity,
+            unlockedSkills: giuLai.unlockedSkills,
+          },
           timerConfig: state.timerConfig,
           relics: state.relics,
-          achievements: state.achievements,
           history: state.history,
           historyStats: state.historyStats,
           savedNotes: state.savedNotes,
@@ -2818,7 +2814,6 @@ const useGameStore = create(
           ...makeProgressionResetState(),
           timerConfig:  makeDefaultTimerConfig(),
           sessionCategories: [...DEFAULT_SESSION_CATEGORIES],
-          achievements: makeDefaultAchievements(),
           history:      [],
           savedNotes:   [],
           buildings:    [],
@@ -2847,7 +2842,6 @@ const useGameStore = create(
         eraCrisis:        state.eraCrisis,
         relics:           state.relics,
         blueprints:       state.blueprints,
-        achievements:     state.achievements,
         history:          state.history,
         historyStats:     state.historyStats,
         savedNotes:       state.savedNotes,
@@ -2886,17 +2880,7 @@ const useGameStore = create(
       }),
 
       // Merge khi hydrate: đảm bảo field mới không bị crash
-      merge: (persisted, current) => normalizePersistedGameState(
-        persisted,
-        current,
-        { trackAchievementBackfill: true },
-      ),
-
-      onRehydrateStorage: () => (state, error) => {
-        if (error || !state || !achievementHydrationState.shouldPersistBackfilledTimeline) return;
-        achievementHydrationState.shouldPersistBackfilledTimeline = false;
-        useGameStore.setState((prev) => ({ achievements: prev.achievements }));
-      },
+      merge: (persisted, current) => normalizePersistedGameState(persisted, current),
     },
   ),
 );

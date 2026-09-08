@@ -41,7 +41,6 @@ test('extractImportSummary reads the key fields defensively', () => {
     history: [{ id: 1 }, { id: 2 }],
     prestige: { count: 2 },
     relics: { r1: true, r2: true, r3: false },
-    achievements: { unlocked: { a1: true, a2: true } },
   };
   const s = extractImportSummary(data);
   assert.equal(s.version, 5);
@@ -52,7 +51,6 @@ test('extractImportSummary reads the key fields defensively', () => {
   assert.equal(s.focusMinutes, 4560);
   assert.equal(s.prestige, 2);
   assert.equal(s.relics, 2);
-  assert.equal(s.achievements, 2);
 });
 
 test('extractImportSummary falls back gracefully on a sparse file', () => {

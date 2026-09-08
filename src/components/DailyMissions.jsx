@@ -6,7 +6,6 @@ import useGameStore from '../store/gameStore';
 import useSettingsStore from '../store/settingsStore';
 import { missionXpMultiplier } from '../engine/wonderEffects.js';
 import { dailyAllBonusXP, scaleMissionXP } from '../engine/missions';
-import { medianSessionXP } from '../engine/eraStage';
 import RewardCard from './shared/RewardCard';
 import { DAILY_BONUS_COPY } from './dailyBonusCopy';
 import { useSnapMotion } from '../lib/motionPresets';
@@ -44,7 +43,6 @@ export default function DailyMissions({ section = 'all' }) {
   const buildings = useGameStore((s) => s.buildings);
   const unlockedSkills = useGameStore((s) => s.player.unlockedSkills);
   const refreshDailyMissions = useGameStore((s) => s.refreshDailyMissions);
-  const history = useGameStore((s) => s.history);
   const uiTheme = useSettingsStore((s) => s.uiTheme);
 
   React.useEffect(() => {
@@ -87,16 +85,22 @@ export default function DailyMissions({ section = 'all' }) {
         ),
       )
     : 0;
-  // ADR-082: the same bonus said in sessions. `null` when there is no history to compare against.
-  const weeklyBonusMedianXP = medianSessionXP(history);
   // Làm tròn về SỐ NGUYÊN phiên: "≈ 6,4 phiên" xuống dòng ở khổ 390px và cái dấu phẩy thập phân
   // giả vờ chính xác hơn mức một số trung vị có thể hứa.
-  // ⚠️ ĐƠN VỊ Ở DÒNG CAPTION, KHÔNG DÍNH VÀO CON SỐ LỚN. Đo bằng ảnh 390px: «+328 XP» ở cỡ 15px
-  // trong cột phải hẹp (tiêu đề chuỗi tuần chiếm bên trái) XUỐNG DÒNG thành ba dòng chồng nhau.
-  // Caption ngay dưới đã có sẵn chỗ cho cả đơn vị lẫn phép so sánh, trên MỘT dòng.
-  const weeklyBonusCaption = (weeklyBonusMedianXP && weeklyBonusXP > 0)
-    ? `XP · ≈ ${Math.max(1, Math.round(weeklyBonusXP / weeklyBonusMedianXP))} phiên`
-    : 'XP thưởng chuỗi';
+  /*
+    ⚠️ ROUND 44 (ADR-084) — CON SỐ LỚN LÀ **SP**, KHÔNG PHẢI XP, VÀ ĐÂY LÀ MỘT PHÁT HIỆN CHỨ KHÔNG
+    PHẢI MỘT SỞ THÍCH. Chuỗi tuần vẫn luôn trả 1–2 ĐIỂM KỸ NĂNG (`WEEKLY_CHAINS[…].bonusSP`) —
+    tức nó đã trả đúng thứ duy nhất đáng tiêu trong game — nhưng màn hình chưa bao giờ nói ra:
+    nó in "+328", một con số XP không có đơn vị. Suốt cả vòng 43 tôi vẫn đọc nó là "phần thưởng XP".
+    Nói SP trước là đổi câu hỏi từ "328 là nhiều hay ít?" sang "xong tuần này là một kỹ năng mới".
+    XP xuống dòng caption, vẫn còn đủ, chỉ là thôi đứng nhầm chỗ.
+    ⚠️ Vẫn tính theo `WEEKLY_CHAIN_XP_SCALE` + Kế Hoạch Hoàn Hảo như cũ — không đổi một đồng nào
+    của nền kinh tế, chỉ đổi thứ được đặt lên trước.
+  */
+  const weeklyBonusSP = Math.max(0, Math.floor(Number(chain?.bonusSP) || 0));
+  const weeklyBonusCaption = weeklyBonusXP > 0
+    ? `+${weeklyBonusXP.toLocaleString('vi-VN')} XP`
+    : 'thưởng chuỗi';
 
   const streakMissionEligible = (streak.currentStreak ?? 0) >= STREAK_MISSION_MIN_STREAK;
   const streakMissionBaseXP = Math.min(
@@ -192,17 +196,16 @@ export default function DailyMissions({ section = 'all' }) {
             </div>
             <div className="text-right">
               <div className="mono text-[15px] font-semibold tabular-nums" style={{ color: 'var(--accent2)' }}>
-                +{weeklyBonusXP}
+                {weeklyBonusSP > 0 ? `+${weeklyBonusSP} SP` : `+${weeklyBonusXP}`}
               </div>
               {/*
-                ⚠️ THE CAPTION IS NOW A COMPARISON, NOT A LABEL (round 43, ADR-082). It used to read
-                «thưởng chuỗi» — a word that repeats what the card's own title already said, on
-                every render, forever. Meanwhile the number above it («+328») had no unit at all,
-                which is worse than a wrong unit: Đàm could not tell whether finishing four steps
-                across a whole week was worth a lot or nothing. Saying it in SESSIONS answers that
-                in one glance, in the only currency this game has (ADR-069) — and it is the same
-                sentence a person would say out loud: *"a week's chain is worth about one session."*
-                No history to compare against ⇒ fall back to the old label rather than guess.
+                ⚠️ THE CAPTION IS THE SECOND CURRENCY, NOT A LABEL (rounds 43–44, ADR-082/084).
+                Two things were wrong with the original «+328 / thưởng chuỗi»: the big number had no
+                unit at all, and the word under it repeated the card's own title on every render
+                forever. Round 43 gave the number its unit. Round 44 found the real problem — the
+                chain was already paying 1–2 SKILL POINTS, the only genuinely spendable thing in the
+                game, and the screen had never once said so. So SP takes the headline and the XP
+                moves down here, where a supporting number belongs.
               */}
               <div className="mono mt-0.5 text-[10px] uppercase tracking-[0.16em]" style={{ color: 'var(--muted)' }}>{weeklyBonusCaption}</div>
             </div>
@@ -375,7 +378,10 @@ function TodayMissionRow({ mission, rewardXP }) {
             A bare number is worse than a number in a unit Đàm cannot spend: he cannot even tell
             WHICH game it belongs to. Three characters buy the whole answer.
           */}
-          <div className="mono mt-1 text-[11px] font-semibold tabular-nums" style={{ color: 'var(--accent2)' }}>
+          {/* ⚠️ `whitespace-nowrap`: đo trên ảnh 390px, thêm đúng ba ký tự " XP" làm hàng nhiệm vụ dài
+              nhất xuống dòng thành "+38" / "XP". Không cắt chữ, nhưng một con số bị bẻ khỏi đơn vị
+              của nó thì đọc lướt sẽ thấy hai thứ chứ không phải một. */}
+          <div className="mono mt-1 whitespace-nowrap text-[11px] font-semibold tabular-nums" style={{ color: 'var(--accent2)' }}>
             +{rewardXP} XP
           </div>
         </div>

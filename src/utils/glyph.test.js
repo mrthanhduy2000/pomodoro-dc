@@ -13,9 +13,6 @@ import { readFileSync } from 'node:fs';
 import { getGlyph, hasGlyphIcon, getLabelMark } from './labelMark.js';
 import { stripComments } from './sourceScan.js';
 import {
-  ACHIEVEMENTS,
-  ACHIEVEMENT_TIERS,
-  ACHIEVEMENT_CATEGORIES,
   BLUEPRINT_CATALOG,
   DEFAULT_SESSION_CATEGORIES,
   ERA_CRISES,
@@ -44,12 +41,9 @@ test('getGlyph: có biểu tượng thì dùng, chuỗi rỗng phải rơi về 
   assert.equal(hasGlyphIcon(undefined), false);
 });
 
-// THỬ-CHO-ĐỎ: xoá `icon: '🥉'` khỏi ACHIEVEMENT_TIERS.bronze ⇒ bài 2 đỏ, kể đích danh bảng nào.
+// THỬ-CHO-ĐỎ: xoá `icon` khỏi một nút bất kỳ của SKILL_TREE ⇒ bài này đỏ, kể đích danh bảng nào.
 test('mọi bảng sưu tập phải khai ĐỦ biểu tượng — không bảng nào được bỏ trống', () => {
   const bang = {
-    'Thành tích': ACHIEVEMENTS,
-    'Hạng thành tích': Object.values(ACHIEVEMENT_TIERS),
-    'Nhóm thành tích': Object.values(ACHIEVEMENT_CATEGORIES),
     'Bản vẽ công trình': Object.values(BLUEPRINT_CATALOG).flat(),
     'Loại việc mặc định': DEFAULT_SESSION_CATEGORIES,
     'Di vật': Object.values(ERA_CRISES).map((c) => c.challengeOption.successRelic),
@@ -69,7 +63,11 @@ test('mọi bảng sưu tập phải khai ĐỦ biểu tượng — không bản
   }
   // Gác chạy-rỗng: con số này chỉ được ĐI LÊN. Tụt xuống nghĩa là một bảng vừa biến mất
   // khỏi phép đo mà vẫn xanh — đúng kiểu hỏng im lặng.
-  assert.ok(tong >= 513, `mới đếm ${tong} biểu tượng, ít hơn mốc 513 đo ngày 2026-09-01`);
+  // ⚠️ MỐC HẠ 513 → 139 (round 44, ADR-084), và đây là lần DUY NHẤT được phép hạ nó. Ba bảng
+  // thành tích (360 mục + 14 nhóm + 5 hạng = 379) bị xoá cùng cả hệ huy hiệu, nên phép đo mất
+  // đúng ngần ấy mục. Hạ mốc vì một hệ ĐÃ BỊ XOÁ là ghi nhận sự thật; hạ mốc vì "bài test đỏ mà
+  // tôi không rõ vì sao" là bịt đúng cái chuông mà bài này sinh ra để rung.
+  assert.ok(tong >= 139, `mới đếm ${tong} biểu tượng, ít hơn mốc 139 đo ngày 2026-09-08`);
 });
 
 // THỬ-CHO-ĐỎ: đổi một chỗ gọi bất kỳ về `getLabelMark(x.label, ...)` ⇒ bài 3 đỏ.
@@ -81,7 +79,6 @@ test('mọi bảng sưu tập phải khai ĐỦ biểu tượng — không bản
 // ("sinh ký hiệu tắt từ nhãn") ở MỌI cái tên nó mang, chứ không hỏi một cái tên.
 test('màn sưu tập phải hỏi getGlyph, KHÔNG được nối thẳng ký hiệu tắt', () => {
   const man = [
-    'src/components/Achievements.jsx',
     'src/components/SkillTree.jsx',
     'src/components/BuildScreen.jsx',
     'src/components/RelicInventory.jsx',

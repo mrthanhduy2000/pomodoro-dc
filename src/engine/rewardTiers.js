@@ -71,19 +71,6 @@ export function tierFromBlueprintRarity(rarity) {
   return BLUEPRINT_RARITY_TO_TIER[rarity] ?? DEFAULT_REWARD_TIER;
 }
 
-/** Năm hạng huy chương → bốn bậc: hai hạng cao nhất dùng chung bậc đỉnh. */
-const ACHIEVEMENT_TIER_TO_TIER = {
-  bronze:   'thuong',
-  silver:   'tot',
-  gold:     'hiem',
-  platinum: 'huyenThoai',
-  diamond:  'huyenThoai',
-};
-
-export function tierFromAchievementTier(tier) {
-  return ACHIEVEMENT_TIER_TO_TIER[tier] ?? DEFAULT_REWARD_TIER;
-}
-
 /**
  * Nhiệm vụ ngày: `bucket` (`core`/`variety`/`stretch`/`rare`) đã là thang khó-dễ
  * mà `MISSION_CATALOG` dùng để rút bài mỗi ngày — chấm hạng theo nó thay vì theo

@@ -107,7 +107,7 @@ test('chồng toast được gắn vào app, và nó dừng đồng hồ khi có
 test('điều kiện dựng lớp phủ có tính cả di vật và nhiệm vụ ngày', () => {
   const gate = /const\s+hasToast\s*=\s*\(([\s\S]*?)\);/.exec(APP_CODE);
   assert.ok(gate, 'không đọc được `hasToast`');
-  for (const needle of ['relicPending', 'missionCompletedCount', 'achievementQueueLength', 'hasLevelUp']) {
+  for (const needle of ['relicPending', 'missionCompletedCount', 'hasLevelUp']) {
     assert.match(gate[1], new RegExp(needle), `\`hasToast\` bỏ sót ${needle}`);
   }
 });

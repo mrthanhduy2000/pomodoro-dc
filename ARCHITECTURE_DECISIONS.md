@@ -73,6 +73,43 @@ roughly 44%. Titles below are the lookup key; read one with
 
 ---
 
+## ADR-084 — Round 44: the CITY funds the skill tree, and the 360-badge system is deleted outright
+
+**Date**: 2026-09-08 · **Order**: *"tôi kiếm được gì, và tôi tiêu nó vào đâu?"* · *"360 thứ không thưởng gì thì tệ hơn 20 thứ thưởng thật."*
+
+**Context — five measured numbers that only make sense together.** Round 43 gave the app a destination (75 buildings) and killed the units nobody could spend. It did not fix why. The economy underneath had stopped running:
+
+| measured | value |
+|---|---|
+| units of progress · how many are spendable | 12 · 2 |
+| the whole skill tree, all 36 skills | **138 SP** |
+| SP from levels: 6.000 XP/level against a median ~35 XP/session | **~86 sessions per SP** |
+| a real 617-session save | **2 unspent SP · 4 of 36 skills open** |
+| the other SP source (weekly chain, 1–2 SP) | behind a tab that does not exist on desktop |
+
+So the one thing worth buying was the one thing that could not be earned, while 360 badges could be earned endlessly and bought nothing. Those are not numbers to tune.
+
+**Decision 1 — a finished building pays 1 skill point (`engine/skillPointEconomy.js`).** The city was already the destination (ADR-082); it is now the economy too, so the two never compete for attention. The rate is derived, not chosen for feel: 75 buildings × 1 SP = 75, plus ~1 SP/week from the chain over ~50 weeks, plus ~14 from levels, is **~139 SP against a tree costing 138** — the tree finishes as the city finishes and all three sources still matter. Two SP per building would have covered the tree from the city alone and made the other two decorative. **~5,6 sessions per SP**, down from ~86.
+
+**Decision 2 — it is a LEDGER, not an event.** `settleCitySP` compares what the city has EARNED (a function of how many buildings stand) against what it has already PAID (`player.spFromCity`). Three properties fall out, and each was a reason not to write `if (built) sp += 1`: it pays a pre-existing save **retroactively with no migration step** (38 buildings ⇒ 38 points on first load); it **cannot double-pay**, so it is safe to settle on hydration AND after every session, which is what happens; and it **self-heals** after a rejected CAS write instead of losing a point forever. It never subtracts — a city can shrink (a cloud pull from a device that is behind, an older import) and clawing back spent points is the one thing an economy must never do. It rides through Thăng Hoa, because prestige does not reset the city and a reset ledger would make prestige an SP printer.
+
+**Decision 3 — the 360-badge system is DELETED, closing TECH_DEBT #103.** Round 43 measured the alternative before refusing it: tier-scaled XP over bronze 64 · silver 87 · gold 89 · platinum 61 · diamond 59 at a modest 60/120/250/500/1.000 is **126.030 XP ≈ 21 levels ≈ 42 SP**, against a tree of 138 — a second faucet large enough to dissolve the one-currency rule (ADR-069). Đàm's own principle decided the rest: *360 things that pay nothing are worse than 20 that pay something*. Gone: `ACHIEVEMENTS` (360) + `ACHIEVEMENT_TIERS` + `ACHIEVEMENT_CATEGORIES`, three engine modules, five components, the achievement toast source, the localStorage "seen" bookkeeping in `navAttention.js`, the `achievements` slice of persisted state, and the Huy hiệu sub-tab. **No corpse left**: the tab is now "Di vật" (relics still buff, so they keep their job), and `resolveTabTarget` explicitly translates the old `achievements` id so saved notifications do not become dead buttons.
+
+**Decision 4 — the weekly chain leads with SP.** It had *always* paid 1–2 skill points, and the screen had never said so: it printed `+328`, an unlabelled XP number. Naming the SP changes the question from *"is 328 a lot?"* to *"finishing this week is a new skill."*
+
+**Consequences.**
+- Every unit now terminates in the same sink. `gạch → công trình → SP`; `XP` and everything that multiplies it (streak · rank · relics · skills · missions) `→ cấp → SP`; `EP → kỷ → 5 more buildings → 5 more SP`. One sink (the tree), one destination (the city), no orphan numbers.
+- The reward card that lets Đàm SPEND a point now fires for city points too, right after the card naming the building — `"Kho Gia Vị xong" → "+1 SP, chọn một kỹ năng"` is one thought. It was previously gated on a level-up, i.e. roughly twice a year.
+- Two "go level up" captions were removed as dead advice: at ~171 sessions per level that sentence pointed at the longest road on the board.
+- `countBuiltBuildings` in `engine/journey.js` is now read by the LEDGER as well as the screens, so a second way of counting would pay the wrong number of points, not merely draw a wrong caption.
+- The glyph-coverage floor drops 513 → 139 and the toast-density floor 5 → 4. Both are recorded as *a system was deleted*, with a note that this is the only legitimate reason to lower either.
+
+**A trap found while writing this.** A `/* … */` block comment placed immediately after the `{` of an object literal made `components/journeyWiring.test.js` go red in an unrelated file: its JSX-comment stripper (`\{\s*\/\*[\s\S]*?\*\/\s*\}`) backtracked past the intended end and swallowed hundreds of lines of real code before the assertions ran. Line comments there instead; the warning sits at the site.
+
+**Alternatives considered.** Rewriting the XP ladder so levels become reachable (rejected: to fit inside the 12-session countdown window a level must cost ~420 XP, which puts a 617-session save at level 70 and makes the number absurd — the ladder cannot be both sane in count and reachable in that window, so the city had to be the faucet). Keeping ~24 curated badges that pay SP (rejected: a third faucet for the same sink, and it keeps a screen Đàm never opens).
+
+---
+
 ## ADR-083 — Round 42: a shape and the space reserved for it must be ONE number; a stack must carry its own axis
 
 **Date**: 2026-09-08 · **Order**: *"Build lớn. Simplify mạnh… Tập trung nhiều hơn vào UX/UI. VÒNG 42 = KHÔNG GIAN: cái gì nằm ở đâu, to bao nhiêu, có vừa khung không. TOÀN QUYỀN."* Reported with three photographs of a real session.

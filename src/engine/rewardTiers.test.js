@@ -9,11 +9,10 @@ import {
   REWARD_TIER_KEYS,
   getRewardTier,
   resolveRewardTier,
-  tierFromAchievementTier,
   tierFromBlueprintRarity,
   tierFromSessionMultiplier,
 } from './rewardTiers.js';
-import { ACHIEVEMENTS, BLUEPRINT_RARITY_LABEL } from './constants.js';
+import { BLUEPRINT_RARITY_LABEL } from './constants.js';
 
 const HERE = dirname(fileURLToPath(import.meta.url));
 
@@ -68,13 +67,6 @@ test('mọi từ vựng độ hiếm đang có của app đều ánh xạ đư�
       REWARD_TIER[tierFromBlueprintRarity(rarity)],
       `độ hiếm bản vẽ "${rarity}" không ánh xạ được`,
     );
-  }
-
-  // Thành tích: 5 hạng huy chương. Duyệt bảng thật, không duyệt danh sách nhớ.
-  const achievementTiers = new Set(ACHIEVEMENTS.map((a) => a.tier));
-  assert.ok(achievementTiers.size >= 4, 'không đọc được hạng thành tích — bảng đã đổi hình?');
-  for (const tier of achievementTiers) {
-    assert.ok(REWARD_TIER[tierFromAchievementTier(tier)], `hạng thành tích "${tier}" không ánh xạ được`);
   }
 });
 

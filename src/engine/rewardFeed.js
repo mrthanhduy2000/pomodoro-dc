@@ -23,13 +23,11 @@
  * File này là chỗ gọi đó.
  */
 import {
-  ACHIEVEMENTS,
   BLUEPRINT_RARITY_LABEL,
   STREAK_MILESTONES,
 } from './constants.js';
 import {
   getRewardTier,
-  tierFromAchievementTier,
   tierFromSessionMultiplier,
 } from './rewardTiers.js';
 
@@ -39,7 +37,6 @@ export const MAX_REWARD_TOASTS = 3;
 /** Toast tự biến mất sau 4 giây (Đàm chốt). */
 export const REWARD_TOAST_MS = 4000;
 
-const ACHIEVEMENT_LOOKUP = Object.fromEntries(ACHIEVEMENTS.map((a) => [a.id, a]));
 
 /**
  * Thứ tự ưu tiên khi có nhiều phần thưởng cùng lúc.
@@ -50,7 +47,7 @@ const ACHIEVEMENT_LOOKUP = Object.fromEntries(ACHIEVEMENTS.map((a) => [a.id, a])
  * Một chồng toast chỉ đọc được khi vị trí ổn định — thứ vừa xảy ra (tổng kết
  * phiên) luôn ở trên cùng, thứ hiếm nhất (di vật) ngay dưới.
  */
-const SOURCE_ORDER = ['weekly', 'loot', 'milestone', 'relic', 'level', 'achievement'];
+const SOURCE_ORDER = ['weekly', 'loot', 'milestone', 'relic', 'level'];
 
 function sourceRank(source) {
   const index = SOURCE_ORDER.indexOf(source);
@@ -209,22 +206,6 @@ function buildLevelToast(entry) {
 }
 
 
-function buildAchievementToast(id) {
-  const ach = ACHIEVEMENT_LOOKUP[id];
-  if (!ach) return null;
-  return {
-    id: `achievement:${id}`,
-    source: 'achievement',
-    key: id,
-    icon: ach.icon ?? '🏅',
-    name: ach.label,
-    tier: tierFromAchievementTier(ach.tier),
-    description: ach.description ?? 'Thành tích mới mở khoá.',
-    amount: null,
-    action: { tab: 'achievements' },
-  };
-}
-
 
 /**
  * Bản vẽ vừa nghiên cứu xong. Store ghi nó vào `notificationFeed` (hộp thư), chứ
@@ -322,9 +303,9 @@ export function buildBlueprintToast(blueprint) {
   ⚠️ GIỮ `weekly` DÙ NÓ CŨNG CÓ CHẤM BỀN. Đã định cắt nó và đã đổi ý sau khi đọc chính bài test
   của nó: thẻ này đến ĐÚNG MỘT LẦN MỖI TUẦN và không thể tự đến lần thứ hai. Một nhịp mỗi tuần là
   thứ ĐỐI LẬP với lạm phát thông tin — cắt nó là cắt một khoảnh khắc, không phải cắt tiếng ồn.
-  ⚠️ GIỮ `achievement` dù nó cũng có chấm riêng (`navAttention.js`). Cái chấm 6px trả lời "có
-  việc"; nó KHÔNG phải một lời chúc mừng — mà mở khoá một thành tích đúng là khoảnh khắc đáng ăn
-  mừng. Vòng này Đàm xin THÊM hứng thú, nên chỗ cắt phải là chỗ LẶP, không phải chỗ VUI.
+  ⚠️ `achievement` ĐÃ HẾT (round 44, ADR-084): hệ huy hiệu bị xoá hẳn — 360 mục, 0 phần thưởng.
+  Đừng dựng lại một nguồn toast cho nó. Khoảnh khắc đáng ăn mừng của vòng lặp nay là `level`, và
+  `level` giờ nổ ra cho CẢ điểm kỹ năng do thành phố trả, tức nó đến thường xuyên hơn hẳn trước.
 
   ⚠️ Mọi hàm `dismiss*` GIỮ NGUYÊN — chúng vẫn được gọi khi Đàm xem kênh bền.
 */
@@ -335,11 +316,10 @@ export function buildRewardToasts(ui = {}, extras = {}) {
     buildMilestoneToast(ui.lootModalOpen ? ui.pendingReward : null),
     buildRelicToast(ui.relicNotification),
     buildLevelToast((ui.levelUpQueue ?? [])[0]),
-    ...(ui.achievementQueue ?? []).map(buildAchievementToast),
   ].filter(Boolean);
 
   // Sắp xếp ỔN ĐỊNH theo nguồn: `sort` của JS đã ổn định từ ES2019 nên thứ tự
-  // trong cùng một nguồn (ví dụ ba thành tích cùng mở) giữ nguyên thứ tự store ghi.
+  // trong cùng một nguồn giữ nguyên thứ tự store ghi.
   return toasts.sort((a, b) => sourceRank(a.source) - sourceRank(b.source));
 }
 

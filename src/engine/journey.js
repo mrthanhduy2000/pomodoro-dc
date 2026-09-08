@@ -33,6 +33,8 @@
  *
  * PURE: no store, no `Date`, no DOM. Everything arrives as arguments.
  */
+import { listVisitableEras } from './cityArchive';
+import { summarizeMuseum, withEraCompletion } from './cityCompletion';
 import { BLUEPRINT_CATALOG } from './constants';
 import { describeStageCountdown } from './eraStage';
 
@@ -97,3 +99,24 @@ export function describeRailProgress({ stage = null, epPerSession = 0, journey =
   return { text: j.line, tone: 'destination' };
 }
 
+
+/**
+ * How many buildings stand in the whole city — sealed eras included — from raw store state.
+ *
+ * ⚠️ ONE COUNT, TWO READERS, AND THE SECOND ONE PAYS MONEY. The screens read this through
+ * `hooks/useJourney.js`; from round 44 the SKILL-POINT LEDGER reads it too
+ * (`engine/skillPointEconomy.js`), so a second way of counting would not just draw a wrong caption,
+ * it would pay the wrong number of skill points. Hence one function, and both callers go through it.
+ *
+ * ⚠️ `pending` IS DELIBERATELY EMPTY. `summarizeEraCompletion` only counts a slot as `built`, never
+ * as `building`, so passing the crafting queue changes nothing today — but passing it would invite
+ * a future edit that counts scaffolding as done, and the ledger would pay for a building that has
+ * not been finished and can still be cancelled.
+ */
+export function countBuiltBuildings({ cityArchive = null, activeBook = 1, buildings = [] } = {}) {
+  const eras = withEraCompletion(listVisitableEras(cityArchive, activeBook), {
+    built: Array.isArray(buildings) ? buildings : [],
+    pending: [],
+  });
+  return summarizeMuseum(eras).builtTotal;
+}

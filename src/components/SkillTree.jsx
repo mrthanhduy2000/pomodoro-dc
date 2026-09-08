@@ -33,8 +33,6 @@ import {
   SO_DO_CHARGES,
   EXP_PER_LEVEL,
   SP_PER_LEVEL,
-  ACHIEVEMENTS,
-  ACHIEVEMENT_TIERS,
 } from '../engine/constants';
 import { getLevelProgress, getEffectiveSkillCost } from '../engine/gameMath';
 import { STAGE_COUNTDOWN_MAX_SESSIONS, medianSessionXP, sessionsToStageEnd } from '../engine/eraStage';
@@ -104,7 +102,6 @@ const ELITE_RESONANCE_BY_SKILL = Object.fromEntries(
 );
 
 // Bản đồ tra cứu thành tựu theo id + tông màu bậc dịu mắt (hợp nền giấy ấm)
-const ACHIEVEMENT_BY_ID = Object.fromEntries(ACHIEVEMENTS.map((a) => [a.id, a]));
 const ACH_TIER_TINT = {
   bronze: '#b27c50',
   silver: '#a39e96',
@@ -141,7 +138,7 @@ function getTierBadgeProps(tierStyle, lightTheme) {
 
 // ─────────────────────────────────────────────────────────────────────────────
 
-export default function SkillTree({ _onOpenAchievements }) {
+export default function SkillTree() {
   const uiTheme            = useSettingsStore((s) => s.uiTheme);
   const sp                 = useGameStore((s) => s.player.sp);
   const totalEXP           = useGameStore((s) => s.player.totalEXP);

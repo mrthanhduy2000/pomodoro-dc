@@ -93,7 +93,7 @@ test('cảnh soi CHỈ được chạm `ui` — không cảnh nào chạm dữ l
   // Đây là lời hứa an toàn cốt lõi của cả cơ chế: `ui` không nằm trong `partialize` nên nó không
   // lên Supabase và không vào localStorage. Một cảnh lỡ mang theo khoá `history`/`progress`/
   // `player` là đủ để một lần soi ghi đè dữ liệu thật.
-  const CAM = ['history', 'progress', 'player', 'resources', 'achievements', 'blueprints',
+  const CAM = ['history', 'progress', 'player', 'resources', 'blueprints',
     'timerSession', 'breakSession', 'streak', 'missions', 'buildings', 'prestige'];
   for (const [ten, patch] of Object.entries(PREVIEW_SCENES)) {
     for (const k of CAM) {

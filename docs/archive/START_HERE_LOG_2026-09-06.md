@@ -1,7 +1,22 @@
-# NHẬT KÝ VÒNG 20 → 32, VÀ VÒNG 37 (tách khỏi START_HERE.md ngày 2026-09-06; vòng 37 thêm ngày 2026-09-08)
+# NHẬT KÝ VÒNG 20 → 32, VÀ VÒNG 37 + 40 (tách khỏi START_HERE.md ngày 2026-09-06; vòng 37 và 40 thêm ngày 2026-09-08)
 
 > Chuyển ra đây để `START_HERE.md` về đúng lời hứa của chính nó ("file ngắn, đọc mỗi phiên").
 > Nguyên văn, không xoá chữ nào. `grep` khi cần truy một vòng cũ.
+
+---
+
+- **Loop — ROUND 40 (2026-09-08): THINGS THAT HAPPEN AND VANISH (ADR-080).** Order: fill the
+  gap round 39 exposed, with a static budget of ZERO — only things that happen and are gone. Session
+  beats (`engine/sessionBeats.js`: settled · halfway · final stretch · last minute — an 8-second whisper
+  in the ring label + `focus/BeatRipple.jsx`, from elapsed time, background-safe, no new sound); the glow
+  warms with progress; the tab title carries a phase glyph ○ ◔ ◑ ◕ ● (☕/⏰ on a break); break beats
+  (stand up · water · come back). Tiered ending (`shared/RewardBurst.jsx`: brick dust · building ring +
+  confetti · rare full-screen; bricks DROP in `BrickRow`). Lucky brick (`rollLuckyBrick`, 12 %, ≥ 15 min,
+  never negative, `pendingReward.luckyBrickId`, the card names the double brick first). Leftovers: reward
+  tiers in the three-colour family, era chips wrap, era colours on the City tab kept. Round-39 counts
+  unchanged (1 · 2 · 3 · 0). Inspect: `--preview loot-lucky --card project` · `--preview loot-built --card
+  project` · `--preview loot-max --card level`; a beat: seed `timerSession.startedAt` so elapsed = 751 s
+  (`tools/timerFixtures.mjs <base> <run> <break> 751`) and shoot with `--settle 600`.
 
 ---
 

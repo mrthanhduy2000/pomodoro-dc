@@ -13,7 +13,11 @@
 > mà không được refactor triệt để, phải CHỦ ĐỘNG đề xuất mở một "Maintenance Sprint" (nêu rõ mục
 > tiêu/phạm vi/lợi ích/rủi ro/tiêu chí hoàn thành) thay vì tiếp tục cộng thêm tính năng mới.
 >
-> **Threshold status (2026-09-08, after ADR-082 "round 43")**: one entry OPENED (#103, an open
+> **Threshold status (2026-09-08, after ADR-084 "round 44")**: **#103 CLOSED by deletion** — the
+> 360-badge system is gone from code, state and docs. None opened. High/Critical count unchanged,
+> so no Maintenance Sprint is due.
+>
+> *(previous)* **Threshold status (2026-09-08, after ADR-082 "round 43")**: one entry OPENED (#103, an open
 > decision rather than a defect); none closed. High/Critical count unchanged, so no Maintenance
 > Sprint is due.
 >
@@ -556,35 +560,31 @@ Look one up: `grep -n '^## #<n>' docs/TECH_DEBT_3D.md`.
 
 ---
 
-## #103 — 360 achievements grant nothing: an open DECISION, not a defect
+## #103 — ✅ **ĐÓNG 2026-09-08** (round 44, ADR-084) — 360 huy hiệu không thưởng gì
 
-**Opened**: 2026-09-08 (ADR-082, round 43) · **Priority**: Medium · **Owner of the decision**: Đàm
+**Mở**: 2026-09-08 (round 43) · **Đóng**: 2026-09-08 (round 44) · **Cách đóng**: XOÁ HẲN hệ huy hiệu.
 
-**The fact.** `ACHIEVEMENTS` holds **360 entries and not one of them carries a reward field.** They
-unlock, they queue a toast, they fill a grid roughly 4.600 px tall at 390 px — and nothing in the
-game changes. Round 43's audit asked of every unit *"what can Đàm DO with it?"*; this is the emptiest
-answer in the app.
+**Sự thật đã đo.** `ACHIEVEMENTS` có **360 mục và không mục nào mang trường phần thưởng.** Chúng mở
+khoá, đẩy một toast, và lấp một lưới cao ~4.600 px ở khổ 390. Không có gì trong game đổi khác.
 
-**Why it was NOT fixed in round 43, with the number.** Tier-scaled XP was the obvious fill, and it
-uses an existing unit rather than inventing a ninth. It was measured before being rejected: the tiers
-are bronze 64 · silver 87 · gold 89 · platinum 61 · diamond 59, and at a modest 60/120/250/500/1.000
-XP that is **126.030 XP across the whole game ≈ 21 levels ≈ 42 SP**, against a skill tree of 36
-skills. A second XP faucet that size dissolves the one-currency rule (ADR-069) that the rest of round
-43 spent itself enforcing. Deleting the grid instead was also refused: round 42 (layout and space) was
-unmerged, so the round could not reshape the screen around a 360-item removal.
+**Vì sao KHÔNG gắn XP vào (đã tính ra số trước khi bác).** bronze 64 · silver 87 · gold 89 ·
+platinum 61 · diamond 59; ở mức khiêm tốn 60/120/250/500/1.000 XP là **126.030 XP ≈ 21 cấp ≈ 42 SP**
+cả ván, đối lại một cây kỹ năng chỉ **138 SP**. Đó là vòi thứ hai đủ lớn để hoà tan luật MỘT TIỀN TỆ
+(ADR-069) mà vòng 43 và 44 dựng lên.
 
-**The three options, for whoever picks this up.**
-1. **Reward them** — pick grants an order of magnitude smaller than the numbers above, and re-measure
-   the total against the tree before shipping. `rewardAxes.test.js` should gain a case so the new
-   axis is locked like the other three.
-2. **Delete them** — a real deletion of content; needs a before-shot (there is one:
-   `.city-preview/before-HuyHieu-390.png`) and should be done in a round that can also close the
-   hole the removal leaves in the Hành trang tab.
-3. **Re-role them explicitly** — stop presenting a record as a reward, and let the grid be a museum.
-   Cheapest, and it makes the honest claim; it does not make the screen shorter.
+**Chốt bằng nguyên tắc của chính Đàm**: *"360 thứ không thưởng gì thì tệ hơn 20 thứ thưởng thật."*
+Thứ thay nó không phải một bảng khác mà là một CÁI VÒI THẬT: một công trình xong trả 1 SP
+(`engine/skillPointEconomy.js`). Bản ghi "tôi đã đi được bao xa" nay là chính thành phố (38/75 công
+trình, kỷ niêm phong có dấu ★) và màn Thống kê.
 
-**Not blocking anything.** Nothing depends on this; it is filed so the emptiness stays visible
-instead of being rediscovered by a fourth audit.
+**Đã xoá, không để lại xác**: `ACHIEVEMENTS` + `ACHIEVEMENT_TIERS` + `ACHIEVEMENT_CATEGORIES`;
+`engine/achievementState.js` · `achievementProgress.js` · `achievementTimeline.js` ·
+`navAttention.js`; `components/Achievements.jsx` · `achievementUnit.js` · `shared/BadgeGrid.jsx` ·
+`shared/badgeGroups.js`; nguồn toast `achievement`; mảng `achievements` trong state đồng bộ; tab con
+"Huy hiệu" (nay là "Di vật"). Ảnh trước khi xoá: `.city-preview/r43/before-HuyHieu-390.png`.
+
+**Còn lại một dây an toàn**: `resolveTabTarget` dịch tường minh id `achievements` cũ sang `relics`,
+vì mọi thông báo huy hiệu đã LƯU trong localStorage của Đàm vẫn mang id ấy.
 
 ---
 

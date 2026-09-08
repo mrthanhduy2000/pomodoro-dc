@@ -57,10 +57,12 @@ const CO_BE = new Set(['building', 'scaffold', 'dwelling']);
  * ⚠️ VÀ KHÔNG CÓ TRẦN CHUNG. Một con số tuyệt đối cho cả 15 kỷ thì cho 14 kỷ còn lại một khoảng
  * trống để trôi vào trong im lặng; cổng ấy chỉ bắt được kỷ tệ nhất (Đàm, 2026-08-18, `#38`).
  */
+// ⚠️ Re-measured 2026-09-08 (round 47, ADR-087): rounded corners + wider bevels (parts.js), hip/mansard
+// vernacular roofs, relative window floor, 12-gon domes. Heaviest: era 6 198.388 → 307.904 (×1,55).
 const MOC_TAM_GIAC = {
-  1: 100876, 2: 107666, 3: 109464, 4: 158140, 5: 100250,
-  6: 198388, 7: 159068, 8: 124348, 9: 139160, 10: 109756,
-  11: 131008, 12: 108992, 13: 126648, 14: 143484, 15: 108660,
+  1: 92912, 2: 113350, 3: 104728, 4: 165096, 5: 96930,
+  6: 199252, 7: 161952, 8: 118508, 9: 143036, 10: 100536,
+  11: 123912, 12: 104424, 13: 120052, 14: 137600, 15: 95640,
 };
 
 /** Số BỆ KÈ của từng kỷ — tách riêng vì nó là hàm của ĐỊA HÌNH, không của kiến trúc. */
@@ -76,10 +78,11 @@ const MOC_SO_BE = {
  * 12** (nó mỏng tới mức `bevelWidth` trả 0). Ngoại lệ ấy được ĐẾM TƯỜNG MINH ở bài dưới, vì một
  * ngoại lệ bị làm tròn đi là một ngoại lệ không ai biết khi nó thành hai.
  */
-const BE_CO_VAT = 28;
+// Round 47 (ADR-087): a beveled plinth is a rounded-corner box — 3 bands × 2 × 12 + 2 × 10 = 92.
+const BE_CO_VAT = 92;
 const BE_KHONG_VAT = 12;
 /** Phân bố ĐO ĐƯỢC 2026-09-05 trên cả 15 kỷ: `{tam giác mỗi bệ: số bệ}`. */
-const PHAN_BO_BE = { 12: 1, 28: 26 };
+const PHAN_BO_BE = { 44: 1, 92: 26 };   // round 47: the one thin plate now rounds its plan corners (44), the 26 beveled boxes are 92
 
 function thanhPhoDoDuoc(era) {
   const built = BLUEPRINT_CATALOG[era].map((bp) => bp.id);

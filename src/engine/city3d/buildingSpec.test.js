@@ -1055,3 +1055,16 @@ test('TỪ VỰNG MÁI (c) — bảng không được dẹt: 15 kỷ phải còn
   assert.ok(dongNhat <= 3,
     `${dongNhat} kỷ cùng dùng một kiểu mái kỳ quan — bảng đang dồn cục, xem lại kỷ mới thêm`);
 });
+
+// ─── ROUND 47 (ADR-087, TECH_DEBT_3D #25) ─────────────────────────────────────────────────────
+test('CỬA SỔ: nhà dân NHỎ NHẤT của mọi kỷ có cửa sổ vẫn có ít nhất một ô cửa — không còn hộp trơn đội mái', () => {
+  // #25 measured the smallest `common` house of eras 3, 6 and 8 at ZERO glass parts: the window
+  // floor was an absolute 0,3 unit applied to walls a third that tall. It is relative to the storey now.
+  for (const era of ERAS) {
+    const style = getEraStyle(era);
+    if (style.windows === 'none') continue;   // eras 1–2: skin tents and mud huts really have none
+    const spec = buildBuildingSpec({ bpId: `dw|${era}|1|1`, era, type: 'house', rarity: 'common', level: 1 });
+    const glass = spec.parts.filter((p) => p.role === 'glass').length;
+    assert.ok(glass >= 1, `kỷ ${era} (${style.country}): nhà dân nhỏ nhất không có một ô cửa nào`);
+  }
+});

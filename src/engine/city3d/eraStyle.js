@@ -83,6 +83,11 @@
  */
 export const ROOF_KINDS = [
   'cone', 'gable', 'flat', 'stepped', 'ziggurat', 'tiered', 'dome', 'pyramid', 'sawtooth', 'blade',
+  // ⚠️ ROUND 47 (ADR-087, TECH_DEBT_3D #76): two VERNACULAR roofs. Dwelling roofs had 3 of 10 kinds
+  // for 15 eras (flat ×7 · gable ×7 · cone ×1). `hip` — four slopes, short ridge: the Chinese common
+  // house and the Tuscan farmhouse. `mansard` — steep lower slope, flat top, dormers: the roof of
+  // Paris. Both are dwelling roofs first; a monument may still use them later.
+  'hip', 'mansard',
 ];
 
 /**
@@ -106,6 +111,34 @@ export const WINDOW_KINDS = ['none', 'slit', 'square', 'arch', 'grid', 'curtain'
  * ⚠️ Tỉ lệ cao/rộng bị khoá trần ở `buildingSpec.test.js` (2,4 — ba kỷ cao được nới 3,2). Nâng
  * `massScale` mà quên nâng `spread` theo là cách nhanh nhất làm đỏ bài test đó.
  */
+/**
+ * ⚠️ ROUND 47 (ADR-087) — THE GROUND BELONGS TO THE COUNTRY, NOT TO THE PALETTE.
+ *
+ * Measured 2026-09-08 on the noon sweep: the ground of ALL 15 eras came from one hard-coded anchor
+ * in `palette3d.js` (`GROUND_ANCHOR = 58°`, era tint 22 %, saturation 0,20) — the desert of Ur, the
+ * paddies of Bắc Bộ, the snow of Stalingrad and the sand of Dubai were one yellow-olive sheet. The
+ * 14 largest colours of era 8 covered 65,6 % of the frame and 9 of them sat at saturation 0,06–0,10;
+ * the brightest thing in the city was the water. So every era now declares the ground it really
+ * stands on — `groundKind` names the family (so a test can check the colour is a plausible member of
+ * it) and `groundColor` is the noon colour of that ground in daylight. `palette3d.js` derives the
+ * four terrain shades, the outskirts and the road contrast from it; it invents nothing.
+ *
+ * Windows are for NOON, LIGHT THEME (the palette darkens and desaturates them itself at night).
+ * Saturation caps are the "no artificial grass" law: real grass tops out well under 0,55; real sand
+ * under 0,70. Hue windows keep each family in the range its real material occupies.
+ */
+export const GROUND_KINDS = {
+  sand:   { hue: [26, 48],   sat: [0.35, 0.70], light: [0.55, 0.76], note: 'desert sand — Giza, Dubai' },
+  clay:   { hue: [28, 46],   sat: [0.25, 0.52], light: [0.50, 0.72], note: 'dried mud flats, loess — Ur, Chang\'an' },
+  steppe: { hue: [36, 60],   sat: [0.18, 0.56], light: [0.44, 0.62], note: 'dry summer grass — Anatolia, Tuscany' },
+  meadow: { hue: [70, 100],  sat: [0.26, 0.50], light: [0.30, 0.54], note: 'temperate grass, forest floor — Eifel, Île-de-France' },
+  paddy:  { hue: [88, 128],  sat: [0.28, 0.55], light: [0.36, 0.52], note: 'wet rice, tropical lawn — Bắc Bộ, Singapore' },
+  paving: { hue: [20, 120],  sat: [0.02, 0.22], light: [0.36, 0.68], note: 'stone, cobble, asphalt — Lisbon, New York, Tokyo' },
+  cinder: { hue: [20, 70],   sat: [0.02, 0.12], light: [0.28, 0.46], note: 'soot and coal dust — Manchester' },
+  snow:   { hue: [190, 235], sat: [0.10, 0.40], light: [0.82, 0.95], note: 'packed snow — Stalingrad in winter' },
+};
+export const GROUND_KIND_NAMES = Object.keys(GROUND_KINDS);
+
 export const ERA_STYLES = {
   1: {
     name: 'đá thô & lều da thú',
@@ -125,6 +158,8 @@ export const ERA_STYLES = {
     vernacularRoof: 'cone',
     // đường mòn ĐẤT NỆN — thời đồ đá chưa có khái niệm lát đường
     roadMaterial: 'dirt', roadColor: '#8d7550',
+    groundKind: 'steppe', groundColor: '#a99a63',   // Anatolian steppe in summer — dry ochre grass
+    wallColor: '#8c7f6c',                         // dry-stone walls, grey-brown
     windows: 'none',
     motifs: ['boulder', 'firepit'],
     rough: 0.9,
@@ -171,6 +206,8 @@ export const ERA_STYLES = {
     vernacularRoof: 'flat',
     // lối cát ven sông Nin, đất pha cát phơi nắng
     roadMaterial: 'dirt', roadColor: '#b9a173',
+    groundKind: 'sand', groundColor: '#d8c07e',   // desert edge above the Nile floodplain — yellow sand
+    wallColor: '#cdb38a',                         // sun-dried mudbrick, pale
     windows: 'none',
     motifs: ['fence', 'granary'],
     rough: 0.62,
@@ -204,6 +241,8 @@ export const ERA_STYLES = {
     // người, và Lưỡng Hà là nơi duy nhất thời đó có bitum lộ thiên (mỏ Hit). Vì thế nó ĐẬM hẳn so
     // với đường cát Ai Cập ngay kỷ trước, chứ không phải cùng một sắc đất nhạt hơn một chút.
     roadMaterial: 'mudbrick', roadColor: '#6b5745',
+    groundKind: 'clay', groundColor: '#c9a266',   // dried mud flats around Ur — pale khaki clay
+    wallColor: '#b58f66',                         // mudbrick of Ur — warm tan
     windows: 'slit',
     motifs: ['pillar', 'ramp'],
     rough: 0.36,
@@ -219,10 +258,13 @@ export const ERA_STYLES = {
     roof: 'tiered', roofPitch: 0.34, eaves: 0.34,
     // Mái CHỒNG nhiều tầng là đặc quyền của cung điện và chùa; luật nhà Thanh còn cấm dân thường
     // lợp kiểu đó. Nhà tứ hợp viện của dân là mái dốc hai phía, một tầng, lợp ngói.
-    vernacularRoof: 'gable',
+    vernacularRoof: 'hip',   // round 47 (#76): the Chinese common house is hipped (wudian/xieshan family), never the palace's tiers
+    vernacularPitch: 0.42,   // round 47: a hip at the palace's 0.34 reads as a lid; 0.42 shows the slope from the default camera
     // đường lát THANH THẠCH (青石) kinh thành, kẻ ô vuông vắn theo quy hoạch Chu Lễ. Tên gọi
     // "đá xanh" là mô tả đúng: loại granite này ngả LỤC-xám, khác hẳn granite ngả LAM của Paris.
     roadMaterial: 'stone', roadColor: '#82877e',
+    groundKind: 'clay', groundColor: '#b08d52',   // loess of the Guanzhong basin — yellow-brown earth
+    wallColor: '#d8d2c6',                         // rammed earth plastered white-grey (Tang)
     windows: 'square',
     motifs: ['columns', 'banner'],
     rough: 0.22,
@@ -241,6 +283,8 @@ export const ERA_STYLES = {
     // ngõ ĐÁ CUỘI trung cổ Đức — mặt lồi lõm, kẽ đá đầy bùn và rêu nên tổng thể ngả NÂU ẤM, không
     // phải xám sạch: ngõ trung cổ không có cống, mọi thứ đọng lại trên mặt đường.
     roadMaterial: 'stone', roadColor: '#7d7264',
+    groundKind: 'meadow', groundColor: '#5f7f3b',   // Eifel forest meadow — deep green
+    wallColor: '#8e8b83',                         // quarried grey stone
     windows: 'slit',
     motifs: ['buttress', 'crenel'],
     rough: 0.44,
@@ -267,6 +311,8 @@ export const ERA_STYLES = {
     // nghiêng lát sân đình cũng đỏ. Đây là mặt đường ĐỎ NHẤT cả 15 kỷ, và đó là sự thật về đất
     // Việt Nam chứ không phải một lựa chọn cho khác kỷ 5.
     roadMaterial: 'mudbrick', roadColor: '#a05c3c',
+    groundKind: 'paddy', groundColor: '#64a33e',   // Red River delta paddies — bright rice green
+    wallColor: '#cfae6f',                         // lime plaster in Hanoi ochre
     windows: 'square',
     motifs: ['courtyard', 'banner', 'columns'],
     rough: 0.2,
@@ -284,7 +330,8 @@ export const ERA_STYLES = {
     // ⚠️ CA NẶNG NHẤT CỦA CẢ BẢNG, và là lý do trường này ra đời. Firenze có ĐÚNG MỘT mái vòm;
     // toàn bộ phần còn lại của thành phố là nhà phố mái ngói dốc thoải. Cho nhà dân đội vòm thì
     // Duomo — thứ đáng lẽ nhận ra được từ xa — chìm nghỉm giữa 25 bản sao tí hon của chính nó.
-    vernacularRoof: 'gable',
+    vernacularRoof: 'hip',   // round 47 (#76): Tuscan farmhouses carry a low hip of terracotta; only the Duomo has a dome
+    vernacularPitch: 0.30,   // round 47: the dome's 0.56 would make a farmhouse roof a steeple; Tuscan hips are low
     // ⚠️ ĐÁ **PIETRA SERENA** — SỬA MỘT LỖI ĐỌC SỬ, KHÔNG PHẢI CHỈNH MÀU CHO DỄ NHÌN. Bản trước
     // dùng `#9c8760` (pietraforte) và tự giải thích là "chính thứ đá dựng nên Palazzo Vecchio" —
     // câu ấy đúng, và chính nó là chỗ sai: pietraforte là đá XÂY TƯỜNG. Thứ người Firenze LÁT
@@ -297,6 +344,8 @@ export const ERA_STYLES = {
     // vì đá của chúng XÁM, khác họ màu với đất. Nói cách khác kỷ 7 dính đúng bệnh của cả Phase
     // 9D, thu nhỏ lại: một trục (độ sáng) phải gánh việc của hai (sáng + sắc).
     roadMaterial: 'stone', roadColor: '#8a8f8c',
+    groundKind: 'steppe', groundColor: '#cfae5c',   // Tuscan fields in July — pale gold
+    wallColor: '#d6b98a',                         // Tuscan ochre plaster
     windows: 'arch',
     motifs: ['columns', 'arcade', 'statue'],
     rough: 0.06,
@@ -314,6 +363,8 @@ export const ERA_STYLES = {
     vernacularRoof: 'gable',
     // calçada portuguesa — đá vôi TRẮNG khảm hoa văn, sáng nhất bảng
     roadMaterial: 'stone', roadColor: '#c9c3b4',
+    groundKind: 'paving', groundColor: '#b3a88d',   // calçada portuguesa — limestone and basalt mosaic, sun-warmed
+    wallColor: '#ece7da',                         // whitewash of the Lisbon waterfront
     windows: 'square',
     motifs: ['mast', 'crate'],
     rough: 0.3,
@@ -330,9 +381,12 @@ export const ERA_STYLES = {
     roof: 'pyramid', roofPitch: 0.28, eaves: 0.26,
     // Chóp bốn mặt là mái của điện Panthéon. Nhà phố Haussmann là mái MANSARD — dốc đứng, lợp
     // kẽm, ngắt thành hai độ dốc. `gable` là cách gần nhất dựng được bằng bộ khối hiện có.
-    vernacularRoof: 'gable',
+    vernacularRoof: 'mansard',   // round 47 (#76): the roof of Haussmann's Paris — steep zinc lower slope, flat top, dormers
+    vernacularPitch: 0.62,   // round 47: the Louvre's 0.28 pyramid pitch is far too shallow for a mansard's steep lower slope
     // pavé Paris — đá granite xám ngả LAM rõ, mặt đã mòn bóng vì xe ngựa
     roadMaterial: 'stone', roadColor: '#767f8a',
+    groundKind: 'meadow', groundColor: '#7a9c48',   // formal lawns of Paris — light green
+    wallColor: '#d4cbb8',                         // Lutetian limestone, pale cream-grey
     windows: 'arch',
     motifs: ['columns', 'pediment', 'statue'],
     rough: 0.04,
@@ -351,6 +405,8 @@ export const ERA_STYLES = {
     vernacularRoof: 'gable',
     // đường gạch nung Manchester ÁM BỒ HÓNG — tối vì khói nhà máy
     roadMaterial: 'brick', roadColor: '#584f48',
+    groundKind: 'cinder', groundColor: '#787569',   // Manchester yards — soot and coal dust
+    wallColor: '#985240',                         // Accrington red brick
     windows: 'grid',
     motifs: ['chimney', 'truss'],
     rough: 0.18,
@@ -370,6 +426,8 @@ export const ERA_STYLES = {
     // NHỰA ĐƯỜNG (asphalt gốc dầu mỏ) New York + vỉa hè granite. Lạnh và gần đen — khác hẳn
     // macadam đá vôi ám bồ hóng ẤM của Manchester ngay kỷ trước, dù nhìn thoáng cả hai đều "tối".
     roadMaterial: 'concrete', roadColor: '#3a3b3e',
+    groundKind: 'paving', groundColor: '#8f8069',   // New York lots — bluestone and packed earth
+    wallColor: '#8c7565',                         // brownstone
     windows: 'grid',
     motifs: ['columns', 'spire', 'statue'],
     rough: 0.03,
@@ -384,9 +442,12 @@ export const ERA_STYLES = {
     massScale: 1.02, spread: 1.1,
     roof: 'flat', roofPitch: 0.12, eaves: 0.14,
     // Khối nhà ở tập thể Xô-viết cũng mái bằng như lô cốt — khác ở bề dày tường, không ở mái.
-    vernacularRoof: 'flat',
+    vernacularRoof: 'gable',   // round 47 (#76): Stalingrad's wooden houses had pitched roofs against snow; the flat roof is the bunker's
+    vernacularPitch: 0.62,   // round 47: inheriting the bunker's 0.12 made the gable a flat lid — snow roofs are steep
     // tấm BÊ TÔNG đúc sẵn kiểu quân sự Xô-viết, ngả ô-liu
     roadMaterial: 'concrete', roadColor: '#5e665c',
+    groundKind: 'snow', groundColor: '#e3e9f0',   // Stalingrad in winter — packed snow
+    wallColor: '#8a8c84',                         // poured military concrete
     windows: 'slit',
     motifs: ['bunker', 'crenel'],
     rough: 0.26,
@@ -406,6 +467,8 @@ export const ERA_STYLES = {
     vernacularRoof: 'flat',
     // asphalt Tokyo hậu chiến phẳng lì, kẻ vạch trắng — xám ngả lam, sẫm
     roadMaterial: 'concrete', roadColor: '#42474f',
+    groundKind: 'paving', groundColor: '#777b73',   // Tokyo — asphalt, gravel gardens, moss
+    wallColor: '#c2c0b9',                         // precast concrete, light grey
     windows: 'grid',
     motifs: ['antenna', 'dish'],
     rough: 0.08,
@@ -425,6 +488,8 @@ export const ERA_STYLES = {
     // lại được rửa thường xuyên. Sáng hơn hẳn asphalt Tokyo kỷ trước — đây là chỗ Đàm đi qua và
     // thấy đường ĐỔI, nên hai kỷ liền nhau không được phép cùng một sắc.
     roadMaterial: 'concrete', roadColor: '#9aa0a6',
+    groundKind: 'paddy', groundColor: '#4f9c4d',   // Singapore garden city — tropical lawn
+    wallColor: '#6f8ea3',                         // curtain glass, blue-grey
     windows: 'curtain',
     motifs: ['sign', 'solar'],
     rough: 0,
@@ -443,6 +508,8 @@ export const ERA_STYLES = {
     vernacularRoof: 'flat',
     // asphalt mới + đá sáng chống nóng sa mạc Dubai
     roadMaterial: 'concrete', roadColor: '#b0a68e',
+    groundKind: 'sand', groundColor: '#d9a463',   // Dubai desert — orange sand
+    wallColor: '#cfc6b3',                         // champagne cladding and white glass
     windows: 'neon',
     motifs: ['halo', 'float'],
     rough: 0,
@@ -546,6 +613,12 @@ export function normalizeEraKey(era) {
 export function getVernacularStyle(era) {
   const style = getEraStyle(era);
   if (!style.vernacularRoof || style.vernacularRoof === style.roof) return style;
-  return { ...style, roof: style.vernacularRoof };
+  // Round 47 (ADR-087): a vernacular roof may also carry its OWN pitch. Inheriting the landmark's
+  // pitch made era 12's gables flat lids (0.12) and would make era 7's hips steeples (0.56).
+  return {
+    ...style,
+    roof: style.vernacularRoof,
+    roofPitch: Number.isFinite(style.vernacularPitch) ? style.vernacularPitch : style.roofPitch,
+  };
 }
 

@@ -35,7 +35,7 @@ import { BufferAttribute, BufferGeometry, Color } from 'three';
 import { getEraStyle } from '../../../engine/city3d/eraStyle';
 import { MATERIAL_ORDER, contactShade, materialFamilyFor } from '../../../engine/city3d/materials';
 import { buildOcclusionGrid, occlusionShade } from '../../../engine/city3d/occlusion';
-import { bevelWidth } from '../../../engine/city3d/parts';
+import { CORNER_SEGMENTS, bevelWidth, cornerRadius } from '../../../engine/city3d/parts';
 
 /** Bộ đệm tích luỹ trong lúc dựng. Mảng JS thường rồi mới đổ sang Float32Array một lần. */
 function createSink() {
@@ -116,7 +116,7 @@ function place(px, py, pz, transform) {
  * thì hộp vuông (n = 4) sẽ rộng hơn ý định 41%, và mọi công trình sẽ lấn sang ô bên cạnh.
  * Góc bắt đầu `π/n` là thứ làm mặt phẳng quay ra trước thay vì một góc nhọn chĩa vào người xem.
  */
-function emitPrism(sink, part, transform, rgb, shadeBase, bevel = 0, occ = null) {
+function emitPrism(sink, part, transform, rgb, shadeBase, bevel = 0, occ = null, corner = 0) {
   const n = part.sides;
   const half = Math.PI / n;
   const rx = (part.w / 2) / Math.cos(half);
@@ -129,21 +129,46 @@ function emitPrism(sink, part, transform, rgb, shadeBase, bevel = 0, occ = null)
   // khi nhìn vuông góc vào mặt tường (nghĩa duy nhất đọc được), phải chia ngược lại — y hệt lý do
   // `rx` chia cho `cos(half)` ở ngay trên. Bỏ bước này thì mép vát của hộp vuông hẹp đi 29%, và
   // hẹp đi đúng ở chỗ ngưỡng nhìn-thấy-được vừa được tính toán cẩn thận để không rơi xuống dưới.
+  // ⚠️ ROUND 47 (ADR-087): a beveled BOX rounds its four vertical corners too. The ring of a
+  // 4-sided beveled prism is then a rounded rectangle — half-extents `hx`/`hz` (measured per face,
+  // like `inset`), each corner an arc of `CORNER_SEGMENTS` segments with radius = the bevel width,
+  // emitted in the SAME increasing-angle order as the plain ring so every band keeps its winding
+  // and its outward normals. Vertex count per ring = 4 + 4·CORNER_SEGMENTS — the exact number
+  // `countTriangles` assumes (`ringVertexCount`); the "budget must not lie" test holds both to it.
+  const rounded = n === 4 && corner > 0;
   const ring = (radiusScale, y, inset = 0) => {
+    const out = [];
+    if (rounded) {
+      const hx = Math.max(0, (part.w / 2) * radiusScale - inset);
+      const hz = Math.max(0, (part.d / 2) * radiusScale - inset);
+      const cr = Math.min(corner, hx * 0.5, hz * 0.5);
+      // Corners at 45°, 135°, 225°, 315° — each arc spans ±45° around its corner centre.
+      for (let k = 0; k < 4; k += 1) {
+        const centre = Math.PI / 4 + (k * Math.PI) / 2;
+        const cx = Math.sign(Math.cos(centre)) * (hx - cr);
+        const cz = Math.sign(Math.sin(centre)) * (hz - cr);
+        for (let sgm = 0; sgm <= CORNER_SEGMENTS; sgm += 1) {
+          const a = centre - Math.PI / 4 + (sgm * (Math.PI / 2)) / CORNER_SEGMENTS;
+          out.push(place(cx + Math.cos(a) * cr, y, cz + Math.sin(a) * cr, transform));
+        }
+      }
+      return out;
+    }
     const ax = Math.max(0, rx * radiusScale - inset / Math.cos(half));
     const az = Math.max(0, rz * radiusScale - inset / Math.cos(half));
-    const out = [];
     for (let i = 0; i < n; i += 1) {
       const angle = half + (i * 2 * Math.PI) / n;
       out.push(place(Math.cos(angle) * ax, y, Math.sin(angle) * az, transform));
     }
     return out;
   };
+  /** Number of vertices in a ring — 4 + 4·CORNER_SEGMENTS for a rounded box, else `n`. */
+  const m = rounded ? 4 + 4 * CORNER_SEGMENTS : n;
 
   /** Một vành mặt bên nối hai vòng đỉnh. Thứ tự đỉnh đã kiểm: pháp tuyến hướng RA NGOÀI. */
   const band = (lower, upper) => {
-    for (let i = 0; i < n; i += 1) {
-      const j = (i + 1) % n;
+    for (let i = 0; i < m; i += 1) {
+      const j = (i + 1) % m;
       pushTriangle(sink, lower[i], upper[i], upper[j], rgb, shadeBase, occ);
       pushTriangle(sink, lower[i], upper[j], lower[j], rgb, shadeBase, occ);
     }
@@ -182,18 +207,18 @@ function emitPrism(sink, part, transform, rgb, shadeBase, bevel = 0, occ = null)
   }
 
   // Mặt trên: quạt tam giác theo chiều NGƯỢC vòng để pháp tuyến hướng lên.
-  for (let i = 1; i < n - 1; i += 1) {
+  for (let i = 1; i < m - 1; i += 1) {
     pushTriangle(sink, upper[0], upper[i + 1], upper[i], rgb, shadeBase, occ);
   }
   // Mặt đáy: chiều thuận → pháp tuyến hướng xuống. Vẫn phải vẽ vì camera hạ được xuống thấp và
   // khối lơ lửng (kỷ 15) thì nhìn thấy đáy thật.
-  for (let i = 1; i < n - 1; i += 1) {
+  for (let i = 1; i < m - 1; i += 1) {
     pushTriangle(sink, bottom[0], bottom[i], bottom[i + 1], rgb, shadeBase, occ);
   }
 }
 
 /** Mái dốc hai phía. Nóc chạy dọc trục X cục bộ; `ry` của khối lo phần xoay. */
-function emitGable(sink, part, transform, rgb, shadeBase, occ = null) {
+function emitGable(sink, part, transform, rgb, shadeBase, occ = null, bevel = 0) {
   const hw = part.w / 2;
   const hd = part.d / 2;
   const y0 = part.y;
@@ -203,6 +228,33 @@ function emitGable(sink, part, transform, rgb, shadeBase, occ = null) {
   const B = place(hw, y0, -hd, transform);
   const C = place(hw, y0, hd, transform);
   const D = place(-hw, y0, hd, transform);
+
+  if (bevel > 0) {
+    // ⚠️ ROUND 47 (ADR-087): ROUNDED RIDGE. The sharp ridge line becomes a narrow flat cap `2·bevel`
+    // wide, `bevel/2` below the old apex: the two slopes meet a third, near-horizontal face that
+    // catches the sun where the knife edge caught nothing. Seen from the default camera this is the
+    // single line the eye reads first on every gabled roof — seven eras of skyline. Each gable end
+    // becomes a quad (two triangles). 12 triangles — `countTriangles` says the same.
+    const yc = y1 - bevel * 0.5;
+    const R0a = place(-hw, yc, -bevel, transform);
+    const R0b = place(-hw, yc, bevel, transform);
+    const R1a = place(hw, yc, -bevel, transform);
+    const R1b = place(hw, yc, bevel, transform);
+    pushTriangle(sink, D, C, R1b, rgb, shadeBase, occ);     // mặt dốc hướng +Z
+    pushTriangle(sink, D, R1b, R0b, rgb, shadeBase, occ);
+    pushTriangle(sink, B, A, R0a, rgb, shadeBase, occ);     // mặt dốc hướng −Z
+    pushTriangle(sink, B, R0a, R1a, rgb, shadeBase, occ);
+    pushTriangle(sink, R0b, R1b, R1a, rgb, shadeBase, occ); // cap — pháp tuyến hướng lên
+    pushTriangle(sink, R0b, R1a, R0a, rgb, shadeBase, occ);
+    pushTriangle(sink, B, R1a, R1b, rgb, shadeBase, occ);   // đầu hồi +X (quad)
+    pushTriangle(sink, B, R1b, C, rgb, shadeBase, occ);
+    pushTriangle(sink, A, D, R0b, rgb, shadeBase, occ);     // đầu hồi −X (quad)
+    pushTriangle(sink, A, R0b, R0a, rgb, shadeBase, occ);
+    pushTriangle(sink, A, B, C, rgb, shadeBase, occ);       // đáy
+    pushTriangle(sink, A, C, D, rgb, shadeBase, occ);
+    return;
+  }
+
   const R0 = place(-hw, y1, 0, transform);
   const R1 = place(hw, y1, 0, transform);
 
@@ -339,8 +391,8 @@ export function buildMergedGeometry(
       // cùng một câu trên cùng một dữ liệu là cách duy nhất giữ hai bên không bao giờ lệch. Hỏi
       // trên số đã nhân 1,3 thì những khối nằm sát ngưỡng sẽ được vát ở đây mà không được đếm ở
       // kia, và cái lệch đó im lặng: nó chỉ hiện ra dưới dạng bảng ngân sách báo sai.
-      if (part.shape === 'gable') emitGable(target, scaled, transform, rgb, shadeBase, occ);
-      else emitPrism(target, scaled, transform, rgb, shadeBase, bevelWidth(part) * scale, occ);
+      if (part.shape === 'gable') emitGable(target, scaled, transform, rgb, shadeBase, occ, bevelWidth(part) * scale);
+      else emitPrism(target, scaled, transform, rgb, shadeBase, bevelWidth(part) * scale, occ, cornerRadius(part) * scale);
     }
   }
 

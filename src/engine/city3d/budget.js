@@ -20,7 +20,11 @@ import { countSpecTriangles } from './parts';
  * Trần tam giác cho MỘT công trình. Kỳ quan cấp 3 là ca nặng nhất.
  * Vượt ngưỡng = chi tiết đã vượt khỏi mức mắt phân biệt được ở cỡ hiển thị thật.
  */
-export const MAX_TRIANGLES_PER_BUILDING = 8000;
+// ⚠️ ROUND 47 (ADR-087): 8000 → 12000. Rounded corners and wider bevels (parts.js) lift the heaviest
+// wonder (Palazzo, era 7) from 6.912 to ~8.500. Geometry is nearly free on the real hardware
+// (`PERFORMANCE.md`: 43 % more triangles cost 2,4 % more time); Đàm's order for the round was
+// "đừng tiết kiệm tam giác — tiết kiệm sai chỗ là lý do thành phố đang vuông".
+export const MAX_TRIANGLES_PER_BUILDING = 12000;
 
 /**
  * Trần tam giác cho toàn bộ công trình của MỘT thành phố (5 bản vẽ, tất cả cấp 3).

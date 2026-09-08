@@ -127,7 +127,14 @@ test('CAO LÊN, KHÔNG THẤP ĐI — lời hứa trung tâm của cả phase, �
     assert.ok(thapNhat >= 0.75, `kỷ ${era}: có khu phố chỉ còn ${thapNhat.toFixed(3)}× chiều cao căn nhà cũ`);
   }
   assert.equal(daKiem, 473, 'quần thể đổi cỡ — mọi con số biên ghi trong file này phải đo lại');
-  assert.deepEqual(truot, [5],
+  // ⚠️ ROUND 47 (ADR-087) — THE LIST IS EMPTY, and here is why that is a fix and not a loosening.
+  // `TECH_DEBT_3D #90` named the root cause of era 5's slip: a height that scales with the UNIT's
+  // width while the reference house keeps the full plot. `emitRoof` now takes the roof rise on the
+  // full-plot footprint (`ctx.plotFx/plotFz`), so a split block's roofs are as tall as the single
+  // house's — and every one of the 15 eras is now HIGHER after the split (era 5 was 0,9942, era 12
+  // had dropped to 0,97 when its dwellings gained a snow gable). The threshold is still 1; the
+  // list is still the timer: any era appearing here again is a real regression, not a rounding.
+  assert.deepEqual(truot, [],
     `kỷ bị THẤP ĐI sau khi chia khu phố nay là [${truot.join(',')}] — dài ra là có kỷ mới tụt xuống, `
     + 'ngắn đi là có kỷ vừa được chữa (hãy cập nhật bảng số trong chú thích và `TECH_DEBT #90`)');
   assert.ok(biMin < 1.02, `biên mỏng nhất nay là ${biMin.toFixed(4)}× — nếu nó nới rộng ra thì tốt, `
@@ -425,22 +432,31 @@ test('CHI TIẾT MÁI KHÔNG ĐƯỢC CHẾT — và danh sách kỷ mất một
  * THỬ-CHO-ĐỎ (đã chạy): đổi mặc định của `fx` trong `buildBuildingSpec` từ `: 1` thành `: 1.0001`
  * ⇒ bài này ĐỎ ngay ở kỷ 1.
  */
+/*
+  ⚠️ ROUND 47 (ADR-087) RE-BASED THIS TABLE, AND THIS IS THE ONE LEGITIMATE REASON TO. The hashes
+  are the SHAPE of every building spec; ADR-007 locks the PLACE of a building, never its shape
+  (Đàm, 2026-09-08: "ADR-007 khoá CHỖ ĐỨNG, không khoá HÌNH DÁNG"). Round 47 changed shapes on
+  purpose — rounded corners and wider bevels (parts.js), hip/mansard vernacular roofs, a relative
+  window floor, 12-gon domes — so every digest moved. Position is guarded by the test right below
+  ("ADR-007 QUA THỜI GIAN") and by `cityPlan.test.js`; both stayed green through the re-base. The
+  table still does its job: a shape change that nobody meant to make goes red here.
+*/
 const GOLDEN = {
-  1: 'b927b598dda52aedb81d743486d4ed19',
-  2: '8b16f06f2ceea10dc2465b41ae866fd3',
-  3: 'a8cc0feb8c3c12cbd55fc6a5b04f2af6',
-  4: 'b87f5c32147c3b719c4a424521f3ee77',
-  5: '527527d86a1cc08d6c60daea3ebeabaf',
-  6: '17e4a8d3e567e569e087c318d519a062',
-  7: '5cad57918aac4fd90250a98ea01b6b95',
-  8: '7fbfb358a5c1961b4dd698fa5d6dcc56',
-  9: '3af69ac231d8d87b1b3bcbc46b3c401b',
-  10: '8c3dcf5c6bb73082ac6581fc68092201',
-  11: '5755417cd876d1813bc41fcaff361045',
-  12: '7bfcc23670533b4b223fb0958115829d',
-  13: '8154738dca45645a665d9ddde0b0bb1b',
-  14: '342ba772f14fbedfdaa6ee4a9e8a7370',
-  15: 'bd754442385b53bafcd66e8fe87c5f62',
+  1: '4c896bf47cd9be2b890076367b9dcf83',
+  2: 'cc4b87555564ea8be02d40da1a1c18db',
+  3: 'e23de6560e4d2353683268033641197d',
+  4: 'f48a5f9bb6069a8b88700a7c59927a13',
+  5: 'a50a206cbd920f9444b0b315906df4c2',
+  6: 'e5dbe9f55e821766a2838207d2ababaf',
+  7: '9d5839cbfdb89b30bbd39cb6227cfb1a',
+  8: '0427cf1eb12183ad22d776b8fb215e08',
+  9: '145497ad0146e09fadbf125af368e241',
+  10: '293fe08398125557c0b5111d369bda1b',
+  11: 'e7a34d023abff4a5e51b945b9623dc0c',
+  12: 'db7057705f79cad514a7145d29ef4000',
+  13: 'd0c4421023c13400a3f196d138215fee',
+  14: '757c9d1d65394af11830524679b89f6d',
+  15: 'e541cc2cf9b2376e0921399dfab6ad0e',
 };
 
 test('GOLDEN — thêm tham số `plot` KHÔNG được đổi một chữ số nào của lối gọi cũ', () => {

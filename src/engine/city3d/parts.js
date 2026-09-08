@@ -78,7 +78,9 @@ const ROLE_SET = new Set(PART_ROLES);
 export const BUILDING_SCALE = 1.3;
 
 export const MIN_SIDES = 3;
-export const MAX_SIDES = 12;
+// ⚠️ ROUND 47 (ADR-087): 12 → 16. Đàm unlocked the black box with «bớt góc cạnh · bo tròn nhiều
+// hơn»; a 16-gon is where a column stops reading as a polygon at the sizes the city is drawn at.
+export const MAX_SIDES = 16;
 
 function finite(value, fallback) {
   return Number.isFinite(value) ? value : fallback;
@@ -190,8 +192,16 @@ export function gable({
  * nhà máy chỉ nhân bề rộng dải vát với tỉ lệ.
  */
 
-/** Dải vát rộng bao nhiêu phần cạnh mỏng nhất của khối. */
-export const BEVEL_RATIO = 0.15;
+/**
+ * Dải vát rộng bao nhiêu phần cạnh mỏng nhất của khối.
+ * ⚠️ ROUND 47 (ADR-087): 0,15 → 0,22 and `BEVEL_MAX` 0,035 → 0,06. `TECH_DEBT_3D #48` measured the
+ * Phase 8B bevel BELOW the eye threshold at the default camera in 11/15 eras — a 3,5 % strip on a
+ * 1-unit wall is 2–3 px in the City tab, i.e. "a mechanism that runs and does nothing" (PHASE_RULES
+ * §10.2). The round's gate is a pair of photographs, bevel off / bevel on, that differ BY EYE; the
+ * numbers below were raised until they did. Real chamfers and rounded quoins sit at 4–8 % of a
+ * façade, so 6 % is inside the range architecture actually uses, not a cartoon.
+ */
+export const BEVEL_RATIO = 0.22;
 /**
  * Trần tuyệt đối — thân nhà to mấy thì mép vát cũng chỉ là một dải hẹp, không phải một mặt cắt.
  *
@@ -204,19 +214,81 @@ export const BEVEL_RATIO = 0.15;
  * khác hẳn. Mép vát của kiến trúc thật rơi vào khoảng 2–5% bề mặt; 0,035 trên thân nhà rộng 1 đơn
  * vị là 3,5%, nằm giữa dải đó.
  */
-export const BEVEL_MAX = 0.035;
-/** Hẹp hơn mức này thì dưới một điểm ảnh ở khoảng cách nhìn thường ⇒ không vát, khỏi tốn. */
-export const BEVEL_MIN_VISIBLE = 0.006;
+export const BEVEL_MAX = 0.06;
+/**
+ * Hẹp hơn mức này thì dưới một điểm ảnh ở khoảng cách nhìn thường ⇒ không vát, khỏi tốn.
+ * ⚠️ ROUND 47: 0,006 → 0,014. With `BEVEL_RATIO` 0,22 the old floor let window reliefs (0,035 thick)
+ * and every 0,055 moulding earn a bevel AND four rounded corners — 92 triangles each for a strip
+ * under one pixel wide, and the city tripled its triangles for nothing the eye could see (measured:
+ * era 6 198k → 640k). At the default camera one grid unit is ~80 px in the City tab, so 0,014 is
+ * about one pixel: the floor of "a strip is a strip". Bodies, roofs and plinths keep their bevel;
+ * frames, sills and cornices keep their old shape byte for byte.
+ */
+export const BEVEL_MIN_VISIBLE = 0.014;
+
+/**
+ * ⚠️ ROUND 47 (ADR-087) — THE BOX LOSES ITS CORNERS, NOT JUST ITS EDGES.
+ *
+ * Phase 8B chamfered the TOP and BOTTOM edges of a prism (three bands instead of one). From the
+ * default camera those two edges are one horizontal line each; what the eye reads as "a box" is
+ * the four VERTICAL corners, and those stayed razor-sharp. So a 4-sided prism that earns a bevel
+ * now also rounds its four vertical corners: each corner becomes an arc of `CORNER_SEGMENTS`
+ * segments with the same radius as the bevel, i.e. the ring has `4 + 4 × CORNER_SEGMENTS` vertices
+ * instead of 4. Two segments is the least that reads as a CURVE rather than a second chamfer; the
+ * arc faces sit at ±30° and catch the sun and the rim light differently from both walls they join,
+ * which is exactly the highlight a rounded quoin gives in a painting.
+ *
+ * Only `sides: 4`: a polygon with more sides already has soft corners. Only when the part earns a
+ * bevel (`bevelWidth > 0`): thin trims keep their old shape byte for byte, so the ground-floor
+ * mouldings of Phase 10 are untouched. `countTriangles` and `geometryFactory.emitPrism` read this
+ * SAME constant — one law, one number (the "budget must not lie" test rebuilds all 15 eras and
+ * counts the real vertex buffer against the arithmetic here).
+ */
+export const CORNER_SEGMENTS = 2;
+
+/** Vertices in one ring of a prism, given its side count and whether its corners are rounded. */
+export function ringVertexCount(sides, rounded) {
+  return sides === 4 && rounded ? 4 + 4 * CORNER_SEGMENTS : sides;
+}
+
+/**
+ * A plan narrower than this keeps square corners: window sills, frames, mouldings and courses are
+ * exactly the parts whose corner radius would be under a pixel and whose count is in the hundreds.
+ * A quarter of a cell is where a corner starts to be a corner the eye can see.
+ */
+export const CORNER_MIN_PLAN = 0.25;
+
+/**
+ * Radius of the ROUNDED VERTICAL CORNERS of a 4-sided prism, in grid units. `0` = square corners.
+ *
+ * ⚠️ WHY THIS IS SEPARATE FROM `bevelWidth` (round 47, found by photograph). The first pass rounded
+ * corners only where the top/bottom edges were beveled, and `bevelWidth` reads the THINNEST of the
+ * three dimensions — so a cornice 1 unit wide and 0,05 tall got nothing. But the box look of a
+ * building is carried by exactly those wide, thin plates: cornices, plinths, roof caps, the
+ * spreading courses. Their PLAN corners are large and visible; their EDGES are not. So the corner
+ * radius reads the plan (`min(w, d)`) and the edge bevel reads all three — two questions, two
+ * answers, the same two constants.
+ */
+export function cornerRadius(part) {
+  if (!part || part.shape === 'gable' || (part.sides ?? 4) !== 4) return 0;
+  if (!(part.taper > 0)) return 0;
+  const plan = Math.min(part.w ?? 0, part.d ?? 0);
+  if (!(plan >= CORNER_MIN_PLAN)) return 0;
+  const r = Math.min(BEVEL_MAX, plan * BEVEL_RATIO);
+  return r >= BEVEL_MIN_VISIBLE ? r : 0;
+}
 
 /**
  * Bề rộng dải vát của MỘT khối, đơn vị ô lưới. `0` nghĩa là khối này không vát.
  * Thuần và tất định — cùng một khối luôn ra cùng một con số, vĩnh viễn (bất biến bảo tàng).
  */
 export function bevelWidth(part) {
-  if (!part || part.shape === 'gable') return 0;
+  if (!part) return 0;
   // Khối thóp về MỘT ĐIỂM (chóp, nón, kim tự tháp) đã nhọn theo thiết kế — vát đỉnh nhọn là cắt
-  // cụt cái chóp, tức phá đúng hình bóng mà nó sinh ra để tạo.
-  if (!(part.taper > 0)) return 0;
+  // cụt cái chóp, tức phá đúng hình bóng mà nó sinh ra để tạo. (Round 47 kept this on purpose:
+  // Đàm asked for "bo tròn nhiều hơn", and a rounded apex is a CUT apex — a cone that stops being a
+  // cone. The silhouette wins.)
+  if (part.shape !== 'gable' && !(part.taper > 0)) return 0;
   const thinnest = Math.min(part.w ?? 0, part.d ?? 0, part.h ?? 0);
   if (!(thinnest > 0)) return 0;
   const width = Math.min(BEVEL_MAX, thinnest * BEVEL_RATIO);
@@ -239,8 +311,11 @@ export function bevelWidth(part) {
 export function countTriangles(part) {
   if (!part) return 0;
   if (part.shape === 'gable') {
-    // 2 mặt dốc (2 tam giác mỗi mặt) + 2 đầu hồi tam giác + đáy (2 tam giác)
-    return 8;
+    // 2 mặt dốc (2 tam giác mỗi mặt) + 2 đầu hồi tam giác + đáy (2 tam giác) = 8.
+    // ⚠️ ROUND 47: a gable that earns a bevel gets a ROUNDED RIDGE — the ridge line becomes a narrow
+    // flat cap (2 triangles) and each gable end becomes a quad (2 triangles instead of 1) ⇒ 12.
+    // Phase 8B returned 0 for every gable, which left the whole skyline of seven eras razor-edged.
+    return bevelWidth(part) > 0 ? 12 : 8;
   }
   const n = part.sides ?? 4;
   if (part.taper === 0) {
@@ -249,7 +324,9 @@ export function countTriangles(part) {
   }
   // Vát hai đầu ⇒ mặt bên chia làm BA vành (dải vát dưới · thân · dải vát trên) thay vì một.
   const bands = bevelWidth(part) > 0 ? 3 : 1;
-  return bands * 2 * n + 2 * (n - 2);
+  // Round 47: a box with a wide enough plan rounds its four vertical corners — more vertices per ring.
+  const m = ringVertexCount(n, cornerRadius(part) > 0);
+  return bands * 2 * m + 2 * (m - 2);
 }
 
 /** Tổng tam giác của một danh sách khối. */

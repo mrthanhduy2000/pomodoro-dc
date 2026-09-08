@@ -5,7 +5,7 @@ import { buildMergedGeometry } from './geometryFactory.js';
 import { MATERIAL_ORDER, contactShade, materialFamilyFor } from '../../../engine/city3d/materials.js';
 import { getEraStyle } from '../../../engine/city3d/eraStyle.js';
 import { buildBuildingSpec } from '../../../engine/city3d/buildingSpec.js';
-import { bevelWidth, countSpecTriangles, gable, prism } from '../../../engine/city3d/parts.js';
+import { cornerRadius, countTriangles, bevelWidth, countSpecTriangles, gable, prism } from '../../../engine/city3d/parts.js';
 import { buildScenePalette } from '../../../engine/city3d/palette3d.js';
 
 /**
@@ -243,8 +243,25 @@ test('KHỐI TO ĐƯỢC VÁT, KHỐI MỎNG THÌ KHÔNG — và khối mỏng p
 
   const đỉnh = (p) => buildMergedGeometry(placement([p]), PALETTE, { era: 9 })
     .geometry.getAttribute('position').count / 3;
-  assert.equal(đỉnh(mỏng), 12, 'khối không vát phải giữ đúng 12 tam giác như trước Phase 8B');
-  assert.equal(đỉnh(to), 28, 'khối vát = 3 vành mặt bên (6×4) + 2 mặt đáy/trên (2×2)');
+  // Round 47 (ADR-087): no EDGE bevel on a thin plate — but a 1×1 plate is wide enough to round its
+  // four PLAN corners (`cornerRadius`), so it is 44 triangles now, not 12. The 12-triangle guarantee
+  // moved to the sill-sized part at the bottom of this test, where it still holds byte for byte.
+  assert.equal(đỉnh(mỏng), 44, 'gờ mỏng: không vát mép, chỉ bo góc mặt bằng = 44 tam giác');
+  // Round 47 (ADR-087): a beveled BOX also rounds its four vertical corners — 12 vertices a ring
+  // (4 + 4 × CORNER_SEGMENTS) ⇒ 3 bands × 2 × 12 + 2 caps × (12 − 2) = 92. `countTriangles` agrees.
+  assert.equal(đỉnh(to), 92, 'khối vát = 3 vành × 2 × 12 đỉnh (góc bo tròn) + 2 mặt × 10 = 92');
+  assert.equal(countTriangles(to), 92, 'tầng thuần phải đếm ra đúng con số nhà máy dựng');
+  // Round 47: a WIDE, THIN plate (a cornice) rounds its plan corners without an edge bevel —
+  // 1 band × 2 × 12 + 2 × 10 = 44 — because the box look lives in those plates, not in the walls.
+  const gờ = prism({ w: 1, d: 1, h: 0.05, role: 'trim' });
+  assert.equal(bevelWidth(gờ), 0, 'gờ 0,05 không vát mép');
+  assert.ok(cornerRadius(gờ) > 0, 'gờ rộng 1×1 phải bo góc mặt bằng');
+  assert.equal(đỉnh(gờ), 44, 'gờ bo góc = 1 vành × 2 × 12 + 2 × 10');
+  assert.equal(countTriangles(gờ), 44);
+  // …and a sill-sized part keeps its square corners and its 12 triangles, byte for byte.
+  const bệ = prism({ w: 0.12, d: 0.085, h: 0.035, role: 'trim' });
+  assert.equal(cornerRadius(bệ), 0);
+  assert.equal(đỉnh(bệ), 12);
 });
 
 test('DẢI VÁT NẰM ĐÚNG BÊN TRONG KHỐI — không phình ra, không thủng', () => {

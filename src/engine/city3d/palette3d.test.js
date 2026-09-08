@@ -10,6 +10,8 @@
  */
 
 import test from 'node:test';
+const ERAS = Array.from({ length: 15 }, (_, i) => i + 1);
+import { GROUND_KINDS, getEraStyle } from './eraStyle';
 import assert from 'node:assert/strict';
 
 import {
@@ -320,26 +322,85 @@ test('KHÔNG một vai màu nào ra TÍM SEN RỰC, ở bất kỳ kỷ nào × 
   assert.ok(checked > 10000, `quét quá ít màu (${checked}) — có phải bảng màu bị rút gọn không?`);
 });
 
-test('MẶT ĐẤT của cả 15 kỷ nằm trong dải ĐẤT, không kỷ nào ra màu cỏ nhân tạo', () => {
-  // ⚠️ Lỗi này chỉ hiện ra khi xếp 15 kỷ CẠNH NHAU, nên nó sống sót qua nhiều lần soi từng ảnh một.
-  // Nguyên nhân là phép xoay góc màu LẬT HƯỚNG ở mốc 180°: mặt đất neo 78° pha sắc kỷ, kỷ họ lam
-  // (5, 6, 8, 12, 13, 14, 15) bị đẩy LÊN 102–117° — diệp lục — còn kỷ 7 và 11, cũng họ lam-tím,
-  // lại bị đẩy XUỐNG 41–46° ra đất nâu. Cùng một họ màu, hai kết quả ngược nhau.
-  //
-  // Nền một bức phong cảnh cổ điển là ô-liu / đất son / đất nung: góc màu 25–85°. Trên 90° là bắt
-  // đầu vào vùng diệp lục — thứ đọc ra "sân bóng đá" chứ không ra "đất". Độ tươi cũng phải ghìm:
-  // đất thật là màu XỈN.
-  for (const eraColor of ERA_ACCENTS) {
+test('MẶT ĐẤT: 15 kỷ đứng trên ĐÚNG mặt đất nước mình khai — và không kỷ nào ra cỏ nhân tạo (ADR-087)', () => {
+  // ⚠️ ROUND 47 rewrote this test's LAW, not its purpose. The old law said "every ground is olive /
+  // ochre, hue 25–88°, saturation ≤ 0,30" — which was the description of ONE ground (the 58° anchor)
+  // applied to fifteen countries, and it is exactly what made the desert of Ur and the paddies of
+  // Bắc Bộ the same colour. The purpose survives — no era may render an artificial-grass green —
+  // but it is now stated per material family: `GROUND_KINDS` in `eraStyle.js` gives each real ground
+  // a hue window and a saturation CAP, and the palette's four shades must sit inside the window of
+  // the kind the era declared. The cap is what forbids neon grass (real grass tops out under 0,55).
+  for (const era of ERAS) {
+    const style = getEraStyle(era);
+    const kind = GROUND_KINDS[style.groundKind];
+    assert.ok(kind, `kỷ ${era} khai groundKind "${style.groundKind}" — không có trong GROUND_KINDS`);
     const palette = buildScenePalette({
-      tokens: LIGHT_TOKENS, eraColor, daylight: deriveDaylight(12),
+      tokens: LIGHT_TOKENS, eraColor: ERA_ACCENTS[era - 1], era, daylight: deriveDaylight(12),
     });
     for (const shade of palette.groundShades) {
       const c = readColor(shade);
-      assert.ok(c.h >= 25 && c.h <= 88,
-        `kỷ ${eraColor}: mặt đất ở góc màu ${Math.round(c.h)}° (${c.hex}) — ngoài dải đất 25–88°`);
-      assert.ok(c.s <= 0.30,
-        `kỷ ${eraColor}: mặt đất tươi ${c.s.toFixed(2)} (${c.hex}) — đất thật phải xỉn hơn`);
+      const hueIn = c.s < 0.06 || (c.h >= kind.hue[0] - 5 && c.h <= kind.hue[1] + 5);
+      assert.ok(hueIn,
+        `kỷ ${era} (${style.country}): mặt đất ở góc màu ${Math.round(c.h)}° (${c.hex}) — ngoài dải "${style.groundKind}" ${kind.hue[0]}–${kind.hue[1]}°`);
+      assert.ok(c.s <= kind.sat[1] + 0.02,
+        `kỷ ${era} (${style.country}): mặt đất tươi ${c.s.toFixed(2)} (${c.hex}) — quá trần "${style.groundKind}" ${kind.sat[1]}`);
     }
+    // And the four shades stay a MOTTLE, never a checkerboard (the AgX lesson at `groundShades`).
+    const ls = palette.groundShades.map((shade) => readColor(shade).l);
+    assert.ok(Math.max(...ls) - Math.min(...ls) <= 0.03,
+      `kỷ ${era}: bốn sắc nền chênh độ sáng ${(Math.max(...ls) - Math.min(...ls)).toFixed(3)} — mắt sẽ nối thành bàn cờ`);
+  }
+  // The legacy path (no era) keeps the old anchor — the museum's old callers must not change a byte.
+  const legacy = buildScenePalette({ tokens: LIGHT_TOKENS, eraColor: ERA_ACCENTS[0], daylight: deriveDaylight(12) });
+  for (const shade of legacy.groundShades) {
+    const c = readColor(shade);
+    assert.ok(c.h >= 25 && c.h <= 88 && c.s <= 0.30, `đường cũ (không era) đã đổi: ${c.hex}`);
+  }
+});
+
+test('MẶT ĐẤT: 15 kỷ KHÔNG còn chung một mặt đất — ít nhất 5 họ, và hai kỷ cùng họ vẫn tách được (ADR-087)', () => {
+  const kinds = new Set(ERAS.map((era) => getEraStyle(era).groundKind));
+  assert.ok(kinds.size >= 5, `chỉ ${kinds.size} họ mặt đất cho 15 kỷ — vẫn là một tấm thảm`);
+  const noon = ERAS.map((era) => readColor(buildScenePalette({
+    tokens: LIGHT_TOKENS, eraColor: ERA_ACCENTS[era - 1], era, daylight: deriveDaylight(12),
+  }).groundShades[0]));
+  // Any two eras must differ by an amount the eye can read on the ground alone: hue, or lightness.
+  for (let a = 0; a < noon.length; a += 1) {
+    for (let b = a + 1; b < noon.length; b += 1) {
+      const dh = Math.min(Math.abs(noon[a].h - noon[b].h), 360 - Math.abs(noon[a].h - noon[b].h));
+      const dl = Math.abs(noon[a].l - noon[b].l);
+      const ds = Math.abs(noon[a].s - noon[b].s);
+      assert.ok(dh >= 6 || dl >= 0.05 || ds >= 0.10,
+        `kỷ ${a + 1} ↔ kỷ ${b + 1}: mặt đất gần nhau (Δh ${dh.toFixed(0)}° · Δl ${dl.toFixed(2)} · Δs ${ds.toFixed(2)})`);
+    }
+  }
+  // Night: darker AND less saturated than noon, every era (Purkinje), never the other way round.
+  for (const era of ERAS) {
+    const day = readColor(buildScenePalette({ tokens: LIGHT_TOKENS, eraColor: ERA_ACCENTS[era - 1], era, daylight: deriveDaylight(12) }).groundShades[0]);
+    const night = readColor(buildScenePalette({ tokens: LIGHT_TOKENS, eraColor: ERA_ACCENTS[era - 1], era, daylight: deriveDaylight(22) }).groundShades[0]);
+    assert.ok(night.l < day.l, `kỷ ${era}: đêm không tối hơn trưa (${night.l} vs ${day.l})`);
+    assert.ok(night.s <= day.s + 0.001, `kỷ ${era}: đêm tươi hơn trưa`);
+  }
+});
+
+test('TƯỜNG: 15 kỷ ra 15 vật liệu tường thật — không còn mười lăm bức tường xám ấm (ADR-087)', () => {
+  const walls = ERAS.map((era) => readColor(buildScenePalette({
+    tokens: LIGHT_TOKENS, eraColor: ERA_ACCENTS[era - 1], era, daylight: deriveDaylight(12),
+  }).roles.wall));
+  // Brick and lacquer are allowed to be red; nothing may be plastic: saturation cap 0,55.
+  for (const [i, c] of walls.entries()) {
+    assert.ok(c.s <= 0.56, `kỷ ${i + 1}: tường tươi ${c.s.toFixed(2)} (${c.hex}) — nhựa dẻo`);
+  }
+  // At least four eras have a wall that is clearly NOT warm grey (s ≥ 0,25): brick, ochre, mudbrick…
+  assert.ok(walls.filter((c) => c.s >= 0.25).length >= 4, 'tường của mọi kỷ vẫn là xám ấm');
+  // …and the spread of lightness must be wide: whitewash next to brick.
+  const ls = walls.map((c) => c.l);
+  assert.ok(Math.max(...ls) - Math.min(...ls) >= 0.35, `độ sáng tường chỉ trải ${(Math.max(...ls) - Math.min(...ls)).toFixed(2)}`);
+  // wall2 darker than wall, trim lighter than wall — same material, shade and light.
+  for (const era of ERAS) {
+    const p = buildScenePalette({ tokens: LIGHT_TOKENS, eraColor: ERA_ACCENTS[era - 1], era, daylight: deriveDaylight(12) });
+    assert.ok(readColor(p.roles.wall2).l < readColor(p.roles.wall).l, `kỷ ${era}: wall2 không tối hơn wall`);
+    assert.ok(readColor(p.roles.trim).l >= readColor(p.roles.wall).l, `kỷ ${era}: trim không sáng hơn wall`);
   }
 });
 
@@ -747,9 +808,16 @@ test('MÀU KHÔNG CÒN GÁNH BẢN SẮC MỘT MÌNH — nhưng cũng không đ�
       if (d < gần.d) gần = { d, a: roads12[i].era, b: roads12[j].era };
     }
   }
-  assert.equal(STREET_STYLES[gần.a].paving, STREET_STYLES[gần.b].paving,
+  // ⚠️ ROUND 47 (ADR-087): the road's LIGHTNESS is now measured from the era's OWN ground (per-era
+  // `groundColor`), so two cut-stone pavings on two dark grounds may legitimately land close. The
+  // law is therefore stated per FAMILY of paving: cut stone (cobble · flagstone · slab · gravel) may
+  // neighbour cut stone; brick, asphalt/concrete and dirt are still forbidden to coincide with a
+  // different family — brick and asphalt have no reason to share a colour.
+  const FAMILY = { cobble: 'stone', flagstone: 'stone', slab: 'stone', gravel: 'stone' };
+  const famOf = (era) => FAMILY[STREET_STYLES[era].paving] ?? STREET_STYLES[era].paving;
+  assert.equal(famOf(gần.a), famOf(gần.b),
     `cặp màu gần nhau nhất giờ là kỷ ${gần.a} (${STREET_STYLES[gần.a].paving}) và kỷ ${gần.b} `
-    + `(${STREET_STYLES[gần.b].paving}) — hai vật liệu KHÁC nhau mà cùng màu thì đó là lỗi bảng màu thật`);
+    + `(${STREET_STYLES[gần.b].paving}) — hai họ vật liệu KHÁC nhau mà cùng màu thì đó là lỗi bảng màu thật`);
 });
 
 test('NGÕ PHỐ SUY TỪ ĐẠI LỘ, không mượn màu đá xây tường', () => {

@@ -260,6 +260,23 @@ export function buildScenePalette({ tokens, eraColor, era: eraNumber, daylight }
   const roadSource = Number.isFinite(eraNumber)
     ? parseCssColor(getEraStyle(eraNumber)?.roadColor)
     : null;
+  /*
+    ⚠️ ROUND 47 (ADR-087) — THE GROUND AND THE WALLS ARE MATERIALS TOO, and they are read here, in
+    the same one place as `roofColor` and `roadColor`. Before this round the ground of every era was
+    `GROUND_ANCHOR = 58°` tinted 22 % by the UI accent (see the long note at `groundShades`), and the
+    walls were `WALL_ANCHOR = 36°` tinted 18 % — so the desert of Ur, the paddies of Bắc Bộ and the
+    snow of Stalingrad rendered as one yellow-olive sheet, and every wall from dry stone to curtain
+    glass was the same warm grey. Measured on the noon sweep: median saturation of the 14 largest
+    colours 0,06–0,13 in 13 of 15 eras. `eraStyle.js` now declares `groundColor` (+ `groundKind`) and
+    `wallColor` per era; `null` here (no era: the museum's legacy callers, garbage data) keeps the old
+    path byte for byte.
+  */
+  const groundSource = Number.isFinite(eraNumber)
+    ? parseCssColor(getEraStyle(eraNumber)?.groundColor)
+    : null;
+  const wallSource = Number.isFinite(eraNumber)
+    ? parseCssColor(getEraStyle(eraNumber)?.wallColor)
+    : null;
 
   // ── Giờ trong ngày ────────────────────────────────────────────────────────
   // ⚠️ "THEME TỐI" VÀ "TRỜI ĐÃ TỐI" LÀ HAI CHUYỆN KHÁC NHAU, và gộp chúng là cái bẫy dễ mắc nhất
@@ -581,14 +598,29 @@ export function buildScenePalette({ tokens, eraColor, era: eraNumber, daylight }
   // (thị giác chuyển sang tế bào que), nên giữ nguyên độ tươi chỉ làm tán lá thành mảng xanh giả.
   const leafSat = isDark ? flora.leafSat * 0.52 : flora.leafSat;
 
+  /**
+   * ⭐ THE ERA'S OWN WALLS (round 47). `wallColor` is the real wall material of the country — dry
+   * stone, mudbrick, Tang whitewash, Hanoi ochre plaster, Lisbon whitewash, Accrington brick,
+   * brownstone, curtain glass. The old rule ("walls of every age are warm, identity lives in the
+   * roof") produced fifteen versions of the same warm grey; a wall IS where a street tells you which
+   * country you are in. Saturation is capped at 0,55 so brick stays brick and never plastic; night
+   * keeps the old ratio (0,70 → 0,44 = ×0,63). `wall2` is the same material in shade, `trim` the
+   * same material catching light. No era: the old anchor, byte for byte.
+   */
+  const wallHsl = wallSource ? rgbToHsl(wallSource) : null;
+  const eraWall = (ds, dl) => rgbToHexNumber(hslToRgb({
+    h: wallHsl.h,
+    s: Math.min(0.55, Math.max(0.03, wallHsl.s + ds)),
+    l: Math.min(0.95, Math.max(0.08, (wallHsl.l + dl) * (isDark ? 0.63 : 1))),
+  }));
   const roles = {
-    wall:  material(WALL_ANCHOR, WALL_ERA, isDark ? 0.24 : 0.23, 0.70, 0.44),
-    wall2: material(WALL_ANCHOR, WALL_ERA, isDark ? 0.20 : 0.19, 0.62, 0.37),
+    wall:  wallHsl ? eraWall(0, 0) : material(WALL_ANCHOR, WALL_ERA, isDark ? 0.24 : 0.23, 0.70, 0.44),
+    wall2: wallHsl ? eraWall(-0.02, -0.08) : material(WALL_ANCHOR, WALL_ERA, isDark ? 0.20 : 0.19, 0.62, 0.37),
     // ⚠️ MÁI DÙNG `eraRoof`, KHÔNG DÙNG `material` — xem giải thích đầy đủ ở `eraRoof` phía trên.
     // Tóm tắt: mái là chỗ sắc kỷ nói to nhất, nên nó phải dùng CẢ màu kỷ chứ không chỉ mượn góc
     // màu. Bản cũ (`material(16, 0.40, …)`) đo ra 15 mái dồn vào đúng HAI cụm, ba cặp trùng khít.
     roof:  eraRoof(isDark ? 0.48 : 0.50, isDark ? 0.32 : 0.39),
-    trim:  material(WALL_ANCHOR, WALL_ERA, isDark ? 0.14 : 0.13, 0.76, 0.54),
+    trim:  wallHsl ? eraWall(-0.06, 0.09) : material(WALL_ANCHOR, WALL_ERA, isDark ? 0.14 : 0.13, 0.76, 0.54),
     // Đá vôi/đá xây: gần như trung tính, chỉ ngấm một chút sắc kỷ. Đá lấy ở đâu thì màu nấy, nó
     // không đổi theo thời đại nhiều như ngói.
     stone: material(39, 0.08, 0.12, 0.60, 0.42),
@@ -708,6 +740,25 @@ export function buildScenePalette({ tokens, eraColor, era: eraNumber, daylight }
   const groundSat = isDark ? 0.12 : 0.20;
 
   /**
+   * ⭐ THE ERA'S OWN GROUND (round 47). `groundColor` is the noon colour of the real ground of the
+   * era's country; at night it is darkened and desaturated by the same two ratios the old anchor
+   * used (l 0,536 → 0,400 = ×0,75 · s 0,20 → 0,12 = ×0,62 — the Purkinje shift: in low light the eye
+   * loses colour before it loses form). Offsets are applied AFTER the night ratio so the four
+   * terrain shades keep the same tiny spread in both themes. `clamp01` keeps snow (l 0,92) from
+   * overflowing when a shade adds lightness.
+   */
+  const clamp01 = (v) => Math.min(1, Math.max(0, v));
+  const GROUND_NIGHT_SAT = 0.62;
+  const GROUND_NIGHT_L = 0.75;
+  const groundHsl = groundSource ? rgbToHsl(groundSource) : null;
+  const eraGroundHsl = (dh = 0, ds = 0, dl = 0) => ({
+    h: ((groundHsl.h + dh) % 360 + 360) % 360,
+    s: clamp01(groundHsl.s * (isDark ? GROUND_NIGHT_SAT : 1) + ds),
+    l: clamp01(groundHsl.l * (isDark ? GROUND_NIGHT_L : 1) + dl),
+  });
+  const eraGround = (dh = 0, ds = 0, dl = 0) => rgbToHexNumber(hslToRgb(eraGroundHsl(dh, ds, dl)));
+
+  /**
    * ⭐ MẶT ĐƯỜNG — phát biểu bằng KHOẢNG CÁCH TỚI MẶT ĐẤT, không phải bằng một con số nhớ sẵn.
    *
    * ⚠️ CHỖ NÀY ĐANG GÁNH HAI LỖI, VÀ CHÚNG CÓ CÙNG MỘT GỐC. Bản cũ là đúng MỘT dòng:
@@ -727,7 +778,11 @@ export function buildScenePalette({ tokens, eraColor, era: eraNumber, daylight }
    * đặt mặt đường cách ra một khoảng nhìn thấy được.** Mặt đất có dời đi đâu thì mặt đường theo tới
    * đó, mãi mãi, không cần ai nhớ để chỉnh tay.
    */
-  const groundBaseRgb = blend(GROUND_ANCHOR, GROUND_ERA, groundSat, isDark ? 0.400 : 0.536);
+  // The road contrast is measured against the ground THIS era really has (round 47) — so a dark
+  // concrete road still reads on snow and a pale stone road still reads on Manchester soot.
+  const groundBaseRgb = groundHsl
+    ? hslToRgb(eraGroundHsl())
+    : blend(GROUND_ANCHOR, GROUND_ERA, groundSat, isDark ? 0.400 : 0.536);
   const groundL = rgbToHsl(groundBaseRgb).l;
 
   /**
@@ -778,8 +833,8 @@ export function buildScenePalette({ tokens, eraColor, era: eraNumber, daylight }
   return {
     // ── giữ nguyên các khoá cũ để không phá chỗ đang dùng ────────────────────
     background: horizon,
-    ground:     material(GROUND_ANCHOR, GROUND_ERA, groundSat,        0.55, 0.286),
-    groundAlt:  material(GROUND_ANCHOR, GROUND_ERA, groundSat - 0.02, 0.51, 0.276),
+    ground:     groundHsl ? eraGround() : material(GROUND_ANCHOR, GROUND_ERA, groundSat, 0.55, 0.286),
+    groundAlt:  groundHsl ? eraGround(0, -0.02, -0.02) : material(GROUND_ANCHOR, GROUND_ERA, groundSat - 0.02, 0.51, 0.276),
 
     /**
      * Bốn sắc nền, chênh nhau RẤT ÍT.
@@ -820,12 +875,23 @@ export function buildScenePalette({ tokens, eraColor, era: eraNumber, daylight }
      * Đây cũng là lý do hai lần vá trước (bơm `fillEnergy` 1,45 → 3,40) không ăn thua: chúng cộng
      * thêm vào tầng (1) trong khi thủ phạm nằm ở tầng (3), mà (3) thì NHÂN chứ không CỘNG.
      */
-    groundShades: [
-      material(GROUND_ANCHOR,     GROUND_ERA, groundSat,        0.536, 0.400),
-      material(GROUND_ANCHOR - 4, GROUND_ERA, groundSat - 0.01, 0.528, 0.392),
-      material(GROUND_ANCHOR + 4, GROUND_ERA, groundSat + 0.01, 0.544, 0.406),
-      material(GROUND_ANCHOR + 2, GROUND_ERA, groundSat - 0.02, 0.522, 0.386),
-    ],
+    // ⚠️ ROUND 47: the four shades are the ERA'S ground ±4° of hue, ±0,01 of saturation and ±0,008
+    // of lightness — the same spread the anchor used (the checkerboard lesson above still holds:
+    // lightness steps ≤ 0,018, or the eye joins the cells into a grid). Only the CENTRE moved: from
+    // one hard-coded 58° to the ground the country really has. No era: the old anchor, byte for byte.
+    groundShades: groundHsl
+      ? [
+        eraGround(0, 0, 0),
+        eraGround(-4, -0.01, -0.008),
+        eraGround(4, 0.01, 0.008),
+        eraGround(2, -0.02, -0.014),
+      ]
+      : [
+        material(GROUND_ANCHOR,     GROUND_ERA, groundSat,        0.536, 0.400),
+        material(GROUND_ANCHOR - 4, GROUND_ERA, groundSat - 0.01, 0.528, 0.392),
+        material(GROUND_ANCHOR + 4, GROUND_ERA, groundSat + 0.01, 0.544, 0.406),
+        material(GROUND_ANCHOR + 2, GROUND_ERA, groundSat - 0.02, 0.522, 0.386),
+      ],
 
     /**
      * Mặt đường CỦA KỶ NÀY — góc màu và độ tươi lấy thẳng từ `roadColor`, độ đậm do phép đo mặt
@@ -899,7 +965,12 @@ export function buildScenePalette({ tokens, eraColor, era: eraNumber, daylight }
       // thích ngay trên): nay chỉ còn pha 0,15, nên **màu lam của đêm phải đến từ ÁNH SÁNG chứ
       // không từ nước sơn** — ánh trăng lạnh ở `lights` + sương `FogExp2` nhuộm theo màu chân trời
       // đêm. Đó cũng là đường đúng, vì nó nhuộm theo khoảng cách thật thay vì áp đều.
-      blend(GROUND_ANCHOR + 14, GROUND_ERA, isDark ? 0.16 : 0.19, isDark ? 0.34 : 0.56),
+      // ⚠️ ROUND 47: the land outside the city is the SAME ground, a little paler and a little less
+      // saturated (distance), +6° of hue — a Tuscan field runs out to Tuscan hills, snow runs out to
+      // snow. Before, it was the anchor's yellow-green for all fifteen. No era: old value, byte for byte.
+      groundHsl
+        ? hslToRgb(eraGroundHsl(6, -0.05, 0.035))
+        : blend(GROUND_ANCHOR + 14, GROUND_ERA, isDark ? 0.16 : 0.19, isDark ? 0.34 : 0.56),
       // ⚠️ PHA VỀ ĐÚNG MÀU CHÂN TRỜI CỦA CHẶNG NÀY, không phải về một màu ấm chốt cứng.
       // Bản quét chỉ ra một chuyện chỉ thấy được khi nhìn nguyên khung hình chứ không nhìn từng
       // vai màu: **vùng đất ngoài phố chiếm nhiều diện tích hơn cả bầu trời lẫn thành phố cộng

@@ -158,7 +158,15 @@ export function emitRoof(out, { w, d, top, x, z }, style, ctx) {
   // ⚠️ Khối đặc truyền THẲNG `pitch` và cố ý KHÔNG đi qua cái kẹp 0,08: `emitMonolith` đã tính sẵn
   // con số cho ra ĐÚNG chiều cao đích, cái kẹp sẽ lặng lẽ kéo nó cao lên mà không có gì đỏ —
   // đúng hình dạng bẫy `MIN_STONE` và `walk` đã ghi ở `streetStyle.js`.
-  const pitch = mono ? mono.pitch : Math.max(0.08, style.roofPitch) * Math.max(w, d);
+  // ⚠️ ROUND 47 (ADR-087, closes the roof half of `TECH_DEBT_3D #90`): the rise is taken on the
+  // footprint the house would have had on a FULL plot, not on the unit a split block hands it. A
+  // block unit arrives with `plot.fx/fz` < 1, so `max(w, d)` shrinks with it — and a steep roof
+  // then lost more height than `plot.storey` gave back to the walls (era 12: 0,69× the reference
+  // house at a 0,62 pitch, under the 0,75 floor of `block.test.js`). Rowhouses are narrow AND
+  // steep; a roof that flattens as the plot narrows is the absolute-vs-relative trap in a new coat.
+  const spanX = w / (ctx?.plotFx > 0 ? ctx.plotFx : 1);
+  const spanZ = d / (ctx?.plotFz > 0 ? ctx.plotFz : 1);
+  const pitch = mono ? mono.pitch : Math.max(0.08, style.roofPitch) * Math.max(spanX, spanZ);
   const anchors = { x, z, eaveY: top, apexY: top, rw, rd, pitch, deck: null, ridges: [] };
 
   switch (style.roof) {
@@ -312,15 +320,16 @@ export function emitRoof(out, { w, d, top, x, z }, style, ctx) {
       // chỗ nó phình ra ở dưới rồi mới thu lại ở trên, một đoạn thẳng không diễn tả nổi.
       const drum = Math.min(w, d) * 0.78;
       const cornice = pitch * 0.26;
-      out.push(prism({ x, z, y: top, w: drum * 1.12, d: drum * 1.12, h: cornice * 0.5, sides: 8, role: 'trim' }));
-      out.push(prism({ x, z, y: top + cornice * 0.5, w: drum, d: drum, h: cornice, sides: 8, role: 'trim' }));
+      // Round 47 (ADR-087): 8 → 12 sides. An octagon reads as a lantern; a 12-gon reads as a dome.
+      out.push(prism({ x, z, y: top, w: drum * 1.12, d: drum * 1.12, h: cornice * 0.5, sides: 12, role: 'trim' }));
+      out.push(prism({ x, z, y: top + cornice * 0.5, w: drum, d: drum, h: cornice, sides: 12, role: 'trim' }));
       out.push(prism({
         x, z, y: top + cornice * 1.5, w: drum * 1.04, d: drum * 1.04, h: pitch * 0.42,
-        sides: 8, taper: 0.82, role: 'roof',
+        sides: 12, taper: 0.82, role: 'roof',
       }));
       out.push(prism({
         x, z, y: top + cornice * 1.5 + pitch * 0.42, w: drum * 0.85, d: drum * 0.85, h: pitch * 0.46,
-        sides: 8, taper: 0.24, role: 'roof',
+        sides: 12, taper: 0.24, role: 'roof',
       }));
       out.push(prism({
         x, z, y: top + cornice * 1.5 + pitch * 0.88, w: drum * 0.2, d: drum * 0.2, h: pitch * 0.3,
@@ -361,6 +370,32 @@ export function emitRoof(out, { w, d, top, x, z }, style, ctx) {
       break;
     }
 
+    case 'hip': {
+      // ⚠️ ROUND 47 (ADR-087, #76): FOUR SLOPES AND A SHORT RIDGE. A hip roof is a low, truncated
+      // pyramid — the everyday roof of the Chinese courtyard house and the Tuscan farmhouse. `taper`
+      // 0,18 leaves a small flat top that stands for the short ridge; the eave overhang stays,
+      // because on a hip roof it runs all four sides. Its silhouette is unmistakably NOT a gable
+      // (no vertical gable end) and NOT a pyramid (never comes to a point).
+      const hipH = pitch * 0.58;
+      out.push(prism({ x, z, y: top, w: rw, d: rd, h: hipH, sides: 4, taper: 0.18, role: 'roof' }));
+      anchors.apexY = top + hipH;
+      anchors.ridges.push({ x, z, y: top + hipH, w: rw * 0.3, ry: 0 });
+      break;
+    }
+    case 'mansard': {
+      // ⚠️ ROUND 47 (ADR-087, #76): THE ROOF OF PARIS. A steep lower slope (zinc, in the era's roof
+      // colour) that rises most of the way and then stops; a flat, slightly inset top in the trim
+      // material; and the dormers `rooftop.js` plants on it because `STACK_NEEDS_ROOF.dormer` lists
+      // `mansard`. The steep part uses `taper` 0,80 — a real mansard slope is ~70°, which at these
+      // proportions is exactly a 20 % inset over the roof's height.
+      const lowerH = pitch * 0.62;
+      const capH = Math.max(0.04, pitch * 0.1);
+      out.push(prism({ x, z, y: top, w: rw, d: rd, h: lowerH, sides: 4, taper: 0.80, role: 'roof' }));
+      out.push(prism({ x, z, y: top + lowerH, w: rw * 0.80, d: rd * 0.80, h: capH, sides: 4, role: 'trim' }));
+      anchors.apexY = top + lowerH + capH;
+      anchors.deck = { x, z, y: anchors.apexY, w: rw * 0.80, d: rd * 0.80 };
+      break;
+    }
     default: {
       const slabH = pitch * 0.5;
       out.push(prism({ x, z, y: top, w: rw, d: rd, h: slabH, sides: 4, role: 'trim' }));
@@ -426,7 +461,10 @@ export function emitMonolith(out, { x, z, y, base, rise }, style, ctx) {
  * Vẽ đủ bốn mặt vì camera xoay được 360°: bỏ mặt sau sẽ lộ ra ngay lần đầu Đàm kéo xoay.
  */
 function emitWindows(out, { w, d, base, height, x, z }, style, matNa) {
-  if (style.windows === 'none' || height < 0.3) return;
+  // ⚠️ ROUND 47 (ADR-087, TECH_DEBT_3D #25): the floor is RELATIVE to the era's storey, not the
+  // absolute 0,3 that left the smallest houses of eras 3, 6 and 8 as blank boxes under a roof. A
+  // wall that holds a third of a storey holds a window.
+  if (style.windows === 'none' || height < style.storyHeight * 0.36) return;
 
   const stories = Math.max(1, Math.round(height / style.storyHeight));
   // `sideways` = mặt tường nằm trên hai cạnh trái/phải; cửa sổ ở đó chạy dọc trục Z, còn ở mặt
@@ -872,6 +910,7 @@ export function buildBuildingSpec({
       bpId: id, era, rarity, level: safeLevel, w, d, x, z, base, top, style,
       // ⚠️ `emitRoof` cần biết đây có phải kỳ quan không — xem lý do ở nhánh `gable`.
       symmetric: Boolean(archetype.symmetric),
+      plotFx: fx, plotFz: fz,   // round 47: `emitRoof` undoes the plot shrink for the roof rise
     };
 
     if (!mass.low) {

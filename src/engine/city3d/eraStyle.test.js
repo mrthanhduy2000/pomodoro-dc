@@ -9,11 +9,12 @@
  */
 
 import test from 'node:test';
+import { parseCssColor, rgbToHsl } from './palette3d';
 import assert from 'node:assert/strict';
 
 import {
   ERA_STYLES, ROOF_KINDS, EAVE_MAX_RATIO,
-  getEraStyle, getVernacularStyle, eaveOverhang,
+  getEraStyle, getVernacularStyle, eaveOverhang, GROUND_KINDS,
 } from './eraStyle';
 import { buildBuildingSpec } from './buildingSpec';
 import { MATERIAL_FAMILIES } from './materials';
@@ -41,7 +42,9 @@ test('NHÀ THƯỜNG KHÔNG ĐỘI MÁI KỲ ĐÀI ở những kỷ mà hai th�
   // biểu tượng dùng một thủ pháp mái mà nhà dân KHÔNG BAO GIỜ được phép dùng (mái chồng nhiều
   // tầng từng bị luật cấm với dân thường; giật cấp New York là luật cho cao ốc; vòm Duomo có đúng
   // một cái). Kỷ nào trong danh sách này mà lại khai trùng thì hoặc bảng sai, hoặc lịch sử sai.
-  const MUST_DIFFER = [2, 3, 4, 6, 7, 9, 10, 11, 15];
+  // Round 47 (ADR-087, #76): era 12 joined the list — Stalingrad's houses were wooden with pitched
+  // roofs against snow; only the bunker is flat.
+  const MUST_DIFFER = [2, 3, 4, 6, 7, 9, 10, 11, 12, 15];
   for (const era of MUST_DIFFER) {
     const style = ERA_STYLES[era];
     assert.notEqual(
@@ -52,7 +55,7 @@ test('NHÀ THƯỜNG KHÔNG ĐỘI MÁI KỲ ĐÀI ở những kỷ mà hai th�
   // …và các kỷ còn lại khai TRÙNG một cách có chủ đích (thời đồ đá thì nhà nào cũng là lều).
   // Canh cả vế này để không ai "sửa" bảng bằng cách cho mọi kỷ khác nhau cho đủ chỉ tiêu.
   const same = ERAS.filter((e) => ERA_STYLES[e].vernacularRoof === ERA_STYLES[e].roof);
-  assert.deepEqual(same, [1, 5, 8, 12, 13, 14]);
+  assert.deepEqual(same, [1, 5, 8, 13, 14]);
 });
 
 test('getVernacularStyle THAY MÁI Ở NGUỒN — mọi trường khác giữ nguyên từng chữ số', () => {
@@ -62,8 +65,11 @@ test('getVernacularStyle THAY MÁI Ở NGUỒN — mọi trường khác giữ n
     assert.equal(vern.roof, base.vernacularRoof, `kỷ ${era} chưa thay mái`);
     // Chỉ ĐÚNG MỘT trường được đổi. Nếu hàm này lỡ đổi thêm `roofColor` hay `massScale` thì nhà dân
     // sẽ trôi khỏi bản sắc kỷ mà không ai để ý — đúng thứ `plain` sinh ra để KHÔNG làm.
+    // Round 47 (ADR-087): `roofPitch` may follow a declared `vernacularPitch` — and ONLY then.
+    const pitchWanted = Number.isFinite(base.vernacularPitch) ? base.vernacularPitch : base.roofPitch;
+    assert.equal(vern.roofPitch, pitchWanted, `kỷ ${era}: độ dốc mái dân sai`);
     for (const key of Object.keys(base)) {
-      if (key === 'roof') continue;
+      if (key === 'roof' || key === 'roofPitch') continue;
       assert.deepEqual(vern[key], base[key], `kỷ ${era}: trường "${key}" bị đổi ngoài ý muốn`);
     }
   }
@@ -157,5 +163,32 @@ test('MẶT ĐƯỜNG ĐI HẾT MỘT HÀNH TRÌNH VẬT LIỆU, không dừng �
   }
   for (const era of [1, 2]) {
     assert.equal(ERA_STYLES[era].roadMaterial, 'dirt', `kỷ ${era} không còn là đường đất`);
+  }
+});
+
+// ─── ROUND 47 (ADR-087): THE GROUND AND THE WALLS ARE DECLARED, PER COUNTRY ────────────────────
+test('MỌI KỶ PHẢI KHAI MẶT ĐẤT — một họ có thật, và mã màu nằm trong cửa sổ của họ ấy', () => {
+  for (const era of ERAS) {
+    const style = ERA_STYLES[era];
+    const kind = GROUND_KINDS[style.groundKind];
+    assert.ok(kind, `kỷ ${era} (${style.country}) khai groundKind "${style.groundKind}" — không có trong GROUND_KINDS`);
+    assert.match(String(style.groundColor), /^#[0-9a-f]{6}$/i, `kỷ ${era} chưa khai groundColor đọc được`);
+    assert.match(String(style.wallColor), /^#[0-9a-f]{6}$/i, `kỷ ${era} chưa khai wallColor đọc được`);
+    const c = rgbToHsl(parseCssColor(style.groundColor));
+    const hueIn = c.s < 0.06 || (c.h >= kind.hue[0] && c.h <= kind.hue[1]);
+    assert.ok(hueIn, `kỷ ${era} (${style.country}): groundColor ${style.groundColor} ở ${Math.round(c.h)}° — ngoài dải "${style.groundKind}"`);
+    assert.ok(c.s >= kind.sat[0] - 0.01 && c.s <= kind.sat[1] + 0.01,
+      `kỷ ${era} (${style.country}): groundColor tươi ${c.s.toFixed(2)} — ngoài [${kind.sat}] của "${style.groundKind}"`);
+    assert.ok(c.l >= kind.light[0] - 0.01 && c.l <= kind.light[1] + 0.01,
+      `kỷ ${era} (${style.country}): groundColor sáng ${c.l.toFixed(2)} — ngoài [${kind.light}] của "${style.groundKind}"`);
+  }
+});
+
+test('MẶT ĐẤT ĐI HẾT MỘT HÀNH TRÌNH: ít nhất 5 họ, và họ nào cũng có ít nhất một kỷ dùng… trừ khi bảng nói rõ', () => {
+  const used = new Set(ERAS.map((era) => ERA_STYLES[era].groundKind));
+  assert.ok(used.size >= 5, `chỉ ${used.size} họ mặt đất — một thành phố đi qua 15 nước mà đất chỉ đổi ${used.size} lần`);
+  // Every kind in the table must be used by some era — a kind nobody uses is a dead row.
+  for (const name of Object.keys(GROUND_KINDS)) {
+    assert.ok(used.has(name), `họ mặt đất "${name}" không kỷ nào dùng — hàng chết trong bảng`);
   }
 });

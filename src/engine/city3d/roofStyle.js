@@ -136,9 +136,9 @@ export const CROWN_NEEDS_ROOF = {
   beamEnds: null,
   balustrade: null,
   // Cuộn ngói nằm TRÊN MẶT DỐC ⇒ phải có mặt dốc.
-  barrel: ['gable', 'tiered', 'pyramid', 'cone'],
+  barrel: ['gable', 'tiered', 'pyramid', 'cone', 'hip'],
   // Sống mái là giao tuyến của HAI mặt dốc ⇒ chỉ mái hai dốc mới có.
-  ridge: ['gable', 'sawtooth'],
+  ridge: ['gable', 'sawtooth', 'hip'],
   // Đầu đao là góc của DIỀM MÁI CHỒNG TẦNG. Đây cũng là cách diễn đạt "chỉ Đông Á" bằng hình học
   // thay vì bằng một danh sách nước phải nhớ: chỉ kỷ 4 và 6 khai mái `tiered`.
   upturn: ['tiered'],
@@ -149,8 +149,8 @@ export const STACK_NEEDS_ROOF = {
   none: null,
   // Ống khói xuyên qua mái kiểu gì cũng được — đó là cả điểm của một cái ống.
   chimney: null,
-  crossPoles: ['cone', 'pyramid', 'gable'],
-  dormer: ['gable', 'tiered', 'pyramid', 'cone'],
+  crossPoles: ['cone', 'pyramid', 'gable', 'hip'],
+  dormer: ['gable', 'tiered', 'pyramid', 'cone', 'hip', 'mansard'],
   roofHatch: ['flat', 'stepped'],
   dryingRack: ['flat', 'stepped'],
   tank: ['flat', 'stepped', 'blade'],
@@ -394,7 +394,8 @@ export const ROOF_STYLES = {
   // thần tấm panel đúc sẵn — không phải một vành lan can trang trí.
   12: {
     crown: 'none', crownWeight: 0.45, stack: 'mast', stackCount: 2,
-    vernacularCrown: 'balustrade', vernacularStack: 'dryingRack',
+    // round 47: the vernacular roof of era 12 is a snow-pitched gable, so its stack is a chimney.
+    vernacularCrown: 'balustrade', vernacularStack: 'chimney',
     note: 'lô cốt Stalingrad trơn tuyệt đối; nhà tập thể Xô Viết viền parapet bê tông mỏng, dây phơi căng sau nó',
   },
 

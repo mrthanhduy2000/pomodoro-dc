@@ -143,11 +143,17 @@ export function materialProfile(family) {
  * mặt đất và các khối kề bên ở tầng thấp. Khối lơ lửng (kỷ 15) nằm cao nên không bị tối — đúng.
  */
 
-/** Bóng tiếp xúc lan lên cao bao nhiêu (đơn vị thế giới; một ô lưới = 1). */
-export const CONTACT_REACH = 0.38;
+/**
+ * Bóng tiếp xúc lan lên cao bao nhiêu (đơn vị thế giới; một ô lưới = 1).
+ * ⚠️ ROUND 47 (ADR-087): 0,38 → 0,52 and the floor 0,58 → 0,44 — Đàm's decision on the item that
+ * had waited in `START_HERE` §A since Phase 19 ("deeper / taller contact shadows"). Deeper feet are
+ * what make a low-poly block SIT on the ground instead of floating on it; the exponent below keeps
+ * the darkening concentrated in the crease, so the whole ground floor is not smeared grey.
+ */
+export const CONTACT_REACH = 0.52;
 
 /** Tối nhất còn lại bao nhiêu phần màu gốc ở sát mặt đất. */
-export const CONTACT_FLOOR = 0.58;
+export const CONTACT_FLOOR = 0.44;
 
 /**
  * Hệ số nhân màu theo độ cao so với mặt đất.

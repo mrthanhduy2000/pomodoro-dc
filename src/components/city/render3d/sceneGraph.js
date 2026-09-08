@@ -1631,6 +1631,25 @@ export function createCityScene({
   scene.add(sun);
   scene.add(sun.target);
 
+  /*
+    ⚠️ ROUND 47 (ADR-087) — ONE RIM LIGHT, AND IT IS NOT A FOURTH FILL.
+    Đàm lifted the "never a fourth light source" law for exactly one thing: a rim / back light that
+    separates the blocks from the ground — the thing that makes a low-poly scene "pop". It comes from
+    OPPOSITE the sun and low, in the SKY's colour (cool, so it reads as sky bounce on the shadow-side
+    edge, never as a second sun), at a fifth of the sun's energy, and it casts no shadow. What it is
+    forbidden to be is a FILL: a fill raises the shadow side everywhere and gives back the "milky pale"
+    look Phase 7A paid to remove. A rim light only touches faces turned away from the sun AND toward
+    the camera's far side — the silhouette — which is why it adds depth instead of removing it.
+    Cost: one directional light with no shadow map = one more dot product per fragment. Measured in
+    `renderLoop` stats on the round's photos; see ADR-087.
+  */
+  const RIM_RATIO = 0.22;
+  const rim = new DirectionalLight(palette.lights?.skyDome ?? palette.sky, SUN_BASE * RIM_RATIO * sunEnergy);
+  rim.position.set(-sunDir.x, 0.35, -sunDir.z).normalize().multiplyScalar(gridSize * 1.4);
+  rim.castShadow = false;
+  scene.add(rim);
+  scene.add(rim.target);
+
   // ── Đèn trong nhà hắt ra sân (chỉ khi trời tối) ───────────────────────────
   // Ô cửa sáng ở trên vẽ bằng vật liệu TỰ PHÁT SÁNG — nó rực lên nhưng không rọi ra ngoài một tí
   // nào, nên chân tường vẫn tối om và cả dãy cửa đọc ra như hình dán trên một khối đen. Vài vũng

@@ -779,7 +779,8 @@ test('⚠️ TRẦN HỘP BAO khối `city` — và nội thành PHẢI vẫn nh
 test('dispose() dọn cả bản đồ bóng, và chịu được gọi hai lần', () => {
   const canh = createCityScene(thamSố(7));
   let den = null;
-  canh.scene.traverse((o) => { if (o.isDirectionalLight && o.shadow) den = o; });
+  // Round 47 added a rim light (no shadow): pick the SUN — the one directional light that casts.
+  canh.scene.traverse((o) => { if (o.isDirectionalLight && o.castShadow) den = o; });
   assert.ok(den, 'không tìm thấy đèn mặt trời có bóng — phép đo đang chạy rỗng');
 
   // Giả lập đúng thứ three làm ở lần render đầu: gắn một bản đồ bóng vào đèn.

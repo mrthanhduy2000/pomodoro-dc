@@ -57,6 +57,10 @@ function buildXpCard(reward) {
   // "phần thưởng biến thiên" chỉ là một con số lớn hơn thường lệ mà không ai biết vì sao.
   if (toNumber(reward.luckXpBonus) > 0) chips.push({ id: 'luck-xp', label: '🍀 Vận may', value: `+${Math.round(toNumber(reward.luckXpBonus) * 100)}% XP` });
   if (toNumber(reward.luckEpBonus) > 0) chips.push({ id: 'luck-ep', label: '🍀 Vận may', value: `+${Math.round(toNumber(reward.luckEpBonus) * 100)}% EP` });
+  // ADR-081: the golden beat — the surprise that happened DURING the session, paid at its end.
+  if (reward.goldenBeat && toNumber(reward.goldenBonusXP) > 0) {
+    chips.push({ id: 'golden', label: '🌟 Guồng vàng', value: `+${Math.round(toNumber(reward.goldenBonusXP))} XP` });
+  }
   if (toNumber(reward.overclockBonus) > 0) chips.push({ id: 'overclock', label: 'Giam cầm', value: `+${reward.overclockBonus} XP` });
 
   const event = reward.positiveEvent?.label

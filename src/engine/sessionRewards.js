@@ -34,7 +34,7 @@ import {
 import { pickLegacyCompletions } from './eraLegacy';
 import { isCurrentEraBlueprint, pruneEraScopedBlueprintState } from './eraScope';
 import { appendUiNotifications, makeEraUpFeedNotification, makeLegacyCompletedNotification, makeRankUpFeedNotification, makeWorkshopCompletedNotification } from './feedNotifications';
-import { HISTORY_ENTRY_STATUS, calculateRewards, computeLevelUps, getActiveBook, getComboDecayMs, getHistoryEntryTimestampMs, isCancelledHistoryEntry } from './gameMath';
+import { HISTORY_ENTRY_STATUS, calculateRewards, computeLevelUps, countSessionsOnDay, getActiveBook, getComboDecayMs, getHistoryEntryTimestampMs, isCancelledHistoryEntry } from './gameMath';
 import { applyHistoryReviewStatsDelta, normalizeStoredHistoryStats } from './historyStats';
 import { syncLongBreakCycleProgress } from './longBreakCycle';
 import { refreshMissionsIfStale, tickDailyMissions } from './missions';
@@ -44,6 +44,7 @@ import { describeCrisisQuest, evaluateRankPromotion, openCrisisQuest, settleCris
 import { applyRelicEvolutions, evaluateRelicEvolutions } from './relicGrowth';
 import { upsertSavedNoteEntry } from './savedNotes';
 import { autoQueueSessionProject, rollLuckyBrick } from './sessionBrick';
+import { GOLDEN_BEAT_XP_BONUS, planSessionBeats, rollGoldenBeat } from './sessionBeats';
 import { advanceStreak, refreshStreakIfExpired, streakBonusRate } from './streak';
 import { localDateStr, localWeekMondayStr } from './time';
 import { makeDefaultDailyTracking, makeDefaultSkillActivations } from './trackingDefaults';
@@ -262,8 +263,19 @@ export function assembleSessionReward({
     book: activeBook,
     minutes: minutesFocused,
   });
+  // ADR-081: THE GOLDEN BEAT. Rolled from the same hash the running screen used, so the session that
+  // whispered «Guồng vàng» is exactly the session that pays for it — no state passed between them.
+  // Only when the beat it landed on actually exists for this length (a 5-minute session has none).
+  const goldenBeatId = rollGoldenBeat({
+    dayKey: today,
+    sessionsDoneToday: countSessionsOnDay(state.dailyTracking, today),
+  });
+  const goldenBeat = goldenBeatId
+    && planSessionBeats(Math.round(minutesFocused * 60)).some((b) => b.id === goldenBeatId)
+    ? goldenBeatId : null;
+  const goldenBonusXP = goldenBeat ? Math.round(reward.finalXP * GOLDEN_BEAT_XP_BONUS) : 0;
   const baseSessionXP = Math.round(
-    (reward.finalXP + comboBonus + positiveEventBonus + streakBonusXP) * heSoSieuViet,
+    (reward.finalXP + comboBonus + positiveEventBonus + streakBonusXP + goldenBonusXP) * heSoSieuViet,
   );
 
   const resolvedStartedAt = sessionTiming?.startedAt ?? null;
@@ -740,6 +752,9 @@ export function assembleSessionReward({
         autoQueuedId,
         // ADR-080: which project got the lucky second brick (null = a normal session).
         luckyBrickId: lucky.luckyBrickId,
+        // ADR-081: the golden beat this session hit ('halfway' | 'final' | null) and what it paid.
+        goldenBeat,
+        goldenBonusXP,
         // ⚠️ CHỈ để KHOẢNH KHẮC THÀNH PHỐ (`engine/cityMoment.js`) biết công trình nào vừa
         // xong. `ui` KHÔNG nằm trong `partialize` nên trường này không lên Supabase, tức
         // không thêm một byte nào vào JSONB đang tranh chấp CAS.

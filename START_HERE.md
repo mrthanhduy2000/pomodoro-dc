@@ -32,7 +32,20 @@ Production branch `main` carries **both** work streams (merged 2026-08-28 on Đ�
 ⚠️ Phase 21 therefore shipped **before** Đàm reviewed its screenshots — the "waiting on Đàm's eyes"
 item below is still live, it just now reviews something already running.
 
-- **Loop — ROUND 40 (2026-09-08, LATEST): THINGS THAT HAPPEN AND VANISH (ADR-080).** Order: fill the
+- **Loop — ROUND 41 (2026-09-08, LATEST): THE LONG RHYTHMS, AND A TOOL THAT CAN SEE (ADR-081).**
+  ⚠️ **`shot.mjs --dilate <rate>` is how a transient moment is photographed now.** One framer animation
+  runs on TWO clocks (`opacity` on WAAPI, `x/y/scale` on framer's own rAF loop); `--dilate` slows both,
+  patching `performance.now()` in the page while `Date.now()` stays real. Add `--frames n --frame-gap ms`
+  for a filmstrip, `--city2d` to keep the main thread free, `--ask <js>` to question the page. Three
+  rounds in a row shipped something nobody could see before this existed — do not ship a moment without
+  a photograph of it. The burst was redrawn the day it could be seen (two colours, upward fan).
+  Day and week now open and close (`engine/dayArc.js` + `focus/DayMoment.jsx`: 7-second banner, stamps in
+  `localStorage`, no branch that reads as a failure). Three surprises at three beats: «Gạch đôi» (ending) ·
+  «Guồng vàng» (mid-session, a hash so both sides agree without state) · «Thợ đêm» (a day's open,
+  `rollNightBuilder`). No silence over 15 minutes at any session length. Inspect: `--preview arc-gift`
+  (and `arc-day-open` · `arc-day-close` · `arc-week-open` · `arc-week-close`), `--preview loot-lucky
+  --card project --dilate 0.05 --watch "HÔM NAY MAY" --snap --frames 2`.
+- **Loop — ROUND 40 (2026-09-08): THINGS THAT HAPPEN AND VANISH (ADR-080).** Order: fill the
   gap round 39 exposed, with a static budget of ZERO — only things that happen and are gone. Session
   beats (`engine/sessionBeats.js`: settled · halfway · final stretch · last minute — an 8-second whisper
   in the ring label + `focus/BeatRipple.jsx`, from elapsed time, background-safe, no new sound); the glow

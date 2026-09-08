@@ -30,7 +30,8 @@
 │   │   │   ├── cityPostcard.js    # PURE: layout input (phantom scaffold for the auto-pick) · focus target · selection resolve
 │   │   │   ├── SessionBrickStrip.jsx # "This session's brick" above the ring — reads craftingQueue/buildings, engine/sessionBrick.js
 │   │   │   ├── BrickRow.jsx          # Brick cells (laid · laying · new · empty), shared with the ending's project card; new bricks DROP (ADR-080)
-│   │   │   ├── BeatRipple.jsx        # The visible half of a session/break beat: two rings out of the clock, 1.9 s (ADR-080)
+│   │   │   ├── BeatRipple.jsx        # The visible half of a session/break beat: two rings out of the clock, ~2 s (ADR-080)
+│   │   │   ├── DayMoment.jsx         # The LONG rhythms on screen (ADR-081): day/week open+close as a 7-second banner; stamps in localStorage
 │   │   │   ├── QuickPresets.jsx      # 25/5 · 50/10 … presets (+ `CHU_KY_NGHI_CO_KHAC_NHAU`)
 │   │   │   ├── ModeSwitch.jsx        # Pomodoro ↔ Stopwatch
 │   │   │   ├── StrictModeToggle.jsx  # strict mode switch
@@ -168,7 +169,8 @@
 │   │   ├── buildingPerks.js · historyStats.js · longBreakCycle.js · savedNotes.js   # ten helper clusters moved verbatim
 │   │   │                     #   out of gameStore.js (ADR-078); each header says what it owns. Pure, no store.
 │   │   ├── sessionBrick.js    # "This session's brick" (ADR-077): pickSessionProject · autoQueueSessionProject · chooseSessionProject · describeSessionBrick · rollLuckyBrick (ADR-080)
-│   │   ├── sessionBeats.js    # Session + break BEATS, PURE (ADR-080): planSessionBeats · planBreakBeats · resolveBeat · sessionPhaseGlyph
+│   │   ├── sessionBeats.js    # Session + break BEATS, PURE (ADR-080/081): planSessionBeats · planBreakBeats · resolveBeat · sessionPhaseGlyph · rollGoldenBeat
+│   │   ├── dayArc.js          # The LONG rhythms, PURE (ADR-081): describeDayOpen/Close · describeWeekOpen/Close · pickArcMoment. No failure branch.
 │   │   ├── missions.js        # Daily missions, PURE (ADR-077): roll · normalize · snapshot progress · tickDailyMissions (live = reload)
 │   │   ├── weeklyChain.js     # Weekly step chain, PURE (`now` param): refreshWeeklyChain · autoClaimWeeklySteps · rebuild
 │   │   ├── seededRng.js       # String-seeded PRNG shared by missions.js + weeklyChain.js

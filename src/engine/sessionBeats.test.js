@@ -4,7 +4,8 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {
-  BEAT_WINDOW_SECONDS, planBreakBeats, planSessionBeats, resolveBeat, sessionPhaseGlyph,
+  BEAT_WINDOW_SECONDS, GOLDEN_BEAT_CHANCE, planBreakBeats, planSessionBeats, resolveBeat,
+  rollGoldenBeat, sessionPhaseGlyph,
 } from './sessionBeats.js';
 
 test('a 25-minute session has four beats at 5:00 · 12:30 · 20:00 · 24:00, in order, digit-free', () => {
@@ -62,4 +63,48 @@ test('the tab-title glyph grows ○ ◔ ◑ ◕ ● with progress and never show
   assert.equal(sessionPhaseGlyph(1125, total), '◕');
   assert.equal(sessionPhaseGlyph(1500, total), '●');
   assert.equal(sessionPhaseGlyph(10, 0), '○');
+});
+
+test('NO SILENCE OVER 15 MINUTES at any length (ADR-081): 15 · 25 · 50 · 90 minutes all keep a rhythm', () => {
+  for (const minutes of [15, 25, 50, 90, 120]) {
+    const beats = planSessionBeats(minutes * 60);
+    let prev = 0;
+    for (const b of beats) {
+      assert.ok(b.at - prev <= 15 * 60 + 1, `${minutes} min: ${Math.round((b.at - prev) / 60)} minutes of silence before ${b.id}`);
+      prev = b.at;
+    }
+    assert.ok(minutes * 60 - prev <= 15 * 60 + 1, `${minutes} min: the session ends ${Math.round((minutes * 60 - prev) / 60)} minutes after the last beat`);
+    for (const b of beats) assert.doesNotMatch(b.label, /\d/, `"${b.label}" carries a digit`);
+  }
+  // A 25-minute session keeps EXACTLY the four beats of ADR-080 — the filler must not crowd it.
+  assert.deepEqual(planSessionBeats(25 * 60).map((b) => b.id), ['settled', 'halfway', 'final', 'lastMinute']);
+  // A 90-minute one gets fillers, evenly spread, never more than one per gap-and-a-half.
+  const long = planSessionBeats(90 * 60);
+  assert.ok(long.length >= 7 && long.length <= 10, `a 90-minute session got ${long.length} beats`);
+  assert.ok(long.some((b) => b.id.startsWith('flow')), 'long sessions need "still going" beats');
+});
+
+test('a long break keeps the same law', () => {
+  const beats = planBreakBeats(30 * 60);
+  let prev = 0;
+  for (const b of beats) { assert.ok(b.at - prev <= 15 * 60 + 1, `silence before ${b.id}`); prev = b.at; }
+  assert.deepEqual(planBreakBeats(5 * 60).map((b) => b.id), ['leave', 'water', 'return'], 'a short break is unchanged');
+});
+
+test('the golden beat is a HASH, not dice: same day + same session index ⇒ same answer, everywhere', () => {
+  const a = rollGoldenBeat({ dayKey: '2026-09-08', sessionsDoneToday: 2 });
+  const b = rollGoldenBeat({ dayKey: '2026-09-08', sessionsDoneToday: 2 });
+  assert.equal(a, b, 'the running screen and the reward engine must agree without talking');
+  assert.equal(rollGoldenBeat({ dayKey: '', sessionsDoneToday: 0 }), null);
+  // It only ever lands on a middle beat, and it is rare but real.
+  let hits = 0;
+  for (let i = 0; i < 400; i += 1) {
+    const hit = rollGoldenBeat({ dayKey: `2026-09-${(i % 28) + 1}`, sessionsDoneToday: Math.floor(i / 28) });
+    if (hit) { hits += 1; assert.ok(hit === 'halfway' || hit === 'final', `golden landed on "${hit}"`); }
+  }
+  assert.ok(hits > 400 * GOLDEN_BEAT_CHANCE * 0.4 && hits < 400 * GOLDEN_BEAT_CHANCE * 1.9,
+    `${hits}/400 golden beats — the hash is not spreading like its declared chance`);
+  // Forcing the chance to 1 proves the branch exists at all (a 0-chance test can pass on a bug).
+  assert.ok(rollGoldenBeat({ dayKey: 'x', sessionsDoneToday: 0, chance: 1 }));
+  assert.equal(rollGoldenBeat({ dayKey: 'x', sessionsDoneToday: 0, chance: 0 }), null);
 });

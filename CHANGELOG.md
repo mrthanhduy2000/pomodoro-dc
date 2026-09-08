@@ -10,6 +10,21 @@
 > **Muốn hiểu VÌ SAO một quyết định được chọn** → `ARCHITECTURE_DECISIONS.md`. **Muốn biết migration
 > cụ thể nào cần chạy** → `MIGRATION.md`.
 
+## 2026-09-08 — Round 41: the long rhythms, three kinds of surprise, and a tool that photographs a moment (ADR-081)
+
+**Purpose.** Close the hole that ended three rounds in a row (a feature nobody could see), then give the app the rhythms it still lacked: a day and a week that open and close.
+
+**Scope.**
+- **`shot.mjs --dilate <rate>`**: patches `performance.now()` + the rAF timestamp in the page and matches the WAAPI playback rate, so framer's two clocks slow together; `--frames`/`--frame-gap` return a filmstrip. The three ending bursts of round 40 are photographed for the first time.
+- **Burst redrawn** after seeing it: two legible colours (a third of the confetti used to be invisible on the dark canvas), an upward fan away from the copy, varied shard sizes, gravity arc.
+- **`engine/dayArc.js` + `focus/DayMoment.jsx`**: day open · day close · week open · week close as 7-second banners; no branch reads as a failure; stamps in `localStorage`, never in the synced save.
+- **Two more surprises**: «Guồng vàng» mid-session (a hash, not dice; +15 % XP, chip in the ending) and «Thợ đêm» at the open of a day (one brick, never the last one).
+- **Beats at every length**: no silence over 15 minutes; fillers evenly spaced; a 25-minute session keeps its original four.
+- **Round-40 questions decided**: no task name in «Đoạn cuối» · the ripple stays · no lucky brick on 2-session projects.
+- Tests: `dayArc` 5 · `dayMoment` 4 · `sessionBeats` +3 · `rewardBurst` +1; full suite 1,637 tests · 1,636 pass · 0 fail · 1 skipped.
+
+**Compatibility.** No save migration. `goldenBeat`/`goldenBonusXP` live in `ui.pendingReward` (not persisted); the night crew moves `craftingQueue.sessionsRemaining`, an ordinary state change.
+
 ## 2026-09-08 — Round 40: things that happen and vanish (ADR-080)
 
 **Purpose.** *"Dọn xong thì lộ ra chỗ trống — vòng này lấp chỗ trống ấy."* Give the 125 silent minutes a rhythm, make the ending burst by tier, add one real surprise, design the break — while round 39's screen stays exactly as it is (1 indicator · ≤2 numbers · ≤3 colours · 0 cut text). Static budget: zero.

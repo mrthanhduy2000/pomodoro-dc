@@ -1,3 +1,41 @@
+> Last update: **2026-09-08** — **ROUND 41: THE LONG RHYTHMS, AND A TOOL THAT CAN SEE (ADR-081).**
+> Order: *"Ba lần liên tiếp có thứ không nghiệm thu được là đủ rồi … Chữa cái công cụ, đừng chữa từng ca."*
+> Everything on `main`. Round 39's counts and round 40's seven moments are untouched.
+>
+> ### Done
+> 0. **The tool** — `shot.mjs --dilate <rate>` patches `performance.now()` and the rAF timestamp in the
+>    page (before the bundle) and sets the WAAPI playback rate to match. ⚠️ THE FINDING OF THIS ROUND:
+>    one framer animation runs on TWO clocks — `opacity` on WAAPI, `x/y/scale` on framer's own rAF loop.
+>    Slowing one gave a photograph that LIED (particles halfway along their path with opacity already 0),
+>    which is exactly what round 40 read as "cannot be photographed". `--frames n --frame-gap ms` for a
+>    filmstrip; `--city2d` keeps the main thread free; `--ask <js>` asks the page a question.
+> 1. **The burst, redrawn after seeing it** — `--accent2` is a smudge on the dark canvas (a third of the
+>    confetti was invisible) and a full circle threw half of it through the headline. Two colours now,
+>    upward fan −165°…−15°, gravity arc, varied shards. Both lessons locked in `rewardBurst.test.js`.
+> 2. **Day and week arcs** — `engine/dayArc.js` (pure: `describeDayOpen` · `describeDayClose` ·
+>    `describeWeekOpen` · `describeWeekClose` · `pickArcMoment`) + `focus/DayMoment.jsx` (7 s banner,
+>    tap to dismiss, stamps in `localStorage`, silent while any timer runs or the reward chain is up).
+> 3. **Two new surprises at two new beats** — «Guồng vàng» mid-session (hash of day + sessions done
+>    today, so the screen and `assembleSessionReward` agree with no state passed; +15 % XP, chip in the
+>    ending) and «Thợ đêm» at a day's open (`rollNightBuilder`, ~16 %, one brick, never the last one).
+> 4. **Beats at every length** — `MAX_GAP_SECONDS = 15 min`, gaps filled evenly («Vẫn trong guồng» /
+>    «Cứ nghỉ tiếp»); a 25-minute session keeps exactly the four beats of ADR-080.
+> 5. **Round-40 questions decided** — no task name in «Đoạn cuối»; the ripple stays (the photographs
+>    settle it); no lucky brick on 2-session projects.
+>
+> ### Gates
+> lint clean · build green · `npm run test:fast` 1,637 tests · 1,636 pass · 0 fail · 1 skipped (`# skipped 1`).
+>
+> ### Lessons
+> - **"The DOM has it" is not "the screen shows it".** A field, an element, a particle count — none of
+>   them is evidence about pixels. Three rounds died on this; the fix was one flag, not three excuses.
+> - **One animation, two clocks.** Before slowing anything down, ask WHICH clock drives it — and check
+>   that every property of the same animation answers the same way.
+> - **A screenshot tool that waits for the DOM to go still can never photograph a moment.** `--watch`
+>   plus a snap path that skips every probe between the hit and the shutter is the whole trick.
+
+---
+
 > Last update: **2026-09-08** — **ROUND 40: THINGS THAT HAPPEN AND VANISH (ADR-080).**
 > Order: *"Build lớn. Simplify mạnh. Làm game vui hơn và đầy dopamine hơn … Ngân sách thứ đứng yên: 0.
 > TOÀN QUYỀN."* Five jobs + the gate; everything on `main`. Round 39's counts are untouched.

@@ -13,7 +13,10 @@
 > mà không được refactor triệt để, phải CHỦ ĐỘNG đề xuất mở một "Maintenance Sprint" (nêu rõ mục
 > tiêu/phạm vi/lợi ích/rủi ro/tiêu chí hoàn thành) thay vì tiếp tục cộng thêm tính năng mới.
 >
-> **Threshold status (2026-09-08, after ADR-080 "round 40")**: no entry opened or closed; a moments-only round
+> **Threshold status (2026-09-08, after ADR-081 "round 41")**: no entry opened or closed; the round
+> closed a TOOLING hole instead (transient moments are photographable) and added the long rhythms.
+>
+> *(previous)* **Threshold status (2026-09-08, after ADR-080 "round 40")**: no entry opened or closed; a moments-only round
 > (beats · tiered ending · lucky brick · break beats · round-39 leftovers). Counts unchanged.
 >
 > *(previous)* **Threshold status (2026-09-07, after ADR-079 "round 39")**: no entry opened or closed; a UI-only round

@@ -70,6 +70,7 @@ import {
   SP_PER_LEVEL,
   STREAK_BONUS_PER_DAY,
   CRAFT_QUEUE_SLOTS,
+  NIGHT_BUILDER_CHANCE,
   LEGACY_QUEUE_SLOTS,
   RELIC_EVOLUTION,
   getBuildingLevelMultiplier,
@@ -2537,6 +2538,30 @@ const useGameStore = create(
        */
       // ADR-078 (Việc 2): change this session's project from where Đàm stands — one tap on the
       // Focus strip. The engine decides (`chooseSessionProject`, pure, tested); the store applies.
+      /**
+       * THỢ ĐÊM (ADR-081) — the surprise that lands at the OPEN of a day.
+       *
+       * Called at most once a day by `focus/DayMoment.jsx` (which owns the per-day stamp). It pushes
+       * ONE brick onto the project at the head of the queue and returns its id, or null.
+       *
+       * ⚠️ IT CAN NEVER FINISH A BUILDING. «Công trình hoàn thành» is the reward of a session and it
+       * has a whole tier of the ending built around it; handing it out at breakfast would spend that
+       * moment on nothing. So a head with a single session left is left alone.
+       * ⚠️ Never negative, and never a fourth currency: it moves `sessionsRemaining`, nothing else.
+       */
+      rollNightBuilder: () => {
+        const state = get();
+        const queue = state.craftingQueue ?? [];
+        const head = queue[0];
+        if (!head?.bpId || !(Number(head.sessionsRemaining) >= 2)) return null;
+        if (Math.random() >= NIGHT_BUILDER_CHANCE) return null;
+        set({
+          craftingQueue: [{ ...head, sessionsRemaining: Number(head.sessionsRemaining) - 1 }, ...queue.slice(1)],
+          latestSessionUndo: null,
+        });
+        return head.bpId;
+      },
+
       setSessionProject: (bpId) => {
         const state = get();
         const result = chooseSessionProject({

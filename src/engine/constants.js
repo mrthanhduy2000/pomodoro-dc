@@ -2245,6 +2245,13 @@ export const POSITIVE_EVENT_XP_SCALE = 0.55;
 // `assembleSessionReward`; ~1 session in 8, only for sessions long enough to be a real brick.
 export const LUCKY_BRICK_CHANCE = 0.12;
 export const LUCKY_BRICK_MIN_MINUTES = 15;
+// ADR-081: a lucky double brick on a 2-session project would finish it on the spot and rob the
+// «công trình hoàn thành» moment of its build-up. Small projects are never doubled.
+export const LUCKY_BRICK_MIN_PROJECT_SESSIONS = 3;
+// ─── THỢ ĐÊM (ADR-081) ─────────────────────────────────
+// The third surprise, and it lands at the OPEN of a day: sometimes the scaffold moved overnight.
+// One brick, never enough to finish a building (that ending belongs to a session), never negative.
+export const NIGHT_BUILDER_CHANCE = 0.16;
 export const POSITIVE_EVENTS = [
   { id: 'momentum',    label: 'Đà Tốt',                icon: '🚀', desc: 'Mọi thứ theo quán tính tốt.',            bonusPct: 0.15, minMinutes: 10, chance: 0.18 },
   { id: 'breakthrough',label: 'Đột Phá!',              icon: '💡', desc: 'Khoảnh khắc hiểu sâu bất ngờ.',          bonusPct: 0.25, minMinutes: 20, chance: 0.12 },

@@ -76,12 +76,14 @@ test('--watch phải GẮN TỪ ĐẦU TRANG, không phải hỏi sau khi đã s
     'phải dùng MutationObserver gắn vào <head>: hỏi sau khi settle thì thứ thoáng qua đã tắt',
   );
   // Được tiêm cùng đường với `clockPatch` — nếu không thì nó không bao giờ vào trang.
+  // ⚠️ `dilatePatch` (ADR-081) đứng TRƯỚC hai cái kia: nó vá `performance.now`, mà mọi script sau
+  // đó đều đọc hàm ấy. Tiêm sau thì framer đã giữ tham chiếu tới bản gốc và không có gì chậm lại.
   assert.match(
-    src, /'<head>' \+ clockPatch \+ watchPatch/,
-    '--watch không được tiêm vào trang ⇒ window.__dcWatch không tồn tại và probe luôn rỗng',
+    src, /'<head>' \+ dilatePatch \+ clockPatch \+ watchPatch/,
+    '--watch/--dilate không được tiêm vào trang ⇒ window.__dcWatch không tồn tại và probe luôn rỗng',
   );
   assert.match(
-    src, /if \(\(clockPatch \|\| watchPatch\)/,
+    src, /if \(\(clockPatch \|\| watchPatch \|\| dilatePatch\)/,
     'cổng tiêm vẫn chỉ hỏi clockPatch ⇒ dùng --watch mà không --hour thì không tiêm gì cả',
   );
 });
@@ -107,4 +109,17 @@ test('--preview gắn đúng vào URL sau khi gieo localStorage', () => {
     'tham số preview phải đi cùng lần chuyển trang SAU khi gieo localStorage; gắn vào /seed thì '
     + 'nó bị nuốt mất khi trang tự chuyển sang /index.html',
   );
+});
+
+test('--dilate làm chậm CẢ HAI đồng hồ của một hoạt hoạ (ADR-081)', () => {
+  const src = readFileSync(new URL('./shot.mjs', import.meta.url), 'utf8');
+  // Bài học của vòng 41: `opacity` chạy trên WAAPI còn `x/y/scale` chạy trên rAF của framer. Làm
+  // chậm mỗi một bên thì ra một tấm ảnh NÓI DỐI (hạt ở giữa quãng đường mà opacity đã về 0).
+  assert.match(src, /P\.now=function\(\)\{ return t0\+\(orig\(\)-t0\)\*R; \}/, 'phải vá performance.now');
+  assert.match(src, /window\.requestAnimationFrame=function\(cb\)/, 'và cả mốc thời gian của rAF');
+  assert.match(src, /const SLOW = Number\(arg\('--slow', DILATE\)\)/, '--dilate phải kéo theo tốc độ phát WAAPI');
+  // `Date.now` KHÔNG được đụng: đồng hồ phiên và mốc `__NOW±s__` phải chạy bằng thời gian thật.
+  const patch = /const dilatePatch = [\s\S]*?\}\)\(\);<\/script>`;/.exec(src);
+  assert.ok(patch, 'không tìm thấy dilatePatch');
+  assert.doesNotMatch(patch[0], /Date\.now|window\.Date/, 'giãn thời gian không được chạm đồng hồ THẬT của app');
 });

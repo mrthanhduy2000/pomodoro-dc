@@ -37,7 +37,7 @@ import {
   getSessionWorkedMinutes,
   parseFocusMinutesInput,
 } from '../engine/timerSession';
-import { planBreakBeats, planSessionBeats, resolveBeat } from '../engine/sessionBeats';
+import { GOLDEN_BEAT_LABEL, planBreakBeats, planSessionBeats, resolveBeat, rollGoldenBeat } from '../engine/sessionBeats';
 import BeatRipple from './focus/BeatRipple';
 import ModeSwitch from './focus/ModeSwitch';
 import QuickPresets from './focus/QuickPresets';
@@ -619,10 +619,15 @@ export default function PomodoroEngine({
   const strokeDashoffset = RING_CIRCUMFERENCE - (displayProgressPct / 100) * RING_CIRCUMFERENCE;
   // ADR-079: ONE line under the clock, device-independent (the daily-goal unit is a per-device
   // setting) and true while running (an ordinal, not "0/5 done"). Pure, tested in engine/timerSession.test.js.
+  const sessionsCompletedToday = countSessionsOnDay(dailyTracking, localDateStr());
   const clockSubline = describeClockSubline({
     phase: isBreakMode ? 'break' : timerState === TIMER_STATES.FINISHED ? 'finished' : 'idle',
-    sessionsCompletedToday: countSessionsOnDay(dailyTracking, localDateStr()),
+    sessionsCompletedToday,
   });
+  // ADR-081: THE GOLDEN BEAT — one beat of a rare session comes up as «Guồng vàng» and that session
+  // pays more XP at the end. Both sides read the same hash (day + how many sessions are already
+  // done today), so the screen and `assembleSessionReward` agree without passing anything.
+  const goldenBeatId = rollGoldenBeat({ dayKey: localDateStr(), sessionsDoneToday: sessionsCompletedToday });
   const baseRingColor = isBreakMode
     ? breakRingColor
     : (RING_COLORS[timerState] ?? RING_COLORS[TIMER_STATES.IDLE]);
@@ -1106,7 +1111,7 @@ export default function PomodoroEngine({
                   slot, the arc's colour, then the state label returns. Nothing is added to the screen. */}
               {beat ? (
                 <motion.span key={beat.id} {...whisperMotion} className="inline-block" style={{ color: isBreakMode ? 'var(--good)' : 'var(--accent)' }}>
-                  {beat.label}
+                  {!isBreakMode && beat.id === goldenBeatId ? GOLDEN_BEAT_LABEL : beat.label}
                 </motion.span>
               ) : (<>
               {isBreakMode && (breakIsLong ? 'Giải lao dài' : 'Giải lao')}

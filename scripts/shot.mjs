@@ -186,6 +186,31 @@ const SETTINGS = {
   version: 8,
 };
 
+/*
+  ⚠️ `--dilate <rate>` — GIÃN THỜI GIAN CỦA HOẠT HOẠ (ADR-081, vòng 41).
+
+  Vòng 40 kết thúc với ba khoảnh khắc KHÔNG chụp được: bụi gạch, hoa giấy, nổ màn hình. Chẩn đoán
+  lúc ấy đúng nhưng mới một nửa: `Animation.setPlaybackRate` của CDP chỉ điều khiển hoạt hoạ WAAPI
+  (opacity, sóng), trong khi framer-motion tự chạy x/y/scale bằng `requestAnimationFrame` và tự đo
+  quãng thời gian bằng `performance.now()`. Không cơ chế nào của trình duyệt làm chậm chúng.
+
+  Cách vượt qua: làm chậm ĐỒNG HỒ MÀ CHÚNG ĐỌC. Tiêm trước cả bundle, nên framer thấy bản đã vá:
+    · `performance.now()` trả về thời gian đã nhân với `rate`;
+    · mốc thời gian truyền cho callback của `requestAnimationFrame` cũng vậy.
+  Kết quả: mọi hoạt hoạ chạy bằng rAF trôi chậm đúng `rate` lần, còn `Date.now()` thì KHÔNG bị
+  đụng — đồng hồ phiên, mốc `__NOW±s__` và mọi phép tính của app vẫn chạy bằng thời gian thật.
+
+  ⚠️ Đây là công cụ CHỤP, không phải một chế độ của app: nó chỉ tồn tại trong trang mà `shot.mjs`
+  phục vụ. Không có một dòng nào của nó đi vào `dist/`.
+*/
+const DILATE = Number(arg('--dilate', 1));
+const dilatePatch = DILATE === 1 ? '' : `<script>(function(){
+  var R=${DILATE}, P=performance, orig=P.now.bind(P), t0=orig();
+  P.now=function(){ return t0+(orig()-t0)*R; };
+  var rAF=window.requestAnimationFrame.bind(window);
+  window.requestAnimationFrame=function(cb){ return rAF(function(t){ cb(t0+(t-t0)*R); }); };
+})();</script>`;
+
 const clockPatch = FAKE_EPOCH === null ? '' : `<script>(function(){
   var FIXED=${FAKE_EPOCH}, Real=Date;
   function Fake(){ return arguments.length ? new (Function.prototype.bind.apply(Real,[null].concat([].slice.call(arguments)))) : new Real(FIXED); }
@@ -240,9 +265,10 @@ const server = createServer((req, res) => {
   if (url === '/seed') { res.writeHead(200, { 'content-type': 'text/html;charset=utf-8' }); return res.end(seedPage); }
   const file = join(ROOT, url === '/' ? '/index.html' : url);
   if (!file.startsWith(ROOT) || !existsSync(file)) { res.writeHead(404); return res.end('x'); }
-  if ((clockPatch || watchPatch) && (url === '/' || url === '/index.html')) {
+  if ((clockPatch || watchPatch || dilatePatch) && (url === '/' || url === '/index.html')) {
     res.writeHead(200, { 'content-type': MIME['.html'] });
-    return res.end(readFileSync(file, 'utf8').replace('<head>', '<head>' + clockPatch + watchPatch));
+    // `dilatePatch` đi TRƯỚC: nó phải vá `performance.now` trước khi bất kỳ script nào đọc nó.
+    return res.end(readFileSync(file, 'utf8').replace('<head>', '<head>' + dilatePatch + clockPatch + watchPatch));
   }
   res.writeHead(200, { 'content-type': MIME[extname(file)] ?? 'application/octet-stream' });
   res.end(readFileSync(file));
@@ -315,14 +341,23 @@ await cdp('Runtime.enable');
 // real time, so the card's own entrance finishes) and the shot waits `--slow-hold` ms more: the
 // burst is then mid-flight while everything around it is already in place. Without `--watch` the
 // rate applies from the start (every entrance is slow too — useful only for a still page).
-const SLOW = Number(arg('--slow', 1));
+/*
+  ⚠️ MỘT HOẠT HOẠ CỦA FRAMER CHẠY TRÊN HAI ĐỒNG HỒ, và đó là lý do vòng 40 kết luận sai (ADR-081):
+  `opacity` được đẩy xuống WAAPI (đồng hồ của trình duyệt) còn `x/y/scale` do framer tự chạy bằng
+  rAF. Làm chậm mỗi một bên thì ra một tấm ảnh nói dối — đo thật: hạt bay đúng chỗ giữa quãng
+  đường mà `opacity` đã về 0, tức "có hạt trong DOM" nhưng "không có gì trên màn hình".
+  Nên `--dilate` KÉO THEO tốc độ phát WAAPI bằng đúng tỉ lệ ấy, trừ khi `--slow` nói khác.
+*/
+const SLOW = Number(arg('--slow', DILATE));
 const SLOW_HOLD = Number(arg('--slow-hold', 900));
 const slowDown = async () => {
   if (SLOW === 1) return;
   await cdp('Animation.enable');
   await cdp('Animation.setPlaybackRate', { playbackRate: SLOW });
 };
-if (!WATCH) await slowDown();
+// Ở chế độ `--dilate`, hai đồng hồ phải chậm CÙNG LÚC ngay từ đầu — không thì opacity chạy hết
+// trước khi rAF kịp nhích, đúng cái bẫy ở khối chú thích trên.
+if (!WATCH || DILATE !== 1) await slowDown();
 // ⚠️ ĐÂY là thứ `--window-size` không làm được: đặt bề ngang bố cục THẬT.
 await cdp('Emulation.setDeviceMetricsOverride', {
   width: WIDTH, height: HEIGHT, deviceScaleFactor: DPR, mobile: PHONE,
@@ -392,9 +427,23 @@ async function afterWatchHit() {
   if (WATCH_DELAY > 0) await sleep(WATCH_DELAY);
   if (SLOW !== 1 && SLOW_HOLD > 0) await sleep(SLOW_HOLD);
   if (!has('--snap')) return;
-  const snap = await cdp('Page.captureScreenshot', { format: 'png' });
-  writeFileSync(OUT, Buffer.from(snap.data, 'base64'));
-  console.log(`✓ ${OUT} (snap; watch ${await evaluate('JSON.stringify(window.__dcWatch||[])')})`);
+  /*
+    `--frames <n> --frame-gap <ms>`: chụp n khung liên tiếp thay vì một, ghi ra `ten-1.png`…`ten-n.png`.
+    Cùng với `--dilate`, đây là cách nghiệm thu một hoạt hoạ THOÁNG QUA: một khung lẻ chỉ chứng minh
+    "có gì đó ở đó", còn một dải khung cho thấy nó ĐI như thế nào — bung ra, bay, rồi tắt. Mỗi khung
+    tốn một vòng CDP (~250 ms thật ⇒ ~15 ms hoạt hoạ ở rate 0,06), nên dải khung vẫn nằm gọn trong
+    một lần hoạt hoạ.
+  */
+  const frames = Math.max(1, Number(arg('--frames', 1)));
+  const gap = Number(arg('--frame-gap', 600));
+  for (let i = 1; i <= frames; i += 1) {
+    const snap = await cdp('Page.captureScreenshot', { format: 'png' });
+    const file = frames === 1 ? OUT : OUT.replace(/\.png$/, `-${i}.png`);
+    writeFileSync(file, Buffer.from(snap.data, 'base64'));
+    console.log(`✓ ${file}`);
+    if (i < frames) await sleep(gap);
+  }
+  console.log(`  (snap ×${frames}; watch ${await evaluate('JSON.stringify(window.__dcWatch||[])')})`);
   ws.close(); chrome.kill(); server.close();
   process.exit(0);
 }

@@ -14,6 +14,7 @@ import TodayHero from './components/TodayHero';
 import CityPostcard from './components/focus/CityPostcard';
 import EraStageBar from './components/shared/EraStageBar';
 import SessionRewardStory from './components/SessionRewardStory';
+import DayMoment from './components/focus/DayMoment';
 import { getEraStage } from './engine/eraStage';
 import { calculateStreakMilestoneProgress, evaluateStreakAtRisk } from './engine/gameMath';
 import FocusCoachMobile from './components/FocusCoachMobile';
@@ -1297,6 +1298,14 @@ export default function App() {
         ]}
         variant="section"
       >
+        {/*
+          ADR-081: the LONG rhythms — a day and a week that open and close. It sits OUTSIDE
+          `GlobalOverlays` on purpose: that component early-returns `null` whenever nothing is
+          blocking and no toast is queued, which is exactly the quiet morning this banner exists for.
+          It stays silent while any timer runs or the reward chain is up (`anyTimerRunning`), so the
+          round-39 screen is never touched.
+        */}
+        <DayMoment quiet={timerSessionRunning || isOnBreak || lootModalOpen} />
         <GlobalOverlays
           lootModalOpen={lootModalOpen}
           prestigeModalOpen={prestigeModalOpen}

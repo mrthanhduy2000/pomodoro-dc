@@ -912,6 +912,23 @@ if (CROP) {
 
 // `--ask <js>`: evaluate an expression in the page right before the capture and print it — the
 // cheapest way to ask the page a question the picture cannot answer (a media query, a style value).
+//
+// ⚠️ IT IS ALSO HOW YOU STEP A MULTI-CARD OVERLAY (round 44). `awaitPromise: true` is set on the
+// evaluate below, so `--ask` may be an async IIFE that CLICKS and WAITS — which is the only way to
+// photograph a card that is not the first one in the reward story:
+//
+//   --preview loot-city-sp --settle 2000 --ask "(async function(){
+//      const w=(ms)=>new Promise(r=>setTimeout(r,ms));
+//      for(let i=0;i<2;i++){document.querySelector('[role=\"dialog\"]').click(); await w(900);}
+//      await w(1200); return document.querySelector('[role=\"dialog\"]').innerText;})()"
+//
+// ⚠️ CLICK `[role="dialog"]` ITSELF, NOT `elementFromPoint(x,y)`. The advance handler lives on the
+// overlay ROOT (`SessionRewardStory.jsx`: `onClick={holding ? undefined : next}`); a coordinate
+// click lands on whatever child is under that point and reads as a dismiss, so the overlay just
+// disappears and you shoot the screen behind it. Three attempts were burned on that before the
+// probe below made it obvious. To find out WHICH card you are on, ask first and shoot after:
+// loop `click()` and print the first two lines of `innerText` each time — a card that stops
+// changing is a HOLD card (it has something to choose), and that is where the shutter belongs.
 const ASK = arg('--ask', null);
 if (ASK) console.log('ask →', await evaluate(ASK));
 const shot = await cdp('Page.captureScreenshot', { format: 'png', ...(clip ? { clip } : {}) });

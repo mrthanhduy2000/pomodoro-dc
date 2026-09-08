@@ -41,6 +41,17 @@
 > RED in a different file: its JSX-comment stripper `\{\s*\/\*[\s\S]*?\*\/\s*\}` backtracked past the
 > intended end and ate hundreds of lines of real code before the assertions ran. Use `//` there.
 >
+> ### Nghiệm thu bằng mắt — đã đóng nốt
+> Thẻ «Thành phố trả công · +1 SP» ĐÃ CHỤP ĐƯỢC (`.city-preview/r44/after-loot-citySP-390.png`):
+> 🧱 · "+1 SP" · "chọn một kỹ năng · 40 điểm trong tay" · ba kỹ năng bấm được · "để sau — điểm vẫn
+> giữ". Báo cáo vòng 44 gửi đi khi chưa có tấm này; nay có, và luật vòng 41 được giữ trọn.
+> ⚠️ **CÁCH CHỤP MỘT THẺ KHÔNG PHẢI THẺ ĐẦU**: `--ask` được `evaluate` với `awaitPromise: true`, nên
+> nó nhận một async IIFE vừa `click()` vừa `await` — và phải bấm ĐÚNG `[role="dialog"]`, không phải
+> `elementFromPoint(x,y)`. Tay cầm nhịp nằm ở GỐC lớp phủ (`onClick={holding ? undefined : next}`);
+> bấm theo toạ độ thì trúng một phần tử con và bị đọc là "đóng", lớp phủ biến mất và ta chụp đúng
+> màn hình phía sau nó. Ba lần thử đã cháy vì chuyện đó. Thẻ nào bấm mà KHÔNG đổi là thẻ HOLD —
+> đó là chỗ đặt máy ảnh. Ví dụ đầy đủ nằm ở đầu `--ask` trong `scripts/shot.mjs`.
+>
 > ### Gates
 > lint ✅ · build ✅ · `npm run test:quiet` — see the run recorded with the commit.
 > ⚠️ Two floors were LOWERED, and both only because a system was deleted: glyph coverage 513 → 139

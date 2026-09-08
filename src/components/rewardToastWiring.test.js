@@ -176,9 +176,10 @@ test('no city-moment overlay stands before the reward story any more (ADR-077)',
  */
 test('the unseen-week dot lives on the Thống kê tab, and the toast navigates there', () => {
   assert.doesNotMatch(APP_CODE, /WeeklyReportModal|openWeeklyReport\(|weeklyReportOpen\b/, 'the dialog wiring is back');
-  const memo = /const attentionTabIds = useMemo\(([\s\S]*?)\);/.exec(APP_CODE);
-  assert.ok(memo, 'không đọc được `attentionTabIds`');
-  assert.match(memo[1], /weeklyReportUnseen \? \['stats'\]/, 'the unseen-week dot must land on the stats tab');
+  const memo = /const attentionByTab = useMemo\(([\s\S]*?)\);/.exec(APP_CODE);
+  assert.ok(memo, 'không đọc được `attentionByTab`');
+  // Round 42: the set of ids became a map id → the reason in words, so the dot can say what it reports.
+  assert.match(memo[1], /weeklyReportUnseen \? \[\['stats', '[^']+'\]\]/, 'the unseen-week dot must land on the stats tab');
   assert.match(APP_CODE, /markWeeklyReportSeen\(\);\s*selectTab\('stats'\)/, 'opening the summary must record "seen" and go to Stats');
   assert.match(APP_CODE, /onOpenWeekly=\{openWeeklySummary\}/, 'the Focus line must use the same handler');
 });

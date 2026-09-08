@@ -115,25 +115,37 @@ test('chấm "có việc cần xem" được nối ở CẢ hai thanh điều h�
   // Nối một chỗ quên một chỗ là hình dạng lỗi đã cắn dự án nhiều lần: desktop có chấm, iPhone
   // không — mà iPhone mới là chỗ Đàm dùng nhiều nhất.
   assert.ok(
-    /attentionTabIds=\{attentionTabIds\}/.test(APP_SOURCE),
-    'Thanh bên desktop không còn nhận `attentionTabIds` — chấm chú ý tắt câm ở desktop.',
+    /attentionByTab=\{attentionByTab\}/.test(APP_SOURCE),
+    'Thanh bên desktop không còn nhận `attentionByTab` — chấm chú ý tắt câm ở desktop.',
   );
   assert.ok(
-    /attentionTabIds\?\.has\(tab\.id\)/.test(APP_SOURCE),
-    'Thanh bên desktop nhận `attentionTabIds` nhưng không hỏi tới nó.',
+    /attentionByTab\?\.get\(tab\.id\)/.test(APP_SOURCE),
+    'Thanh bên desktop nhận `attentionByTab` nhưng không hỏi tới nó.',
   );
   assert.ok(
-    /attentionTabIds\.has\(tab\.id\)/.test(APP_SOURCE),
-    'Thanh dưới iPhone không hỏi `attentionTabIds` — chấm chú ý tắt câm trên điện thoại.',
+    /attentionByTab\.has\(tab\.id\)/.test(APP_SOURCE),
+    'Thanh dưới iPhone không hỏi `attentionByTab` — chấm chú ý tắt câm trên điện thoại.',
   );
-  // ADR-077: the set now also carries the unseen-week dot for the Thống kê tab — both signals must stay.
+  // ADR-077: the map now also carries the unseen-week dot for the Thống kê tab — both signals must stay.
   assert.ok(
-    /inventoryNeedsAttention \? \['inventory'\] : \[\]/.test(APP_SOURCE),
+    /inventoryNeedsAttention \? \[\['inventory', '[^']+'\]\] : \[\]/.test(APP_SOURCE),
     'Tập tab có chấm không còn suy từ `inventoryNeedsAttention` — cái chấm mất nguồn tín hiệu.',
   );
   assert.ok(
-    /weeklyReportUnseen \? \['stats'\] : \[\]/.test(APP_SOURCE),
+    /weeklyReportUnseen \? \[\['stats', '[^']+'\]\] : \[\]/.test(APP_SOURCE),
     'the unseen-week dot lost its tab — a missed Monday toast then leaves no trace (TECH_DEBT #87 regresses)',
+  );
+  // ⚠️ VÒNG 42 — MỖI CHẤM PHẢI MANG MỘT CÂU. Đàm nhìn ảnh chụp: «hai chấm cam mà tôi không biết
+  // chúng báo gì». Tập ids đã thành bảng id → LÝ DO; bài này khoá lại việc lý do ấy tồn tại và
+  // đến được cả ba chỗ vẽ nó (thanh bên mở, thanh bên thu gọn, thanh dưới điện thoại).
+  // THỬ-CHO-ĐỎ: đổi `[['inventory', 'Có việc']]` về `['inventory']` ⇒ đỏ ở ngay trên.
+  assert.ok(
+    /aria-label=\{attentionByTab\.get\(tab\.id\)\}/.test(APP_SOURCE),
+    'chấm ở thanh dưới điện thoại lại câm — 48px không đủ cho một chữ, nên nó phải nói qua `aria-label`',
+  );
+  assert.ok(
+    /aria-label=\{attention\}/.test(APP_SOURCE),
+    'chấm ở thanh bên lại câm',
   );
 });
 

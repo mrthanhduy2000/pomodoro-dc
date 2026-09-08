@@ -20,7 +20,7 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import { PerspectiveCamera, Raycaster, Vector2, WebGLRenderer } from 'three';
 
 import { buildScenePalette } from '../../../engine/city3d/palette3d';
-import { deriveDaylight } from '../../../engine/city3d/daylight';
+import { deriveDaylight, museumDaylight } from '../../../engine/city3d/daylight';
 import { CITY_CAMERA_FOV, MIN_PITCH, cityOrbitOptions, createOrbit } from '../../../engine/city3d/orbit';
 import { planCityFocus } from '../../../engine/city3d/cityFocus';
 import { createRenderLoop } from '../../../engine/city3d/renderLoop';
@@ -182,7 +182,10 @@ export default function CityScene3D({
       // buổi chiều của Đàm thành nửa đêm.
       // Cảnh giữ nguyên chặng cho tới lần dựng lại kế tiếp — cố ý: theo dõi đồng hồ từng phút để
       // đổi màu trời là tốn pin cho một thứ không ai ngồi nhìn.
-      const daylight = deriveDaylight(getVietnamHour());
+      // ⚠️ MUSEUM LIGHT (round 46, ADR-086): a SEALED era (`dimmed`) is lit at one fixed hour,
+      // never by tonight's clock — measured 2,5× darker at night than at noon on a city that will
+      // never change again. Same daylight profile machinery, one constant hour (`daylight.js`).
+      const daylight = dimmed ? museumDaylight() : deriveDaylight(getVietnamHour());
 
       const palette = buildScenePalette({
         tokens: readThemeTokens(canvas),

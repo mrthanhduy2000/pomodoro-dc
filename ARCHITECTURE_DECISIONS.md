@@ -73,6 +73,57 @@ roughly 44%. Titles below are the lookup key; read one with
 
 ---
 
+## ADR-086 — Round 46: the City tab catches up with the city's three roles — the picture is the biggest thing on its own screen, the screen says what the city pays, and a museum piece is lit once
+
+**Date**: 2026-09-08 · **Order**: *"THÀNH PHỐ PHẢI TRÔNG NHƯ THỨ ĐÁNG NHẤT TRONG APP. Vòng 43 cho nó một cái đích (75 công trình). Vòng 44 biến nó thành ngân hàng (1 công trình = 1 điểm kỹ năng). Vòng này làm cho màn hình của nó nói ra cả hai."* · Acceptance, in his words: *"tôi mở tab Thành Phố trên iPhone, chưa cuộn một lần nào, và tôi thấy ba thứ — thành phố của tôi, nó còn cách đích bao xa, và nó vừa trả tôi bao nhiêu điểm kỹ năng."*
+
+### Context — one sentence, four measurements
+The city is the destination (ADR-082), the bank (ADR-084) and the one thing that can never be revised (ADR-007) — and its screen had not caught up. Measured 2026-09-08 on an iPhone frame (390×844, `shot.mjs --probe`, a 12-era save):
+
+| | Before | Why it matters |
+|---|---|---|
+| City picture | **201 px = 23,8 %** of the screen | the smallest block on the tab named after it: header 202 · era strip 217 · stat grid 135 |
+| Picture starts at | **y = 494** (8 eras 421 · 15 eras ~564) | one scrolls to see one's own city |
+| «SP» / «kỹ năng» on the tab | **0 times**, ledger `spFromCity` = 37 | the trap round 44 wrote a rule against, on the one screen that earns the money |
+| Museum (Kỷ 3) brightness, 5 points | **0,15 at night · 0,37 at noon** | a permanent reward 2,5× darker at the hour he opens the app, on top of the `dimmed` fade |
+
+Two more lines were false or dead: the museum's stat cell printed **«EP lúc niêm phong: 5006»** (raw EP, no separator, nothing to do with it — against ADR-082), and the ADR-080 promise *"fifteen chips fit three rows at 390"* measured **6 rows at 12 chips** after «5/5 ★» and «· đang xây» fattened them.
+
+### Decision 1 — the picture's height has ONE owner: `components/city/stageMetrics.js`
+Same pattern as the ring (ADR-083), same reason: two expressions for one shape drift the moment a cap binds. `stageFrameStyle()` is the frame's whole geometry — `aspect-ratio: 1.3` (the FLOOR, imported from the engine's own camera fit `FRAME_FIT_ASPECT`: a wider frame only adds margin, a narrower one crops the near corner — so this is the tallest the picture may be without touching the camera) · `max-height: min(ceiling, 100svh − reserve)` · a 200 px floor. `CityScene3D` runs in `fill` mode on every tenant now and reads the frame; the 1 : 0,62 constant and the `StagePlaceholder` that carried a second copy of it are gone. The reserves are DECLARED (measured, rounded up, contents listed beside each number) — a runtime measurement would be a feedback loop, and a declared reserve fails safe.
+**Refused**: passing the real aspect into `cityFrameDistance` so the camera backs off for a taller frame — that is the camera, and the 3D city is a finished black box; it would also make the framing depend on the device. **Refused**: a bleed beyond the card (390 ÷ 1,3 = 300 px) — 31 px of picture is not worth a picture with no edge.
+
+### Decision 2 — everything above the picture gave way, by the rule that was already in the file
+*Two places saying one thing: the one saying less yields.* The phone's top rail on this tab keeps title · level · bell (`hideStats`, `hideEra`, as the Focus tab already did): its stage bar read «57/75 công trình», which is the tab's fourth stat cell, and «Kỷ 12» is the selected tile. 202 → 77 px. The era strip became two-line TILES (`EraSwitcher.jsx`, words in `cityCopy.eraTile`): «Kỷ 12» over «★ | 4/5 | —». The star MEANS five of five, so no fraction beside it; «đang xây» is said once, in the era card's status line, and a sealed era with a restoration in flight keeps its fraction in the accent tone. `repeat(auto-fill, minmax(40px, 1fr))`: 40 px is the finger floor and the width «Kỷ 15» needs — 8 tiles a row at 390, 15 tiles on one row at 1280. Still never a scroller (ADR-080).
+
+### Decision 3 — the city says what it pays, from the economy, in SP first (ADR-084's rule)
+The «Phiên trong kỷ» cell failed round 43's test (*what can Đàm DO with this number?*) and is now **«Điểm kỹ năng» — `cityEarnedSP(builtTotal)` for the whole city, `+N từ kỷ này` as the hint** (era share). The count itself survives as the plaque under the picture (`eraStatusLine`: «Đã niêm phong 2025-06-21 · 54 phiên»). The «Đang xây» card's header names the pay («xong là +1 SP»), every unbuilt slot names its price, and the arrival moment (Decision 6) names it again. No typed rate anywhere: `SP_TAG` is built from `SP_PER_BUILDING`, and `cityViewShellWiring.test.js` reads the CALL SITES — an engine test proves a function runs, never that anyone calls it (this project's third uncalled function was found that way).
+
+### Decision 4 — a sealed era is lit once (`MUSEUM_HOUR = 15`, `museumDaylight()`)
+The shell already hid the «đang là hoàng hôn» caption for sealed eras because "that is a place that no longer changes" — but the LIGHT still followed tonight's clock. Half a rule. A `dimmed` scene now reads one fixed daylight profile (15:00 — a warm, low sun, gallery light); it is a plain existing profile, not a fourth light source or a new material, so the black box renders it as any afternoon. The current era keeps the real clock — the promise "every open is a different scene" belongs to the city that is alive. Measured after: **0,37 at night = 0,37 at noon**, five points identical.
+
+### Decision 5 — two false lines, and one premise corrected
+The museum's «EP lúc niêm phong» cell is gone; the third cell shows the museum score «Kỷ trọn vẹn 6/8» whichever era is on screen, like the destination cell (the two numbers that must not move while he browses). And Đàm's brief said an unbuilt slot in a sealed era «không bao giờ xây được nữa» — **that premise is false in the code he approved**: ADR-012 (2026-08-13, his decision) opened *«Trùng tu di sản»* in Hành trang, one legacy slot at a time, `startProject` has no resource gate any more, and a restored building pays the same skill point (`countBuiltBuildings` counts the archive). So the honest label is not «vĩnh viễn khoá» but **«trùng tu được · +1 SP»** — the museum's grey lots are a PATH to the missing star and to a point, and the screen now says so. What makes the star worth having is that the city never MOVES (ADR-007), not that it cannot grow. Both wordings live in `cityCopy.slotNote` and are pinned by test.
+
+### Decision 6 — the City tab reacts when a building has finished: a DIFFERENCE, not an event (`engine/cityArrival.js`)
+Finishing a building is the rarest, most expensive event in the game and the ending card was its only witness; the tab named after the thing that grew did nothing. It now compares `summarizeMuseum().builtTotal` with the count stamped on THIS device the last time the tab was shown (`localStorage` `dc-city-seen-v1`, per device like `DayMoment`'s stamps — never a synced write). A difference flies the camera to the newest building (the existing focus flight; `buildings[]` is in completion order) and stands a banner in the frame — «Vừa xây xong · Bệnh Viện Dã Chiến · +1 SP · đã cộng vào cây kỹ năng» — for `ARRIVAL_VISIBLE_MS` = 4,2 s, then both leave (ADR-080). A first visit stamps silently: "38 new buildings" on the day this shipped would be a lie about the past. A shrunken city (cloud pull) is never announced. Works across reloads, days and devices, for the same reasons the SP ledger does. The banner is also rendered on the 2D branch — a machine without WebGL2 still finishes buildings.
+
+### Decision 7 — no museum gallery; the shelf IS the overview
+Đàm asked whether eight sealed cities deserve a place to be seen at once. **No** — eight WebGL scenes are eight contexts, and eight 2D thumbnails at 390 px are 80-px stamps below the eye threshold (PHASE_RULES §10). What the collection needs at a glance is *which eras are whole*: the tile strip now shows exactly that — a row of stars with the gaps visible, no new unit, no second tab.
+
+### Consequences (measured after, same instruments)
+- Picture **268 px = 31,8 %** (+33 %), starts at **y = 190** at 12 eras (**204** at 15) — from 494. The stat grid's bottom edge sits at 669 (716 at 15 eras), above the floating tab bar (726): his three things, no scroll. Desktop 1280×900: picture 438 px, stat row on screen at 868 (before: 569 px picture, stats at 1013 — below the fold).
+- Era strip: **15 tiles = 2 rows / 80 px at 390 · 1 row at 1280** (from 6 rows / 217 px at 12 chips). Horizontal scroll 375/390/1280/2000: 0.
+- ADR-007: the invariant test is unchanged and green; no camera, geometry, light or DPR touched. FAST pass 1.682 · 0 fail · skipped 1 (baseline 1.639); cross 3/3; lint clean; build green.
+- New guards: `stageMetrics.test.js` (one owner, screens 390/375/1280/2000) · `cityCopy.test.js` (tile words, slot notes, no scroller) · `cityArrival.test.js` (first visit silent, never negative, CityView call sites) · `cityViewShellWiring.test.js` (SP cell, no raw EP, rail flags) · `CityScene3D.test.js` (museum light). `cityRenderers.test.js` updated for the tile structure.
+
+### Tool lessons (recorded here because two of them cost the round hours)
+1. **The first 3D frame on the City tab is a transient.** At `--settle 600` the frame showed a zoomed, cropped city — the scene's first `resize()` — and looked exactly like a camera bug. `--settle ≥ 1500` shows the truth. Suspect the measuring tool first (LESSONS_3D law 1).
+2. **Headless Chrome (SwiftShader) does not composite the bottom overlay over the WebGL canvas.** The arrival banner was in the DOM, opacity 1, top of `elementsFromPoint`, transform neutralised — and absent from the pixels, while the top-left pill in the same frame painted fine. The moment was therefore photographed over the 2D renderer (`--city2d`), which is the same component in the same slot. On real GPUs positioned DOM over WebGL is routine.
+3. `--probe` exits before the capture — a `--out` on a probe run writes nothing, and the previous file stays. `--click` matches the tile's full text: `--click "Kỷ 3★"`. `--hour` also moves the day-arc stamps: seed `dc-day-arc-v1` for 2026-08-13 when using it, or the week banner lands on the photo.
+
+---
+
 ## ADR-085 — Round 45: a bonus that cannot be seen is not a bonus — every source names itself, and unlocking a skill becomes a moment
 
 **Date**: 2026-09-08 · **Order**: *"Vòng 44 mở van cho tôi kiếm được điểm. Vòng này trả lời câu kế tiếp: tiêu vào đó có đáng không?"* · *"Tôi mở một kỹ năng, và tôi biết ngay app vừa khác đi ở chỗ nào. Nếu tôi mở xong mà không thấy gì đổi thì vòng này chưa đạt."*

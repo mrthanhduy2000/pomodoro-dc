@@ -10,6 +10,38 @@
 > **Muốn hiểu VÌ SAO một quyết định được chọn** → `ARCHITECTURE_DECISIONS.md`. **Muốn biết migration
 > cụ thể nào cần chạy** → `MIGRATION.md`.
 
+## 2026-09-08 — Round 46: the City tab catches up with the city's three roles (ADR-086)
+
+**Purpose.** Round 43 made the city the destination, round 44 made it the bank, ADR-007 makes it the
+one thing that can never be revised — and its own screen showed none of it. Measured on an iPhone
+frame with a 12-era save: the picture was **201 px = 23,8 %** of the screen, started at **y = 494**,
+the tab said «SP» **zero** times against a ledger of 37, and a sealed city was **2,5× darker at night**
+than at noon. Đàm's acceptance: open the tab on the phone, scroll nothing, see the city, the distance
+to the destination, and the skill points it paid.
+
+**Scope.** New `components/city/stageMetrics.js` — the ONE owner of the picture's height (aspect floor
+1,3 from the engine's camera fit · viewport minus a declared reserve · a ceiling); `CityScene3D` runs in
+`fill` mode on every tenant and the 1 : 0,62 constant is gone. The phone top rail on this tab keeps
+title · level · bell (202 → 77 px). `EraSwitcher.jsx` is a wrapping grid of two-line tiles («Kỷ 12» over
+«★ | 4/5 | —»): **15 eras = 2 rows at 390, 1 row at 1280**. New `components/city/cityCopy.js` holds
+the tab's sentences as pure functions. The «Phiên trong kỷ» cell became **«Điểm kỹ năng»** — whole-city
+SP first, this era's share as hint — from `engine/skillPointEconomy.js`; the count moved to the plaque
+under the picture. Every unbuilt slot names its price; in a sealed era it names the path
+(«trùng tu được · +1 SP», ADR-012) — the brief's "never buildable again" was false in the approved
+code. The «EP lúc niêm phong» cell is gone. `engine/city3d/daylight.js` gains `MUSEUM_HOUR = 15` /
+`museumDaylight()`: a sealed era is lit once (0,37 at night = 0,37 at noon). New `engine/cityArrival.js`
++ `components/city/CityMoment.jsx`: when buildings finished since this device last showed the tab
+(a count difference stamped in `localStorage`), the camera flies to the newest and a 4,2-second banner
+names it and its SP. The «Kéo để xoay» hint is a pill on the picture.
+
+**Impact.** Picture **268 px = 31,8 %**, starting at **y = 190** (12 eras) / 204 (15); stat grid above
+the floating tab bar at both. Desktop: stat row on screen (was below the fold). No 3D geometry, camera,
+light or DPR touched; ADR-007 test unchanged and green. 43 new tests; FAST pass 1.682 · 0 fail ·
+skipped 1.
+
+**Compatibility.** No schema change, no migration. One new per-device `localStorage` key
+(`dc-city-seen-v1`), never synced. Decided NOT to build a museum gallery: the tile strip is the overview.
+
 ## 2026-09-08 — Round 45: every bonus names itself at the ending, and opening a skill becomes a moment (ADR-085)
 
 **Purpose.** Answer the question round 44 created: *"is it worth spending points on?"*. Walking all

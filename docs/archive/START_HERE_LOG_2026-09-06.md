@@ -458,3 +458,34 @@ stated twice drifts.
   ⚠️ Inspect a running/break state with a seeded `timerSession`/`breakSession` fixture (ms timestamps, **regenerate
   it right before each shot — a 25-minute session in a stale fixture has already ENDED and you photograph the
   reward card instead**) and `--settle 900`.
+
+## Rotated out of `START_HERE.md` on 2026-09-08 (round 46 arrived; keep the 3 most recent)
+
+- **Loop — ROUND 43 (2026-09-08): ONE DESTINATION, AND EVERY DISTANCE IN SESSIONS (ADR-082).**
+  ⚠️ **`engine/journey.js` owns the destination and nothing else may compute it.** The city is finite —
+  15 eras x 5 blueprints = **75 buildings** — and that is the app's answer to *"đi tới đâu?"*. The
+  denominator is SUMMED from `BLUEPRINT_CATALOG`, never typed; `hooks/useJourney.js` is the only seam
+  to the store. ⚠️ **No screen prints raw EP as a distance any more.** `describeRailProgress` says the
+  distance in SESSIONS while that is honest and falls through to `38/75 công trình` when it is not —
+  and it must NEVER fall back to EP (`describeStageCountdown` has an EP branch for the no-sample case;
+  the guard that drops it is pinned by a red test). Same rule everywhere: rank card says `Đã đủ`, badge
+  thresholds say hours past 120 minutes, the level countdown HIDES past `STAGE_COUNTDOWN_MAX_SESSIONS`
+  rather than print a 155-session wall. The city's fourth stat cell is the destination, not `Cư dân`.
+  ⚠️ XP rewards for the 360 achievements were measured (126.030 XP ≈ 21 levels ≈ 42 SP over the game)
+  and REJECTED as a second faucet — that decision is still open in `TECH_DEBT.md`.
+  Also: `components/journeyWiring.test.js` reads call sites, because an engine test proves a function
+  RUNS and never that anyone CALLS it — this project has now shipped three finished-but-uncalled ones.
+
+- **Loop — ROUND 41 (2026-09-08): THE LONG RHYTHMS, AND A TOOL THAT CAN SEE (ADR-081).**
+  ⚠️ **`shot.mjs --dilate <rate>` is how a transient moment is photographed now.** One framer animation
+  runs on TWO clocks (`opacity` on WAAPI, `x/y/scale` on framer's own rAF loop); `--dilate` slows both,
+  patching `performance.now()` in the page while `Date.now()` stays real. Add `--frames n --frame-gap ms`
+  for a filmstrip, `--city2d` to keep the main thread free, `--ask <js>` to question the page. Three
+  rounds in a row shipped something nobody could see before this existed — do not ship a moment without
+  a photograph of it. The burst was redrawn the day it could be seen (two colours, upward fan).
+  Day and week now open and close (`engine/dayArc.js` + `focus/DayMoment.jsx`: 7-second banner, stamps in
+  `localStorage`, no branch that reads as a failure). Three surprises at three beats: «Gạch đôi» (ending) ·
+  «Guồng vàng» (mid-session, a hash so both sides agree without state) · «Thợ đêm» (a day's open,
+  `rollNightBuilder`). No silence over 15 minutes at any session length. Inspect: `--preview arc-gift`
+  (and `arc-day-open` · `arc-day-close` · `arc-week-open` · `arc-week-close`), `--preview loot-lucky
+  --card project --dilate 0.05 --watch "HÔM NAY MAY" --snap --frames 2`.

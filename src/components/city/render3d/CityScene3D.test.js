@@ -103,3 +103,21 @@ test('GIỜ VIỆT NAM, KHÔNG PHẢI GIỜ MÁY — kể cả ở lớp vỏ Re
     + 'Máy để nhầm múi giờ sẽ cho Đàm bầu trời sai chặng.',
   );
 });
+
+/**
+ * ROUND 46 (ADR-086): A SEALED ERA IS LIT ONCE. Measured 2,5× darker at night than at noon on a
+ * city that never changes again — the museum piece was being lit by tonight's clock. The current
+ * era keeps the real clock; the dimmed (sealed) scene reads the fixed museum hour instead.
+ * Source-level, like the tests above: the daylight choice is one expression inside a WebGL effect.
+ */
+test('BẢO TÀNG THẮP CỐ ĐỊNH: cảnh `dimmed` đọc `museumDaylight()`, không đọc đồng hồ', () => {
+  assert.ok(
+    /import\s*\{[^}]*\bmuseumDaylight\b[^}]*\}\s*from\s*'\.\.\/\.\.\/\.\.\/engine\/city3d\/daylight'/.test(CODE),
+    'Cảnh không còn import `museumDaylight` — bảo tàng lại theo đồng hồ tối nay.',
+  );
+  assert.ok(
+    /const daylight = dimmed \? museumDaylight\(\) : deriveDaylight\(getVietnamHour\(\)\);/.test(CODE),
+    'Dòng chọn ánh sáng phải là `dimmed ? museumDaylight() : deriveDaylight(getVietnamHour())` — '
+    + 'kỷ niêm phong một giờ cố định, kỷ đang chơi theo giờ thật.',
+  );
+});

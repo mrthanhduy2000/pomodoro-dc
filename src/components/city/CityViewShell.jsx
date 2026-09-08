@@ -1,14 +1,29 @@
 /**
- * CityViewShell.jsx — KHUNG của màn hình Thành Phố: thanh chuyển kỷ, tiêu đề kỷ, ô đặt bộ vẽ,
- * bảng số liệu, danh sách công trình.
+ * CityViewShell.jsx — KHUNG của màn hình Thành Phố: thanh chuyển kỷ, bức tranh, chú thích, bảng số
+ * liệu, hàng đợi xây, danh sách công trình.
  *
  * ⚠️ Luật quan trọng nhất của file này: **nó không biết bộ vẽ nào đang chạy.** Bộ vẽ được truyền
- * vào qua `children` và tự quyết định kích thước của mình. Nhờ vậy khi thêm bộ vẽ 3D (`render3d/`),
- * hay khi phải lùi từ 3D về 2D giữa chừng (mất WebGL context), khung màn hình không đổi một dòng —
- * chỉ nội dung trong ô trống đổi.
+ * vào qua `children`; KÍCH THƯỚC của nó do `stageMetrics.js` quyết (ADR-086), không do khung này.
+ * Nhờ vậy khi thêm bộ vẽ 3D (`render3d/`), hay khi phải lùi từ 3D về 2D giữa chừng (mất WebGL
+ * context), khung màn hình không đổi một dòng — chỉ nội dung trong ô trống đổi.
  *
  * Ba trạng thái rỗng (thất truyền / bãi đất trống) cũng nằm ở đây chứ không nằm trong bộ vẽ: chúng
  * là chuyện của DỮ LIỆU, không phải chuyện của cách vẽ.
+ *
+ * ══════════════════════════════════════════════════════════════════════════════════════════════
+ * ROUND 46 (ADR-086) — THE SCREEN CATCHES UP WITH THE CITY'S THREE ROLES
+ * Round 43 made the city the destination (75 buildings); round 44 made it the bank (1 building =
+ * 1 SP); ADR-007 makes it the one thing that can never be revised. Measured 2026-09-08 on an iPhone
+ * (390×844, 12 eras): the picture was 201 px = 23,8 % of the screen and started at y = 494; the tab
+ * said «SP» zero times while the ledger read 37. So, in this order, top to bottom:
+ *   1. the era tiles (2 rows at 15 eras, `EraSwitcher.jsx`),
+ *   2. the PICTURE, flush with the card's edges, sized by `stageMetrics.js` — biggest thing here,
+ *   3. its caption (era name · status · country),
+ *   4. four stat cells — the second now says what the city PAYS, in SP, from
+ *      `engine/skillPointEconomy.js`; the museum's «EP lúc niêm phong» is gone (an EP number nobody
+ *      could act on, printed raw against the round-43 rule).
+ * Đàm's acceptance test is literal: open the tab on the phone, scroll nothing, see the city, how
+ * far it is from the destination, and how many skill points it has paid.
  */
 
 import { motion } from 'framer-motion';
@@ -17,19 +32,15 @@ import { useEnterMotion, useSnapMotion } from '../../lib/motionPresets';
 
 import { summarizeMuseum } from '../../engine/cityCompletion';
 import { describeJourney } from '../../engine/journey';
+import { cityEarnedSP } from '../../engine/skillPointEconomy';
 import { getEraStyle } from '../../engine/city3d/eraStyle';
 import EraSwitcher from './EraSwitcher';
 import { cardStyle, eraSolid } from './cityTokens';
+import { SP_TAG, eraStatusLine, slotNote } from './cityCopy';
 import { DAY_PHASE_LABEL, deriveDaylight } from '../../engine/city3d/daylight';
 import { getVietnamHour } from '../../engine/time';
 
 const eyebrow = 'mono text-[10px] uppercase tracking-[0.2em]';
-
-/** Nhãn phụ của một ô trong bảng sưu tập. Ô đã xây không cần nhãn — cấp Lv. đã nói thay. */
-const SLOT_NOTE = {
-  building: 'đang xây',
-  empty:    'chưa xây',
-};
 
 /**
  * Tô nhẹ dòng ứng với công trình Đàm vừa chạm trong cảnh 3D.
@@ -114,13 +125,9 @@ export default function CityViewShell({
   const label = viewing?.label ?? `Kỷ ${era}`;
   const isCurrent = !!viewing?.isCurrent;
   // ADR-077: at zero buildings the empty state names the project the FIRST session will lay a brick for —
-
   // the same auto-pick `completeFocusSession` makes, so the city and the Focus strip tell one story.
-
   const firstProject = (layout.isEmpty && scaffolds.length === 0 && isCurrent)
-
     ? pickSessionProject({ craftingQueue: [], activeBook: era, buildings: [] }).project
-
     : null;
   const isLost = !!viewing?.isLost;
 
@@ -133,104 +140,107 @@ export default function CityViewShell({
   // phố, còn sưu tập là chuyện của catalog.
   const levelOf = new Map(layout.buildings.map((building) => [building.bpId, building.level]));
 
-  // ⚠️ DÂN SỐ KHÔNG CÒN ĐƯỢC ĐẾM Ở ĐÂY (round 43). The stat cell that printed it is gone — see the
-  // `Thành phố` cell below for why — and `deriveResidentCount` was imported for that cell alone.
-  // The residents themselves did NOT go anywhere: `buildResidents` in the 3D scene calls the same
-  // engine function and they still walk the streets in the picture right above these cells. What
-  // was removed is the NUMBER, not the reward — a crowd you can watch says "28" better than the
-  // digits did, and the digits were costing a quarter of the only four stat slots this screen has.
+  // ⚠️ DÂN SỐ KHÔNG CÒN ĐƯỢC ĐẾM Ở ĐÂY (round 43) — the residents still walk the streets in the
+  // picture above these cells (`buildResidents` calls the same engine function); only the NUMBER
+  // went, because it was the one cell of four that was pure decoration.
 
   // ĐIỂM TỔNG CỦA CẢ BẢO TÀNG — "tôi đã đi được bao xa" trên toàn hành trình, không phải trong kỷ
   // này. Suy ra từ chính danh sách kỷ đã có, không lưu một byte nào.
   const museum = summarizeMuseum(eras);
   // ADR-082: the destination — 75 buildings across 15 eras. See the `Thành phố` cell below.
   const journey = describeJourney({ museum, activeBook: era });
+  // ADR-084/086: what the city has PAID, straight from the economy — the whole city, and this era's
+  // share of it. Never a typed rate: `cityEarnedSP` owns the arithmetic.
+  const citySP = cityEarnedSP(museum.builtTotal);
+  const eraSP = cityEarnedSP(completion?.done ?? 0);
 
   // ĐẤT NƯỚC BIỂU TƯỢNG của kỷ đang xem. Lấy thẳng từ bảng ngữ pháp đang dựng hình, KHÔNG chép lại
   // thành một bảng riêng ở tầng giao diện: chép ra là ngày nào đó đổi kiểu mái mà quên đổi nhãn,
   // rồi màn hình khoe "kiến trúc Ý" trong khi thành phố đang dựng mái chồng Á Đông.
   const eraStyle = getEraStyle(era);
 
+  const hasPicture = !isLost && !(layout.isEmpty && scaffolds.length === 0);
+
   return (
     <div className="flex flex-col gap-3">
       <EraSwitcher eras={eras} viewingEra={era} onSelect={onSelectEra} />
 
-      <div className="overflow-hidden p-3 sm:p-4" style={cardStyle}>
-        <div className="mb-1.5 flex flex-wrap items-baseline justify-between gap-x-3 gap-y-1">
-          <div className="flex items-center gap-2">
-            <span
-              className="inline-block h-2.5 w-2.5 shrink-0 rounded-full"
-              style={{ background: eraSolid(era) }}
-              aria-hidden="true"
-            />
-            <h2
-              className="text-[16px] font-semibold"
-              style={{ color: 'var(--ink)', fontFamily: 'var(--skin-font-display, inherit)' }}
-            >
-              {label}
-            </h2>
-          </div>
-          <div className="text-[11px]" style={{ color: 'var(--muted)' }}>
-            {isCurrent
-              ? 'Đang xây'
-              : (isLost
-                  ? 'Thất truyền'
-                  : `Đã niêm phong${viewing?.sealedAt ? ` ngày ${viewing.sealedAt}` : ''}`)}
-          </div>
-        </div>
-
-
+      {/*
+        THE PICTURE CARD. The stage sits FLUSH with the card's edges (the card clips it with its own
+        radius) and its caption follows underneath, the way a photograph is captioned: the era's
+        name and status, then where its architecture comes from. Before round 46 the title stood
+        ABOVE the picture and the caption had its own line-height budget; at 390 px that was 60 px
+        of words before the first pixel of city.
+      */}
+      <div className="overflow-hidden" style={cardStyle}>
         {isLost ? (
-          <EmptyState icon="🏛️" title="Thành phố thất truyền">
-            {label} · thành phố này đã đi qua trước khi bảo tàng được dựng. Từ kỷ hiện tại trở đi,
-            mọi thành phố sẽ được giữ lại.
-          </EmptyState>
-        ) : (layout.isEmpty && scaffolds.length === 0) ? (
+          <div className="p-3 sm:p-4">
+            <EmptyState icon="🏛️" title="Thành phố thất truyền">
+              {label} · thành phố này đã đi qua trước khi bảo tàng được dựng. Từ kỷ hiện tại trở đi,
+              mọi thành phố sẽ được giữ lại.
+            </EmptyState>
+          </div>
+        ) : !hasPicture ? (
           // ⚠️ CÓ CÔNG TRƯỜNG THÌ KHÔNG PHẢI "BÃI ĐẤT TRỐNG" NỮA, dù chưa công trình nào xong.
           // `layout.isEmpty` cố ý chỉ đếm công trình ĐÃ XÂY (lớp nền trang chủ dựa vào nó), nhưng
           // ở tab này mà chặn theo cờ đó thì hỏng đúng khoảnh khắc đáng giá nhất: lần đầu Đàm khởi
           // công, anh mở tab lên để xem thành quả phiên vừa rồi và nhận về đúng chữ "chưa có gì".
-          <EmptyState icon="🧱" title="Viên gạch đầu tiên đang chờ">
-            {firstProject
-              ? `Phiên tập trung đầu tiên đặt viên gạch đầu cho ${firstProject.label} — ${firstProject.total} phiên là nó mọc lên ở đây.`
-              : `${label} chưa có công trình nào. Mỗi phiên tập trung là một viên gạch.`}
-          </EmptyState>
+          <div className="p-3 sm:p-4">
+            <EmptyState icon="🧱" title="Viên gạch đầu tiên đang chờ">
+              {firstProject
+                ? `Phiên tập trung đầu tiên đặt viên gạch đầu cho ${firstProject.label} — ${firstProject.total} phiên là nó mọc lên ở đây.`
+                : `${label} chưa có công trình nào. Mỗi phiên tập trung là một viên gạch.`}
+            </EmptyState>
+          </div>
         ) : (
-          <motion.div
-            key={era}
-            {...enterMotion}
-          >
+          <motion.div key={era} {...enterMotion}>
             {children}
-            {/*
-              MỘT DÒNG NÓI RA "THÀNH PHỐ NÀY LẤY MẪU TỪ ĐÂU".
-              Đàm: *"mỗi kỷ có thể lấy một đất nước làm biểu tượng"*. Hình khối đã theo đúng nước ấy
-              từ `eraStyle.js`, nhưng nếu không nói ra thì Đàm phải TỰ ĐOÁN — mà đoán ra "Bồ Đào
-              Nha" từ một cái kho có cột buồm thì gần như không ai làm được. Một dòng chữ biến công
-              sức dựng hình thành thứ đọc được, và biến việc lên kỷ mới thành "đi thăm một nước mới".
-
-              ⚠️ ĐỨNG DƯỚI HÌNH, không đứng trên (đổi 2026-08-29). Nó là CHÚ THÍCH cho bức ảnh, mà
-              chú thích thì đọc SAU khi đã nhìn. Ở trên, nó chiếm 2 dòng ở khung 390px và đẩy thành
-              phố — thứ đáng xem nhất màn hình — xuống thấp thêm chừng ấy. Đo trước khi đổi: canvas
-              chỉ chiếm 24% chiều cao và bắt đầu ở y=537/844.
-              Kỷ thất truyền thì giấu: ở đó không có thành phố nào để mà nói nó giống nước nào.
-            */}
-            {eraStyle.country && (
-              <p className="mt-2 text-[11px] leading-snug" style={{ color: 'var(--muted)' }}>
-                Kiến trúc lấy mẫu từ{' '}
-                <span className="font-semibold" style={{ color: 'var(--ink)' }}>{eraStyle.country}</span>
-                {' '}· {eraStyle.landmark}
-                {/*
-                  ⚠️ CHẶNG NGÀY — GHÉP VÀO DÒNG NÀY, KHÔNG THÊM DÒNG MỚI. Cảnh 3D đã đổi theo đồng
-                  hồ thật (giờ Việt Nam) từ lâu: bình minh hồng, trưa gắt, đêm xanh có đèn cửa sổ.
-                  Nhưng không màn hình nào NÓI RA, nên với Đàm nó chỉ là "hôm nay trông hơi khác" —
-                  không đủ thành một lý do mở app vào giờ khác. Một chữ biến hiệu ứng vô hình thành
-                  lời mời quay lại, mà không tốn thêm một dòng nào trên màn hình.
-                  Chỉ hiện cho kỷ ĐANG chơi: bảo tàng là ảnh chụp một thành phố đã niêm phong, nói
-                  "đang là hoàng hôn" ở đó là nói về một nơi không còn đổi nữa.
-                */}
-                {isCurrent && ` · ${DAY_PHASE_LABEL[deriveDaylight(getVietnamHour()).phase]}`}
-              </p>
-            )}
+            <div className="flex flex-col gap-1 px-3 pb-3 pt-2 sm:px-4 sm:pb-4">
+              <div className="flex flex-wrap items-baseline justify-between gap-x-3 gap-y-0.5">
+                <div className="flex items-center gap-2">
+                  <span
+                    className="inline-block h-2.5 w-2.5 shrink-0 rounded-full"
+                    style={{ background: eraSolid(era) }}
+                    aria-hidden="true"
+                  />
+                  <h2
+                    className="text-[16px] font-semibold"
+                    style={{ color: 'var(--ink)', fontFamily: 'var(--skin-font-display, inherit)' }}
+                  >
+                    {label}
+                  </h2>
+                </div>
+                {/* «Đang xây · 143 phiên» / «Đã niêm phong 2026-05-01 · 143 phiên» — `cityCopy.js`.
+                    The session count lives HERE now, not in a stat cell: for a sealed city it is the
+                    plaque ("this one took 143 sessions"), and a plaque belongs under the picture. */}
+                <div className="text-[11px]" style={{ color: 'var(--muted)' }}>
+                  {eraStatusLine({ isCurrent, isLost, sealedAt: viewing?.sealedAt, sessionCount: stats.sessionCount })}
+                </div>
+              </div>
+              {/*
+                MỘT DÒNG NÓI RA "THÀNH PHỐ NÀY LẤY MẪU TỪ ĐÂU".
+                Đàm: *"mỗi kỷ có thể lấy một đất nước làm biểu tượng"*. Hình khối đã theo đúng nước ấy
+                từ `eraStyle.js`, nhưng nếu không nói ra thì Đàm phải TỰ ĐOÁN — mà đoán ra "Bồ Đào
+                Nha" từ một cái kho có cột buồm thì gần như không ai làm được. Một dòng chữ biến công
+                sức dựng hình thành thứ đọc được, và biến việc lên kỷ mới thành "đi thăm một nước mới".
+                Nó là CHÚ THÍCH cho bức ảnh, mà chú thích thì đọc SAU khi đã nhìn — nên đứng dưới.
+              */}
+              {eraStyle.country && (
+                <p className="text-[11px] leading-snug" style={{ color: 'var(--muted)' }}>
+                  Kiến trúc lấy mẫu từ{' '}
+                  <span className="font-semibold" style={{ color: 'var(--ink)' }}>{eraStyle.country}</span>
+                  {' '}· {eraStyle.landmark}
+                  {/*
+                    ⚠️ CHẶNG NGÀY — GHÉP VÀO DÒNG NÀY, KHÔNG THÊM DÒNG MỚI. Cảnh 3D đổi theo đồng hồ
+                    thật (giờ Việt Nam): bình minh hồng, trưa gắt, đêm xanh có đèn cửa sổ. Một chữ
+                    biến hiệu ứng vô hình thành lời mời quay lại, không tốn thêm dòng nào.
+                    Chỉ hiện cho kỷ ĐANG chơi. Bảo tàng nay được THẮP CỐ ĐỊNH (ADR-086,
+                    `museumDaylight`) — nên ở đó không có chặng ngày nào để mà nói.
+                  */}
+                  {isCurrent && ` · ${DAY_PHASE_LABEL[deriveDaylight(getVietnamHour()).phase]}`}
+                </p>
+              )}
+            </div>
           </motion.div>
         )}
       </div>
@@ -250,66 +260,49 @@ export default function CityViewShell({
                 ? 'còn 1 nữa ★'
                 : null,
             },
-            { label: 'Phiên trong kỷ', value: stats.sessionCount },
+            // ⚠️ Ô NÀY TỪNG LÀ «PHIÊN TRONG KỶ» (round 46, ADR-086). It failed the test round 43
+            // used to retire «Cư dân» — *what can Đàm DO with this number?* — nothing: it only
+            // grows, cannot be spent, aimed at or finished. The count itself is kept, as the plaque
+            // in the caption above. What takes the cell is the number this tab had never printed
+            // while being the screen that EARNS it: the skill points the city has paid, whole city
+            // first (ADR-084's rule: a screen that names a reward names it in SP first), this era's
+            // share as the hint. Both from `engine/skillPointEconomy.js` — no typed rate.
+            {
+              label: 'Điểm kỹ năng',
+              value: `${citySP} SP`,
+              hint: eraSP > 0 ? `+${eraSP} từ kỷ này` : null,
+            },
             // ⚠️ Ô NÀY TỪNG LÀ "CHUỖI NGÀY", VÀ ĐÓ LÀ MỘT Ô BỊ LÃNG PHÍ — soi bằng mắt mới thấy
             // (2026-08-13, Phase 4H). Thanh tiêu đề của app đã hiện "CHUỖI 4" ở ngay trên đầu MỌI
-            // tab (`App.jsx`, `TinyStat label="Chuỗi"`), nên trên màn hình này con số 4 xuất hiện
-            // HAI LẦN cách nhau vài phân — chiếm mất một trong bốn ô số liệu để nói lại một điều
-            // vừa nói. Đây đúng luật mà chính ô "Cư dân" ngay bên dưới đã dùng để giành lại chỗ:
-            // *hai chỗ nói cùng một chuyện thì chỗ nói ít hơn phải nhường.*
+            // tab, nên con số 4 xuất hiện HAI LẦN cách nhau vài phân. *Hai chỗ nói cùng một chuyện
+            // thì chỗ nói ít hơn phải nhường.*
             //
-            // Thay bằng ĐIỂM TỔNG BẢO TÀNG, và đây không phải một con số mới nghĩ ra:
-            // `summarizeMuseum` đã được viết, ghi chú đầy đủ và có bài test từ Phase 4B — docstring
-            // của nó tự gọi mình là *"con số duy nhất trả lời 'tôi đã đi được bao xa'"* — nhưng
-            // **chưa màn hình nào từng gọi tới nó**. Nó nằm chết trong engine suốt từ đó.
-            // ⚠️ BÀI HỌC: bài test tầng engine chứng minh hàm CHẠY ĐÚNG, nó **không** chứng minh
-            // hàm CÓ AI GỌI. Một tính năng đã xong 90% mà thiếu đúng dòng nối thì không có gì đỏ
-            // lên — cả 551 bài test vẫn xanh. Xem `cityViewShellWiring.test.js`.
+            // Thay bằng ĐIỂM TỔNG BẢO TÀNG (`summarizeMuseum`, chết trong engine từ Phase 4B tới
+            // 4H vì không màn hình nào gọi — xem `cityViewShellWiring.test.js`). Vì sao đáng một
+            // trong bốn ô: kỷ cũ niêm phong VĨNH VIỄN (ADR-007), nên "6/8 kỷ trọn vẹn" là điểm số
+            // DUY NHẤT trong app không sửa lại được nữa, và là chỗ duy nhất gộp những ngôi sao ★
+            // rải trên thanh chuyển kỷ thành một con số.
             //
-            // Vì sao con số này đáng một trong bốn ô: kỷ cũ niêm phong VĨNH VIỄN (ADR-007), nên
-            // "6/8 kỷ trọn vẹn" là điểm số DUY NHẤT trong app không sửa lại được nữa. Nó cũng là
-            // chỗ duy nhất gộp những ngôi sao ★ rải rác trên thanh chuyển kỷ thành một con số —
-            // trước đây muốn biết mình được mấy sao thì phải tự cuộn thanh đó mà đếm.
+            // ⚠️ ROUND 46: the sealed-era variant «EP lúc niêm phong: 5006» is GONE. Raw EP, no
+            // separator, and nothing Đàm could do with it — it failed the same question as
+            // «Cư dân» and broke the round-43 rule that no screen prints raw EP. The museum score
+            // is the same number whichever era he is looking at, like the destination cell: the
+            // two things that must not move while he browses.
             {
-              label: isCurrent ? 'Kỷ trọn vẹn' : 'EP lúc niêm phong',
+              label: 'Kỷ trọn vẹn',
               // `countedEras === 0` chỉ xảy ra khi MỌI kỷ đều thất truyền (tài khoản có từ trước
               // khi bảo tàng được dựng, xem `MIGRATION.md` schema 3→4). "0/0" là một con số vô
               // nghĩa và lại còn trách oan, nên ca đó lùi về chuỗi ngày như cũ.
-              value: isCurrent
-                ? (museum.countedEras > 0
-                    ? `${museum.completeEras}/${museum.countedEras}`
-                    : stats.streakLength)
-                : (viewing?.epAtSeal ?? 0),
+              value: museum.countedEras > 0
+                ? `${museum.completeEras}/${museum.countedEras}`
+                : stats.streakLength,
             },
-            // DÂN SỐ. Con số này vốn đã được tính để sinh người đi lại trong cảnh 3D
-            // (`deriveResidentCount`), nhưng trước nay chỉ hiện trong BẢNG ĐO HIỆU NĂNG — một bảng
-            // gỡ lỗi phải vào Cài đặt bật lên mới thấy. Một thành phố đông dần lên là phần thưởng;
-            // để phần thưởng nằm trong bảng gỡ lỗi thì coi như không có phần thưởng.
-            //
-            // ⚠️ Ô này TỪNG đổi nghĩa thành "Đang xây: N" khi có công trường. Đo bằng mắt
-            // (2026-08-13) thì thấy nó THỪA: điều kiện hiện nó trùng khít với điều kiện hiện thẻ
-            // "Đang xây" ngay bên dưới, mà thẻ đó nói đủ tên công trình + còn mấy phiên + mở khoá
-            // gì. Hai chỗ nói cùng một chuyện thì chỗ nói ít hơn phải nhường. Và vì công trường
-            // gần như LÚC NÀO cũng có, ô đổi-nghĩa đó khiến dân số thực tế vẫn vô hình.
-            // ("Cảnh vật" — số cây cối — thì đã nhường chỗ từ trước: con số chẳng nói lên điều gì.)
-            //
-            // ⚠️ VÀ NAY CHÍNH "CƯ DÂN" PHẢI NHƯỜNG (round 43, ADR-082) — by the same law it once
-            // used to win the slot. Column three of the unit audit was: *what can Đàm DO with this
-            // number?* For residents the answer is nothing: it is derived (`deriveResidentCount`),
-            // it cannot be spent, aimed at, or finished, and 28 → 29 changes no decision he makes.
-            // It was the only cell of the four that was pure decoration.
-            //
-            // What takes it is the one number this app had never printed: **the destination**.
-            // 15 eras × 5 blueprints = 75 buildings, and then the city is DONE. Every other unit in
-            // the game only grows; this one ENDS, which is what makes it an answer to "where am I
-            // going?" rather than another "keep going". The numerator is `museum.builtTotal` — the
-            // same bricks already counted one cell to the left — so no new unit was invented
-            // (round-43 rule: no ninth unit), only the denominator that was always in the catalog.
-            //
+            // THE DESTINATION (round 43, ADR-082). 15 eras × 5 blueprints = 75 buildings, and then
+            // the city is DONE — the one unit in the game that ENDS, which is what makes it an
+            // answer to "where am I going?". Numerator = `museum.builtTotal`, the same bricks the
+            // SP cell just priced; denominator from the catalog, never typed.
             // ⚠️ Sống ở kỷ nào cũng ĐÚNG SỐ ẤY: the journey is the whole city, not the era on
-            // screen, so this cell does NOT switch source when Đàm browses a sealed era. That is
-            // deliberate — the destination is the one thing that must not move while he looks
-            // around.
+            // screen, so this cell does NOT switch source when Đàm browses a sealed era.
             { label: 'Thành phố', value: journey.short, hint: journey.remaining > 0 ? `còn ${journey.remaining}` : 'trọn vẹn ★' },
           ].map((stat) => (
             <div key={stat.label} className="px-3 py-2.5" style={cardStyle}>
@@ -326,16 +319,19 @@ export default function CityViewShell({
 
         ⚠️ Đặt TRÊN danh sách công trình đã xây, có chủ ý: cái đã xong là phần thưởng đã lĩnh, cái
         đang xây mới là thứ đang chờ chính anh — mà thứ đang chờ thì phải nằm trên.
+        ⚠️ KHÔNG gác `isCurrent` (đổi Phase 4D): kỷ đã niêm phong cũng có thể đang trùng tu một
+        "di sản"; cảnh 3D bên trên đã dựng giàn giáo cho nó, nên giấu bảng này đi thì Đàm thấy giàn
+        giáo mà không có chỗ nào nói còn mấy phiên nữa.
+        ⚠️ ROUND 46: the card's header names the PAY — «xong là +1 SP» — from the economy, not a
+        typed number. A building finishing is the most expensive event in the game and this list is
+        where it is approached one session at a time; it must say what waits at the end.
       */}
-      {/* ⚠️ KHÔNG còn gác `isCurrent` (đổi Phase 4D). Kỷ đã niêm phong nay cũng có thể đang xây dở
-          một "di sản"; cảnh 3D bên trên đã dựng giàn giáo cho nó, nên giấu bảng này đi thì Đàm
-          thấy giàn giáo mà không có chỗ nào nói còn mấy phiên nữa. */}
       {!isLost && scaffolds.length > 0 && (
         <div className="p-3 sm:p-4" style={cardStyle}>
           <div className="flex items-baseline justify-between gap-2">
             <div className={eyebrow} style={{ color: 'var(--muted-2)' }}>Đang xây</div>
             <div className="text-[11px]" style={{ color: 'var(--muted)' }}>
-              Mỗi phiên xong là một nấc giàn giáo
+              Mỗi phiên một nấc · xong là <span className="font-semibold" style={{ color: 'var(--accent)' }}>{SP_TAG}</span>
             </div>
           </div>
           <ul className="mt-2.5 flex flex-col gap-3">
@@ -395,11 +391,14 @@ export default function CityViewShell({
         BẢNG SƯU TẬP — trước đây chỗ này chỉ liệt kê những gì ĐÃ xây, nên nó là một tấm biên lai:
         đọc xong biết mình có gì, không biết mình thiếu gì. Nay nó liệt kê ĐỦ cả 5 bản vẽ của kỷ,
         ô chưa xây để mờ. Cùng một danh sách, nhưng nó thôi làm biên lai và thành một tấm bản đồ:
-        mở lên là thấy ngay còn bao nhiêu chỗ trống, và mỗi chỗ trống có TÊN.
+        mở lên là thấy ngay còn bao nhiêu chỗ trống, và mỗi chỗ trống có TÊN — và có GIÁ (+1 SP).
 
-        ⚠️ Với kỷ đã niêm phong, những ô mờ đó VĨNH VIỄN mờ (ADR-007: bảo tàng bất động). Đó chính
-        là thứ khiến ngôi sao "trọn vẹn" đáng giá — nếu lúc nào cũng quay lại xây bù được thì nó
-        chỉ là chuyện sớm muộn, không phải thành tích.
+        ⚠️ Với kỷ đã niêm phong, một ô mờ KHÔNG phải "mất vĩnh viễn" — câu đó đứng ở đây từ Phase
+        4B và đã hết đúng từ ADR-012 (2026-08-13, Đàm chọn): bảo tàng trùng tu được, từng ô một,
+        qua Hành trang › «Trùng tu di sản», và ô trùng tu xong trả đúng một điểm kỹ năng như mọi
+        công trình khác (`countBuiltBuildings` đếm cả bảo tàng). Cái làm ngôi sao ★ đáng giá là
+        thành phố KHÔNG XÊ DỊCH (ADR-007), không phải việc nó không thể lớn thêm. Nhãn ô nói đúng
+        điều đó (`cityCopy.js`).
 
         ⚠️ Vẫn hiện cả khi chưa xây gì. Đúng lúc thành phố trống trơn mới là lúc cần nhất một danh
         sách nói "đây là 5 thứ sẽ mọc lên ở đây" — chứ không phải một khoảng trắng.
@@ -448,7 +447,7 @@ export default function CityViewShell({
                   )}
                   {!built && (
                     <span className="shrink-0 text-[11px]" style={{ color: 'var(--muted-2)' }}>
-                      {SLOT_NOTE[slot.state]}
+                      {slotNote(slot.state, { sealed: !isCurrent })}
                     </span>
                   )}
                 </li>

@@ -161,7 +161,9 @@ test('THANH CHUYỂN KỶ xếp lưới, không cuộn ngang (ADR-080) — khôn
   assert.ok(found, 'không thấy EraSwitcher.jsx');
   const rail = codeOnly(found.source);
 
-  assert.match(rail, /flex-wrap/, 'thanh chuyển kỷ phải xuống dòng — cuộn ngang là cắt chip');
+  // Round 46 (ADR-086): the strip is a `repeat(auto-fill, …)` grid of two-line tiles — still a
+  // wrapping layout, still never a scroller. Either wrapping form satisfies the ADR-080 promise.
+  assert.match(rail, /flex-wrap|auto-fill/, 'thanh chuyển kỷ phải xuống dòng — cuộn ngang là cắt chip');
   assert.doesNotMatch(rail, /overflow-x-auto|overflow-x-scroll/, 'cuộn ngang quay lại ⇒ chip đầu lại bị cắt nửa');
   // Không còn gì để cuộn thì không được còn mã cuộn: mã chết ở đây là một cái bẫy cho lần "sửa" sau.
   assert.doesNotMatch(rail, /scrollTo\(|scrollIntoView|ResizeObserver|\.offsetLeft/, 'cơ chế cuộn cũ còn sót — thanh đã là lưới');
@@ -244,8 +246,9 @@ test('DẤU "TRỌN VẸN" KHÔNG ĐƯỢC TÔ BẰNG MÀU KỶ — đã đo, kh
   //
   // Cám dỗ tái phạm rất cao: `eraSolid` đã có sẵn ngay trong hai file này (dùng cho chấm tròn, cho
   // thanh tiến độ) nên đổi lại "cho hợp màu kỷ" chỉ mất một chữ. Bài test này là thứ duy nhất cản.
+  // Round 46 (ADR-086): the tile's star colour lives in `MARK_STYLE.complete` (EraSwitcher.jsx).
   const targets = [
-    ['components/city/EraSwitcher.jsx',   /aria-label="trọn vẹn"[\s\S]{0,240}?>/],
+    ['components/city/EraSwitcher.jsx',   /complete:\s*\{[^}]*\}/],
     ['components/city/CityViewShell.jsx', /isComplete\s*\?\s*'[^']+'\s*:/],
   ];
 
@@ -278,8 +281,13 @@ test('"ĐANG XÂY" TRÊN THANH KỶ KHÔNG ĐƯỢC GÁC BẰNG `isCurrent` — 
 
   assert.doesNotMatch(code, /\{\s*era\.isCurrent\s*&&\s*<span[^>]*>·\s*đang xây/,
     'nhãn "đang xây" đang gác bằng mỗi `era.isCurrent` — di sản dang dở ở kỷ cũ sẽ tàng hình');
-  assert.match(code, /state\s*===\s*'building'/,
-    'EraSwitcher phải nhìn vào slot trạng thái "building" để biết kỷ cũ còn đang xây');
+  // Round 46 (ADR-086): the tile's words come from `cityCopy.eraTile`, so the "still building" look
+  // (accent tone on a sealed era's fraction) is decided there — and it must still read the slots.
+  const copy = SOURCES.find((f) => f.path === 'components/city/cityCopy.js');
+  assert.ok(copy, 'không thấy cityCopy.js');
+  assert.match(code, /eraTile\(/, 'EraSwitcher không còn hỏi `eraTile` — nhãn kỷ được viết tay lại');
+  assert.match(codeOnly(copy.source), /state\s*===\s*'building'/,
+    'eraTile phải nhìn vào slot trạng thái "building" để biết kỷ cũ còn đang trùng tu');
 });
 
 test('BAY VÀO KHU PHỐ PHẢI CÓ BA ĐƯỜNG THOÁT, và cả ba đều nằm ở tầng khung chứ không ở tầng cảnh', () => {

@@ -1,3 +1,52 @@
+> Last update: **2026-09-08** — **ROUND 46: THE CITY TAB CATCHES UP WITH THE CITY'S THREE ROLES (ADR-086).**
+> Order: *"THÀNH PHỐ PHẢI TRÔNG NHƯ THỨ ĐÁNG NHẤT TRONG APP … làm cho màn hình của nó nói ra cả hai."*
+> Acceptance: *"mở tab Thành Phố trên iPhone, chưa cuộn một lần nào, và tôi thấy ba thứ."*
+> Everything on `main`, on top of round 45.
+>
+> ### Measured before (390×844, 12-era save, `shot.mjs --probe`)
+> picture **201 px = 23,8 %**, starting at **y = 494** · header 202 px (taller than the city) · 12 era
+> chips = **6 rows / 217 px** · «SP» on the tab: **0** (ledger 37) · Kỷ 3 at night **0,15** vs noon 0,37 ·
+> «EP lúc niêm phong: 5006» printed raw · desktop 1280×900: stat row at y = 1013 (below the fold).
+>
+> ### Done
+> 1. **`components/city/stageMetrics.js` — ONE owner of the picture's height** (aspect floor 1,3 =
+>    `FRAME_FIT_ASPECT` from the engine · `100svh − reserve` · ceiling). `CityScene3D` in `fill` mode on
+>    every tenant; `StagePlaceholder` and the 1 : 0,62 constant deleted. Reserves declared and listed.
+> 2. **Phone top rail on the City tab: title · level · bell only** (`hideStats`, `hideEra`) — 202 → 77 px.
+> 3. **Era TILES** (`EraSwitcher.jsx` + `cityCopy.eraTile`): «Kỷ 12» over «★ | 4/5 | —»; `auto-fill`
+>    grid, 40 px floor. **15 eras = 2 rows at 390 · 1 row at 1280.** «đang xây» said once, in the caption.
+> 4. **The tab says what it pays**: cell 2 = «Điểm kỹ năng» (`cityEarnedSP`, whole city + «+N từ kỷ
+>    này»); «Đang xây» header «xong là +1 SP»; unbuilt slots «chưa xây · +1 SP»; the plaque under the
+>    picture keeps the session count. Call-site test in `cityViewShellWiring.test.js`.
+> 5. **Museum lit once**: `MUSEUM_HOUR = 15` / `museumDaylight()` for `dimmed` scenes. Night = noon = 0,37.
+> 6. **«EP lúc niêm phong» gone**; cell 3 shows «Kỷ trọn vẹn» in every era.
+> 7. **Sealed-era empty slot: «trùng tu được · +1 SP»** — ⚠️ Đàm's premise («không bao giờ xây được
+>    nữa») is FALSE in his own ADR-012: restoration exists, has no resource gate, and pays 1 SP.
+> 8. **Arrival moment** (`engine/cityArrival.js` + `CityMoment.jsx`): count difference vs a per-device
+>    `localStorage` stamp (`dc-city-seen-v1`) → camera flight to the newest building + 4,2 s banner.
+>    First visit stamps silently; a shrunken city is never announced. Also rendered on the 2D branch.
+> 9. «Kéo để xoay» hint is a pill ON the picture (top-left; escape button top-right; card/moment bottom-left).
+>
+> ### Measured after
+> picture **268 px = 31,8 %** at **y = 190** (15 eras: 204) · stat grid bottom 669 / 716 < tab bar 726 ·
+> 15 tiles **2 rows / 80 px** at 390, **1 row** at 1280 · horizontal scroll 375/390/1280/2000 = 0 ·
+> 1280×900 picture 438 px, stat row at 868 · museum 0,37 at 22h and 12h · SP said in ≥ 3 places.
+> Gates: lint clean · build green · FAST **1.682 pass · 0 fail · skipped 1** (baseline 1.639) · cross 3/3.
+>
+> ### Decided, and deliberately NOT done
+> · **No museum gallery** — eight WebGL contexts or eight 80-px stamps; the tile strip is the overview.
+> · **No camera change for a taller frame** — the black box owns `cityFrameDistance`; the aspect floor obeys it.
+> · **The rate stays 1 SP / building** and the destination stays 75. No fifth stat cell, no new unit.
+>
+> ### Tool lessons (ADR-086 §Tool lessons)
+> · First 3D frame at `--settle 600` is a transient (zoomed, cropped) — shoot the City tab at ≥ 1500.
+> · Headless SwiftShader does not composite the bottom overlay over WebGL: the moment was photographed
+>   over the 2D renderer (`--city2d`), same component, same slot. `--probe` exits before capture.
+> · `--hour` moves the day-arc stamps: seed `dc-day-arc-v1` for 2026-08-13 or the week banner lands on the photo.
+>
+> Photos (scratch, 4 attached to the report): `before-390.png` · `after-390.png` · `moment-390-2d.png` ·
+> `museum-night.png` · `strip-15-390.png`; also shot: `after-1280-v1.png`, `museum-noon.png`.
+
 > Last update: **2026-09-08** — **ROUND 45: A BONUS THAT CANNOT BE SEEN IS NOT A BONUS (ADR-085).**
 > Order: *"vòng 44 mở van cho tôi kiếm được điểm. Vòng này trả lời câu kế tiếp: tiêu vào đó có đáng
 > không?"* · *"tôi mở một kỹ năng, và tôi biết ngay app vừa khác đi ở chỗ nào."*

@@ -26,9 +26,12 @@ import {
   describeRenderMode,
   readDeviceHints,
 } from '../../engine/city3d/renderMode';
+import useMinWidth from '../../hooks/useMinWidth';
 import CityCanvas2D from './render2d/CityCanvas2D';
 import CityPerfHud from './CityPerfHud';
 import BuildingCard from './BuildingCard';
+import CityMoment from './CityMoment';
+import { stageFrameStyle } from './stageMetrics';
 
 const CityScene3D = lazy(() => import('./render3d/CityScene3D'));
 
@@ -43,16 +46,12 @@ const FAILURE_LABEL = {
   'lost-context': 'trình duyệt vừa thu hồi tài nguyên đồ hoạ',
 };
 
-/** Chỗ giữ nhịp trong lúc chunk three.js đang tải — cùng tỉ lệ khung với cảnh 3D, khỏi giật layout. */
-function StagePlaceholder() {
-  return (
-    <div
-      className="w-full rounded-[14px]"
-      style={{ background: 'var(--canvas-2)', aspectRatio: '1 / 0.62' }}
-      aria-hidden="true"
-    />
-  );
-}
+/**
+ * ⚠️ NO PLACEHOLDER COMPONENT ANY MORE (round 46, ADR-086). The old `StagePlaceholder` carried its
+ * own `aspectRatio: '1 / 0.62'` — a SECOND copy of the picture's geometry, exactly the drift that
+ * `stageMetrics.js` exists to delete. The frame below has its size before the three.js chunk
+ * arrives, so the frame IS the placeholder: same box, one owner.
+ */
 
 export default function CityStage({
   layout,
@@ -83,8 +82,19 @@ export default function CityStage({
    * session's brick with it); only the escape button and the info card need `interactive`.
    */
   selection = null,
+  /**
+   * ADR-086: «a building finished since you last looked» — `{ eyebrow, title, line }` from
+   * `engine/cityArrival.js`, or `null`. Drawn INSIDE the frame in the building card's slot (the
+   * camera is flying to that building at the same time), and it replaces the card + the escape
+   * button for as long as it stands: the moment has its own exit (a tap, or the timer in CityView).
+   */
+  moment = null,
+  onDismissMoment,
 }) {
   const enterMotion = useEnterMotion();
+  // `md` (768) is where the ShellPane title block appears and the era tiles fit one row — the two
+  // things that change how much of the screen the picture may have. See `stageMetrics.js`.
+  const wide = useMinWidth(768);
   const preference = useSettingsStore((s) => s.cityRenderMode);
   const showHud = useSettingsStore((s) => s.cityPerfHud);
 
@@ -147,8 +157,20 @@ export default function CityStage({
       {mode === '3d' ? (
         // `relative` để thẻ thông tin nổi ĐÈ LÊN cảnh. Đặt thẻ ở dưới cảnh thì trên iPhone nó rơi
         // xuống dưới mép màn hình: chạm vào nhà xong chẳng thấy gì xảy ra, phải cuộn mới biết.
-        <div className={`relative ${fill ? 'h-full' : ''}`}>
-          <Suspense fallback={fill ? null : <StagePlaceholder />}>
+        //
+        // ⚠️ THE FRAME OWNS THE SIZE (round 46, ADR-086). Card mode used to let `CityScene3D` pick its
+        // own height from a fixed 1 : 0,62 ratio — 201 px on an iPhone, the smallest block on the
+        // tab. Now the frame's height is ONE expression from `stageMetrics.js` (aspect floor 1,3 from
+        // the engine's own camera fit · the viewport minus everything else · a ceiling), and the
+        // scene runs in `fill` mode against it on EVERY tenant. Same scene, same camera; only the
+        // box changed hands. In `fill` mode the CALLER's box is the frame (the Focus postcard).
+        <div
+          className={fill ? 'relative h-full' : 'relative w-full overflow-hidden'}
+          style={fill ? undefined : { background: 'var(--canvas-2)', ...stageFrameStyle({ wide }) }}
+          role={fill ? undefined : 'img'}
+          aria-label={fill ? undefined : `Thành phố 3D có ${layout.buildings.length} công trình`}
+        >
+          <Suspense fallback={null}>
             <CityScene3D
               layout={layout}
               dimmed={dimmed}
@@ -158,7 +180,7 @@ export default function CityStage({
               onStats={setStats}
               onFallback={handleFallback}
               still={still}
-              fill={fill}
+              fill
               interactive={interactive}
               onPick={interactive ? onPick : undefined}
               // ⚠️ HAI SỐ RỜI, không phải object `selection`: `selection` được `useMemo` dựng lại
@@ -179,9 +201,31 @@ export default function CityStage({
             ⚠️ `pointer-events-none` ở lớp bọc, `auto` ở chính cái nút: thiếu luật này thì cả dải
             trống bên cạnh nút nuốt mất thao tác kéo xoay (đúng bài học của thẻ thông tin bên dưới).
           */}
-          <div className="pointer-events-none absolute inset-x-2 top-2 flex justify-end">
+          <div className="pointer-events-none absolute inset-x-2 top-2 flex items-start justify-between gap-2">
+            {/*
+              ⚠️ MỘT TÍNH NĂNG KHÔNG AI BIẾT LÀ MỘT TÍNH NĂNG KHÔNG TỒN TẠI. Chạm-vào-công-trình được
+              dựng xong ở Phase 3K nhưng KHÔNG có gì trên màn hình nói rằng nó tồn tại: cảnh 3D trông y
+              hệt một bức tranh, và không ai đi chạm thử vào một bức tranh. Trên iPhone không có con trỏ
+              đổi hình, nên một dòng chữ nhỏ là thứ duy nhất nói "chạm được".
+              ⚠️ ROUND 46 (ADR-086): the hint moved from a line UNDER the picture to a pill ON it. It is
+              a caption about the picture's controls, so it belongs where the controls are — and the
+              41 px it took below (line + two gaps) were exactly what pushed the stat grid under the
+              floating tab bar at 15 eras. Top-left, so it never sits under the escape button
+              (top-right) or the building card / moment (bottom-left). `pointer-events-none`: a hint
+              that swallows the drag it describes would be the bug, not the feature.
+            */}
+            {chrome && interactive ? (
+              <span
+                className="pointer-events-none max-w-[70%] rounded-full px-2 py-0.5 text-[10px] leading-snug"
+                style={{ background: 'color-mix(in srgb, var(--canvas) 78%, transparent)', color: 'var(--muted)' }}
+              >
+                {selection
+                  ? 'Kéo để xoay quanh · “Toàn cảnh” hoặc Esc để lùi ra'
+                  : 'Kéo để xoay · chạm để ngắm gần'}
+              </span>
+            ) : <span />}
             <AnimatePresence>
-              {interactive && selection && (
+              {interactive && selection && !moment && (
                 <motion.button
                   type="button"
                   {...enterMotion}
@@ -199,13 +243,16 @@ export default function CityStage({
               luật này thì cả vùng trống quanh thẻ nuốt mất thao tác kéo xoay của Đàm. */}
           <div className="pointer-events-none absolute inset-x-2 bottom-2 flex justify-start">
             <AnimatePresence>
-              {interactive && selection && (
+              {moment ? (
+                <CityMoment key="moment" moment={moment} onDismiss={onDismissMoment} />
+              ) : (interactive && selection && (
                 <BuildingCard
+                  key={selection.bpId}
                   item={selection}
                   era={layout.era}
                   onClose={() => onPick?.(null)}
                 />
-              )}
+              ))}
             </AnimatePresence>
           </div>
         </div>
@@ -218,32 +265,24 @@ export default function CityStage({
         // cropped by the frame instead of skipped — a picture of the city beats an empty card.
         fill
           ? <div className="h-full overflow-hidden"><CityCanvas2D layout={layout} dimmed={dimmed} /></div>
-          : <CityCanvas2D layout={layout} dimmed={dimmed} />
-      )}
-
-      {/*
-        ⚠️ MỘT TÍNH NĂNG KHÔNG AI BIẾT LÀ MỘT TÍNH NĂNG KHÔNG TỒN TẠI. Chạm-vào-công-trình được
-        dựng xong ở Phase 3K nhưng KHÔNG có gì trên màn hình nói rằng nó tồn tại: cảnh 3D trông y
-        hệt một bức tranh, và không ai đi chạm thử vào một bức tranh. Trên máy tính còn có con trỏ
-        đổi hình khi rê qua nhà; trên iPhone — tức là máy Đàm dùng hằng ngày — thì KHÔNG có gì cả.
-        Một dòng chữ nhỏ rẻ hơn nhiều so với việc để cả tính năng nằm im.
-      */}
-      {chrome && mode === '3d' && interactive && (
-        <p className="text-[11px]" style={{ color: 'var(--muted-2)' }}>
-          {selection
-            ? 'Đang ngắm gần · kéo để xoay quanh · bấm “Toàn cảnh” hoặc Esc để lùi ra'
-            // ⚠️ RÚT GỌN 2026-08-29, KHÔNG GỠ. Lý do dòng này tồn tại (khối chú thích ngay trên)
-            // vẫn nguyên giá trị: trên iPhone không có con trỏ đổi hình, nên không gì nói rằng
-            // chạm được. Nhưng câu đầy đủ chiếm trọn một dòng ở khung 390px ngay dưới hình, cạnh
-            // một dòng chú thích khác — hai dòng chữ nhỏ liên tiếp thì mắt bỏ qua cả hai.
-            : 'Kéo để xoay · chạm để ngắm gần'}
-        </p>
+          : (
+            // ADR-086: the arrival moment must land on the 2D drawing too — a machine without WebGL2
+            // still finishes buildings. Same slot (bottom-left), same component, no flight.
+            <div className="relative">
+              <CityCanvas2D layout={layout} dimmed={dimmed} />
+              <div className="pointer-events-none absolute inset-x-2 bottom-2 flex justify-start">
+                <AnimatePresence>
+                  {moment && <CityMoment key="moment" moment={moment} onDismiss={onDismissMoment} />}
+                </AnimatePresence>
+              </div>
+            </div>
+          )
       )}
 
       {/* Khi 3D bỏ cuộc GIỮA CHỪNG, phải nói cho Đàm biết — nếu không anh chỉ thấy hình đột nhiên
           đổi kiểu mà không hiểu vì sao, rồi tưởng app hỏng. */}
       {chrome && failure && (
-        <p className="text-[11px]" style={{ color: 'var(--muted)' }}>
+        <p className="px-3 text-[11px] sm:px-4" style={{ color: 'var(--muted)' }}>
           Đã chuyển về bản vẽ 2D: {FAILURE_LABEL[failure] ?? 'bản 3D gặp sự cố'}.
         </p>
       )}

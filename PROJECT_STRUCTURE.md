@@ -73,7 +73,14 @@
 │   │   ├── city/             # Màn hình Thành Phố. Luật: KHUNG tách khỏi BỘ VẼ (ADR-008)
 │   │   │   ├── CityViewShell.jsx # KHUNG: chuyển kỷ, số liệu, trạng thái rỗng. KHÔNG biết bộ vẽ
 │   │   │   │                     #   nào đang chạy — bộ vẽ vào qua `children` và TỰ định kích thước
-│   │   │   ├── EraSwitcher.jsx   # Era chips of the museum — a WRAPPING grid since ADR-080 (no horizontal scroll, no align machinery)
+│   │   │   ├── EraSwitcher.jsx   # The museum's shelf: two-line era TILES («Kỷ 12» over «★ | 4/5 | —») in an
+│   │   │   │                     #   `auto-fill` grid — wraps, never scrolls (ADR-080/086); 15 eras = 2 rows @390, 1 @1280
+│   │   │   ├── cityCopy.js       # ADR-086: the tab's SENTENCES as pure functions — `slotNote` («chưa xây · +1 SP» /
+│   │   │   │                     #   «trùng tu được · +1 SP»), `eraStatusLine` (the plaque), `eraTile`, `SP_TAG` from the economy
+│   │   │   ├── stageMetrics.js   # ⭐ ADR-086: the ONE owner of the city picture's height — `stageFrameStyle()` =
+│   │   │   │                     #   aspect floor 1,3 (`FRAME_FIT_ASPECT`) · `100svh − reserve` · ceiling. No second height anywhere
+│   │   │   ├── CityMoment.jsx    # ADR-086: «Vừa xây xong · +1 SP» banner in the frame (bottom-left slot), 4,2 s, tap to close;
+│   │   │   │                     #   words from `engine/cityArrival.js`, wired in `CityView.jsx`
 │   │   │   ├── BuildingCard.jsx  # Thẻ hiện ra khi CHẠM vào một công trình trong cảnh 3D.
 │   │   │   │                     #   Thuần trình bày — nhận sẵn phần tử của layout, không tra cứu
 │   │   │   ├── cityTokens.js     # Token DÙNG CHUNG mọi bộ vẽ: eraTint/eraSolid/cardStyle
@@ -82,7 +89,8 @@
 │   │   │   │   ├── CityCanvas2D.jsx # Gộp 144 ô nền thành 4 <path> (ngân sách ≤200 phần tử DOM)
 │   │   │   │   ├── CityTile.jsx     # MỘT vật thể nổi (nhà/cảnh vật). Ô nền KHÔNG đi qua đây
 │   │   │   │   └── tokens2d.js      # Kích thước ô + bảng màu rgba() + phép chiếu — CHỈ hợp SVG/CSS
-│   │   │   ├── CityStage.jsx     # CHỌN bộ vẽ + tự lùi về 2D khi 3D hỏng. Nạp LƯỜI render3d
+│   │   │   ├── CityStage.jsx     # CHỌN bộ vẽ + tự lùi về 2D khi 3D hỏng. Nạp LƯỜI render3d. ADR-086: draws the
+│   │   │   │                     #   metric-owned FRAME (scene in `fill` mode), the hint pill, escape button, card / moment slot
 │   │   │   │                     #   Có CHẾ ĐỘ LỚP NỀN (chrome/still/fill/interactive) — cùng một
 │   │   │   │                     #   bộ vẽ, hai vai trò: màn hình để ngắm vs khung cảnh phía sau
 │   │   │   ├── CityPerfHud.jsx   # Bảng FPS/lệnh vẽ/tam giác — để đo cổng hiệu năng Phase 3A
@@ -181,6 +189,9 @@
 │   │   ├── sessionBeats.js    # Session + break BEATS, PURE (ADR-080/081): planSessionBeats · planBreakBeats · resolveBeat · sessionPhaseGlyph · rollGoldenBeat
 │   │   ├── dayArc.js          # The LONG rhythms, PURE (ADR-081): describeDayOpen/Close · describeWeekOpen/Close · pickArcMoment. No failure branch.
 │   │   │                     #   ADR-082: the two CLOSE moments take a `journeyLine`; the opens never do.
+│   │   ├── cityArrival.js     # ADR-086 — «a building finished since you last looked», PURE: `describeCityArrival` is a
+│   │   │                     #   DIFFERENCE of counts (now vs the per-device stamp), priced by `cityEarnedSP`; silent on a
+│   │   │                     #   first visit, never negative. `nextCitySeenTotal` never goes down. `ARRIVAL_VISIBLE_MS`.
 │   │   ├── skillPointEconomy.js # ADR-084 — THE CITY FUNDS THE TREE, PURE. SP_PER_BUILDING = 1
 │   │   │                     #   (derived: 75 buildings + ~50 weekly-chain + ~14 level = ~139 SP
 │   │   │                     #   against a tree costing 138 — do NOT round it to 2). `settleCitySP`

@@ -32,7 +32,33 @@ Production branch `main` carries **both** work streams (merged 2026-08-28 on Đ�
 ⚠️ Phase 21 therefore shipped **before** Đàm reviewed its screenshots — the "waiting on Đàm's eyes"
 item below is still live, it just now reviews something already running.
 
-- **Loop — ROUND 45 (2026-09-08, LATEST): A BONUS THAT CANNOT BE SEEN IS NOT A BONUS (ADR-085).**
+- **Loop — ROUND 46 (2026-09-08, LATEST): THE CITY TAB CATCHES UP WITH THE CITY'S THREE ROLES (ADR-086).**
+  Order: *"THÀNH PHỐ PHẢI TRÔNG NHƯ THỨ ĐÁNG NHẤT TRONG APP."* Measured before (390×844, 12 eras): picture
+  **201 px = 23,8 %** at y = 494 · header 202 px · 12 chips = 6 rows · «SP» said 0 times · museum 2,5× darker
+  at night. After: picture **268 px = 31,8 %** at y = 190 · header 77 · **15 eras = 2 rows @390, 1 @1280** ·
+  stat grid above the tab bar at 12 AND 15 eras · museum 0,37 at 22h = 12h.
+  ⚠️ **`components/city/stageMetrics.js` is the ONE owner of the picture's height** (ADR-083's pattern):
+  aspect floor 1,3 = the engine's `FRAME_FIT_ASPECT` (taller crops the near corner — the only way to
+  cut a building without touching the camera), `100svh − declared reserve`, ceiling. `CityScene3D` runs in
+  `fill` on every tenant. Never add a second height, a ratio'd placeholder, or a transform.
+  ⚠️ **A sealed era is lit ONCE** — `museumDaylight()` / `MUSEUM_HOUR = 15` for `dimmed` scenes. The clock
+  belongs to the living city only.
+  ⚠️ **The tab names its pay from `engine/skillPointEconomy.js`**: cell 2 «Điểm kỹ năng» (whole city +
+  «+N từ kỷ này»), «Đang xây» header, every unbuilt slot. The session count is the plaque under the
+  picture (`cityCopy.eraStatusLine`). The museum's raw-EP cell is gone (nothing to do with it).
+  ⚠️ **Đàm's premise that a sealed era's empty slot can never be built again is FALSE in the approved
+  code** — ADR-012 (his choice, 2026-08-13) restores museum lots from the inventory's restoration
+  section, with no resource gate, and a restored building pays 1 SP. The slot note says so (`slotNote`,
+  sealed variant). What ADR-007 locks is POSITION, not growth.
+  ⚠️ **Arrival moment = a DIFFERENCE, not an event** (`engine/cityArrival.js`, stamp `dc-city-seen-v1` per
+  device in `localStorage`): camera flight to the newest building + 4,2 s banner. First visit stamps
+  silently. Photograph it over the 2D renderer (`--city2d`, `--ls 'dc-city-seen-v1={"builtTotal":N-1}'`):
+  headless SwiftShader does not composite that overlay over WebGL (ADR-086 §Tool lessons).
+  ⚠️ **City-tab photos need `--settle ≥ 1500`**: the first 3D frame is a zoomed transient that looks like a
+  camera bug. `--click "Kỷ 3★"` (tile text). `--hour` moves the day-arc stamps — seed `dc-day-arc-v1`.
+  Decided NOT to build a museum gallery: the tile strip is the overview (stars and gaps in one glance).
+
+- **Loop — ROUND 45 (2026-09-08): A BONUS THAT CANNOT BE SEEN IS NOT A BONUS (ADR-085).**
   The audit that decided it: of 36 skills, **27 are a silent `+X% XP/EP`** shown on no screen ever, 6
   are genuinely felt, 3 are prestige-only. One skill is worth 3–7 XP on a 48-minute session, so round
   44's twelve taps bought twelve numbers nobody could see.
@@ -76,34 +102,10 @@ item below is still live, it just now reviews something already running.
   ⚠️ Never put a `/* … */` comment straight after the `{` of an object literal — it makes the JSX
   comment stripper in `components/journeyWiring.test.js` eat real code in a different file.
 
-- **Loop — ROUND 43 (2026-09-08): ONE DESTINATION, AND EVERY DISTANCE IN SESSIONS (ADR-082).**
-  ⚠️ **`engine/journey.js` owns the destination and nothing else may compute it.** The city is finite —
-  15 eras x 5 blueprints = **75 buildings** — and that is the app's answer to *"đi tới đâu?"*. The
-  denominator is SUMMED from `BLUEPRINT_CATALOG`, never typed; `hooks/useJourney.js` is the only seam
-  to the store. ⚠️ **No screen prints raw EP as a distance any more.** `describeRailProgress` says the
-  distance in SESSIONS while that is honest and falls through to `38/75 công trình` when it is not —
-  and it must NEVER fall back to EP (`describeStageCountdown` has an EP branch for the no-sample case;
-  the guard that drops it is pinned by a red test). Same rule everywhere: rank card says `Đã đủ`, badge
-  thresholds say hours past 120 minutes, the level countdown HIDES past `STAGE_COUNTDOWN_MAX_SESSIONS`
-  rather than print a 155-session wall. The city's fourth stat cell is the destination, not `Cư dân`.
-  ⚠️ XP rewards for the 360 achievements were measured (126.030 XP ≈ 21 levels ≈ 42 SP over the game)
-  and REJECTED as a second faucet — that decision is still open in `TECH_DEBT.md`.
-  Also: `components/journeyWiring.test.js` reads call sites, because an engine test proves a function
-  RUNS and never that anyone CALLS it — this project has now shipped three finished-but-uncalled ones.
-
-- **Loop — ROUND 41 (2026-09-08): THE LONG RHYTHMS, AND A TOOL THAT CAN SEE (ADR-081).**
-  ⚠️ **`shot.mjs --dilate <rate>` is how a transient moment is photographed now.** One framer animation
-  runs on TWO clocks (`opacity` on WAAPI, `x/y/scale` on framer's own rAF loop); `--dilate` slows both,
-  patching `performance.now()` in the page while `Date.now()` stays real. Add `--frames n --frame-gap ms`
-  for a filmstrip, `--city2d` to keep the main thread free, `--ask <js>` to question the page. Three
-  rounds in a row shipped something nobody could see before this existed — do not ship a moment without
-  a photograph of it. The burst was redrawn the day it could be seen (two colours, upward fan).
-  Day and week now open and close (`engine/dayArc.js` + `focus/DayMoment.jsx`: 7-second banner, stamps in
-  `localStorage`, no branch that reads as a failure). Three surprises at three beats: «Gạch đôi» (ending) ·
-  «Guồng vàng» (mid-session, a hash so both sides agree without state) · «Thợ đêm» (a day's open,
-  `rollNightBuilder`). No silence over 15 minutes at any session length. Inspect: `--preview arc-gift`
-  (and `arc-day-open` · `arc-day-close` · `arc-week-open` · `arc-week-close`), `--preview loot-lucky
-  --card project --dilate 0.05 --watch "HÔM NAY MAY" --snap --frames 2`.
+- **Loop — ROUNDS 43 & 41 (2026-09-08): ONE DESTINATION, EVERY DISTANCE IN SESSIONS (ADR-082) · THE LONG
+  RHYTHMS, AND A TOOL THAT CAN SEE (ADR-081).** Moved verbatim to
+  `docs/archive/START_HERE_LOG_2026-09-06.md` on 2026-09-08 (round 46 arrived; keep the 3 most recent) —
+  `grep -n 'ROUND 43\|ROUND 41'` there. Still-live rules: `docs/UI_INVARIANTS.md` (ADR-081/082 bullets).
 - **Loop — ROUND 40 (2026-09-08): THINGS THAT HAPPEN AND VANISH (ADR-080).** Moved verbatim to
   `docs/archive/START_HERE_LOG_2026-09-06.md` — `grep` it when you need that round. Its still-live
   rules live in `docs/UI_INVARIANTS.md` (static budget zero); nothing was deleted.

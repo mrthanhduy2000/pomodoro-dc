@@ -23,6 +23,7 @@ import assert from 'node:assert/strict';
 import { readFile } from 'node:fs/promises';
 
 const SHELL = await readFile(new URL('./CityViewShell.jsx', import.meta.url), 'utf8');
+const APP = await readFile(new URL('../../App.jsx', import.meta.url), 'utf8');
 
 /** Bỏ chú thích, để không đọc trúng chính đoạn giải thích ở trên rồi tưởng là mã. */
 function codeOnly(source) {
@@ -54,4 +55,38 @@ test('Ô số liệu thứ ba KHÔNG quay lại nói lại con số chuỗi mà 
   assert.doesNotMatch(code, /label:\s*isCurrent\s*\?\s*'Chuỗi ngày'/,
     'Ô số liệu đã quay lại nhãn "Chuỗi ngày" — trùng với "Chuỗi" trên thanh tiêu đề của App.jsx.\n'
     + 'Luật đã có sẵn ngay trong file này (ô "Cư dân"): hai chỗ nói cùng một chuyện thì chỗ nói ít hơn phải nhường.');
+});
+
+// ─── ROUND 46 (ADR-086): THE CITY SAYS WHAT IT PAYS ──────────────────────────────────────────
+// RED WHEN: the SP cell is dropped, the rate is typed instead of read, or the museum's raw-EP cell
+// returns. An engine test on `skillPointEconomy.js` proves the arithmetic; only this proves the one
+// screen that EARNS the money prints it.
+test('the City tab reads the skill-point economy and spends a stat cell on it', () => {
+  const code = codeOnly(SHELL);
+  assert.match(code, /import\s*\{[^}]*\bcityEarnedSP\b[^}]*\}\s*from\s*'\.\.\/\.\.\/engine\/skillPointEconomy'/,
+    'CityViewShell.jsx no longer imports `cityEarnedSP` — the SP number is typed or gone.');
+  assert.match(code, /cityEarnedSP\(/, 'imported but never called — the exact trap this file exists for.');
+  assert.match(code, /label:\s*'Điểm kỹ năng'/, 'the SP stat cell is gone from the city stat grid.');
+  assert.match(code, /import\s*\{[^}]*\bSP_TAG\b[^}]*\bslotNote\b[^}]*\}\s*from\s*'\.\/cityCopy'/,
+    'the slot notes / SP tag are no longer read from cityCopy.js.');
+  assert.match(code, /slotNote\(slot\.state,\s*\{\s*sealed:\s*!isCurrent\s*\}\)/,
+    'unbuilt slots no longer say their price and, in the museum, their path.');
+  assert.match(code, /\{SP_TAG\}/, 'the «Đang xây» card no longer names the pay.');
+  assert.doesNotMatch(code, /\+1 SP|1 SP/, 'a typed "+1 SP" — the rate must come from the engine.');
+});
+
+test('the museum no longer prints raw EP, and no cell counts sessions Đàm can do nothing with', () => {
+  const code = codeOnly(SHELL);
+  assert.doesNotMatch(code, /EP lúc niêm phong/, '«EP lúc niêm phong» is back — raw EP against ADR-082, and nothing to do with it.');
+  assert.doesNotMatch(code, /epAtSeal/, 'the shell reads `epAtSeal` again — the only reader of that number was the cell that was retired.');
+  assert.doesNotMatch(code, /label:\s*'Phiên trong kỷ'/, 'the session-count cell is back; the count lives in the status line (eraStatusLine).');
+  assert.match(code, /eraStatusLine\(\{/, 'the plaque (status · sessions) is no longer written under the picture.');
+  assert.doesNotMatch(code, /'chưa xây'/, 'a bare «chưa xây» is back — the note must come from slotNote().');
+});
+
+test('the phone top rail on the City tab keeps only title · level · bell (measured 202 px before)', () => {
+  const app = codeOnly(APP);
+  const pane = app.slice(app.indexOf('title="Thành Phố"'), app.indexOf('title="Thành Phố"') + 700);
+  assert.match(pane, /renderTopRail\(\{\s*hideStats:\s*true,\s*hideEra:\s*true\s*\}\)/,
+    'the City tab renders the full phone rail again — it stood taller than the city picture.');
 });

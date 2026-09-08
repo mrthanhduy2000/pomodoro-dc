@@ -432,3 +432,25 @@ export function sunDirectionAt(base, altitude) {
   const horizontal = Math.sqrt(Math.max(0, 1 - alt * alt));
   return { x: ax * horizontal, y: alt, z: az * horizontal };
 }
+
+/**
+ * ⚠️ A MUSEUM PIECE IS LIT ONCE (round 46, ADR-086).
+ *
+ * A sealed era is Đàm's permanent reward — it never changes again (ADR-007). Yet it was lit by
+ * TONIGHT's clock: measured on five points of Kỷ 3, the same city read 0,15 at night and 0,37 at
+ * noon — 2,5× darker exactly at the hour he opens the app, on top of the `dimmed` fade it already
+ * wears. The shell had even hidden the "đang là hoàng hôn" caption for sealed eras because "that
+ * is a place that no longer changes" — but the LIGHT still changed. Half a rule.
+ *
+ * So the museum has one hour. 15:00 is a warm, low sun with a golden horizon — gallery light, the
+ * classic hero-shot hour — and it is a plain daylight profile, not a fourth light source or a new
+ * material: the black box renders it exactly as it renders any afternoon. The current era keeps
+ * following the real clock; the promise "every time you open the app it is a different scene"
+ * belongs to the city that is still alive.
+ */
+export const MUSEUM_HOUR = 15;
+
+/** The fixed daylight of every sealed era. */
+export function museumDaylight() {
+  return deriveDaylight(MUSEUM_HOUR);
+}

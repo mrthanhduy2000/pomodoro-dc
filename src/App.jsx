@@ -1133,7 +1133,12 @@ export default function App() {
                       <ShellPane
                         title="Thành Phố"
                         subtitle="Mỗi công trình đã xây là một căn nhà. Qua kỷ mới, thành phố cũ được niêm phong để ghé thăm lại."
-                        topRail={!isDesktop && !showFocusFullscreen ? renderTopRail() : null}
+                        // ⚠️ ROUND 46 (ADR-086): the phone rail on THIS tab keeps only the title, the
+                        // level and the bell — measured at 390 px it stood 202 px tall, taller than the
+                        // city picture itself (201 px), and every line it carried is said again right
+                        // below it: the stage bar's «57/75 công trình» is the tab's fourth stat cell,
+                        // «Kỷ 12» is the selected era tile. Same rule as the Focus tab, same two flags.
+                        topRail={!isDesktop && !showFocusFullscreen ? renderTopRail({ hideStats: true, hideEra: true }) : null}
                       >
                         <DeferredTabContent>
                           <CityView />

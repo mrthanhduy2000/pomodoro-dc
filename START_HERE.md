@@ -33,7 +33,7 @@ Production branch `main` carries **both** work streams (merged 2026-08-28 on Đ�
 item below is still live, it just now reviews something already running.
 
 - **Loop — ROUND 42 (2026-09-08, LATEST): SPACE — ONE NUMBER FOR A SHAPE, ONE AXIS FOR A STACK
-  (ADR-081).** Order: *"VÒNG 42 = KHÔNG GIAN: cái gì nằm ở đâu, to bao nhiêu, có vừa khung không"*, with three
+  (ADR-083).** Order: *"VÒNG 42 = KHÔNG GIAN: cái gì nằm ở đâu, to bao nhiêu, có vừa khung không"*, with three
   photographs. Root cause, one sentence: the ring was DRAWN at `min(canvas, cap) × transform: scale()` while the
   room under it was RESERVED from a SECOND expression — a transform does not change layout, so once the cap bit
   the drawing was bigger than the hole (390 px full screen: **427 drawn, 281 reserved, the goal line 32 px inside

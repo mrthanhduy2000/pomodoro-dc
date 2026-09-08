@@ -208,7 +208,7 @@ export default function PomodoroEngine({
   const [noteExpanded, setNoteExpanded] = useState(false);
   const [showCancelConfirm, setShowCancelConfirm] = useState(false);
   /*
-    ⚠️ THE FULL-SCREEN NOTEBOOK IS CLOSED UNTIL ASKED FOR (round 42, ADR-081).
+    ⚠️ THE FULL-SCREEN NOTEBOOK IS CLOSED UNTIL ASKED FOR (round 42, ADR-083).
     It is ~890 px of session notes below the clock, and it was ALWAYS mounted — so full screen, the
     mode whose whole point is one screen and nothing else, arrived with 887–1062 px of scroll on
     every frame (measured 2026-09-08). Nothing is deleted: the same panel, one tap away, and the
@@ -379,7 +379,7 @@ export default function PomodoroEngine({
       : 1240
     : 560;
   /*
-    ⚠️ ONE NUMBER FOR THE RING (round 42, ADR-081). Everything that used to describe this circle —
+    ⚠️ ONE NUMBER FOR THE RING (round 42, ADR-083). Everything that used to describe this circle —
     `immersiveTimerScale`, `fullScreenDesktopBoost`, `timerCircleBoost`, `timerCanvasSize`,
     `timerFootprintScale/Size/Height`, `ringViewportCap`, `fullScreenTimerScaleDown/CanvasDown` and
     a `transform: scale()` on top of all of it — is GONE, replaced by this single CSS length.
@@ -397,7 +397,7 @@ export default function PomodoroEngine({
   const prioritizeSetupCard = !fullScreenMode && immersiveMode && isIdle && !isBreakMode;
   const useImmersiveHeroLayout = fullScreenMode || (immersiveMode && !prioritizeSetupCard);
   /*
-    ⚠️ WHILE A TIMER OWNS THE SCREEN, THE SCREEN IS ONE SCREEN (round 42, ADR-081).
+    ⚠️ WHILE A TIMER OWNS THE SCREEN, THE SCREEN IS ONE SCREEN (round 42, ADR-083).
     Đàm: «lúc tôi đang tập trung mà phải cuộn để tìm nút Tạm dừng là hỏng». Measured before this
     change at 1280×900: the Focus column was 1255 px tall ⇒ 355 px of scroll, and the button row was
     the part below the fold. Break counts too — it is a running clock with a button under it.
@@ -414,7 +414,7 @@ export default function PomodoroEngine({
   // chế độ tối giản như fullscreen — ẩn huy hiệu game để 25 phút chỉ còn đồng hồ.
   const useMinimalFocusStage = fullScreenMode || (isActive && !isBreakMode);
   /*
-    ⚠️ THE CLOCK IS A FRACTION OF THE RING, NOT A LIST OF BREAKPOINTS (round 42, ADR-081).
+    ⚠️ THE CLOCK IS A FRACTION OF THE RING, NOT A LIST OF BREAKPOINTS (round 42, ADR-083).
 
     This used to be eleven absolute rem values across four breakpoints, tuned by hand for the ring
     size of the day — the same failure as the ring itself, one layer in: shrink the ring and the
@@ -612,7 +612,7 @@ export default function PomodoroEngine({
   // ngoại lệ, và mỗi ngoại lệ phải tự khai lý do — không có dòng lý do thì nó đáng lẽ là `enter`.
   const enterMotion = useEnterMotion();
 
-  // ⚠️ THE RING IS NO LONGER SCALED BY TRANSFORM (round 42, ADR-081). This slot used to hold a
+  // ⚠️ THE RING IS NO LONGER SCALED BY TRANSFORM (round 42, ADR-083). This slot used to hold a
   // `useSnapMotion` animating `scale` to a per-mode factor — and that transform is precisely what
   // made the drawing bigger than the space reserved for it, because a transform does not change
   // layout. The size is now one CSS length on the box itself (`ringSize`), so entering focus mode
@@ -985,7 +985,7 @@ export default function PomodoroEngine({
       {/* ADR-079: the «Giải lao dài» pill above the ring is gone — the ring's own label says it. */}
 
       {/*
-        ⚠️ THE SLOT HAS NO HEIGHT OF ITS OWN — THAT IS THE WHOLE FIX (round 42, ADR-081).
+        ⚠️ THE SLOT HAS NO HEIGHT OF ITS OWN — THAT IS THE WHOLE FIX (round 42, ADR-083).
 
         The previous version reserved the ring's height with a `minHeight` computed from a SECOND
         expression, while the ring itself was drawn from a first one and then blown up by a
@@ -1073,7 +1073,7 @@ export default function PomodoroEngine({
           </motion.div>
 
           <div className="absolute inset-0 flex flex-col items-center justify-center">
-            {/* Every string inside the disc is sized in `cqw` = 1 % of the ring (ADR-081) — see the
+            {/* Every string inside the disc is sized in `cqw` = 1 % of the ring (ADR-083) — see the
                 block above `timerValueLayoutClass`. Absolute px here is how text used to end up on
                 the stroke whenever the ring changed size. */}
             <span
@@ -1195,7 +1195,7 @@ export default function PomodoroEngine({
   const compactTimerActionButtonClassName = 'min-w-0 w-full';
 
   /*
-    ⚠️ ONE BUTTON ROW, ONE PLACE (round 42, ADR-081). Desktop full screen used to DOCK this row at
+    ⚠️ ONE BUTTON ROW, ONE PLACE (round 42, ADR-083). Desktop full screen used to DOCK this row at
     the bottom of the page, separately from the stage, and that split is what let the stage above it
     be mounted into a ROW flex container — where the goal line, a sibling in a stack, flew out to the
     ring's right edge and landed on the digits (measured 2026-09-08 at 1280 and 2000). The row is a
@@ -1390,7 +1390,7 @@ export default function PomodoroEngine({
   );
   /*
     ⚠️ THE STAGE CARRIES ITS OWN COLUMN — AND IT IS THE ONLY PLACE `timerStageVisual` IS MOUNTED
-    (round 42, ADR-081).
+    (round 42, ADR-083).
 
     `timerStageVisual` is a FRAGMENT of stacked blocks: brick strip, ring, then the one line under
     the ring. A fragment has no layout of its own, so its children become direct children of
@@ -1713,7 +1713,7 @@ export default function PomodoroEngine({
         </button>
 
         {/*
-          ⚠️ ONE SCREEN, NO SCROLL, ONE COLUMN (round 42, ADR-081). `h-[100svh]` + `overflow-hidden`
+          ⚠️ ONE SCREEN, NO SCROLL, ONE COLUMN (round 42, ADR-083). `h-[100svh]` + `overflow-hidden`
           is the promise: full screen is the mode Đàm opens to look at nothing but the clock, so
           having to scroll to reach «Tạm dừng» is the whole mode failing. Measured before this
           change: 999 px of scroll at 1280 and 2000, 1038 px at 390. It holds because the ring gives

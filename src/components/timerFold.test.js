@@ -27,7 +27,7 @@ const CODE = stripComments(SRC);
 // trị đã được chứng minh là KHÔNG đủ) và lớn hơn 0 một cách có nghĩa — hạ tiếp là bắt đầu ăn vào
 // chính thứ to nhất màn hình, mà chuyện ấy phải do Đàm chọn.
 
-// ⚠️ VÒNG 42 (ADR-081) — CÁI TRẦN CŨ ĐÃ ĐƯỢC THAY BẰNG MỘT THỨ MẠNH HƠN, VÀ ĐÂY LÀ LÝ DO.
+// ⚠️ VÒNG 42 (ADR-083) — CÁI TRẦN CŨ ĐÃ ĐƯỢC THAY BẰNG MỘT THỨ MẠNH HƠN, VÀ ĐÂY LÀ LÝ DO.
 //
 // Bản cũ khoá `min(${timerCanvasSize}px, ${ringViewportCap})` ở HAI chỗ và bắt hai chỗ ấy dùng
 // CÙNG một trần — đúng ý, nhưng nó chỉ canh được cái trần, không canh được phép nhân đứng sau nó.

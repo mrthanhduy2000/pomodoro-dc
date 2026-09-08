@@ -10,7 +10,7 @@
 > **Muốn hiểu VÌ SAO một quyết định được chọn** → `ARCHITECTURE_DECISIONS.md`. **Muốn biết migration
 > cụ thể nào cần chạy** → `MIGRATION.md`.
 
-## 2026-09-08 — Round 42: space — one number for a shape, one axis for a stack (ADR-081)
+## 2026-09-08 — Round 42: space — one number for a shape, one axis for a stack (ADR-083)
 
 - **Purpose**: close the three layout faults Đàm photographed in a real session — the session-goal
   line landing ON the ring in full screen and on iPhone, and the Focus screen needing a scroll to

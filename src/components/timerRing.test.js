@@ -31,7 +31,7 @@ function codeOnly(src) {
 const CODE = codeOnly(SOURCE);
 
 /*
-  ⚠️ ROUND 42 (ADR-081): the geometry moved to `focus/ringMetrics.js`, which is now its ONE owner —
+  ⚠️ ROUND 42 (ADR-083): the geometry moved to `focus/ringMetrics.js`, which is now its ONE owner —
   the bug of that round was two places describing one circle. So this test IMPORTS the numbers
   instead of re-reading them out of the component: re-deriving them here would rebuild the very
   duplication the move deleted. What the component may still be checked for is that it uses them.

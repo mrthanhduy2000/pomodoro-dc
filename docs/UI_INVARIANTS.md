@@ -20,7 +20,7 @@
   since round 42 carries the REASON in words — «Có việc» · «Tuần mới» — not just the id: a mark on a
   screen must be able to say what it reports), which
   exists on both platforms by construction.
-- **The ring's size is ONE number, and the space reserved for it is that same number** (ADR-081,
+- **The ring's size is ONE number, and the space reserved for it is that same number** (ADR-083,
   round 42). `src/components/focus/ringMetrics.js` owns it: `ringSizeCss()` is the ring's `width`,
   `aspect-ratio: 1` gives the height, and the slot around it has NO height of its own. **Never put a
   `minHeight`/`height` on that slot and never scale the ring by transform** — those two are exactly

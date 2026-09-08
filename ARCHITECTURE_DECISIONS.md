@@ -73,7 +73,7 @@ roughly 44%. Titles below are the lookup key; read one with
 
 ---
 
-## ADR-081 — Round 42: a shape and the space reserved for it must be ONE number; a stack must carry its own axis
+## ADR-083 — Round 42: a shape and the space reserved for it must be ONE number; a stack must carry its own axis
 
 **Date**: 2026-09-08 · **Order**: *"Build lớn. Simplify mạnh… Tập trung nhiều hơn vào UX/UI. VÒNG 42 = KHÔNG GIAN: cái gì nằm ở đâu, to bao nhiêu, có vừa khung không. TOÀN QUYỀN."* Reported with three photographs of a real session.
 

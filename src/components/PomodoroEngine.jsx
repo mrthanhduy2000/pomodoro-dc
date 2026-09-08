@@ -403,6 +403,13 @@ export default function PomodoroEngine({
     the part below the fold. Break counts too — it is a running clock with a button under it.
   */
   const timerOwnsScreen = isActive || isBreakMode;
+  /*
+    ⚠️ THE CARD BREATHES LESS WHILE THE CLOCK IS RUNNING (round 42, Việc 2). 64 px of vertical
+    padding is 10 % of a 667 px phone, and on that frame it was the difference between a screen that
+    fits and 23 px of scroll with «Tạm dừng» in the part you cannot see. Idle keeps the roomy card —
+    there the screen scrolls anyway, so the padding costs nothing and reads as calm.
+  */
+  const timerCardPaddingClass = timerOwnsScreen ? 'py-5 md:py-8' : 'py-8 md:py-10';
   // Màn Focus "tĩnh": khi đang chạy/tạm dừng (không phải giải lao) cũng dùng
   // chế độ tối giản như fullscreen — ẩn huy hiệu game để 25 phút chỉ còn đồng hồ.
   const useMinimalFocusStage = fullScreenMode || (isActive && !isBreakMode);
@@ -1782,7 +1789,7 @@ export default function PomodoroEngine({
               ? 'justify-start'
               : 'min-h-[76vh] lg:min-h-[84vh] xl:min-h-[88vh] justify-center'
           }`}>
-            <div className="mx-auto flex w-full max-w-[640px] flex-col items-center px-5 py-8 md:px-7 md:py-10" style={timerCardStyle}>
+            <div className={`mx-auto flex w-full max-w-[640px] flex-col items-center px-5 md:px-7 ${timerCardPaddingClass}`} style={timerCardStyle}>
               {timerStageContent}
             </div>
             {belowTimer && <div className="mx-auto mt-4 w-full max-w-[640px] md:mt-5">{belowTimer}</div>}
@@ -1792,7 +1799,7 @@ export default function PomodoroEngine({
         </>
       ) : (
         <>
-          <div className="mx-auto flex w-full max-w-[640px] flex-col items-center px-5 py-8 md:px-7 md:py-10" style={timerCardStyle}>
+          <div className={`mx-auto flex w-full max-w-[640px] flex-col items-center px-5 md:px-7 ${timerCardPaddingClass}`} style={timerCardStyle}>
             {timerStageContent}
           </div>
           {belowTimer && <div className="mx-auto mt-4 w-full max-w-[640px] md:mt-5">{belowTimer}</div>}

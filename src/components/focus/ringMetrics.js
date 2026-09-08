@@ -85,8 +85,9 @@ export const RING_HEIGHT_RESERVE_PX = Object.freeze({
   // + goal line (24) + button row (72) + pb-8 (32) + safety (72, and it is EARNED: the greeting
   // block above runs 2 or 3 lines depending on the day — round 20 lost a whole ceiling to that)
   wide: 610,
-  // pt-4 (16) + postcard (192) + mt-4 (16) + card py-8 (64) + brick strip (26) + goal line, two
-  // lines (44) + button row (52) + floating tab bar (118) + safety (38)
+  // pt-4 (16) + postcard (180) + mt-4 (16) + card py-5 (40) + brick strip (26) + goal line, two
+  // lines (44) + note row (56) + floating tab bar (118) + safety (70 — the greeting block runs 2 or
+  // 3 lines depending on the day, and round 20 lost a whole ceiling to exactly that)
   compact: 566,
 });
 
@@ -102,7 +103,7 @@ export const RING_HEIGHT_RESERVE_PX = Object.freeze({
  * `h-[min(168px,20svh)]` (`focus/CityPostcard.jsx`), unchanged at 844 px, 35 px smaller at 667 px.
  * At every frame Đàm actually judges on, the px reserve is the smaller one and nothing moves.
  */
-export const RING_HEIGHT_RESERVE_SVH = Object.freeze({ fullScreen: 40, wide: 70, compact: 75 });
+export const RING_HEIGHT_RESERVE_SVH = Object.freeze({ fullScreen: 40, wide: 70, compact: 76 });
 
 /** The share of the viewport height the whole Focus stack may occupy. 100 = all of it. */
 export const RING_HEIGHT_BUDGET_SVH = 100;

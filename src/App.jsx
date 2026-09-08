@@ -653,8 +653,20 @@ export default function App() {
   // đây thì phải đặt cho nó một id giả `'weeklyReport'` — một khoá trông như tab mà không có tab
   // nào tên thế, và `selectTab` sẽ nuốt im lặng nếu có ai lỡ truyền nó đi.
   // ADR-077: the Monday "week summary unseen" dot now sits on the Thống kê tab (the report was folded into Stats).
-  const attentionTabIds = useMemo(
-    () => new Set([...(inventoryNeedsAttention ? ['inventory'] : []), ...(weeklyReportUnseen ? ['stats'] : [])]),
+  /*
+    ⚠️ VÒNG 42 — MỘT CHẤM PHẢI NÓI ĐƯỢC NÓ ĐANG BÁO GÌ. Đàm, nhìn ảnh chụp thanh bên thu gọn: «có
+    hai chấm cam nhỏ ở hai icon mà tôi không biết chúng báo gì». Đúng: một chấm 7 điểm ảnh trên một
+    icon không nhãn là một câu đố, và nó ngồi đó mỗi ngày. Tập ids thành một BẢNG id → LÝ DO, và
+    chỗ nào đủ rộng thì in luôn lý do ra; chỗ chật (thanh dưới điện thoại) giữ cái chấm nhưng nay
+    nó có `aria-label` nói đúng câu ấy. Không thêm tín hiệu nào — chỉ đặt tên cho tín hiệu đã có.
+  */
+  const attentionByTab = useMemo(
+    () => new Map([
+      // «Có việc»: một kỹ năng mở được / một thứ chế được / một thành tích chưa xem (`useInventoryAttention`).
+      ...(inventoryNeedsAttention ? [['inventory', 'Có việc']] : []),
+      // «Tuần mới»: tổng kết tuần này chưa đọc (`lastWeeklyReportSeenDate`).
+      ...(weeklyReportUnseen ? [['stats', 'Tuần mới']] : []),
+    ]),
     [inventoryNeedsAttention, weeklyReportUnseen],
   );
   // ⚠️ MỌI đường vào điều hướng phải đi qua đây, kể cả khi nơi gọi truyền id CŨ
@@ -861,7 +873,7 @@ export default function App() {
           >
             <EditorialSidebar
               activeTab={activeTab}
-              attentionTabIds={attentionTabIds}
+              attentionByTab={attentionByTab}
               isOpen={sidebarOpen}
               onSelect={selectTab}
               onToggle={() => setSidebarOpen((value) => !value)}
@@ -1229,12 +1241,15 @@ export default function App() {
                 >
                   <span className="relative">
                     <tab.Icon size={15} />
-                    {attentionTabIds.has(tab.id) && (
+                    {attentionByTab.has(tab.id) && (
                       // Chấm chú ý nằm ở GÓC ICON; chấm "đang mở" nằm ở đáy nút. Hai chấm nói hai
                       // chuyện khác nhau nên chúng không được ở cùng một chỗ, kể cả khi tab này
                       // vừa đang mở vừa đang có việc.
+                      // ⚠️ Vòng 42: 48px bề ngang không đủ cho một chữ, nên ở ĐÂY chấm vẫn là chấm —
+                      // nhưng nó thôi câm: `aria-label` nói đúng lý do mà thanh bên in ra thành chữ.
                       <span
-                        aria-hidden="true"
+                        role="img"
+                        aria-label={attentionByTab.get(tab.id)}
                         className="absolute -right-1.5 -top-1 h-[6px] w-[6px] rounded-full"
                         style={{ background: 'var(--accent)' }}
                       />
@@ -1489,11 +1504,20 @@ function OverlayStack({
   );
 }
 
-function EditorialSidebar({ activeTab, attentionTabIds, isOpen, onSelect, onToggle }) {
+/*
+  ⚠️ VÒNG 42 — THANH BÊN THU GỌN VẪN PHẢI ĐỌC ĐƯỢC. Đàm, nhìn ảnh chụp: «thanh bên chỉ còn năm biểu
+  tượng không có chữ. Tôi phải nhớ icon nào là tab nào.» Luật anh đặt ra ngay tại đó: một biểu
+  tượng không nhãn chỉ được dùng khi nó phổ biến tới mức ai cũng đọc ra — bánh răng thì được, còn
+  CÁI HỘP (Hành trang) và CÁI BIỂU ĐỒ (Thống kê) thì không, và app này còn có hai icon "toà nhà"
+  (Thành Phố) rất dễ lẫn với biểu đồ cột.
+  ⇒ Không bỏ chế độ thu gọn (nó trả lại 154px cho nội dung), mà bỏ cái CÂM: bản thu gọn nay là một
+  cột icon CÓ NHÃN dưới chân, 88px thay vì 66px. Mất 22px, đổi lấy việc không phải nhớ gì.
+*/
+function EditorialSidebar({ activeTab, attentionByTab, isOpen, onSelect, onToggle }) {
   // ⚠️ NGOẠI LỆ CÓ LÝ DO — cùng chuyện với cột phải: cột trái THU GỌN chứ không XUẤT HIỆN, và
   // bề ngang do chính `animate` khai nên phải NHẢY tới đích chứ không được bỏ đi (`useSnapMotion`).
   const railMotion = useSnapMotion({
-    animate: { width: isOpen ? 232 : 66 },
+    animate: { width: isOpen ? 232 : 88 },
     transition: { duration: 0.22, ease: [0.4, 0, 0.2, 1] },
   });
   const chevronMotion = useSnapMotion({
@@ -1528,7 +1552,7 @@ function EditorialSidebar({ activeTab, attentionTabIds, isOpen, onSelect, onTogg
           <SidebarItem
             key={tab.id}
             active={activeTab === tab.id}
-            attention={attentionTabIds?.has(tab.id) ?? false}
+            attention={attentionByTab?.get(tab.id) ?? null}
             icon={<tab.Icon size={18} />}
             isOpen={isOpen}
             label={tab.label}
@@ -1564,14 +1588,17 @@ function EditorialSidebar({ activeTab, attentionTabIds, isOpen, onSelect, onTogg
   );
 }
 
-function SidebarItem({ active, attention = false, icon, isOpen, label, onClick }) {
+/**
+ * @param {string|null} attention  lý do tab này đang cần chú ý, viết thành CHỮ («Có việc», «Tuần
+ *   mới»). `null` = không có gì. Trước vòng 42 nó là một boolean và vẽ ra một chấm câm.
+ */
+function SidebarItem({ active, attention = null, icon, isOpen, label, onClick }) {
   return (
     <button
       type="button"
       onClick={onClick}
-      title={!isOpen ? label : undefined}
-      className={`group flex items-center rounded-[12px] transition-colors hover:bg-[rgba(255,255,255,0.06)] ${
-        isOpen ? 'gap-3 px-1.5 py-1 justify-start' : 'justify-center py-1'
+      className={`group flex rounded-[12px] transition-colors hover:bg-[rgba(255,255,255,0.06)] ${
+        isOpen ? 'items-center gap-3 px-1.5 py-1 justify-start' : 'w-full flex-col items-center gap-1 px-0.5 py-1.5'
       }`}
     >
       <span
@@ -1583,23 +1610,58 @@ function SidebarItem({ active, attention = false, icon, isOpen, label, onClick }
         }}
       >
         {icon}
-        {attention && (
-          // Chấm gắn vào Ô ICON chứ không vào cả nút: thanh bên thu gọn còn 66px thì chỉ ô icon
-          // còn lại, gắn vào nút thì chấm trôi ra rìa và biến mất.
+        {/* ⚠️ CHẤM CHỈ CÒN Ở BẢN THU GỌN (vòng 42). Ở bản mở rộng cái chữ «CÓ VIỆC» bên phải đã nói
+            trọn điều cái chấm định nói, nên giữ cả hai là hai tín hiệu cho một sự việc — đúng thứ
+            luật «một chỉ báo» của vòng 39 cấm. Chấm gắn vào Ô ICON chứ không vào cả nút: ở bản thu
+            gọn chỉ ô icon còn lại, gắn vào nút thì chấm trôi ra rìa và biến mất. */}
+        {attention && !isOpen && (
           <span
-            aria-hidden="true"
+            role="img"
+            aria-label={attention}
             className="absolute right-0.5 top-0.5 h-[7px] w-[7px] rounded-full"
             style={{ background: 'var(--accent)', boxShadow: '0 0 0 2px #1b1a17' }}
           />
         )}
       </span>
-      {isOpen && (
-        <span
-          className="text-[13.5px] font-medium leading-snug"
-          style={{ color: active ? '#faf9f6' : 'rgba(250,249,246,0.62)' }}
-        >
-          {label}
-        </span>
+      {isOpen ? (
+        <>
+          <span
+            className="text-[13.5px] font-medium leading-snug"
+            style={{ color: active ? '#faf9f6' : 'rgba(250,249,246,0.62)' }}
+          >
+            {label}
+          </span>
+          {/* Lý do cái chấm, viết ra thành chữ ngay cạnh tên tab — chỗ này rộng, không có cớ để đố. */}
+          {attention && (
+            <span
+              className="ml-auto mr-1 shrink-0 rounded-full px-1.5 py-[3px] text-[9.5px] font-semibold uppercase tracking-[0.06em]"
+              style={{ background: 'rgba(var(--accent-rgb),0.16)', color: 'var(--accent)' }}
+            >
+              {attention}
+            </span>
+          )}
+        </>
+      ) : (
+        // ⚠️ NHÃN DƯỚI ICON Ở BẢN THU GỌN (vòng 42). `title` chỉ hiện khi rê chuột và không tồn tại
+        // trên cảm ứng — nó là một nhãn cho người đã biết đường, tức đúng những người không cần nó.
+        // ⚠️ XUỐNG DÒNG, KHÔNG `truncate` — vòng 39 đã đóng luật «không chữ nào bị cắt», và một nhãn
+        // điều hướng bị cắt thành «Hành tr…» là đúng cái luật ấy cấm. Cột rộng 88px đủ cho nhãn dài
+        // nhất trên một dòng; nếu một ngày nào đó không đủ (đổi font, đổi tên tab, người dùng phóng
+        // to chữ hệ thống) thì nó XUỐNG DÒNG chứ không mất chữ nào.
+        <>
+          <span
+            className="w-full text-center text-[9.5px] font-medium leading-[1.15]"
+            style={{ color: active ? '#faf9f6' : 'rgba(250,249,246,0.58)' }}
+          >
+            {label}
+          </span>
+          {/* Lý do cái chấm, cũng viết ra thành chữ ở đây — 88px đủ cho «Có việc»/«Tuần mới». */}
+          {attention && (
+            <span className="w-full text-center text-[8.5px] font-semibold leading-[1.15]" style={{ color: 'var(--accent)' }}>
+              {attention}
+            </span>
+          )}
+        </>
       )}
     </button>
   );

@@ -1,8 +1,13 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
+import { RING_HEIGHT_RESERVE_PX } from './focus/ringMetrics.js';
+import { stripComments } from '../utils/sourceScan.js';
 
 const SRC = readFileSync(new URL('./PomodoroEngine.jsx', import.meta.url), 'utf8');
+// ⚠️ Bản BỎ CHÚ THÍCH: mấy tên cũ được kể lại trong chính lời giải thích vì sao chúng bị xoá,
+// nên một phép tìm trên nguyên văn sẽ đọc trúng lời cáo phó và tưởng là người còn sống.
+const CODE = stripComments(SRC);
 
 // ⚠️ VÌ SAO BÀI NÀY TỒN TẠI. Đo trên khung 390px thật: nút Bắt đầu nằm ở y=779..822 trong khi
 // thanh tab NỔI bắt đầu ở y=774 ⇒ **nút chính của cả app bị thanh tab che**, và Đàm phải cuộn mới
@@ -22,37 +27,87 @@ const SRC = readFileSync(new URL('./PomodoroEngine.jsx', import.meta.url), 'utf8
 // trị đã được chứng minh là KHÔNG đủ) và lớn hơn 0 một cách có nghĩa — hạ tiếp là bắt đầu ăn vào
 // chính thứ to nhất màn hình, mà chuyện ấy phải do Đàm chọn.
 
-test('vòng đồng hồ có TRẦN theo bề ngang màn hình, không phải cỡ cố định', () => {
-  // ⚠️ Phải là `min(...)`: một hằng số nhỏ hơn thì thu đồng hồ ở MỌI khổ màn hình, kể cả nơi không
-  // hề thiếu chỗ — trả giá ở chỗ không có vấn đề. Trần chỉ cắn khi bề ngang < 466px.
-  // ADR-079: the cap is a variable — TIGHT while idle (this fold law), LIFTED while a timer runs
-  // (no Start button then, and at 226 px the number ran over the track). Both values are read here.
-  assert.ok(
-    /timerCanvasSize\}px, \$\{ringViewportCap\}\)/.test(SRC),
-    'vòng đồng hồ không còn trần theo bề ngang ⇒ nút Bắt đầu sẽ chui lại xuống dưới thanh tab',
+// ⚠️ VÒNG 42 (ADR-081) — CÁI TRẦN CŨ ĐÃ ĐƯỢC THAY BẰNG MỘT THỨ MẠNH HƠN, VÀ ĐÂY LÀ LÝ DO.
+//
+// Bản cũ khoá `min(${timerCanvasSize}px, ${ringViewportCap})` ở HAI chỗ và bắt hai chỗ ấy dùng
+// CÙNG một trần — đúng ý, nhưng nó chỉ canh được cái trần, không canh được phép nhân đứng sau nó.
+// Vòng đồng hồ còn bị `transform: scale()` phóng to lên nữa, mà transform KHÔNG đổi bố cục ⇒ hình
+// vẽ to hơn cái lỗ chừa cho nó đúng lúc trần cắn. Đo 2026-09-08 ở 390px toàn màn hình: vẽ 427px,
+// chừa 281px, dòng mục tiêu nằm SÂU 32px trong nét vòng. Bài test cũ vẫn XANH suốt lúc ấy.
+//
+// ⇒ Nay không còn hai biểu thức để so nhau nữa: vòng là một hộp bố cục bình thường với MỘT bề
+// ngang (`ringSize`) và `aspect-ratio: 1`, còn chỗ chứa nó KHÔNG có chiều cao riêng. Cái được
+// canh ở đây là chính điều đó — vì đó là thứ đã gãy.
+
+test('vòng đồng hồ có MỘT bề ngang duy nhất, lấy từ `ringSizeCss`', () => {
+  assert.match(
+    SRC, /const ringSize = ringSizeCss\(ringContext\(/,
+    'cỡ vòng không còn đến từ `focus/ringMetrics.js` — mọi con số cỡ vòng phải có đúng MỘT chủ',
   );
-  const m = SRC.match(/const ringViewportCap = isIdle && !isBreakMode \? '(\d+)vw' : '(\d+)vw';/);
-  assert.ok(m, 'không tìm thấy `ringViewportCap` với nhánh idle / đang chạy');
-  const idleVw = Number(m[1]);
-  const runningVw = Number(m[2]);
-  assert.ok(
-    idleVw <= 58,
-    `trần vòng đồng hồ lúc NGHỈ đang là ${idleVw}vw — 64vw đã được ĐO là không đủ cho ngày mà khối chào dài 3 dòng`,
+  assert.match(
+    SRC, /style=\{\{ width: ringSize, aspectRatio: '1 \/ 1', containerType: 'inline-size' \}\}/,
+    'hộp vòng đồng hồ không còn là `width: ringSize` + `aspect-ratio` ⇒ chiều cao lại là một con số riêng',
   );
+  // THỬ-CHO-ĐỎ: đổi `width: ringSize` thành `width: ringSize, height: ringSize` ⇒ vẫn xanh ở dòng
+  // trên nhưng đỏ ở đây, vì hai chiều lại tách thành hai giá trị có thể lệch nhau.
+  const i = SRC.indexOf("style={{ width: ringSize, aspectRatio");
+  assert.ok(i > 0);
   assert.ok(
-    runningVw >= 70,
-    `trần lúc ĐANG CHẠY là ${runningVw}vw — dưới 70vw ở 390px vòng nhỏ hơn cỡ tự nhiên và số 72px lại đè lên nét vòng (ADR-079)`,
+    !/height: ringSize/.test(SRC.slice(i, i + 200)),
+    'chiều cao vòng lại được khai riêng — `aspect-ratio` là thứ duy nhất được suy ra nó',
   );
 });
 
-// ⚠️ Vế dễ quên nhất, và quên thì KHÔNG được một điểm ảnh nào: `minHeight` của khối cha là chỗ
-// GIỮ SẴN chiều cao. Thu mỗi cái vòng mà để nguyên nó thì khoảng trống vẫn bị giữ y như cũ.
-// THỬ-CHO-ĐỎ: đổi `minHeight` về `timerFootprintHeight` trần ⇒ đỏ.
-test('chỗ giữ sẵn chiều cao dùng CÙNG trần với vòng đồng hồ', () => {
-  const vong = SRC.match(/timerCanvasSize\}px, (\$\{ringViewportCap\})\)/)?.[1];
-  const cho = SRC.match(/minHeight: `min\(\$\{timerFootprintHeight\}px, (\$\{ringViewportCap\})\)`/)?.[1];
-  assert.ok(cho, 'chỗ giữ sẵn chiều cao không còn trần theo bề ngang');
-  assert.equal(cho, vong, 'hai vế dùng hai trần KHÁC nhau ⇒ thu cái vòng mà chỗ trống vẫn giữ nguyên');
+// ⚠️ VẾ DỄ QUÊN NHẤT, VÀ CHÍNH NÓ ĐÃ GÃY: chỗ chứa vòng KHÔNG được có chiều cao riêng. Bản cũ giữ
+// sẵn chiều cao bằng `minHeight` tính từ một biểu thức THỨ HAI; hễ hai biểu thức lệch nhau là chữ
+// nằm dưới vòng rơi lên nét vòng. Chỗ chứa nay `height: auto` nên nó ôm đúng cái nó chứa — thứ
+// được chừa CHÍNH LÀ thứ được vẽ, không còn gì để lệch.
+// THỬ-CHO-ĐỎ: thêm lại `style={{ minHeight: ... }}` vào khối cha của vòng ⇒ đỏ.
+test('chỗ chứa vòng KHÔNG có chiều cao riêng — thứ được chừa chính là thứ được vẽ', () => {
+  const i = SRC.indexOf('<div className="relative mt-2 flex w-full items-center justify-center');
+  assert.ok(i > 0, 'không tìm thấy khối chứa vòng đồng hồ — phép đo chạy rỗng');
+  const khoi = SRC.slice(i, SRC.indexOf('style={{ width: ringSize', i));
+  assert.ok(
+    !/minHeight|height:/.test(khoi),
+    'khối chứa vòng lại tự khai chiều cao ⇒ nó có thể lệch khỏi cỡ vòng thật, đúng lỗi vòng 42',
+  );
+  assert.ok(
+    !/timerFootprintHeight|ringViewportCap|timerCanvasSize|timerCircleBoost|timerVisualScale/.test(CODE),
+    'một trong chín con số cỡ vòng cũ đã quay lại — chúng bị xoá vì hai trong số chúng nói ngược nhau',
+  );
+});
+
+// ⚠️ KHÔNG BAO GIỜ PHÓNG VÒNG BẰNG `transform`. Đây là nguyên nhân gốc, viết thành một dòng: một
+// phép biến hình không đổi bố cục, nên mọi thứ nằm dưới vòng vẫn tính theo cỡ TRƯỚC khi phóng.
+// THỬ-CHO-ĐỎ: thêm lại `animate: { scale: … }` cho khối bọc vòng ⇒ đỏ.
+test('không có phép `scale` nào phóng vòng đồng hồ', () => {
+  const i = SRC.indexOf("style={{ width: ringSize, aspectRatio");
+  const truoc = SRC.slice(Math.max(0, i - 400), i);
+  assert.ok(
+    !/scale/.test(truoc),
+    'có `scale` quanh hộp vòng đồng hồ — transform không đổi bố cục, nên chữ dưới vòng lại đè lên nét vòng',
+  );
+});
+
+// ⚠️ CÒN CÁI TRẦN NÚT-TRÊN-NẾP-GẤP THÌ CHUYỂN THÀNH MỘT CON SỐ THẬT: phần chiều cao mà mọi thứ
+// KHÔNG PHẢI vòng đồng hồ cần trên khung điện thoại. Vòng lấy phần còn lại, nên nút Bắt đầu ở
+// trên nếp gấp là hệ quả của số này chứ không phải của một cái trần theo bề ngang.
+// Đo 2026-09-08 ở 390×844: nút Bắt đầu y=686…728, thanh tab nổi y=774 ⇒ dư 46px.
+test('phần chừa cho phần còn lại của màn Tập trung đủ lớn để nút Bắt đầu nằm trên thanh tab', () => {
+  // Thanh tab nổi bắt đầu ở 774/844 = 91.7% chiều cao khung. Mọi thứ ngoài vòng đồng hồ ở khung
+  // hẹp — bưu thiếp, dải gạch, dòng dưới vòng, hàng nút, và chính 118px thanh tab chừa sẵn — cộng
+  // lại phải ≥ 500px, nếu không vòng lại phình ra và đẩy nút xuống dưới thanh tab.
+  assert.ok(
+    RING_HEIGHT_RESERVE_PX.compact >= 500,
+    `phần chừa ở khung hẹp còn ${RING_HEIGHT_RESERVE_PX.compact}px — dưới 500px thì vòng phình ra và `
+    + 'nút Bắt đầu chui xuống dưới thanh tab nổi (đã xảy ra hai lần: vòng 20 và vòng 23)',
+  );
+  // …và không được lớn tới mức vòng biến mất: dưới 200px đường kính thì con số trong vòng bắt đầu
+  // nhỏ hơn chữ thường của app, tức đồng hồ thôi là trung tâm thị giác.
+  assert.ok(
+    844 - RING_HEIGHT_RESERVE_PX.compact >= 200,
+    'phần chừa lớn tới mức vòng đồng hồ ở khung 390×844 nhỏ hơn 200px — đồng hồ thôi là thứ to nhất màn hình',
+  );
 });
 
 // ⚠️ SVG phải co theo khối cha (`100%`), không giữ cỡ px riêng — nếu không nó tràn ra ngoài đúng

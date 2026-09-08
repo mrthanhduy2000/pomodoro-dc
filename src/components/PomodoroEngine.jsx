@@ -46,15 +46,24 @@ import CategoryChip from './focus/CategoryChip';
 import SessionReviewCard from './focus/SessionReviewCard';
 import CancelConfirmDialog from './focus/CancelConfirmDialog';
 import CategoryManager from './focus/CategoryManager';
-import useMinWidth from '../hooks/useMinWidth';
+import {
+  RING_ART,
+  RING_ART_SIZE,
+  RING_TEXT_CQW,
+  clockCqw,
+  ringContext,
+  ringSizeCss,
+} from './focus/ringMetrics';
 import { isEditableShortcutTarget, isSpaceKeyEvent } from '../lib/keyboard';
 
 const NOTE_WORD_LIMIT = 3000;
 const SESSION_EXTENSION_SECONDS = 60;
 const SESSION_EXTENSION_WINDOW_SECONDS = 5 * 60;
 const SESSION_EXTENSION_IDLE_GRACE_MS = 30 * 1000;
-const RING_RADIUS = 128;
-const RING_STROKE = 14;
+// ⚠️ The ring's geometry lives in `focus/ringMetrics.js` — ONE owner, because the bug of round 42
+// was two files/expressions describing one circle. Read that file's header before touching sizes.
+const RING_RADIUS = RING_ART.radius;
+const RING_STROKE = RING_ART.stroke;
 const RING_CIRCUMFERENCE = 2 * Math.PI * RING_RADIUS;
 // ── Vòng thứ hai: MỤC TIÊU NGÀY ──────────────────────────────────────────────
 // Mảnh hơn hẳn vòng chính (4 so với 14) và nằm NGOÀI nó, cách một khoảng trống rõ — để mắt đọc ra
@@ -63,7 +72,7 @@ const RING_CIRCUMFERENCE = 2 * Math.PI * RING_RADIUS;
 // thì vòng ngoài tự dịch theo, và `SVG_SIZE` bên dưới cũng tự nới — không có con số nào phải sửa tay.
 // ADR-079: ONE ring. The outer daily-goal ring (a second arc, unlabelled) is gone — while a session
 // runs the only progress on screen is the time left. The SVG frame hugs the main ring.
-const SVG_SIZE = (RING_RADIUS + RING_STROKE / 2) * 2 + 4;
+const SVG_SIZE = RING_ART_SIZE;
 
 const RING_COLORS = {
   [TIMER_STATES.IDLE]: 'var(--ink)',
@@ -81,7 +90,6 @@ export default function PomodoroEngine({
   /** ADR-078: rendered right under the timer card (the streak card lives here now). */
   belowTimer = null,
 }) {
-  const isDesktopViewport = useMinWidth(1024);
   const timerConfig = useGameStore((s) => s.timerConfig);
   const setTimerConfig = useGameStore((s) => s.setTimerConfig);
   const unlockedSkills = useGameStore((s) => s.player.unlockedSkills);
@@ -199,6 +207,14 @@ export default function PomodoroEngine({
   const [showCatManager, setShowCatManager] = useState(false);
   const [noteExpanded, setNoteExpanded] = useState(false);
   const [showCancelConfirm, setShowCancelConfirm] = useState(false);
+  /*
+    ⚠️ THE FULL-SCREEN NOTEBOOK IS CLOSED UNTIL ASKED FOR (round 42, ADR-081).
+    It is ~890 px of session notes below the clock, and it was ALWAYS mounted — so full screen, the
+    mode whose whole point is one screen and nothing else, arrived with 887–1062 px of scroll on
+    every frame (measured 2026-09-08). Nothing is deleted: the same panel, one tap away, and the
+    scroll is now something Đàm asks for instead of something he lands in.
+  */
+  const [fullScreenNotebookOpen, setFullScreenNotebookOpen] = useState(false);
   // Bảng thiết lập GẤP LẠI mặc định — xem chú thích ở `sessionSetupCard`.
   const [setupOpen, setSetupOpen] = useState(false);
   const [focusMinutesDraft, setFocusMinutesDraft] = useState(() => (
@@ -362,98 +378,49 @@ export default function PomodoroEngine({
       ? 900
       : 1240
     : 560;
-  const isDesktopFullScreen = fullScreenMode && isDesktopViewport;
-  const isDesktopFocusStage = immersiveMode && isDesktopViewport && !fullScreenMode;
-  const immersiveTimerScale = immersiveMode
-    ? fullScreenMode
-      ? isBreakMode
-        ? 1.3
-        : isActive
-          ? 1.56
-          : timerState === TIMER_STATES.FINISHED
-            ? 1.42
-            : 1.46
-      : isBreakMode
-        ? 1.24
-        : isActive
-          ? 1.34
-          : timerState === TIMER_STATES.FINISHED
-            ? 1.22
-            : 1.16
-    : 1;
-  const fullScreenDesktopBoost = isDesktopFullScreen
-    ? isBreakMode
-      ? 1.4
-      : isActive
-        ? 1.5
-        : timerState === TIMER_STATES.FINISHED
-          ? 1.42
-          : 1.38
-    : isDesktopFocusStage
-      ? isBreakMode
-        ? 1.12
-        : 1.18
-      : 1;
-  const timerCircleBoost = isDesktopFullScreen
-    ? isBreakMode
-      ? 1.2
-      : 1.28
-    : isDesktopFocusStage
-      ? isBreakMode
-        ? 1.14
-        : 1.22
-      : 1;
-  const shouldDockFullScreenActions = isDesktopFullScreen && !showSessionReview;
-  const fullScreenTimerScaleDown = shouldDockFullScreenActions ? 1 : 1;
-  const fullScreenTimerCanvasDown = shouldDockFullScreenActions ? 1 : 1;
-  const timerVisualScale = immersiveMode
-    ? immersiveTimerScale * fullScreenDesktopBoost * fullScreenTimerScaleDown
-    : 1;
-  const timerCanvasSize = Math.ceil(SVG_SIZE * timerCircleBoost * fullScreenTimerCanvasDown);
-  const timerFootprintScale = immersiveMode
-    ? timerVisualScale * timerCircleBoost * fullScreenTimerCanvasDown
-    : 1;
-  const timerFootprintSize = Math.ceil(SVG_SIZE * timerFootprintScale);
-  const timerFootprintHeight = timerFootprintSize + (immersiveMode
-    ? shouldDockFullScreenActions
-      ? 40
-      : isDesktopFullScreen
-        ? 176
-        : isDesktopFocusStage
-          ? 92
-          : 40
-    : 0);
-  const fullScreenDesktopStageLift = shouldDockFullScreenActions
-    ? 0
-    : isDesktopFullScreen
-      ? -44
-      : 0;
+  /*
+    ⚠️ ONE NUMBER FOR THE RING (round 42, ADR-081). Everything that used to describe this circle —
+    `immersiveTimerScale`, `fullScreenDesktopBoost`, `timerCircleBoost`, `timerCanvasSize`,
+    `timerFootprintScale/Size/Height`, `ringViewportCap`, `fullScreenTimerScaleDown/CanvasDown` and
+    a `transform: scale()` on top of all of it — is GONE, replaced by this single CSS length.
+
+    Nine numbers described one circle, and two of them disagreed: the ring was DRAWN at
+    `min(canvas, cap) × scale` and the room under it was RESERVED as `min(canvas × scale + pad, cap)`.
+    A transform does not change layout, so the moment the cap bit, the drawing was bigger than the
+    hole left for it and the goal line landed on the arc (measured 2026-09-08 at 390 px in full
+    screen: 427 drawn, 281 reserved, 32 px of text inside the ring). See `focus/ringMetrics.js`.
+
+    The slot around the ring now has NO height of its own — the ring is an ordinary in-flow box, so
+    what the browser reserves IS what it draws. There is no second number left to disagree.
+  */
+  const ringSize = ringSizeCss(ringContext({ fullScreen: fullScreenMode, wide: immersiveMode }));
   const prioritizeSetupCard = !fullScreenMode && immersiveMode && isIdle && !isBreakMode;
   const useImmersiveHeroLayout = fullScreenMode || (immersiveMode && !prioritizeSetupCard);
+  /*
+    ⚠️ WHILE A TIMER OWNS THE SCREEN, THE SCREEN IS ONE SCREEN (round 42, ADR-081).
+    Đàm: «lúc tôi đang tập trung mà phải cuộn để tìm nút Tạm dừng là hỏng». Measured before this
+    change at 1280×900: the Focus column was 1255 px tall ⇒ 355 px of scroll, and the button row was
+    the part below the fold. Break counts too — it is a running clock with a button under it.
+  */
+  const timerOwnsScreen = isActive || isBreakMode;
   // Màn Focus "tĩnh": khi đang chạy/tạm dừng (không phải giải lao) cũng dùng
   // chế độ tối giản như fullscreen — ẩn huy hiệu game để 25 phút chỉ còn đồng hồ.
   const useMinimalFocusStage = fullScreenMode || (isActive && !isBreakMode);
-  // ADR-079: the ring's viewport cap — tight while idle (Start must stay above the tab bar at 390 px),
-  // lifted while any timer runs (see the block comment above the ring).
-  const ringViewportCap = isIdle && !isBreakMode ? '58vw' : '72vw';
-  // Cỡ chữ đã tăng ~20% so với bản trước (2026-08-27) để con số thành trung tâm thị giác thật sự.
-  // ⚠️ Mọi mốc đáp ứng đều phải nhân CÙNG hệ số — nới một mốc rồi bỏ quên mốc kia thì chữ nhảy cỡ
-  // đúng lúc xoay ngang máy. Bảng cũ → mới: 4.8→5.75 · 5.6→6.7 · 6.4→7.7 · 7.05→8.45 ·
-  // 4.55→5.45 · 4.9→5.9 · 5.2→6.25 · 5.55→6.65 · 3.95→4.75 · 4.65→5.6 · 5.2→6.25 ·
-  // text-6xl (3.75rem) → 4.5rem.
-  const timerValueLayoutClass = useImmersiveHeroLayout
-    ? fullScreenMode
-      ? isDesktopFullScreen
-        ? 'block w-[82%] text-center text-[5.75rem] leading-[0.81] tracking-[-0.065em] md:text-[6.7rem] xl:text-[7.7rem] 2xl:text-[8.45rem]'
-        : 'block w-[84%] text-center text-[5.45rem] leading-[0.8] tracking-[-0.068em] sm:text-[5.9rem] md:text-[6.25rem] xl:text-[6.65rem]'
-      : 'block max-w-[82%] text-center text-[4.75rem] leading-[0.86] tracking-[-0.06em] md:text-[5.6rem] xl:text-[6.25rem]'
-    // ⚠️ `tracking-wide` chứ KHÔNG còn `tracking-widest`, và đây là hệ quả ĐO ĐƯỢC của việc nâng
-    // cỡ chữ 20%: nhánh này là nhánh DUY NHẤT không có ràng buộc bề rộng, mà ở khung 390px lòng
-    // đĩa chỉ rộng 238px. Đo thật: "180:00" (bấm giờ chạy quá 100 phút — `clampFocusMinutes` cho
-    // tới 180) ở `widest` (0,1em) rộng **247px ⇒ TRÀN 9px** ra đè lên vòng; `wider` 226px; `wide`
-    // 215px ⇒ dư 23px. Bản trước cỡ chữ nhỏ hơn nên `widest` vẫn vừa — cái tràn này do chính phép
-    // nâng cỡ sinh ra, không phải có sẵn.
-    : 'text-[4.5rem] tracking-wide';
+  /*
+    ⚠️ THE CLOCK IS A FRACTION OF THE RING, NOT A LIST OF BREAKPOINTS (round 42, ADR-081).
+
+    This used to be eleven absolute rem values across four breakpoints, tuned by hand for the ring
+    size of the day — the same failure as the ring itself, one layer in: shrink the ring and the
+    digits stay, so they run over the stroke; grow it and they rattle inside it. Round 39 already
+    paid for this once, when raising the type 20 % pushed "180:00" 9 px past the disc and the fix
+    was to narrow the tracking.
+
+    `cqw` is 1 % of the ring's own width (the ring box declares `container-type: inline-size`), so
+    the answer to "what if this ring were 20 % bigger?" is "so is the text, and the margin is
+    unchanged" — 25 % clear of the disc's chord at every size, proved in `ringText.test.js`.
+    Six characters ("180:00", the stopwatch past 100 minutes) get the smaller of the two ratios.
+  */
+  const timerValueLayoutClass = 'block w-[88%] text-center leading-[0.84] tracking-wide';
   // ⚠️ MỘT lớp độ đậm duy nhất. `.serif`/`.mono` chỉ khai font-family (kiểm ở `index.css`), nên
   // `font-extrabold` không phải tranh với ai — chồng thêm `font-medium`/`font-bold` như bản cũ là
   // để hai lớp cùng khai `font-weight` rồi phó mặc thứ tự bảng kiểu Tailwind quyết ai thắng.
@@ -611,6 +578,9 @@ export default function PomodoroEngine({
     : 0;
   const displayRingSeconds = isBreakMode ? breakSecsLeft : visibleDisplaySeconds;
   const displayProgressPct = isBreakMode ? breakProgressPct : progressPct;
+  /** The string the clock shows. Its LENGTH picks the type size — see `timerValueLayoutClass`. */
+  const clockText = formatTime(displayRingSeconds);
+  const timerValueStyle = { fontSize: `${clockCqw(clockText)}cqw` };
   // Nghỉ NGẮN hay nghỉ DÀI đều là "đang nghỉ" ⇒ cùng một màu, và là màu tích cực `--good`.
   // ⚠️ Bản cũ rẽ theo `lightTheme` rồi chốt cứng `#60a5fa`/`#38bdf8` cho chế độ tối — hai mã màu
   // xanh lam ấy không thuộc bảng màu nào của 5 skin hiện tại, nên vòng đồng hồ là thứ DUY NHẤT
@@ -635,12 +605,11 @@ export default function PomodoroEngine({
   // ngoại lệ, và mỗi ngoại lệ phải tự khai lý do — không có dòng lý do thì nó đáng lẽ là `enter`.
   const enterMotion = useEnterMotion();
 
-  // NGOẠI LỆ (mang bố cục) — cỡ đồng hồ lúc vào/ra chế độ chuyên chú. `animate` KHAI ra tỉ lệ, bỏ
-  // hẳn thì đồng hồ nhảy về cỡ mặc định và chế độ chuyên chú mất luôn ý nghĩa.
-  const timerScaleMotion = useSnapMotion({
-    animate: { scale: timerVisualScale, y: immersiveMode ? (isDesktopFullScreen ? 8 : 4) : 0 },
-    transition: { duration: 0.28, ease: [0.22, 1, 0.36, 1] },
-  });
+  // ⚠️ THE RING IS NO LONGER SCALED BY TRANSFORM (round 42, ADR-081). This slot used to hold a
+  // `useSnapMotion` animating `scale` to a per-mode factor — and that transform is precisely what
+  // made the drawing bigger than the space reserved for it, because a transform does not change
+  // layout. The size is now one CSS length on the box itself (`ringSize`), so entering focus mode
+  // still grows the clock, and what is measured is what is seen. Do not re-add a scaling wrapper.
 
   // NGOẠI LỆ (trang trí) — nhịp thở của đồng hồ: lặp VÔ HẠN, nên nó không thể là `enter` (một nhịp
   // xuất hiện chạy đúng một lần). Bỏ hẳn thì đồng hồ đứng yên ở tỉ lệ 1 — đúng thứ cần.
@@ -1009,36 +978,28 @@ export default function PomodoroEngine({
       {/* ADR-079: the «Giải lao dài» pill above the ring is gone — the ring's own label says it. */}
 
       {/*
-        ⚠️ TRẦN THEO BỀ NGANG MÀN HÌNH, KHÔNG PHẢI ĐỔI CỠ ĐỒNG HỒ (2026-08-30).
-        Đo trên khung 390px thật: nút Bắt đầu nằm ở y=779..822 trong khi thanh tab NỔI bắt đầu ở
-        y=774 ⇒ **nút chính của cả app bị thanh tab che**, và Đàm phải cuộn mới bấm được thứ anh mở
-        app ra để bấm. Sau khi đã thu hết khoảng trắng quanh đồng hồ (36px) vẫn còn thiếu 48px, mà
-        thứ duy nhất còn đủ lớn để nhường là chính vòng đồng hồ (298px = 76% bề ngang máy).
-        ⚠️ VÌ SAO LÀ `min()` CHỨ KHÔNG PHẢI MỘT HẰNG SỐ NHỎ HƠN: hằng số thì thu đồng hồ ở MỌI khổ
-        màn hình, kể cả nơi không hề thiếu chỗ — tức trả giá ở chỗ không có vấn đề. Cái trần này
-        chỉ cắn khi bề ngang < 466px; từ đó trở lên `timerCanvasSize` thắng và mọi thứ y như cũ.
-        ⚠️ 64vw → 58vw (vòng 20, 2026-08-30). Đo lại trên tài khoản đã chơi lâu thì nút VẪN bị
-        che: khối chào là `${lời chào}. ${biến thể theo ngày}` với 8 biến thể, nên có ngày nó dài
-        2 dòng, có ngày 3 dòng — chênh 26px. Ở ngày dài, nút xuống y=757…799 trong khi thanh tab
-        bắt đầu ở y=774. Tức trần cũ chỉ đủ cho NGÀY NGẮN, và một cái trần chỉ đúng vào ngày may
-        mắn thì không phải một cái trần. 58vw ở 390px cho ra 226px — vẫn là thứ to nhất màn hình,
-        và trần chỉ cắn khi bề ngang < 514px nên máy bàn không đổi một điểm ảnh nào.
-        ⚠️ `minHeight` PHẢI dùng CÙNG biểu thức: nó là chỗ giữ sẵn chiều cao, nên nếu chỉ thu cái
-        vòng mà quên nó thì khoảng trống vẫn bị giữ nguyên và không được một điểm ảnh nào.
-        ADR-079: the 58vw cap exists for ONE reason — the idle Start button above the tab bar. While a
-        timer runs there is no Start button and the card below is a one-line goal plus a short row of
-        buttons, so the cap is lifted to 72vw (the ring's natural size on every phone ≥ 380 px): at
-        226 px the inner disc is 192 px and the 72 px number ran over the track, and the line under
-        it grazed the arc at 20 characters. Same expression in both places, as the note above says.
+        ⚠️ THE SLOT HAS NO HEIGHT OF ITS OWN — THAT IS THE WHOLE FIX (round 42, ADR-081).
+
+        The previous version reserved the ring's height with a `minHeight` computed from a SECOND
+        expression, while the ring itself was drawn from a first one and then blown up by a
+        `transform: scale()`. Transforms do not change layout, so the two disagreed exactly when the
+        viewport cap bit, and the goal line under the ring landed ON the arc — 32 px inside it at
+        390 px in full screen, measured 2026-09-08. Two expressions for one circle is the bug.
+
+        Now the ring is an ordinary in-flow box with ONE width (`ringSize`) and `aspect-ratio: 1`;
+        this slot is `height: auto` and simply hugs it. What the browser reserves IS what it draws,
+        by construction — the class of bug cannot come back without someone re-adding a height here.
+
+        ⚠️ NEVER put `minHeight`/`height` on this slot, and never scale the box below by transform.
+        `container-type: inline-size` is what lets every string INSIDE the disc be sized in `cqw`
+        (a fraction of this ring), so the text follows the ring instead of guessing at it.
+
+        The three terms of `ringSize` and the reserves behind them: `focus/ringMetrics.js`.
       */}
-      <div
-        className="relative mt-2 flex w-full items-center justify-center sm:mt-5 md:mt-1"
-        style={{ minHeight: `min(${timerFootprintHeight}px, ${ringViewportCap})` }}
-      >
-        <motion.div
+      <div className="relative mt-2 flex w-full items-center justify-center sm:mt-4 md:mt-1">
+        <div
           className="relative flex shrink-0 items-center justify-center"
-          {...timerScaleMotion}
-          style={{ width: `min(${timerCanvasSize}px, ${ringViewportCap})`, height: `min(${timerCanvasSize}px, ${ringViewportCap})` }}
+          style={{ width: ringSize, aspectRatio: '1 / 1', containerType: 'inline-size' }}
         >
           {immersiveMode && (isActive || isBreakMode) && (
             <motion.div
@@ -1051,7 +1012,11 @@ export default function PomodoroEngine({
           {beat && (
             <BeatRipple key={`${isBreakMode ? 'break' : 'focus'}-${beat.id}`} color={isBreakMode ? 'var(--good)' : 'var(--accent)'} />
           )}
-          <motion.div className="relative" {...timerBreathMotion}>
+          {/* ⚠️ `h-full w-full` (round 42): the SVG inside asks for `width/height: 100%`, so this
+              wrapper is what those percentages resolve against. Without a size of its own the
+              drawing fell back to its intrinsic box and stopped following the ring — a 560 px ring
+              with a 290 px circle inside it, measured 2026-09-08. */}
+          <motion.div className="relative h-full w-full" {...timerBreathMotion}>
           <svg
             width="100%"
             height="100%"
@@ -1101,7 +1066,13 @@ export default function PomodoroEngine({
           </motion.div>
 
           <div className="absolute inset-0 flex flex-col items-center justify-center">
-            <span className={`mono text-[10px] uppercase tracking-[0.22em] text-[var(--muted)]`}>
+            {/* Every string inside the disc is sized in `cqw` = 1 % of the ring (ADR-081) — see the
+                block above `timerValueLayoutClass`. Absolute px here is how text used to end up on
+                the stroke whenever the ring changed size. */}
+            <span
+              className="mono uppercase tracking-[0.22em] text-[var(--muted)]"
+              style={{ fontSize: `${RING_TEXT_CQW.label}cqw` }}
+            >
               {/* ADR-080: during a beat the label WHISPERS the beat (a few seconds, no digit) — the same
                   slot, the arc's colour, then the state label returns. Nothing is added to the screen. */}
               {beat ? (
@@ -1132,15 +1103,19 @@ export default function PomodoroEngine({
             </span>
             <motion.span
               key={`${isBreakMode ? 'break' : runtimeTimerMode}-${displayRingSeconds}`}
-              className={`mt-3 ${timerValueLayoutClass} ${timerValueFontClass} ${timerValueToneClass} tabular-nums transition-all duration-300`}
+              className={`mt-[3.5cqw] ${timerValueLayoutClass} ${timerValueFontClass} ${timerValueToneClass} tabular-nums`}
+              style={timerValueStyle}
               {...countdownPulseMotion}
             >
-              {formatTime(displayRingSeconds)}
+              {clockText}
             </motion.span>
             {/* ADR-079: the second answer of the clock is an ORDINAL ("Phiên thứ N hôm nay"), the same
                 sentence on every device and true while running; the daily-goal fraction moved to
                 the postcard caption, idle only. */}
-            <span className="mt-1.5 text-[13px] leading-none" style={{ color: 'var(--muted)' }}>
+            <span
+              className="mt-[1.6cqw] leading-none"
+              style={{ color: 'var(--muted)', fontSize: `${RING_TEXT_CQW.subline}cqw` }}
+            >
               {clockSubline}
             </span>
             {/*
@@ -1160,18 +1135,27 @@ export default function PomodoroEngine({
             */}
             {!isBreakMode && isStopwatchMode && (
               <>
-                <span className={`mt-0.5 text-xs ${lightTheme ? 'text-[var(--accent)]' : 'text-[var(--accent-light)]'}`}>
+                <span
+                  className={`mt-[0.6cqw] ${lightTheme ? 'text-[var(--accent)]' : 'text-[var(--accent-light)]'}`}
+                  style={{ fontSize: `${RING_TEXT_CQW.hint}cqw` }}
+                >
                   Ghi nhận theo phút thực tế
                 </span>
                 {isContinuingAfterPomodoro && (
                   <span className="mt-1 flex flex-col items-center leading-tight">
-                    <span className={`text-[11px] font-semibold ${lightTheme ? 'text-[var(--accent)]' : 'text-[var(--accent-light)]'}`}>
+                    <span
+                      className={`font-semibold ${lightTheme ? 'text-[var(--accent)]' : 'text-[var(--accent-light)]'}`}
+                      style={{ fontSize: `${RING_TEXT_CQW.hint}cqw` }}
+                    >
                       {continuedPomodoroConfirmationPending
                         ? 'Đã thêm 15 phút nữa — tiếp tục hay dừng?'
                         : `Xong ${currentSessionTargetMinutes}′ — đang tính giờ thêm`}
                     </span>
                     {!continuedPomodoroConfirmationPending && (
-                      <span className={`mt-0.5 text-[10px] text-[var(--muted)]`}>
+                      <span
+                        className="mt-[0.6cqw] text-[var(--muted)]"
+                        style={{ fontSize: `${RING_TEXT_CQW.label}cqw` }}
+                      >
                         Bấm Hết Phiên khi muốn dừng
                       </span>
                     )}
@@ -1180,7 +1164,7 @@ export default function PomodoroEngine({
               </>
             )}
           </div>
-        </motion.div>
+        </div>
       </div>
       {/* ADR-079: the ONE line under the ring — the session goal while focusing, the rest line on a
           break. Outside the disc (see the note inside the ring column), full width, wraps, no clamp. */}
@@ -1203,14 +1187,17 @@ export default function PomodoroEngine({
   const compactTimerActionRowClassName = 'grid w-full grid-flow-col auto-cols-fr items-stretch gap-1.5 sm:flex sm:w-auto sm:items-center sm:gap-3';
   const compactTimerActionButtonClassName = 'min-w-0 w-full';
 
+  /*
+    ⚠️ ONE BUTTON ROW, ONE PLACE (round 42, ADR-081). Desktop full screen used to DOCK this row at
+    the bottom of the page, separately from the stage, and that split is what let the stage above it
+    be mounted into a ROW flex container — where the goal line, a sibling in a stack, flew out to the
+    ring's right edge and landed on the digits (measured 2026-09-08 at 1280 and 2000). The row is a
+    normal last child of the stage column now, on every device; `min-h` keeps its height steady while
+    the buttons swap so the ring above does not jump.
+  */
   const timerStageActions = (
-    <div className={shouldDockFullScreenActions
-      ? 'flex w-full items-start justify-center'
-      : `mt-2 flex w-full items-start justify-center md:mt-4 ${immersiveMode ? 'min-h-[104px]' : 'min-h-[52px]'}`
-    }>
-      <div className={`flex w-full max-w-[412px] flex-col items-stretch gap-3 ${
-        shouldDockFullScreenActions ? 'sm:w-full sm:max-w-[540px] sm:items-center' : 'sm:w-auto sm:max-w-none sm:items-start'
-      }`}>
+    <div className={`mt-2 flex w-full shrink-0 items-start justify-center md:mt-4 ${immersiveMode ? 'min-h-[72px]' : 'min-h-[52px]'}`}>
+      <div className="flex w-full max-w-[412px] flex-col items-stretch gap-3 sm:w-auto sm:max-w-none sm:items-center">
         <AnimatePresence mode="wait">
           {isBreakMode && (
             <ActionButton
@@ -1394,11 +1381,26 @@ export default function PomodoroEngine({
       </div>
     </div>
   );
+  /*
+    ⚠️ THE STAGE CARRIES ITS OWN COLUMN — AND IT IS THE ONLY PLACE `timerStageVisual` IS MOUNTED
+    (round 42, ADR-081).
+
+    `timerStageVisual` is a FRAGMENT of stacked blocks: brick strip, ring, then the one line under
+    the ring. A fragment has no layout of its own, so its children become direct children of
+    whatever mounts it — and one call site (desktop full screen) mounted it into a container with
+    `flex items-center justify-center`, i.e. a ROW. The stack was laid out side by side: the goal
+    line ended up at the ring's right edge, vertically centred, on top of the digits. That is
+    Đàm's screenshot (a), and no amount of margin on the line could have fixed it.
+
+    Declaring the column HERE, once, is what makes it unfixable-by-accident: there is no longer a
+    caller that can choose the axis. `focusStackFit.test.js` fails if `timerStageVisual` is mounted
+    anywhere else, or if this wrapper stops being `flex-col`.
+  */
   const timerStageContent = (
-    <>
+    <div className="flex w-full min-w-0 flex-col items-center">
       {timerStageVisual}
       {timerStageActions}
-    </>
+    </div>
   );
   const showShortcutHint = !useMinimalFocusStage && !isBreakMode && timerState === TIMER_STATES.IDLE;
 
@@ -1703,39 +1705,44 @@ export default function PomodoroEngine({
           Thu nhỏ
         </button>
 
-        <section className={shouldDockFullScreenActions
-          ? 'relative flex h-[100svh] min-h-[100svh] items-center justify-center overflow-hidden px-5 py-10 md:px-8 lg:px-10'
-          : 'flex min-h-[100svh] items-center justify-center px-5 py-10 md:px-8 lg:px-10'}
-        >
-          {shouldDockFullScreenActions ? (
-            <div
-              className="mx-auto flex w-full max-w-[1180px] items-center justify-center"
-              style={{ transform: fullScreenDesktopStageLift !== 0 ? `translateY(${fullScreenDesktopStageLift}px)` : undefined }}
-            >
-              {timerStageVisual}
-            </div>
-          ) : (
-            <div
-              className="mx-auto flex w-full max-w-[960px] flex-col items-center gap-8"
-              style={{ transform: fullScreenDesktopStageLift !== 0 ? `translateY(${fullScreenDesktopStageLift}px)` : undefined }}
-            >
-              {timerStageContent}
-              {showSessionReview && (
-                <div className="w-full max-w-[520px]">
-                  {sessionReviewCard}
-                </div>
-              )}
-            </div>
-          )}
+        {/*
+          ⚠️ ONE SCREEN, NO SCROLL, ONE COLUMN (round 42, ADR-081). `h-[100svh]` + `overflow-hidden`
+          is the promise: full screen is the mode Đàm opens to look at nothing but the clock, so
+          having to scroll to reach «Tạm dừng» is the whole mode failing. Measured before this
+          change: 999 px of scroll at 1280 and 2000, 1038 px at 390. It holds because the ring gives
+          way first — `ringSize` subtracts this stack's reserve from `100svh` (`focus/ringMetrics.js`).
+          ⚠️ The session-review card is the ONE thing allowed to make it scroll again: it appears
+          after the timer has stopped, it is a card to read, and cutting it off would hide content.
+        */}
+        <section className={`flex flex-col items-center justify-center px-5 pb-2 pt-8 md:px-8 lg:px-10 ${
+          showSessionReview ? 'min-h-[100svh]' : 'h-[calc(100svh-64px)] overflow-hidden'
+        }`}>
+          <div className="mx-auto flex h-full max-h-full w-full max-w-[960px] flex-col items-center justify-center gap-6">
+            {timerStageContent}
+            {showSessionReview && (
+              <div className="w-full max-w-[520px]">
+                {sessionReviewCard}
+              </div>
+            )}
+          </div>
         </section>
 
-        {shouldDockFullScreenActions && (
-          <div className="mx-auto flex w-full max-w-[960px] justify-center px-5 pb-8 pt-5 md:px-8 md:pb-10 md:pt-6 lg:px-10">
-            {timerStageActions}
-          </div>
-        )}
-
-        {fullScreenNotebook}
+        {/* Docked under the clock screen, inside no scroll region: the door, not the room. */}
+        <div className="mx-auto flex w-full max-w-[780px] shrink-0 justify-center px-5 pb-6 md:px-8">
+          <button
+            type="button"
+            onClick={() => setFullScreenNotebookOpen((open) => !open)}
+            aria-expanded={fullScreenNotebookOpen}
+            className={`mono rounded-full border px-4 py-2 text-[10px] font-semibold uppercase tracking-[0.18em] transition-colors focus-visible:outline-none focus-visible:ring-2 ${
+              lightTheme
+                ? 'border-[var(--line)] text-[var(--muted)] hover:text-[var(--ink)] focus-visible:ring-[rgba(31,30,29,0.14)]'
+                : 'border-[var(--line)] text-[var(--muted)] hover:text-[var(--ink)] focus-visible:ring-[var(--line-2)]'
+            }`}
+          >
+            {fullScreenNotebookOpen ? 'Ẩn sổ tay phiên ↑' : 'Sổ tay phiên ↓'}
+          </button>
+        </div>
+        {fullScreenNotebookOpen && fullScreenNotebook}
 
         <AnimatePresence>
           {showCancelConfirm && (
@@ -1765,8 +1772,13 @@ export default function PomodoroEngine({
               </AnimatePresence>
             </div>
           )}
+          {/* ⚠️ `min-h-[Nvh]` ONLY WHILE IDLE (round 42). It exists to centre the clock on a big empty
+              desktop screen — but while a session runs it forces the column to 76–88 vh on top of the
+              postcard above it, which is 355 px of guaranteed scroll on a 900 px window with the
+              «Tạm dừng» button in the part you cannot see. When a timer owns the screen the stack
+              sizes itself instead (`ringSize` subtracts this column's reserve from `100svh`). */}
           <div className={`w-full flex flex-col items-center gap-5 lg:gap-7 ${
-            shouldPrioritizeSessionReview
+            shouldPrioritizeSessionReview || timerOwnsScreen
               ? 'justify-start'
               : 'min-h-[76vh] lg:min-h-[84vh] xl:min-h-[88vh] justify-center'
           }`}>

@@ -17,6 +17,8 @@ import assert from 'node:assert/strict';
 import { readFile, readdir } from 'node:fs/promises';
 import { readFileSync } from 'node:fs';
 
+import { RING_ART, RING_ART_SIZE } from './focus/ringMetrics.js';
+
 const SOURCE = await readFile(new URL('./PomodoroEngine.jsx', import.meta.url), 'utf8');
 
 /** Strip comments — otherwise a test reads the very counter-example its explanation quotes. */
@@ -28,24 +30,18 @@ function codeOnly(src) {
 }
 const CODE = codeOnly(SOURCE);
 
-/** Read a `const NAME = <expr>;` and EVALUATE it instead of copying the value. */
-function evalConst(name) {
-  const re = new RegExp(`const ${name} = ([^;]+);`);
-  const m = re.exec(CODE);
-  assert.ok(m, `constant \`${name}\` not found`);
-  const scope = {};
-  for (const d of ['RING_RADIUS', 'RING_STROKE']) {
-    if (d === name) break;
-    const mm = new RegExp(`const ${d} = ([^;]+);`).exec(CODE);
-    if (mm) scope[d] = Function(...Object.keys(scope), `return (${mm[1]});`)(...Object.values(scope));
-  }
-  return Function(...Object.keys(scope), `return (${m[1]});`)(...Object.values(scope));
-}
-
+/*
+  ⚠️ ROUND 42 (ADR-081): the geometry moved to `focus/ringMetrics.js`, which is now its ONE owner —
+  the bug of that round was two places describing one circle. So this test IMPORTS the numbers
+  instead of re-reading them out of the component: re-deriving them here would rebuild the very
+  duplication the move deleted. What the component may still be checked for is that it uses them.
+*/
 test('GEOMETRY: one thick ring, and the SVG frame hugs it without clipping', () => {
-  const R = evalConst('RING_RADIUS');
-  const S = evalConst('RING_STROKE');
-  const SIZE = evalConst('SVG_SIZE');
+  const R = RING_ART.radius;
+  const S = RING_ART.stroke;
+  const SIZE = RING_ART_SIZE;
+  assert.match(CODE, /const RING_RADIUS = RING_ART\.radius;/, 'the component forked the ring geometry again');
+  assert.match(CODE, /const SVG_SIZE = RING_ART_SIZE;/, 'the SVG frame forked from the ring geometry again');
   assert.ok(S >= 10, `the ring must be THICK to be the visual centre — it is ${S}px`);
   assert.ok(SIZE >= (R + S / 2) * 2, `SVG_SIZE = ${SIZE} but the ring needs ${(R + S / 2) * 2}px ⇒ clipped edge`);
   assert.ok(SIZE <= (R + S / 2) * 2 + 16, `SVG_SIZE = ${SIZE}: the frame is sized for a ring that is no longer drawn`);

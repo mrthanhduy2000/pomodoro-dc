@@ -86,7 +86,10 @@ export default function CityPostcard({
     <AppErrorBoundary area="bưu thiếp thành phố" fallback={() => null} variant="section">
       <section
         aria-label="Thành phố của bạn"
-        className="pointer-events-none relative mb-3 h-[168px] w-full overflow-hidden md:mb-4 md:h-[212px]"
+        // ⚠️ `min(px, svh)` (round 42): a FIXED height here is 25 % of a 667 px phone, and on that screen
+        // it was squeezing the clock below the ring to 101 px — space taken from the one thing the
+        // screen is for. Unchanged at 844 px and on every desktop; it only gives way where it must.
+        className="pointer-events-none relative mb-3 h-[min(168px,20svh)] w-full overflow-hidden md:mb-4 md:h-[min(212px,24svh)]"
         style={frameStyle}
         data-postcard-focus={selection ? `${selection.kind}:${selection.bpId}` : 'home'}
       >

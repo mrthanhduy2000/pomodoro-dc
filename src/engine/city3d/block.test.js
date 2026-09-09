@@ -461,22 +461,31 @@ test('CHI TIẾT MÁI KHÔNG ĐƯỢC CHẾT — và danh sách kỷ mất một
 // because a room is asymmetric and the wonder must mirror). Previously:
 // Round 49 (ADR-089): six eras re-based on purpose — a flag on every `mast` motif (8, 12), a hanging
 // cloth on every `banner` (4), a flame in every `firepit` (1, 6, 13). The other nine are untouched.
+// ⚠️ ROUND 51 (ADR-091): TWELVE of fifteen re-based on purpose — the facade vocabulary gained the
+// BOTTOM TWO METRES (`facadeDetail.js`: a number plate beside the door, a window box under the sill,
+// a shop board across the opening). Round 50 wrote that table looking at a building from across the
+// square, so every item on it lived at storey height or above; round 50 also put the eye on the
+// street, where none of them is in the frame.
+// ⚠️ AND ERAS 1–3 DID NOT MOVE, WHICH IS THE EVIDENCE THIS WAS SCOPED. Göbekli Tepe, Egypt and Ur
+// have no street numbering, no window boxes and no shopfronts, so their vocabulary gained nothing —
+// and their digests are byte-identical to round 50's. A re-base that moved all fifteen would have
+// meant the change leaked somewhere it was not meant to go.
 const GOLDEN = {
   1: '231d3db716d9c91bf8af8b10eca02471',
   2: '7ca5b1bf68e3dc9328de2d679bda211f',
   3: '90e3b135478b2ea0ccce32c33ba8c553',
-  4: 'c3da934940b1de41e1c1ed685f41c77a',
-  5: '0bae652119b86377580cfa6fb0b78ee0',
-  6: '0c36a9aa95f306a9e6cb45cb3a54096b',
-  7: 'f37bbb75cd7293d4963f205823afd90a',
-  8: 'f30c653cfb2cec5e463ae74cbc9cc534',
-  9: 'c6f3f8bcb12a334b5462bb6714f46c80',
-  10: 'dcc3b9f93a2c136b90125753bbe56de5',
-  11: '3cbc20d9f632fd2b39d8859d46dc69e7',
-  12: 'bff3bcfada037b02886b3258626c93d0',
-  13: 'd40b0289cecb496ab1bd9c16f1edb0b1',
-  14: '02e9052e21fb2056fb93647a81de9569',
-  15: '4d49465ca82e04e631709a80eb93af94',
+  4: '8883f94cb2a28a83e386435e8f2924e6',
+  5: '908fbe83311bc86fffedd86d31787886',
+  6: '2fe3bab7b95adad55eb09d13478aa7bb',
+  7: 'bbd4c147ad13dbc68e4db6a91ffd1e8b',
+  8: '49ff31ebf2ca81d708415847aee43968',
+  9: 'bc15405fbe2babe468bebd49a97c0122',
+  10: 'f365aee2fe5b29d25d4f24f5e5884143',
+  11: 'fdf9e5fc9c6637f24c30ded9f96fafae',
+  12: '255599c271123fe89290be04f88cd6c2',
+  13: '7bfdf254723a6e6976388710d7edc791',
+  14: 'c52c60cd0dc9bd0ebf4165ef08629122',
+  15: '193b73b98894640a23256f1e003d8442',
 };
 
 test('GOLDEN — thêm tham số `plot` KHÔNG được đổi một chữ số nào của lối gọi cũ', () => {

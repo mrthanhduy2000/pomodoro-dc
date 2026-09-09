@@ -88,10 +88,22 @@ const CO_BE = new Set(['building', 'scaffold', 'dwelling']);
 // NO era gained a MATERIAL FAMILY (checked across all 15): every piece rides `wood`, `stone`,
 // `trim`, `dark`, `roof`, `leaf`, plus `glass` only where the era already has glass and `gold` only
 // where it already has gold. So the draw-call table below did NOT move, and that is by design.
+// …and then, same round and same day, TWO MORE PIECES OF THE EYE-LEVEL WORK:
+//   · the facade vocabulary gained the BOTTOM TWO METRES (`facadeDetail.js`: a number plate beside
+//     the door, a window box under the sill, a shop board with goods across the opening);
+//   · the WONDER OPENED (`wonderEntrance.js`): a portal cut into the front of every landmark, a
+//     colonnade in equal pairs, a lintel, a pediment where the tradition had one, and a stair up
+//     the face of the ziggurat.
+// +0,1 % … +3,1 % on top of the street furniture. Era 5 the most (+3,1 %: Fachwerk window boxes on
+// every wall AND a portal); era 1 the least (+0,15 %: two T-pillars and a fire in the doorway).
+// ⚠️ AND ERA 2 DID NOT MOVE AT ALL, which is the evidence this was scoped rather than sprayed. The
+// Great Pyramid declares `steps: 0` in `WONDER_ENTRANCE` — its outer face has no stair and no door,
+// and giving it one would have been Mesoamerican, not Egyptian. A table where all fifteen rows move
+// is a table that cannot tell a decision from an accident.
 const MOC_TAM_GIAC = {
-  1: 102266, 2: 128686, 3: 125752, 4: 189008, 5: 121302,
-  6: 240820, 7: 191656, 8: 145632, 9: 171068, 10: 122024,
-  11: 147748, 12: 120888, 13: 142956, 14: 164016, 15: 112110,
+  1: 102418, 2: 128686, 3: 125888, 4: 191452, 5: 125010,
+  6: 243174, 7: 195774, 8: 149444, 9: 175074, 10: 125604,
+  11: 151594, 12: 124740, 13: 145180, 14: 167716, 15: 115566,
 };
 
 /** Số BỆ KÈ của từng kỷ — tách riêng vì nó là hàm của ĐỊA HÌNH, không của kiến trúc. */

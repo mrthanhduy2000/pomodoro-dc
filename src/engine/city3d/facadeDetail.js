@@ -23,22 +23,32 @@ import { unit } from '../hashId';
 export const MAX_RELIEF = 0.025;
 
 /** The vocabulary of each era — which of the items below its buildings carry. */
+/**
+ * ⚠️ ROUND 51 (ADR-091) ADDS THE BOTTOM TWO METRES, AND THAT IS WHERE THE VOCABULARY WAS THINNEST.
+ * Round 50 wrote this table looking at a building from across the square, so every item on it lives
+ * at storey height or above: string courses, brackets, balconies, fire escapes. At eye level none of
+ * those is in the frame. The three new items are the ones a person actually passes within arm's
+ * reach — a NUMBER beside the door, a WINDOW BOX under the sill, and the STALL BOARD of a shop that
+ * opens onto the street. `numberPlate` goes to every era that had street numbering (Paris 1512 is the
+ * first, but it only becomes universal in the 18th century — so era 9 onward, plus the eras whose
+ * `note` already says "shop"); `windowBox` to the ones whose climate and habit had them.
+ */
 export const FACADE_VOCAB = Object.freeze({
   1:  ['bandStone', 'niche'],
   2:  ['bandStone', 'niche', 'awning'],
   3:  ['bandStone', 'niche', 'pilaster'],
-  4:  ['bracket', 'bandWood', 'lantern', 'sign'],
-  5:  ['timberFrame', 'shutter', 'bandWood', 'lamp'],
-  6:  ['bracket', 'shutter', 'awning', 'lantern'],
-  7:  ['pilaster', 'bandStone', 'shutter', 'sign'],
-  8:  ['tile', 'bandStone', 'balcony', 'lamp'],
-  9:  ['balcony', 'bandStone', 'shutter', 'lamp', 'sign'],
-  10: ['brickArch', 'downpipe', 'bandStone', 'sign'],
-  11: ['pilaster', 'bandStone', 'fireEscape', 'sign'],
-  12: ['bandStone', 'shutter', 'downpipe'],
-  13: ['signTall', 'ac', 'bandStone', 'lantern'],
-  14: ['fin', 'bandStone', 'balcony'],
-  15: ['fin', 'bandStone', 'awning'],
+  4:  ['bracket', 'bandWood', 'lantern', 'sign', 'stallBoard'],
+  5:  ['timberFrame', 'shutter', 'bandWood', 'lamp', 'windowBox'],
+  6:  ['bracket', 'shutter', 'awning', 'lantern', 'stallBoard'],
+  7:  ['pilaster', 'bandStone', 'shutter', 'sign', 'windowBox'],
+  8:  ['tile', 'bandStone', 'balcony', 'lamp', 'windowBox'],
+  9:  ['balcony', 'bandStone', 'shutter', 'lamp', 'sign', 'numberPlate'],
+  10: ['brickArch', 'downpipe', 'bandStone', 'sign', 'numberPlate'],
+  11: ['pilaster', 'bandStone', 'fireEscape', 'sign', 'numberPlate'],
+  12: ['bandStone', 'shutter', 'downpipe', 'numberPlate'],
+  13: ['signTall', 'ac', 'bandStone', 'lantern', 'stallBoard'],
+  14: ['fin', 'bandStone', 'balcony', 'numberPlate'],
+  15: ['fin', 'bandStone', 'awning', 'numberPlate'],
 });
 
 export const FACADE_ITEMS = Object.freeze([...new Set(Object.values(FACADE_VOCAB).flat())]);
@@ -93,7 +103,9 @@ export function emitFacadeDetail(out, p) {
   // `symmetry.test.js` demands left–right symmetry; a sign hung on one side, a balcony on the third
   // floor or a downpipe down one corner is asymmetric by nature. The symmetric half of the vocabulary
   // (bands · pilasters · brackets · shutters · fins · arches · niches · awnings) still applies.
-  const ONE_SIDED = new Set(['sign', 'signTall', 'lantern', 'lamp', 'balcony', 'fireEscape', 'downpipe', 'tile', 'timberFrame']);
+  // round 51: a number plate hangs beside ONE door and a stall board belongs to ONE shop — both are
+  // asymmetric by nature, so a landmark keeps neither. A window box is symmetric and stays.
+  const ONE_SIDED = new Set(['sign', 'signTall', 'lantern', 'lamp', 'balcony', 'fireEscape', 'downpipe', 'tile', 'timberFrame', 'numberPlate', 'stallBoard']);
   for (const item of vocab) {
     if (symmetric && ONE_SIDED.has(item)) continue;
     switch (item) {
@@ -188,6 +200,52 @@ export function emitFacadeDetail(out, p) {
           put({ x: x + (i - 1.5) * w * 0.26, z: face, y, w: w * 0.03, d: R * 1.5, h: height * 0.96, role: 'trim' });
         }
         break;
+      /**
+       * ── ROUND 51 (ADR-091): THE BOTTOM TWO METRES ────────────────────────
+       * ⚠️ THESE THREE ARE PINNED TO THE GROUND, NOT TO A FRACTION OF THE HEIGHT. Every item above
+       * places itself at `height × something`, which is right for a string course — it belongs to
+       * the STOREY. A house number belongs to a PERSON: it sits where a person can read it, and it
+       * sits there whether the building is two storeys or twelve. Writing `height * 0.16` would put
+       * era 11's numbers on the fourth floor. So they measure from `y` in absolute units, clamped
+       * so they never climb past the ground floor of even the shortest shed.
+       */
+      case 'numberPlate': {
+        const storey = height / Math.max(1, storeys);
+        const eye = y + Math.min(storey * 0.62, 0.20);
+        const sx = seed('num') > 0.5 ? 1 : -1;
+        put({ x: x + sx * w * 0.3, z: face, y: eye, w: Math.min(w * 0.12, 0.06), d: R, h: 0.045, role: 'trim' });
+        put({ x: x + sx * w * 0.3, z: face, y: eye + 0.008, w: Math.min(w * 0.08, 0.04), d: R * 0.5, h: 0.028, role: 'dark' });
+        break;
+      }
+      case 'windowBox': {
+        // under the sill of the ground-floor window: a box, and the thing growing out of it
+        const storey = height / Math.max(1, storeys);
+        const sill = y + Math.min(storey * 0.44, 0.16);
+        for (const sx of [-1, 1]) {
+          put({ x: x + sx * w * 0.24, z: face, y: sill, w: Math.min(w * 0.2, 0.13), d: R * 1.8, h: 0.032, role: 'wood' });
+          if (!plain) {
+            put({ x: x + sx * w * 0.24, z: face, y: sill + 0.030, w: Math.min(w * 0.17, 0.11), d: R * 1.6, h: 0.030, sides: 5, role: 'leaf' });
+          }
+        }
+        break;
+      }
+      case 'stallBoard': {
+        // the shop board: a shelf across the opening at counter height, with goods stacked on it —
+        // this is what "the ground floor opens onto the street" LOOKS like from three metres away
+        const storey = height / Math.max(1, storeys);
+        const top = y + Math.min(storey * 0.34, 0.13);
+        put({ x, z: face, y: top, w: w * 0.56, d: R * 1.9, h: 0.022, role: 'wood' });
+        if (!plain) {
+          for (let i = 0; i < 3; i += 1) {
+            put({
+              x: x + (i - 1) * w * 0.17, z: face, y: top + 0.022,
+              w: Math.min(w * 0.12, 0.075), d: R * 1.5, h: 0.030 + seed(`gd${i}`) * 0.026,
+              sides: i === 1 ? 6 : 4, role: i === 1 ? 'canvas' : 'trim',
+            });
+          }
+        }
+        break;
+      }
       default:
         break;
     }

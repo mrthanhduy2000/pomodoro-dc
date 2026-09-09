@@ -195,6 +195,40 @@ test('TRỤC ĐỘ HIẾM: quý hơn = nhiều mảng nhà hơn, cao hơn, nhi�
   assert.ok(rare.parts.length > common.parts.length, 'rare phải nhiều chi tiết hơn common');
 });
 
+test('ROUND 51 — LỐI VÀO KỲ QUAN MỞ Ở CẢ 15 KỶ, VÀ MỞ MÀ KHÔNG PHÁ GƯƠNG', () => {
+  /**
+   * Vòng 50 để kỳ quan ĐÓNG CỬA có lý do: cửa, phòng và biển hiệu đều bất đối xứng, mà kỳ quan thì
+   * bắt buộc soi gương. Đọc lại ở tầm mắt vòng 51 thì hệ quả là: công trình mà cả thành phố xây
+   * quanh nó là công trình DUY NHẤT không vào được.
+   *
+   * ⚠️ BÀI NÀY HỎI HAI VẾ, VÀ THIẾU VẾ NÀO CŨNG VÔ NGHĨA. Vế một: mỗi kỷ phải có ĐÚNG một lối vào
+   * (không phải "ít nhất một" — năm khối cùng mở cổng thì kỳ quan đọc ra là một dãy cửa). Vế hai:
+   * tổng x của MỌI phần lối vào phải bằng 0, tức nó đối xứng theo CẤU TẠO chứ không nhờ may.
+   *
+   * ⚠️ VÀ KỶ 2 ĐƯỢC PHÉP KHÔNG CÓ GÌ — kim tự tháp Ai Cập không có cửa trên mặt ngoài. Đó là một
+   * CÂU TRẢ LỜI đã cân nhắc (xem bảng `WONDER_ENTRANCE`), nên bài test nói thẳng ra nó, thay vì để
+   * một con số 14/15 trôi qua như một chỗ bỏ sót.
+   */
+  const KHONG_CO_LOI_VAO = new Set([2]);
+  for (let era = 1; era <= 15; era += 1) {
+    const bp = BLUEPRINT_CATALOG[era].find((b) => b.rarity === 'epic');
+    assert.ok(bp, `kỷ ${era} không có bản vẽ epic nào`);
+    const spec = buildBuildingSpec({ bpId: bp.id, era, type: 'wonder', rarity: 'epic', level: 3 });
+    const cong = spec.parts.filter((p) => p.tag === 'portal');
+    if (KHONG_CO_LOI_VAO.has(era)) {
+      assert.equal(cong.length, 0, `kỷ ${era} đáng lẽ KHÔNG có lối vào — xem bảng WONDER_ENTRANCE`);
+      continue;
+    }
+    assert.equal(cong.length, 1, `kỷ ${era}: kỳ quan có ${cong.length} cổng, phải đúng 1`);
+
+    const loiVao = spec.parts.filter((p) => p.tag === 'entrance' || p.tag === 'portal');
+    assert.ok(loiVao.length >= 3, `kỷ ${era}: lối vào chỉ có ${loiVao.length} khối — không đủ để đọc ra là một lối vào`);
+    const tongX = loiVao.reduce((t, p) => t + p.x * p.w, 0);
+    assert.ok(Math.abs(tongX) < 1e-9,
+      `kỷ ${era}: lối vào lệch gương, tổng mô-men x = ${tongX}`);
+  }
+});
+
 test('kỳ quan luôn đối xứng tuyệt đối, kể cả ở kỷ có nét vẽ thô nhất', () => {
   // Kỷ 1 có `rough: 0.9` — cao nhất bảng. Kỳ quan đứng giữa thành phố mà xiêu vẹo thì cả bố cục
   // mất điểm tựa, nên `archetype.symmetric` phải thắng được `style.rough`.
@@ -218,7 +252,18 @@ test('kỳ quan luôn đối xứng tuyệt đối, kể cả ở kỷ có nét 
   // *số đo nào gây bất ngờ thì kiểm CÔNG CỤ trước, kiểm mã sau.* Trong danh sách khối kết cấu,
   // vai `trim` mà lệch khỏi tâm theo CẢ HAI trục thì chỉ có thể là tháp góc (bệ và thân đều nằm
   // đúng tâm), nên phép lọc này không phụ thuộc kỷ nào đang dựng.
-  const towers = structural.filter((p) => p.role === 'trim'
+  /**
+   * ⚠️ ROUND 51 (ADR-091) — PHÉP LỌC NÀY LẠI GIÀ ĐI MỘT LẦN NỮA, VÀ ĐÚNG THEO CÁCH CHÚ THÍCH TRÊN
+   * ĐÃ CẢNH BÁO. Nó nhận diện tháp góc bằng một SUY ĐOÁN: *"khối `trim` lệch tâm theo cả hai trục
+   * thì chỉ có thể là tháp góc, vì bệ và thân đều nằm đúng tâm"*. Đúng suốt hai năm, và sai đúng
+   * vào ngày `wonderEntrance.js` đặt một cái ĐẦU CỘT vai `trim` lên hàng cột trước mặt tiền:
+   * đầu cột lệch x (±off) và lệch z (nằm ở mặt trước), nên nó bị đếm là tháp, cả bốn cái cùng nằm
+   * một phía theo z, và tổng z thôi bằng 0.
+   *
+   * Cách chữa KHÔNG phải nới ngưỡng — mà là hỏi NHÃN thay vì đoán. Bên dựng biết chắc phần nào là
+   * lối vào (`tag: 'entrance'`), nên bên dựng nói ra, đúng luật đã trả giá ở `TECH_DEBT #22`.
+   */
+  const towers = structural.filter((p) => p.role === 'trim' && p.tag !== 'entrance'
     && Math.abs(p.x) > 1e-6 && Math.abs(p.z) > 1e-6);
   assert.ok(towers.length >= 4, 'kỳ quan epic phải có 4 tháp góc');
   const sumX = towers.reduce((s, p) => s + p.x, 0);

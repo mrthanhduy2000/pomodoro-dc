@@ -17,6 +17,7 @@ import { unit, signed } from '../hashId';
 import { emitGroundFloor } from './groundFloor';
 import { interiorKindFor } from './interiors';
 import { emitFacadeDetail } from './facadeDetail';
+import { emitMonolithStair, emitWonderEntrance } from './wonderEntrance';
 import { emitRooftop } from './rooftop';
 import { getGroundFloor } from './groundFloorStyle';
 import { getRoofStyle } from './roofStyle';
@@ -837,6 +838,39 @@ export function buildBuildingSpec({
   // Đỉnh của từng khối đặc đã dựng. Dùng để CHỮ KÝ KIẾN TRÚC biết leo tới đâu — xem `mainCtx`.
   const monoTops = [];
 
+  /**
+   * ROUND 51 (ADR-091): WHICH mass of a wonder gets the grand entrance.
+   *
+   * ⚠️ IT MUST BE A MASS STANDING **ON THE AXIS**, and that is not a preference — it is the only
+   * choice that keeps the mirror. Pick "the tallest mass" and on a wonder built from a mirrored PAIR
+   * you have just put a portal on the left half and nothing on the right. So: only masses whose
+   * centre is x = 0 are eligible, and among those the FRONT-MOST one (largest z) gets it — a portico
+   * belongs at the front, and the front-most centred mass is the one the street actually sees. A
+   * wonder with no centred mass gets no grand entrance, which is the honest answer rather than an
+   * asymmetric one.
+   */
+  const entranceIndex = archetype.symmetric
+    ? masses.reduce((best, mass, i) => {
+      if (mass.tower || Math.abs(mass.x) > 1e-9) return best;
+      if (best < 0) return i;
+      /**
+       * ⚠️ THE TALLEST, AND THE ROUTE TO THAT ANSWER IS WORTH KEEPING. An epic wonder is three
+       * CONCENTRIC masses: a stone platform 1,72 across, a trim course 1,44, and the body 1,16
+       * rising through both. The first rule here was THE WIDEST, reasoning that the podium is the
+       * face the street can see — and it is. But a podium is declared `low`, which scales its
+       * height by 0,34, so the portal came out **0,036 world units tall**: a doorway you would need
+       * to be a mouse to use. The measurement said so plainly the moment it was taken.
+       *
+       * The body is the only mass tall enough to hold a great door. It stands at ground level like
+       * the podium does, so its portal starts on the ground and rises well clear of the podium in
+       * front of it — the lower courses are hidden, which is exactly what a podium does to a door
+       * in real buildings too.
+       */
+      return massHeight(mass, style, archetype, rarity, safeLevel, storeyScale)
+        > massHeight(masses[best], style, archetype, rarity, safeLevel, storeyScale) + 1e-9 ? i : best;
+    }, -1)
+    : -1;
+
   masses.forEach((mass, index) => {
     // ⚠️ `rough === 0` thì BỎ HẲN phép tính lệch, không nhân với 0. Nhân số âm với 0 trong
     // JavaScript ra `-0`, mà `-0` không bằng `0` theo `Object.is` — nghĩa là bài test đối xứng
@@ -882,6 +916,7 @@ export function buildBuildingSpec({
         ? style.monument.base : 1.3) * mass.w * grow;
       const rise = Number.isFinite(style.monument?.rise) && style.monument.rise > 0
         ? style.monument.rise : 0.6;
+      const beforeMono = parts.length;
       const anchorsMono = emitMonolith(
         parts, { x, z, y: base, base: canhDay, rise }, style,
         { bpId: id, era, rarity, level: safeLevel, style, symmetric: true },
@@ -889,6 +924,31 @@ export function buildBuildingSpec({
       // `false` = hình mái này không cao lên theo `pitch`. Không có nhánh nào như vậy hôm nay; nếu
       // có thì thà dựng ra khối rỗng còn hơn đẩy `NaN` vào cảnh, và bài test đếm sẽ bắt được.
       if (anchorsMono) monoTops.push(anchorsMono.apexY);
+      /**
+       * Round 51 (ADR-091): a ziggurat is DEFINED by its stair — see `emitMonolithStair`. A pyramid
+       * declares `steps: 0` in the entrance table and gets none, which is the honest answer.
+       *
+       * ⚠️ THE STAIR IS MEASURED OFF THE SHAPE THAT WAS ACTUALLY BUILT, not off `canhDay`. Those two
+       * are not the same number: `canhDay` is what `emitMonolith` is ASKED for, and the ziggurat's
+       * stepped tiers come out narrower than the ask. Sizing the stair from the ask put its lowest
+       * tread outside the real face and took era 3 from 3,7 cells to 3,908 — the "no building
+       * overflows its plot" test caught it, twice. `specSpan` of the parts just emitted is the
+       * shape that exists.
+       */
+      if (archetype.symmetric) {
+        const built = parts.slice(beforeMono);
+        // ⚠️ `specSpan` TRẢ VỀ BỀ NGANG TOÀN PHẦN, không phải nửa. Đọc nhầm nó là nửa rồi nhân đôi
+        // đưa ziggurat kỷ 3 lên 7,815 ô — đo lại trên chính hàm ấy (`base 2,700 ⇒ specSpan 2,700`)
+        // là xong. Đúng luật đầu tiên của dự án: NGHI CÔNG CỤ ĐO trước khi nghi mã.
+        const thatSpan = specSpan(built);
+        const thatTop = specHeight(built);
+        if (thatSpan > 0 && thatTop > 0) {
+          emitMonolithStair(parts, {
+            bpId: id, era, x, z, y: base,
+            base: thatSpan, rise: thatTop / thatSpan, ry: jitterR,
+          });
+        }
+      }
       return;
     }
 
@@ -900,6 +960,29 @@ export function buildBuildingSpec({
       ry: jitterR,
       role: mass.role ?? 'wall',
     }));
+
+    /**
+     * ROUND 51 (ADR-091): THE WONDER OPENS. Round 50 gave every ordinary building an open door and a
+     * room behind it, and deliberately left the landmark shut — a door, a room and a sign are
+     * asymmetric, and the symmetry test demands the landmark mirror. Read back at eye level in round
+     * 51, that meant the one building the whole city is built around was the only one nobody could
+     * enter.
+     *
+     * ⚠️ THE MIRROR IS NOT RELAXED. `emitWonderEntrance` builds a portal on the centre line, a
+     * colonnade in EQUAL PAIRS, a lintel and a pediment across the whole front — the shape a great
+     * entrance already has in all fifteen of these traditions. Nothing is placed on "a side".
+     * ⚠️ AND IT IS EMITTED **HERE**, right after the body, NOT down with the windows and the facade.
+     * Those live inside `if (!mass.low)`, and on an epic wonder the mass that faces the street IS a
+     * low one (the podium). Put the call there and the entrance silently never fires — which is
+     * exactly what the first version did: fifteen eras, zero portals, and every test still green.
+     */
+    if (index === entranceIndex) {
+      emitWonderEntrance(parts, {
+        bpId: id, index, era,
+        x, z, y: base, w, d, height, ry: jitterR,
+        storyHeight: style.storyHeight,
+      });
+    }
 
     // ── BA ĐƯỜNG NGANG CẮT MẶT TƯỜNG (Phase 8A) ─────────────────────────────
     // Xem khối chú thích ở đầu file. Tóm tắt: một mảng tường không có gì trên đó đọc ra như bìa

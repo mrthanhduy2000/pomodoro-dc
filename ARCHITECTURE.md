@@ -839,6 +839,26 @@ now feed the renderer:
   sweeps 15 eras × 5 stages; ADR-007's 1…120 × 15 position tests are untouched. A sealed era is
   rendered with the session count stored at its seal, so the museum never grows.
 
+### 7.13 Props that move, fire, and weather (round 49, ADR-089)
+- **Cloth and what it hangs on.** Two dyed roles in `palette3d.js` — `canvas` (undyed sailcloth, one linen
+  for all eras) and `flag` (`FLAG_HUE` per era) — both flap (`motion.js` FLAP_ROLES) and both ride the `wood`
+  material family (`materials.js`), so no era gains a draw call. `geometryFactory.motionFor` weights a flag
+  from its −X edge and a hanging cloth from its top; a placement with `motion: 'bob'` (a boat) moves as one
+  rigid body.
+- **Boats, cranes, life.** `waterProps.js` places boats where the water is deep enough (`setting.insetAt`);
+  `cityParts.js` emits them as item kind `water`, which `KIND_NGOAI_LUOI` puts outside the city box and the
+  camera blockers (one law for `sceneGraph` and the focus tests). `lifeProps.js` appends `ERA_LIFE` props to
+  `cityLayout.deriveProps` output (only-add). `buildScaffoldSpec` adds a crane past 30 % progress.
+- **Fire.** Parts tagged `fire` (role `flame`) are collected from EVERY placement group in `sceneGraph`; they
+  feed `PARTICLE_STYLE.fire` (additive, embers), glow at night through the same glow sink as lit windows, and
+  the nearest six get flickering local `PointLight`s (`FIRE_LIGHT`, `fireFlicker(t)` — deterministic). `ERA_MOTION`
+  declares `fire` only for eras whose `ERA_LIFE` guarantees a source.
+- **Weather.** `weather.js` is pure: `weatherAt(era, hour)` per day phase, `wet ≥ rain` by construction,
+  `wetSurface` for the ground materials, `museumWeather` for sealed eras. `CityScene3D` derives it from the same
+  hour as `deriveDaylight` and passes it to `createCityScene({ weather })`, which multiplies the fog, darkens and
+  smooths the three ground materials (specular gain only when wet), adds rain/drizzle streak particles, and tints
+  smoke by phase. The preview tool renders the weather of `--hour`; `--dry` is the control frame.
+
 ### 7.12 Geometry vocabulary and roof grammar
 
 **Ngôn ngữ hình khối 3 trục — vì sao mô tả hình học lại là ENGINE THUẦN (2026-08-12)**: hình dáng

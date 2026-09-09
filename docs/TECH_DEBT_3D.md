@@ -1,4 +1,4 @@
-# TECH_DEBT — 3D city subsystem (47 open entries · 3 closed in round 47 · 2 in round 48)
+# TECH_DEBT — 3D city subsystem (46 open entries · 3 closed in round 47 · 2 in round 48 · 1 in round 49)
 
 > Split out of the active `TECH_DEBT.md` on 2026-09-06 (ADR-075). **These are still OPEN debts, not
 > archived history** — they were moved by SUBSYSTEM, not by status.
@@ -2558,7 +2558,11 @@ trong chú thích thì đừng để `--selftest` của chính nó vẫn dùng �
   nhìn thấy khác biệt này, nên sửa nó bây giờ là tiêu công cho một thứ chưa ai thấy.
 - **Review Trigger**: khi cư dân được vẽ lớn hơn trên khung mặc định, HOẶC khi có kỷ thứ tư khai
   `headgear: 'brim'`.
-- **Owner**: chưa ai · **Status**: mở
+- **Owner**: round 49 (2026-09-09) · **Status**: 🟡 **PARTIAL 2026-09-09 (ADR-089)** — brim 1,9 → 1,7 `headW`
+  (1,52× → 1,36× the shoulders). The floor is 1,62: `humanShape.test.js` demands the crown (0,62 × brim)
+  clear the skull, and the skull carries the head's deliberate 1,54× enlargement. Going further means
+  a hat that does not fit the head it sits on — the entry's own diagnosis. Left open for the day the
+  head ratio itself is revisited.
 
 ---
 
@@ -2624,7 +2628,11 @@ trong chú thích thì đừng để `--selftest` của chính nó vẫn dùng �
   thì tương phản thấp lại là sự thật lịch sử.
 - **Review Trigger**: khi thêm một kỷ đội mũ kim loại trần, HOẶC khi bộ từ vựng `CARRY_KINDS` vượt 8
   giá trị.
-- **Owner**: chưa ai · **Status**: mở
+- **Owner**: round 49 (2026-09-09) · **Status**: ✅ **CLOSED 2026-09-09 (ADR-089)** — `steel` split out of
+  `gear` for the helmet and the tool head (`HUMAN_ROLES` 6 → 7; the spear shaft, bundle and leather
+  case stay `gear`). Split by HUE, not lightness: the one bare helmet in the set (kỷ 12, SSh-40) was
+  painted the colour of the jacket, and `palette3d.test.js` keeps [12, 15] as an explicit historical
+  exception — the low contrast this entry measured is a fact, not a defect, so it was not "beaten".
 
 ---
 

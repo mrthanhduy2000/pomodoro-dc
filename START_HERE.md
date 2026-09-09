@@ -32,7 +32,20 @@ Production branch `main` carries **both** work streams (merged 2026-08-28 on Đ�
 ⚠️ Phase 21 therefore shipped **before** Đàm reviewed its screenshots — the "waiting on Đàm's eyes"
 item below is still live, it just now reviews something already running.
 
-- **Loop — ROUND 48 (2026-09-09, LATEST): THE CITY BECOMES A PLACE (ADR-088).**
+- **Loop — ROUND 49 (2026-09-09, LATEST): SOMETHING TO BLOW, AND A FIRE LIT (ADR-089).**
+  Order: flags, sails, boats, cranes, market life · fire and night · weather whose rain WETS the ground.
+  ⚠️ **Lesson 106 — a shader injection needs its own program cache key.** `applySurfaceDetail` keys differ with
+  motion; before the fix nothing merged ever moved (era 8: 0,31 % → 1,44 % px). Verify motion on the thing
+  you changed, with the magenta heat-map, not with one era's smoke.
+  ⚠️ **Cloth is `canvas` (undyed) or `flag` (`FLAG_HUE`); `cloth`/`cloth2` are the residents'.** New part
+  roles ride `wood` (`materials.js`) — a family that appears or vanishes moves five draw-call tables.
+  ⚠️ **Boats are item kind `water` in `KIND_NGOAI_LUOI`** — outside the city box and the blockers, one law.
+  ⚠️ **Fire = parts tagged `fire`**; an era may declare `fire` particles only if `ERA_LIFE` puts a fire prop
+  FIRST for it. Fire lights: ≤ 6, `fireFlicker(t)` — never `Math.random`. `MUSEUM_HOUR` is 18 (dusk).
+  ⚠️ **Weather is `weatherAt(era, hour)` per day phase; `wet ≥ rain` by construction** (`weather.js`). The
+  three ground materials read `wet` through `wetSurface`; the specular gain is spread only when wet — the
+  dry law of the wiring test is intact. `city-preview --dry` is the control frame.
+- **Loop — ROUND 48 (2026-09-09): THE CITY BECOMES A PLACE (ADR-088).**
   Order: make the city *"MỘT NƠI CÓ THẬT"* — a place, not a photograph; ten seconds untouched must show
   motion. **No performance measuring** (Đàm: measure again only when he reports lag).
   ⚠️ **Lesson 104 — copy frames from `.city-preview/last-run.json`, never from `ls`.** The tool now
@@ -41,28 +54,14 @@ item below is still live, it just now reviews something already running.
   ⚠️ **Motion is a function of time only** (`engine/city3d/motion.js` = per-era vocabulary; the renderer's
   `update(t)` feeds ONE `uTime` to foliage/cloth vertices, water and particles). Never add `Math.random`
   or a second clock; every object's phase comes from `phaseAt(x, z)`. `still` scenes do not move.
-  ⚠️ **Parts tilt** (`rx`/`rz`, keys only when non-zero) and **joints yaw** (`c`). Untilted specs must keep
-  serialising byte for byte — the GOLDEN digests are the alarm.
-  ⚠️ **The core is flat** (`ERA_TERRAIN` 13 × 1, eras 5/8 × 2); a century's land is `HORIZON_STYLES`.
-  ⚠️ **The land grows only by ADDING** (`landGrowth.js` milestones 0·25·50·90·140): outskirts ring 8 → 11,
-  hamlets appended, camera +5 %/stage. `landGrowth.test.js` sweeps it; a sealed era renders with its
-  frozen session count. ADR-007's 15 × 120 tests stay the stop condition.
-- **Loop — ROUND 47 (2026-09-08): THE CITY IS REDRAWN ON THE SAME MAP (ADR-087).**
-  Order: *"ĐỘT PHÁ MỸ THUẬT … hộp đen không còn."* The 3D city's ART is open again (shapes · colours ·
-  materials · lights · ground · sky · camera); **ADR-007 still locks every building's position** — run its two
-  tests (`cityPlan.test.js` «15 kỷ × 120 mốc», `block.test.js` «QUA THỜI GIAN») before every 3D commit.
-  Measured: one ground for 15 eras → **15 own grounds (8 `GROUND_KINDS`)**; saturation ≥ 0,20 in 2/15 → **10/15**
-  (stone · soot · asphalt · snow · concrete eras are grey on purpose); `sweep-score` 22,4/36,2 → **24,9/51,6**.
-  ⚠️ **Ground and wall are per-era FACTS in `eraStyle.js`** (`groundKind` = a material WINDOW the colour must
-  sit in; the test fails on astroturf in a desert). Legacy anchor only for an era that declares nothing.
-  ⚠️ **Rounding lives in `parts.js`**: `bevelWidth` (edges) and `cornerRadius` (plan corners, ≥ 0,25 unit,
-  INCLUDING thin plates — that is what the eye sees); `BEVEL_MIN_VISIBLE` 0,014 is the floor that keeps
-  window reliefs from tripling the triangle count. `countTriangles` must mirror the factory (test).
-  ⚠️ **Roof rise is taken on the full-plot footprint** (`emitRoof`, `ctx.plotFx/plotFz`) — no era is lower
-  after a block split any more; the named list in `block.test.js` is `[]` and must stay so.
-  ⚠️ **Photos come from `--era N`, one at a time** — `--all` drew era 12 differently the same minute
-  (`docs/LESSONS_3D.md` 103). Bevel proof = off/on at the SAME default camera, ×3 crop of the same frame.
-  Rejected by eye: `PCFShadowMap`. Untouched on purpose: tone mapping · DPR · a 4th light · the round-46 2D screen.
+  ⚠️ **Parts tilt** (`rx`/`rz`) and **joints yaw** (`c`); GOLDEN digests are the alarm. **The core is flat**
+  (`ERA_TERRAIN`); **the land grows only by ADDING** (`landGrowth.js`); a sealed era renders with its frozen
+  session count. ADR-007's 15 × 120 tests stay the stop condition.
+- **Loop — ROUND 47 (2026-09-08): THE CITY IS REDRAWN ON THE SAME MAP (ADR-087).** The 3D city's ART is
+  open again; **ADR-007 still locks every building's position** — run its two tests (`cityPlan.test.js`
+  «15 kỷ × 120 mốc», `block.test.js` «QUA THỜI GIAN») before every 3D commit. Ground and wall are per-era
+  FACTS in `eraStyle.js`; rounding lives in `parts.js` (`bevelWidth`, `cornerRadius`, `BEVEL_MIN_VISIBLE`).
+  Full detail: ADR-087 and `BAN_GIAO.md`.
 - **Loop — ROUND 46 (2026-09-08): THE CITY TAB CATCHES UP WITH THE CITY'S THREE ROLES (ADR-086).**
   Order: *"THÀNH PHỐ PHẢI TRÔNG NHƯ THỨ ĐÁNG NHẤT TRONG APP."* Measured before (390×844, 12 eras): picture
   **201 px = 23,8 %** at y = 494 · header 202 px · 12 chips = 6 rows · «SP» said 0 times · museum 2,5× darker
@@ -144,9 +143,9 @@ stated twice drifts.
   still needs his eye on top-down photos before any code.
 
 ### B. Ready to build
-1. **Props that move but do not exist yet** — boats (eras 2 · 8 · 14 · 15), cranes on scaffolds, flags
-   on landmark masts: the `cloth` role, the flap shader and the `bob` mode are ready (round 48), no part
-   uses them. Also `#40` (tiles on the slope — the tilt axis exists) and `#90(b)` (era 6 rooftop detail).
+1. **`#90(b)` + `#77` together** — `ROOFTOP_MIN_SPAN` as a pixel relation (`CELL_PIXELS`/`EYE_PIXELS`), with
+   a control that traps the old broken sizes; 12 green rooftop tests. Also `#40` (tiles on the slope) and
+   people talking in pairs (round 49 left both).
 2. **`TECH_DEBT #88`** — the one-cell ceiling (`BLOCK_MAX_CELLS = 1`) pins the plot count at 4 across
    all 15 eras, making the `units`/`cols`/`rows` columns of the district table a dead axis. Three
    options already measured.
@@ -154,7 +153,8 @@ stated twice drifts.
    explicitly twice, has barely moved. Do not read the aggregate number as "solved".
 
 ### C. Waiting on Đàm's eyes
-🔴 **Round 48 motion** — the app on the phone, 10 s untouched: smoke, snow/sand, swaying crowns, water.
+🔴 **Round 49 at 22:00** — the phone, 10 s untouched: fire burning and flickering, flags flying, boats
+bobbing; rain on a wet street in eras 9 · 11 · 13 at night. Museum pieces now at dusk (18:00).
 🔴 **Phase 21 screenshots** — the 15-era sweep + 12 top-down views (eras 1 · 3 · 7 · 10 · 11 · 14, each
 at 20 and 120 sessions). Accepted by EYE: eras 1–9 must show no rows/alignment; eras 11–15 must.
 ⚠️ This is already running in production.

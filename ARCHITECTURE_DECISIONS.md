@@ -1255,3 +1255,40 @@ Worse, none of the twelve ENDS. Every one only grows, and a number that only gro
 
 ---
 
+## ADR-089 — Round 49: give the machine something to blow, and light the fire — props that move, fire and night, weather that wets the ground
+
+**Date**: 2026-09-09 · **Order**: *"CHO CÁI MÁY THỨ ĐỂ THỔI, VÀ THẮP LỬA LÊN … tôi mở tab Thành Phố lúc 10 giờ tối, không chạm gì, nhìn 10 giây — và tôi thấy lửa cháy, cờ bay, thuyền nhấp nhô."* Full authority; no performance measuring; the only numeric gate is the 105 era pairs; ADR-007's two tests are the only stop condition.
+
+### Context
+Round 48 built the motion machine — one clock, a per-vertex `aMotion`, particles — and had almost nothing to blow: no flag, sail, boat or crane existed, the only "fire" was a tag with no flame, and the sky did the same thing at every hour. Worse, one of round 48's own measurements was carried by smoke and residents alone: the merged city (trees, cloth) never moved in the tool, and no test was red (lesson 106).
+
+### Decisions
+0. **Lesson 106 — the program cache key.** `applySurfaceDetail` gave every patched material the same `customProgramCacheKey`. The motion injection edits shader CODE, so whichever material compiled first decided for all: the ground's program (no motion) served the merged city too, and nothing merged ever moved. The key now differs with motion; a control test builds one material with and one without and demands different keys. Era 8, two frames 0,8 s apart: **0,31 % → 1,44 %** of pixels change, with no other change in between.
+1. **Cloth is two dyes, not one role.** `canvas` = undyed sailcloth (sails, awnings, tents, laundry sheets — one sun-bleached linen for all eras, the `straw` logic) and `flag` = dyed (`FLAG_HUE` per era: heraldic red mostly, blue for Paris and New York, green for Dubai — never the UI accent, which is violet in era 6 and fails the magenta guard). `cloth`/`cloth2` stay the residents' dyes. Every new role (`canvas` · `flag` · `hull` · `hook` · `flame`) rides the `wood` family, so no era gains a draw call; the stall's goods went `gold` → `trim` because era 13 draws no gold at all.
+2. **Props that move.** A flag on every `mast` motif and on rooftop masts (a mirrored PAIR — the symmetry law), a hanging cloth on every `banner`; **boats** from `waterProps.js` (cells with `insetAt` above a per-water threshold, 1,7 cells apart, yaw along the water's open axis; item kind `water`, group `landscape` so they widen neither the city box nor the blocker list, 1,3× scale, the whole hull a rigid `bob`); **cranes** on scaffolds past t > 0,3 (a wooden jib before era 10, a tower crane after; `hook` bobs); **life props** from `lifeProps.js` (`ERA_LIFE`, 15 rows: stalls with awnings, laundry lines, tents, campfires, braziers, forges, wells, barrels, firewood, lanterns, carts, animals, benches) on free cells that touch a road or sit within two cells of a home — hash-ranked, only-add, no existing prop re-rolled. Flap weights: a flag is held along its −X edge, a hanging cloth along its top; the held edge weighs 0.
+3. **Fire.** `PARTICLE_STYLE.fire` — additive, unfogged tongues that shrink and cool from orange to dark red, every fourth one an ember. Sources are every part tagged `fire` in ANY group: campfire · brazier · forge · firepit · a torch on the lamp posts of eras 1–3 (a bronze collar keeps `gold` in those eras — a family that vanishes moves five draw-call tables). `ERA_MOTION` declares `fire` for eras 1–10 and 12, and `ERA_LIFE` lists a fire-bearing prop FIRST for each of them, so a declared particle kind always has a source (the `sceneStats` law). At night `flame` joins `glass` in the glow sink, in its own colour. **Local light**: up to 6 `PointLight`s (`FIRE_LIGHT`: reach 0,24 cell, decay 2), nearest to the centre first, flicker = three incommensurate sines of t (`fireFlicker`) — deterministic, never `Math.random`. Not a fourth fill light.
+4. **Museum hour 15 → 18**, by eye on two frames of era 1: at 15:00 the fires are three dots in flat sun; at 18:00 the same city has warm side-light, long shadows, lit windows and a pool of firelight at every hearth, roofs still readable. A sealed era keeps ONE hour — the promise of ADR-086 — and now one weather (`museumWeather`).
+5. **Weather.** `weather.js`: `weatherAt(era, hour)` is a pure table per DAY PHASE (so it changes only when the daylight phase does — no second rebuild trigger). **The one law: rain wets the ground** — `wet ≥ rain` by construction in `normalize`; the three ground materials go through `wetSurface` (roughness → 0,34, albedo × 0,70, specular gain × 2,4 — applied ONLY when wet, the dry law of the wiring test holds); fog = daylight haze × (1 + 2,5 · weather fog); rain/drizzle are streak particles owned by the weather, never by an era's list; smoke is lit by the phase (`smokeLightFor`: night 0,3). The tool renders the weather of `--hour`; `--dry` is the control frame. Era 13 at 22:00, wet vs dry: **29,8 %** of pixels differ, and the difference is a darker, glossier street under white streaks — not noise on a matte one.
+6. **People.** `#79`: `steel` split from `gear` (helmet, tool head) by HUE, kept as dark as gear on purpose — the SSh-40 of era 12 was painted the colour of the jacket; the palette test's exception list [12, 15] is history, not a threshold. `#81`: brim 1,9 → 1,7 headW — the crown (0,62 × brim) must clear the skull, so 1,62 is the floor; partial by design.
+7. **Re-based on purpose:** GOLDEN eras 1 · 4 · 6 · 8 · 12 · 13 (flag, banner and flame parts), `MOC_TAM_GIAC` all 15 (+0,5 … +2,1 %), the cityFocus control list [1, 8, 10, 12, 15] / 8 flights (era 12's masthead flag), `cityFocus.test.js` blockers now exclude `water` through the same `KIND_NGOAI_LUOI` as `sceneGraph`. Draw-call marks untouched.
+
+### Consequences
+| | Before (round 48) | After |
+|---|---|---|
+| Prop kinds | 6 (+ ground covers) | 20 (+ boats, cranes, 12 life kinds) |
+| Flags · sails · boats · cranes | 0 · 0 · 0 · 0 | on every mast · on 5 boat rigs · 8 boats/era with water · 1 per scaffold past 30 % |
+| Particle kinds | 6 (smoke · steam · snow · sand · dust · birds) | 9 (+ fire, rain, drizzle) |
+| Eras with a fire burning | 0 | 11 (1–10, 12), lit and flickering at night |
+| Weather kinds | 1 | 7 (clear · haze · fog · drizzle · rain · snow · sand), per era, per phase |
+| Rain without wet ground | possible | impossible (`wet ≥ rain`) |
+| Pixels changed, era 8, 0,8 s apart | 0,31 % (nothing merged moved) | 1,44 % |
+| Museum hour | 15:00 | 18:00 |
+| 3D debts | 47 open | #79 closed · #81 partial · #75 and #24 confirmed closed (frame-fit 0/15) · #90(b), #77 read and left open |
+
+**Not done, on purpose:** `#90(b)` with `#77` (the rooftop span as a pixel relation touches 12 green tests — its own round); people talking in pairs; puddles as a mask (wet is roughness + albedo + specular); nothing removed in the 390 px audit this round (judged on the sweep, see BAN_GIAO); no 22:00 sweep of the round-48 code (the after-sweep is the record).
+
+### Tool lessons
+- A percentage cannot say WHAT is still — the magenta heat-map of changed pixels is what found lesson 106 (flags, sails, palms all black; only the shoreline and the residents lit up).
+- `--dry` is the only fair control for a weather frame: same hour, same light, same clock, no weather.
+
+---

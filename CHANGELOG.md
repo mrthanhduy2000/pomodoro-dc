@@ -10,6 +10,31 @@
 > **Muốn hiểu VÌ SAO một quyết định được chọn** → `ARCHITECTURE_DECISIONS.md`. **Muốn biết migration
 > cụ thể nào cần chạy** → `MIGRATION.md`.
 
+## 2026-09-09 — Round 49: something to blow, and a fire lit (ADR-089)
+
+**Purpose.** Đàm's brief: *"CHO CÁI MÁY THỨ ĐỂ THỔI, VÀ THẮP LỬA LÊN"* — props that move (flags, sails,
+boats, cranes, market life), fire and night, deterministic weather whose rain WETS the ground. No
+performance measuring; the only stop condition is ADR-007.
+
+**Scope.** `src/engine/city3d/` (materials · palette3d · parts · motion · buildingSpec · rooftop · propSpec ·
+**waterProps** · **lifeProps** · **weather** · daylight · human · cityParts) · `src/engine/cityLayout.js` ·
+`src/components/city/render3d/` (geometryFactory · motion · surfaceDetail · sceneGraph · CityScene3D) ·
+`scripts/city-preview.mjs` (`--dry`). No store, no sync, no 2D screen.
+- **Lesson 106 (root cause, fixed).** One `customProgramCacheKey` for materials with and without the motion
+  shader ⇒ the merged city never moved. Era 8 frames 0,8 s apart: 0,31 % → 1,44 % pixels.
+- **Props that move.** `canvas`/`flag` cloth roles (per-era `FLAG_HUE`), flags on every mast, banners,
+  boats on the water (`waterProps.js`, rigid bob, landscape group), cranes on scaffolds, 13 life-prop kinds
+  (`lifeProps.js`, only-add).
+- **Fire.** `fire` particles (additive, embers) from every part tagged `fire`; torches, braziers, forges,
+  campfires; flames glow at night; ≤ 6 flickering local point lights (deterministic). Museum hour 15 → 18.
+- **Weather.** `weatherAt(era, hour)` per day phase; `wet ≥ rain` by construction; wet ground = roughness
+  0,34 + albedo × 0,70 + specular gain (wet only); fog multiplier; rain/drizzle streaks; smoke lit by phase;
+  sealed eras get `museumWeather`. Era 13 at 22 h wet vs `--dry`: 29,8 % pixels differ.
+- **People.** `#79` closed (`steel` role), `#81` partial (brim 1,9 → 1,7). `#75`/`#24` confirmed closed
+  (frame-fit 0/15).
+- **Tests re-based on purpose:** GOLDEN (6 eras), triangle marks (15), cityFocus control list, stall goods
+  `gold` → `trim` so era 13 keeps its draw-call mark. `npm run test:quiet` **1 715 pass · 0 fail · skipped 1 (+12 vs round 48)**.
+
 ## 2026-09-09 — Round 48: the city becomes a place (ADR-088)
 
 **Purpose.** Đàm's brief: *"thành phố đang là một tấm ảnh đẹp. Vòng này biến nó thành MỘT NƠI CÓ THẬT"*

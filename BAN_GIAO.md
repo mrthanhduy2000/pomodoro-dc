@@ -1,3 +1,53 @@
+> Last update: **2026-09-09** — **ROUND 49: SOMETHING TO BLOW, AND A FIRE LIT (ADR-089).**
+> Order: *"CHO CÁI MÁY THỨ ĐỂ THỔI, VÀ THẮP LỬA LÊN … lúc 10 giờ tối, không chạm gì, nhìn 10 giây — và tôi thấy
+> lửa cháy, cờ bay, thuyền nhấp nhô."* Everything on `main`, on top of round 48. No performance numbers (Đàm).
+>
+> ### Measured before
+> era 8, two frames 0,8 s apart: **0,31 %** of pixels change — and a heat-map shows only the shoreline and the
+> residents; no flag, sail, palm or tree moves (the round-48 2,6 % was era 10: smoke + residents) · prop kinds 6
+> · particle kinds 6 · 0 eras with fire · one weather for every hour · museum hour 15.
+>
+> ### Done
+> 1. **Lesson 106.** `surfaceDetail.applySurfaceDetail` shares one program cache key across materials with and
+>    without the motion injection ⇒ the merged city's program was the ground's ⇒ nothing merged moved. Key now
+>    splits on motion; control test in `surfaceDetail.test.js`. Same frames: **1,44 %**.
+> 2. **Cloth** — `canvas` (undyed) and `flag` (`FLAG_HUE` per era; the UI accent is violet in era 6 and fails the
+>    magenta guard) · flags on `mast` motifs and rooftop masts (mirrored pair) · banners · sails · awnings ·
+>    laundry · tents. Flap weights: held edge = 0 (flag: −X edge; hanging cloth: top). All new roles ride `wood`.
+> 3. **Boats** — `waterProps.js` (`insetAt` threshold per water kind, 1,7 cells apart, yaw along the open axis);
+>    item kind `water` in `KIND_NGOAI_LUOI` (landscape group; the same law excludes them from camera blockers
+>    in `sceneGraph` AND `cityFocus.test.js`); 1,3× scale; the whole hull is one rigid `bob` (`geometryFactory`).
+> 4. **Cranes** on scaffolds past t > 0,3; **life props** `lifeProps.js` (`ERA_LIFE` 15 rows; free cells touching a
+>    road or within 2 of a home; only-add — `lifeProps.test.js`).
+> 5. **Fire** — `PARTICLE_STYLE.fire` (additive, unfogged, embers) from every part tagged `fire` in any group
+>    (campfire · brazier · forge · firepit · torches on the lamps of eras 1–3, bronze collar keeps `gold`);
+>    `ERA_MOTION` declares `fire` for 1–10 and 12 and `ERA_LIFE` puts a fire prop FIRST there (sceneStats law:
+>    a declared kind needs a source); `flame` glows at night with `glass`; ≤ 6 local `PointLight`s, deterministic
+>    flicker (`fireFlicker`); `MUSEUM_HOUR` 15 → 18 by eye (two frames of era 1).
+> 6. **Weather** — `weather.js` (`weatherAt` per day phase; `wet ≥ rain` by construction; `wetSurface`; `museumWeather`);
+>    `sceneGraph`: fog × (1 + 2,5·fog), three ground materials darker/smoother/reflective only when wet
+>    (`wetGain` — the dry specular law of the wiring test still holds), rain/drizzle streaks, smoke tint by phase;
+>    `CityScene3D` passes the weather of the same hour; `city-preview --dry` = control. Era 13 22 h wet vs dry:
+>    **29,8 %** pixels differ. `weather.test.js` (6) + a wiring test.
+> 7. **People** — `#79` closed (`steel` role, kept dark: SSh-40 painted like the jacket, palette exception [12, 15]
+>    is history) · `#81` partial (brim 1,9 → 1,7; floor 1,62 from the crown law).
+> 8. **Re-based on purpose:** GOLDEN eras 1·4·6·8·12·13 · `MOC_TAM_GIAC` 15 eras (+0,5 … +2,1 %) · cityFocus control
+>    list [1, 8, 10, 12, 15] / 8 flights (era 12 masthead flag) · stall goods `gold` → `trim` (era 13 draws no gold).
+>
+> ### Measured after
+> prop kinds 6 → 20 · particle kinds 6 → 9 · eras with fire 0 → 11 · weather kinds 1 → 7 · era 8 px change
+> 0,31 % → 1,44 % · frame-fit 0/15 cut · ADR-007 15 × 120: 0 moved · `npm run test:quiet` **1 715 pass · 0 fail · skipped 1 (+12 vs round 48)** · lint 0 · build ✓.
+>
+> ### Not done · why
+> `#90(b)` + `#77` (rooftop span as a pixel relation — 12 green tests, its own round) · people talking in pairs ·
+> puddles as a mask · 390 px audit: judged on the sweep, nothing removed (the details added this round —
+> boats 1,3×, flags, awnings — were sized at the default camera first) · no 22 h before-sweep (round-48 code).
+>
+> ### Photos (scratch, in the report)
+> era 8 strip 17,5/18,3/19,1 s (river crop 2×) · era 1 at 22 h (fires) · era 13 at 22 h wet vs `--dry` · phone 390 px.
+
+---
+
 > Last update: **2026-09-09** — **ROUND 48: THE CITY BECOMES A PLACE (ADR-088).**
 > Order: *"Chuyển động, motion, 3D chuẩn hơn. Bám sát lịch sử. Mở rộng diện tích thành phố … biến nó thành
 > MỘT NƠI CÓ THẬT."* Everything on `main`, on top of round 47. **No performance numbers this round** (Đàm).

@@ -120,7 +120,7 @@
 │   │   │       │                   #   một dị vật, không phải một cải tiến. Đúng lý do `parts.js`
 │   │   │       │                   #   cũng phẳng (ADR-019 nói về mặt ĐẤT thì ngược lại: mượt)
 │   │   │       ├── geometryFactory.js # Mô tả hình học THUẦN → MỘT BufferGeometry đã gộp, chia
-│   │   │       ├── motion.js       # ROUND 48 (ADR-088): the scenery moves — aMotion vertex sway/flap GLSL, water waves, InstancedMesh particles (smoke · snow · sand · dust · birds); one uTime clock
+│   │   │       ├── motion.js       # ROUND 48 (ADR-088) + 49 (ADR-089): the scenery moves — aMotion vertex sway/bob/flap GLSL, water waves, InstancedMesh particles (smoke · snow · sand · dust · birds · fire · rain · drizzle); one uTime clock
 │   │   │       │                   #   NHÓM theo họ vật liệu (`addGroup`). Mọi công trình = 1 khối
 │   │   │       │                   #   hình học nhưng 5–7 lệnh vẽ (một lệnh mỗi họ), KHÔNG phải 750
 │   │   │       │                   #   ⚠️ Thứ tự nhóm PHẢI theo `MATERIAL_ORDER`, không theo thứ tự
@@ -581,6 +581,9 @@
 │   │   │   ├── flora.js           # 7 LOÀI CÂY (Phase 8D): tán rộng · thông · cọ · trắc bách diệp
 │   │   │   ├── landGrowth.js      # ROUND 48 (ADR-088): land grows with sessions — milestones 0·25·50·90·140, outskirt reach 8→11, hamlet bonus, camera pull-back; only add, never move
 │   │   │   ├── motion.js          # ROUND 48 (ADR-088): what moves per era (wind · smoke · particles), phaseAt(x,z), motionTime — pure, no three
+│   │   │   ├── weather.js         # ROUND 49 (ADR-089): weatherAt(era, hour) per day phase — rain · drizzle · fog · snow · sand; wet ≥ rain by construction; wetSurface; museumWeather
+│   │   │   ├── waterProps.js      # ROUND 49 (ADR-089): boats on the water — cells with insetAt above a per-water threshold, 1,7 apart, yaw along the open axis; item kind `water` (landscape)
+│   │   │   ├── lifeProps.js       # ROUND 49 (ADR-089): ERA_LIFE — stalls, laundry, tents, campfires, braziers, forges, wells, carts, animals… on free cells by roads/homes; only-add
 │   │   │   │                      #   · đa · cây phố · bụi. Luật chống-primitive: tán là NHIỀU
 │   │   │   │                      #   THUỲ chồng lấn lệch tâm, KHÔNG phải một khối lồi (xem ADR-020)
 │   │   │   │                      #   ⚠️ `sides`/`taper` phải theo HẠT, không viết cứng — lỗi này

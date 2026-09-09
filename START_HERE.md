@@ -32,31 +32,35 @@ Production branch `main` carries **both** work streams (merged 2026-08-28 on Đ�
 ⚠️ Phase 21 therefore shipped **before** Đàm reviewed its screenshots — the "waiting on Đàm's eyes"
 item below is still live, it just now reviews something already running.
 
-- **Loop — ROUND 50 (2026-09-09, LATEST): MORE TO SEE, MORE TO DO (ADR-090).**
-  Order: more features and more detail, **only ever adding**; no thresholds, no ceilings, no performance.
-  ⚠️ **The season is a second axis** (`season.js`): 15 × 4 = 60 looks. `seasonLook(era, season)` moves
-  colour, air and what falls; `weatherAt(era, hour, season)`; a sealed era freezes ITS season
-  (`museumSeason`) as it freezes its hour. Summer is the identity look — every round-47…49 table was
-  tuned on it, so never "improve" summer without re-measuring the other three.
-  ⚠️ **One place derives the hour and the season** (`CityScene3D`: `hourNow`, `seasonNow`) and hands them
-  to light, weather, palette and scene. The slider and chips (`CityTimeControls`) hold no logic; a museum
-  piece has no handle at all.
-  ⚠️ **Walk mode is a MODE of `orbit.js`** (`walk.js` + `setWalk`), never a second camera; the walker
-  stands on the scene's own terrain (`groundHeightAt`) — at y = 0 it photographs the underside of the world.
-  ⚠️ **Interiors and facade detail only ADD**: no new material family, nothing protrudes past the wall
-  (a 0,022 ornament moved a PLINTH count), and a symmetric landmark keeps its door shut and its
-  symmetric-only vocabulary.
-  ⚠️ **`ROOFTOP_MIN_SPAN` is a RELATION now** (0,083, from `CELL_PIXELS`/`EYE_PIXELS` at the close-up
-  frame); the LAND floor is `ROOFTOP_LAND_SPAN` = 0,24 and must not move (ADR-007). `#77` · `#81` ·
-  `#90(b)` closed.
-- **Loops — ROUNDS 47 · 48 · 49 (2026-09-08…09).** The art was reopened (ADR-087: per-era ground and wall
-  materials, rounding in `parts.js`), the scenery started to move (ADR-088: one `uTime` clock, land that
-  grows only by ADDING, lesson 104 — copy frames from `.city-preview/last-run.json`, never from `ls`), and
-  props, fire and weather arrived (ADR-089: cloth roles `canvas`/`flag`, boats as item kind `water`, fire
-  from parts tagged `fire`, `weatherAt` with `wet ≥ rain` by construction, lesson 106 — a shader injection
+- **Loop — ROUND 51 (2026-09-09, LATEST): THE EYE CAME DOWN TO THE STREET (ADR-091).**
+  Round 50's walk mode changed the priorities of the four rounds before it: everything from round 47 on
+  was built for a camera looking DOWN, and from the pavement none of it is where the eye is.
+  ⚠️ **The sky is a DECISION, not a backdrop** (`sky.js`, pure): cloud kind/cover, drift, stars behind
+  the era's light pollution, the Milky Way, a real 29,53-day moon. Drawn on a DOME that TURNS — a flat
+  cloud plane puts half the clouds between the camera and the city.
+  ⚠️ **Geometry has FOUR columns now: `city · backdrop · sky · total`** — `sky` is not inside
+  `backdrop`, which exists for being CONSTANT across eras; clouds are the opposite.
+  ⚠️ **Street furniture lives in `layout.street`, NOT `layout.props`** — `props` keeps its
+  one-thing-per-cell law; a lamp post on a kerb occupies no cell.
+  ⚠️ **Role `iron` exists because `trim` borrows the century's colour** (a Manchester gas lamp came out
+  brick red). It rides the `wood` family, so no era gained a draw call; any new role must do the same.
+  ⚠️ **A wonder opens without relaxing the mirror** (`wonderEntrance.js`): centred at x = 0 or in equal
+  ±pairs. ⚠️ **`specSpan` takes `max(w/2, d/2)`, not the depth** — clamp anything laid on a face by that
+  formula, not by its own depth.
+- **Loop — ROUND 50 (2026-09-09): MORE TO SEE, MORE TO DO (ADR-090).** Seasons, an hour slider, walk
+  mode, the postcard, interiors, facade vocabulary; `#77` · `#81` · `#90(b)` closed. Laws still live:
+  the **season is a second axis** (`seasonLook`; summer is the identity look — never "improve" it
+  without re-measuring the other three; `museumSeason` freezes a sealed era) · **one place derives the
+  hour and the season** (`CityScene3D`: `hourNow`/`seasonNow`; the controls hold no logic, a museum
+  piece has no handle) · **walk mode is a MODE of `orbit.js`**, never a second camera, and the walker
+  stands on the scene's own terrain (at y = 0 it photographs the underside of the world) · **nothing on
+  a facade may protrude** (a 0,022 ornament moved a PLINTH count) · **`ROOFTOP_MIN_SPAN` is a RELATION**
+  (0,083), while `ROOFTOP_LAND_SPAN` = 0,24 must not move (ADR-007). Full detail: ADR-090.
+- **Loops — ROUNDS 47 · 48 · 49 (2026-09-08…09).** Art reopened (ADR-087), the scenery started to move
+  (ADR-088: one `uTime` clock; lesson 104 — copy frames from `.city-preview/last-run.json`, never `ls`),
+  props, fire and weather arrived (ADR-089: `wet ≥ rain` by construction; lesson 106 — a shader injection
   needs its own program cache key). ⚠️ **ADR-007 still locks every building's position**; run its two tests
   (`cityPlan.test.js` «15 kỷ × 120 mốc», `block.test.js` «QUA THỜI GIAN») before every 3D commit.
-  Full detail: ADR-087 · 088 · 089 and `BAN_GIAO.md`.
 - **Loop — ROUND 46 (2026-09-08): THE CITY TAB CATCHES UP WITH THE CITY'S THREE ROLES (ADR-086).**
   Order: *"THÀNH PHỐ PHẢI TRÔNG NHƯ THỨ ĐÁNG NHẤT TRONG APP."* Measured before (390×844, 12 eras): picture
   **201 px = 23,8 %** at y = 494 · header 202 px · 12 chips = 6 rows · «SP» said 0 times · museum 2,5× darker
@@ -138,9 +142,14 @@ stated twice drifts.
   still needs his eye on top-down photos before any code.
 
 ### B. Ready to build
+0. **Round 51's leftovers, in the brief's order** — Việc 5 (greenery: vines, trellises, planters,
+   vegetable beds, street trees), Việc 6 (more resident roles and animals), Việc 7 (moss, rust, peeling
+   paint, soot by building age), Việc 9 (auto tour, street names, tap while walking, lamps pooling
+   light, remembering where you stood). All additive, none blocked — the round spent its budget on
+   A + B in full, as the brief asked.
 1. **`#65`** — river · canal · estuary still share one geometry; give each its own shape, with the bridge ·
    quay · steps grammar `#60` asks for. Also `#40` (tiles on the slope), more resident roles and animals,
-   and people talking in pairs (rounds 49 and 50 both left these).
+   and people talking in pairs (rounds 49, 50 and 51 all left these).
 2. **`TECH_DEBT #88`** — the one-cell ceiling (`BLOCK_MAX_CELLS = 1`) pins the plot count at 4 across
    all 15 eras, making the `units`/`cols`/`rows` columns of the district table a dead axis. Three
    options already measured.
@@ -148,6 +157,9 @@ stated twice drifts.
    explicitly twice, has barely moved. Do not read the aggregate number as "solved".
 
 ### C. Waiting on Đàm's eyes
+🔴 **Round 51 on the phone** — walk a lap down the street by day and by night in three different eras.
+Đàm's own test: each street must read immediately as that country, that century; an empty road or a
+smooth sky on that lap means the round failed.
 🔴 **Round 50 on the phone** — drag the hour from morning to night, switch all four seasons, walk a lap
 down the street, save one postcard. Đàm's own test: every change must show a different city.
 🔴 **Phase 21 screenshots** — the 15-era sweep + 12 top-down views (eras 1 · 3 · 7 · 10 · 11 · 14, each

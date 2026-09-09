@@ -10,6 +10,24 @@
 > **Muốn hiểu VÌ SAO một quyết định được chọn** → `ARCHITECTURE_DECISIONS.md`. **Muốn biết migration
 > cụ thể nào cần chạy** → `MIGRATION.md`.
 
+## 2026-09-09 — Round 51: the eye came down to the street (ADR-091)
+
+**Purpose.** Round 50's walk mode changed what matters: at eye level the sky is nearly half the frame
+and the road most of the other half, and both were empty. This round fills those two.
+
+**Scope.** `engine/city3d/sky.js` + `render3d/skyLayer.js` (clouds on a dome, stars behind the era's
+light pollution, a deterministic moon, cloud shadows on the real ground) · `streetFurniture.js` +
+`streetFurnitureSpec.js` (19 kinds, a kit per century, on the kerb line) · a new part role `iron` ·
+three ground-level facade items · `wonderEntrance.js` (14/15 wonders open, symmetric by construction).
+
+**Impact.** A fourth geometry column (`city · backdrop · sky · total`) in `measureSceneGeometry`, the
+HUD and the preview tool. `layout.street` is a new array. `getVietnamDayIndex()` in `engine/time.js`.
+Triangles +1,7 %…+7,9 % per era; draw calls unchanged in all fifteen.
+
+**Compatibility.** Additive throughout. No saved state changes. ADR-007 holds — nothing already
+placed moved; every new thing hangs on an edge or is cut into a wall.
+
+
 ## 2026-09-09 — Round 50: more to see, more to do (ADR-090)
 
 **Purpose.** Đàm's brief: *"THÊM TIỂU TIẾT VÀ TÍNH NĂNG … CHỈ THÊM, KHÔNG BỚT … BỎ HẾT VIỆC NGƯỠNG VÀ

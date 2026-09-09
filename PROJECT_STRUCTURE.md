@@ -104,6 +104,10 @@
 │   │   │       ├── terrainMesh.test.js # Hình học THẬT (không đọc mã nguồn): có đỉnh đúng tâm mỗi ô
 │   │   │       │                   #   không · mặt đất có lén quay về bậc thang không · đường có bám
 │   │   │       │                   #   sườn dốc không · ngõ có cân giữa không · ngân sách tam giác
+│   │   │       ├── skyLayer.js     # ROUND 51 (ADR-091): what `sky.js` decides, DRAWN — clouds as clusters of
+│   │   │       │                   #   puffs on a shallow DOME that turns (a flat plane puts half of them between
+│   │   │       │                   #   camera and city), stars + Milky Way band, a moon with its dark disc, and
+│   │   │       │                   #   CLOUD SHADOWS laid on the real ground the walker stands on
 │   │   │       ├── sceneGraph.js   # Dựng cảnh: trời/đất + ánh sáng 3 nguồn + công trình + cư dân
 │   │   │       │                   #   + NƯỚNG BẢN ĐỒ MÔI TRƯỜNG từ chính bầu trời đang nhìn thấy
 │   │   │       │                   #   (`paintSkyGradient` dùng chung cho vòm trời và quả cầu dò —
@@ -582,6 +586,10 @@
 │   │   │   ├── landGrowth.js      # ROUND 48 (ADR-088): land grows with sessions — milestones 0·25·50·90·140, outskirt reach 8→11, hamlet bonus, camera pull-back; only add, never move
 │   │   │   ├── motion.js          # ROUND 48 (ADR-088): what moves per era (wind · smoke · particles), phaseAt(x,z), motionTime — pure, no three
 │   │   │   ├── weather.js         # ROUND 49 (ADR-089): weatherAt(era, hour, season) per day phase — rain · drizzle · fog · snow · sand; wet ≥ rain by construction; wetSurface; museumWeather
+│   │   │   ├── sky.js             # ROUND 51 (ADR-091): what hangs above — cloud kind/cover per era·season·weather, drift, dawn/dusk underlighting, stars behind the era's light pollution, Milky Way, a real 29,53-day moon (PURE)
+│   │   │   ├── streetFurniture.js # ROUND 51 (ADR-091): the kit each century furnishes a street with, placed on the KERB LINE of a road cell; lives in layout.street, never layout.props
+│   │   │   ├── streetFurnitureSpec.js # ROUND 51: the 19 shapes — post · marker · weeds · bollard · torchpost · lamppost · milestone · gutter · trough · step · bin · gaslamp · signpost · manhole · hydrant · rail · streetlight · streetbench · utilitypole
+│   │   │   ├── wonderEntrance.js  # ROUND 51 (ADR-091): the landmark opens — portal cut INTO the front, colonnade in equal pairs, lintel, pediment, threshold; and the ziggurat's processional stair
 │   │   │   ├── season.js          # ROUND 50 (ADR-090): the second axis — 15 eras × 4 seasons; leaves · blossom · snow · wind · fog · what falls; museumSeason freezes a sealed era
 │   │   │   ├── walk.js            # ROUND 50 (ADR-090): the walker — eye height, road-network positions, orbit states; walk mode is a MODE of orbit.js, not a second camera
 │   │   │   ├── interiors.js       # ROUND 50 (ADR-090): what an open door reveals — forge (a real fire source) · shelves · table · loom · books · altar · bar · bed · grain · desk

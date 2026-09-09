@@ -1293,6 +1293,48 @@ Round 48 built the motion machine — one clock, a per-vertex `aMotion`, particl
 
 ---
 
+## ADR-091 — Round 51: the eye came down to the street, and the two biggest things in the frame were the two emptiest
+
+**Date**: 2026-09-09 · **Order**: *"PHỐ ĐÃ MỞ, GIỜ PHẢI CÓ NGƯỜI Ở … MẮT TÔI NAY ĐỨNG DƯỚI ĐƯỜNG … Ở tầm mắt, bầu trời chiếm gần nửa khung hình và mặt đường chiếm phần lớn nửa còn lại. Hai thứ lớn nhất trong tầm nhìn đang là hai thứ trống nhất … Không đủ sức làm hết thì làm sâu A + B, đừng rải mỏng cả bốn."* Same three laws: ADR-007, determinism, and the 105 era pairs across all four seasons.
+
+### Context
+Round 50 gave Đàm a walk mode, and that one feature invalidated the priorities of the four rounds before it. Everything built between round 47 and round 50 was designed for a camera looking DOWN from across the square: ground colours read from above, roof detail, skylines, string courses at storey height. From the pavement, none of that is where the eye is. The sky was one gradient — the same gradient in all fifteen eras, all four seasons, all twenty-four hours — and the road was a coloured strip with nothing standing on it.
+
+### Decisions
+1. **The sky is a decision, not a backdrop** (`engine/city3d/sky.js`, pure). `skyAt(era, season, hour, weather, dayIndex)` answers what is up there: cloud kind and cover, drift speed, how much a low sun lights the cloud from below, how many stars survive the era's own light pollution, whether the Milky Way shows, and where the moon is in a real 29,53-day cycle. `ERA_SKY` gives each century its own: Anatolia clear and starlit (`pollution: 0`), Manchester a closed lid (`amount: 0,85`), Tokyo the brightest night on the board (`pollution: 0,95`, effectively starless).
+2. **The clouds are on a DOME and they turn** (`render3d/skyLayer.js`). The first draft scattered them on a flat plane at cloud height over a 36-unit square; the camera orbits ~22 out and ~12 up, so half of them ended up BETWEEN the camera and the city, and the photo showed pale slabs draped over Tuscany. A sky is high in the middle and comes down to the horizon: clouds sit on a shallow dome inside the gradient dome, their height falling with the square of the distance from the centre, and they drift by TURNING about the vertical axis — which has no wrap seam, and which from the street is exactly what the eye sees. Each cloud is a CLUSTER of four puffs drawn out along the wind, because a lump needs at least three overlapping bodies to read as one.
+3. **Cloud shadows fall on the real ground.** One soft disc per cloud, projected down the scene's own sun ray and placed at the height `horizon.heightAt` gives — the same surface the walker stands on. They are what make a cloud an object with a place rather than a decal. Darkness peaks at BROKEN cloud and falls to zero at full cover, because an overcast sky has no shadow edges at all. A flat disc on a slope would cut into the hill, so each one asks the ground at two points of its own rim before drawing.
+4. **A FOURTH geometry column: `sky`** (`measureSceneGeometry`). It is deliberately NOT folded into `backdrop`. The backdrop column exists because the dome and the mountains are a constant across all fifteen eras and a constant dilutes era comparison; the clouds are the opposite of constant. Same reasoning, opposite answer, so it needs its own column — and `sceneStats.test.js` now demands both: backdrop identical across 15 eras, sky NOT.
+5. **The street gets furniture** (`streetFurniture.js` + `streetFurnitureSpec.js`). Nineteen shapes, a kit per century, each piece hung on the KERB LINE of a road cell that already exists — using that street's own cross-section (`streetCrossSection`) to know where the kerb is. Every row is a date, not a taste: a hydrant is 1801, a gas lamp 1807, a public bin the 1870s, a tram rail the 1830s, a hitching post as old as the ridden horse — the same law `streetStyle.js` already applies to kerbs (Rome) and road markings (C20).
+6. **Street furniture lives in `layout.street`, not `layout.props`.** `props` carries a one-thing-per-cell invariant that six tests guard, and they are right to: two trees in one cell is a bug. A lamp post on a kerb occupies no cell at all. Putting it in `props` turned all six red at once and every one was telling the truth — the same reason ground cover got its own array.
+7. **A new part role: `iron`.** `trim` takes the era's trim material, so a cast-iron gas lamp in Manchester came out BRICK RED and a manhole cover came out PINK. Iron looked the same in Paris and in Manchester, and a role that borrows the century's colour cannot say that. It rides the `wood` material family — drawn by all fifteen eras — so no era gained a draw call.
+8. **The facade vocabulary gained the bottom two metres** (`facadeDetail.js`): a number plate beside the door, a window box under the sill, a shop board with goods across the opening. These are pinned to the GROUND in absolute units, not to a fraction of the height — `height × 0,16` would put era 11's house numbers on the fourth floor. A house number belongs to a PERSON, not to a storey.
+9. **The wonder opens** (`wonderEntrance.js`). Round 50 left the landmark sealed for a real reason: a door, a room and a sign are asymmetric and the wonder must mirror. The way out was not to relax the mirror but to build something that is symmetric anyway — which a great entrance already is in all fifteen of these traditions: a portal on the centre line, a colonnade in EQUAL PAIRS, a lintel and a pediment across the whole front. Nothing projects; the portal is cut INTO the wall, and going inward can never widen a footprint. A monolith wonder gets what a monolith actually has: era 3's ziggurat its processional stair, era 2's pyramid nothing at all, because the Great Pyramid has no stair on its outer face and one would have been Mesoamerican.
+
+### Consequences
+| | Before (round 50) | After |
+|---|---|---|
+| The sky | one gradient, all eras/hours/seasons | **per era · season · weather · hour** — cloud kind, cover, drift, stars, Milky Way, moon phase |
+| Cloud shadows | none | **on the real ground**, moving with the cloud, strongest at broken cloud |
+| Things standing beside the road | 0 | **19 kinds**, a kit per century |
+| Wonders you can enter | 0/15 | **14/15** (era 2's pyramid stays solid, on purpose) |
+| Facade detail kinds | 19 | **22**, three of them at eye level |
+| Part roles | 20 | **21** (`iron`) |
+| Geometry columns | city · backdrop · total | **city · backdrop · sky · total** |
+| Triangles (era 6, the largest) | 237 632 | **243 174** (+2,3 %) |
+| Draw calls | — | **unchanged in all 15 eras** (no era gained a material family) |
+| Tests | 1 734 | **1 751** |
+
+**Not done, and named rather than hidden:** Việc 5 (vines, trellises, planters, vegetable beds, street trees), Việc 6 (more resident roles and animals), Việc 7 (moss, rust, peeling paint, soot scaled by building age), Việc 8 (`#65` river/canal/estuary geometry, `#60` bridges and quays), Việc 9 (auto tour, street names, tap-while-walking, lamps pooling light, remembering where you stood). The brief said explicitly: *"Không đủ sức làm hết thì làm sâu A + B, đừng rải mỏng cả bốn"* — so the budget went to A and B in full.
+
+### What the tests caught that reading the code did not
+Five, and every one of them was invisible in a green build:
+1. **The wonder entrance never fired.** Fifteen eras, zero portals, every test green — because the call sat inside `if (!mass.low)` and on an epic wonder the mass facing the street IS a low one. This is why the portal now carries `tag: 'portal'`: the side that BUILDS a thing knows what it is, and a probe that guesses from part counts answered "2" for a wonder with an entrance and "2" for one without.
+2. **On the widest mass the portal came out 0,036 world units tall** — a doorway for a mouse — because a podium is declared `low` and scaled by 0,34. Only the tallest mass can hold a great door.
+3. **A `glass` light in the doorway gave era 1 a material family it does not have**, +1 draw call on the very era Đàm chose as the witness for *"nothing may quietly charge itself to a century"*. And the error was not only performance: the Stone Age has no glass. It lights a doorway with FIRE.
+4. **`specSpan` takes `max(w/2, d/2)`, not the depth.** A ziggurat tread 0,17 wide and 0,05 deep therefore measures as 0,17 DEEP, and era 3 read 3,908 cells against a 3,7 limit — twice — while every number in the function looked right. The clamp now asks the measuring formula its own question. (Project law #1: suspect the measuring tool first.)
+5. **The wonder-symmetry test's tower heuristic aged.** It found the four corner towers by *"a `trim` part off-centre on BOTH axes can only be a tower"* — true for two years, false the moment a `trim` capital stood on a colonnade in front of a facade. The fix was not a wider threshold but a tag.
+
 ## ADR-090 — Round 50: more to see and more to do — four seasons, a handle on the clock, a walk down the street, a postcard, and insides
 
 **Date**: 2026-09-09 · **Order**: *"VÒNG 50 — THÊM TIỂU TIẾT VÀ TÍNH NĂNG … CHỈ THÊM, KHÔNG BỚT … BỎ HẾT VIỆC NGƯỠNG VÀ TRẦN … Vòng này đo bằng đúng hai câu: thành phố có thêm bao nhiêu thứ để nhìn, và tôi làm được thêm bao nhiêu việc với nó."* Three laws only: ADR-007, determinism, and the 105 era pairs.

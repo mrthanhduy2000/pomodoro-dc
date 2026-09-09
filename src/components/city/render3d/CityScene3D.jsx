@@ -227,7 +227,7 @@ export default function CityScene3D({
       // 3,6 × gridSize và camera lùi được tới 3,1 × gridSize — tổng 6,7 phải NHỎ HƠN mặt phẳng xa,
       // nếu không nửa vòm phía sau bị cắt và bầu trời chuyển sắc biến mất, chỉ còn màu nền phẳng.
       const camera = new PerspectiveCamera(CITY_CAMERA_FOV, 1, 0.5, layout.gridSize * 8);
-      const orbit = createOrbit(cityOrbitOptions(layout.gridSize, layout.era));
+      const orbit = createOrbit(cityOrbitOptions(layout.gridSize, layout.era, layout.sessionCount));
 
       // Dùng LẠI hai đối tượng này cho mọi cú chạm. Tạo mới mỗi lần chạm thì chẳng chết ai, nhưng
       // đây là file mà cả bộ dọn rác lẫn nhịp vẽ đều đang được giữ gìn từng chút một.

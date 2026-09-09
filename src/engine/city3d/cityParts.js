@@ -174,7 +174,7 @@ export function collectCitySpecs({ layout, detail = 'high' } = {}) {
    * (`buildings` · `props` · `landscape`) khi công cụ chụp cần hỏi *"bao nhiêu phần khung hình là
    * vùng quê?"*. Đó là một CỜ CHỈ-ĐỂ-ĐO đã có sẵn, không phải một cờ thứ ba.
    */
-  for (const wild of deriveOutskirts({ era, gridSize: layout.gridSize })) {
+  for (const wild of deriveOutskirts({ era, gridSize: layout.gridSize, sessionCount: layout.sessionCount })) {
     out.push({
       kind: 'outskirt',
       source: wild,
@@ -199,7 +199,7 @@ export function collectCitySpecs({ layout, detail = 'high' } = {}) {
    * kèm DỮ LIỆU RÁC (`built`, `sessionCount`…) rồi đòi kết quả y hệt — đúng khuôn đã dùng cho
    * `buildTerrain` ở Phase 7B.
    */
-  for (const item of deriveHinterland({ era, gridSize: layout.gridSize })) {
+  for (const item of deriveHinterland({ era, gridSize: layout.gridSize, sessionCount: layout.sessionCount })) {
     out.push({ kind: 'hinterland', source: item, spec: item.spec });
   }
 

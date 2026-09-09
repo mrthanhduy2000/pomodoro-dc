@@ -40,6 +40,8 @@ import { buildSetting, hazXuongDay } from './setting';
 
 /** Bao xa thì hết thế giới, tính bằng CẠNH LƯỚI. Phải nhỏ hơn bán kính vòm trời (3,6 × lưới). */
 export const HORIZON_REACH = 3.0;
+/** Round 48: how much of the onset→reach ramp a `near` of 1 removes (0,72 ⇒ the ramp is 28 % as long). */
+export const HORIZON_NEAR_STEEP = 0.72;
 
 /**
  * Lưới đỉnh của vùng đất xa chia làm bao nhiêu bước từ TÂM ra tới CHỖ GIÁP.
@@ -238,7 +240,11 @@ export function buildHorizon({ era, gridSize = 12, terrain } = {}) {
     innerEdge + 0.6,
     size * HORIZON_ONSET + (1 - style.near) * (reach - size * HORIZON_ONSET) * 0.5,
   );
-  const span = Math.max(1e-6, reach - onset);
+  // ROUND 48 (ADR-088): `near` also STEEPENS the ramp. With the ramp always spanning onset → reach
+  // (~32 cells) a mountain era reached 4 % of its height at the frame's edge (8 cells out) — the hills
+  // were declared but lived outside the picture. Now a `near` of 0,95 climbs over ~9 cells, a plain's
+  // 0,15 still over ~28, so the plains stay far and flat and the mountains stand in the frame.
+  const span = Math.max(1e-6, (reach - onset) * (1 - HORIZON_NEAR_STEEP * style.near));
 
   // Cỡ ô nhiễu LỚN NHẤT, theo ĐƠN VỊ THẾ GIỚI, suy từ cạnh lưới — `grain` là một TỈ LỆ, không phải
   // một khoảng cách. Viết thẳng "4,5 đơn vị" ở đây thì đổi cỡ lưới là cả dãy núi đổi tần số mà không

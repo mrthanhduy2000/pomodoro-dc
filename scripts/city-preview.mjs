@@ -419,7 +419,7 @@ city.updateResidents(ANIM_T);
 
 const camera = new PerspectiveCamera(CITY_CAMERA_FOV, VIEW_W / VIEW_H, 0.5, layout.gridSize * 8);
 // Dùng CHUNG bộ tham số camera với app; ZOOM chỉ để soi chi tiết, mặc định 1 = đúng khung app.
-const orbitOptions = cityOrbitOptions(layout.gridSize, layout.era);
+const orbitOptions = cityOrbitOptions(layout.gridSize, layout.era, layout.sessionCount);
 const orbit = createOrbit({
   ...orbitOptions,
   distance: orbitOptions.distance * ZOOM,
@@ -834,7 +834,7 @@ for (let row = 0; row < eras.length; row += 1) {
     renderer.shadowMap.needsUpdate = true;
     city.updateResidents(ANIM_T);
 
-    const orbitOptions = cityOrbitOptions(layout.gridSize, layout.era);
+    const orbitOptions = cityOrbitOptions(layout.gridSize, layout.era, layout.sessionCount);
     const orbit = createOrbit(orbitOptions);
     const eye = orbit.getPosition();
     const target = orbit.getTarget();

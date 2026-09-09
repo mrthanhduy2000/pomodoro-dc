@@ -10,6 +10,7 @@
  */
 
 import { getEraStyle } from './eraStyle';
+import { cameraPullback, landStage } from './landGrowth';
 import { buildTerrain, terrainMaxHeight } from './terrain';
 import { buildBuildingSpec } from './buildingSpec';
 import { BUILDING_SCALE, specSpan } from './parts';
@@ -294,7 +295,12 @@ export function cityFrameDistance(era, gridSize, { targetY = 0, aspect = FRAME_F
   return ra;
 }
 
-export function cityOrbitOptions(gridSize, era) {
+/**
+ * Round 48 (ADR-088): `sessionCount` (of the era) pulls the eye back +5 % per land stage so the ring
+ * that grew is inside the frame — a sealed era passes its frozen count and keeps its frame (see `#73`).
+ */
+export function cityOrbitOptions(gridSize, era, sessionCount = 0) {
+  const pullback = cameraPullback(landStage(sessionCount));
   const scale = getEraStyle(era)?.massScale ?? 1;
   // `lift` ÂM ở kỷ nhà thấp — đó là nửa thứ hai của yêu cầu, và là nửa dễ quên. Bản đầu kẹp
   // `Math.max(0, …)` nên chỉ biết lùi ra, không biết tiến vào: kỷ 1 (nhà cao bằng 0,36 mức cũ) vẫn
@@ -335,7 +341,7 @@ export function cityOrbitOptions(gridSize, era) {
   const sanDo = cityFrameDistance(era, gridSize, { targetY });
 
   return {
-    distance: Math.max(gridSize * factor + terrainLift * TERRAIN_TO_DISTANCE, sanDo),
+    distance: Math.max(gridSize * factor + terrainLift * TERRAIN_TO_DISTANCE, sanDo) * pullback,
     minDistance: gridSize * CAMERA_MIN_FACTOR,
     maxDistance: gridSize * CAMERA_MAX_FACTOR,
     target: { x: 0, y: targetY, z: 0 },

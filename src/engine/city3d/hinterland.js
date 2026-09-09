@@ -46,6 +46,7 @@
  */
 
 import { prism, gable, specHeight, countSpecTriangles } from './parts';
+import { hamletBonus, landStage } from './landGrowth';
 import { PROP_SHORE_CLEAR, buildSetting, distanceOutsideGrid } from './setting';
 import { getHinterlandStyle, isValidHinterland } from './hinterlandStyle';
 import { hashId } from '../cityLayout';
@@ -697,7 +698,7 @@ function trongTamHuong(side, gridSize) {
  * @returns {Array<{x:number,y:number,kind:string,scale:number,seed:string,ry:number,
  *   detail:'high'|'low', onWater?:boolean}>} toạ độ theo Ô, giống `deriveOutskirts`
  */
-export function planHinterland({ era, gridSize = 12, style, setting } = {}) {
+export function planHinterland({ era, gridSize = 12, style, setting, hamletExtra = 0 } = {}) {
   // Thiếu bảng ⇒ KHÔNG dựng gì, và không ném lỗi. Ném lỗi ở đây sẽ làm sập cả cảnh vì một dòng
   // bảng hỏng; trả rỗng thì phép đếm ở `hinterland.test.js` bắt được ngay mà cảnh vẫn dựng được.
   if (!style || typeof style !== 'object') return [];
@@ -848,7 +849,10 @@ export function planHinterland({ era, gridSize = 12, style, setting } = {}) {
    * mỗi cụm — hai trục riêng, vì ngoài đời chúng độc lập (nước Nga có ít làng nhưng làng to; nước
    * Ý có nhiều làng nhỏ).
    */
-  for (let c = 0; c < style.hamletCount; c += 1) {
+  // Round 48 (ADR-088, #74): `hamletExtra` hamlets are APPENDED after the era's own — same formula,
+  // indices continue from `hamletCount`, so the existing hamlets keep every coordinate.
+  const hamletTotal = style.hamletCount + Math.max(0, Math.round(hamletExtra));
+  for (let c = 0; c < hamletTotal; c += 1) {
     // Cụm đặt trên một vòng quanh thành phố, góc tất định theo kỷ — không rơi vào một góc phần tư.
     const goc = ((hashId(`${key}|xom|${c}`) % 1000) / 1000) * Math.PI * 2;
     const banKinh = HINTERLAND_CLEAR + 1.6 + ((hashId(`${key}|xr|${c}`) % 1000) / 1000) * (HINTERLAND_REACH - HINTERLAND_CLEAR - 2.2);
@@ -966,12 +970,13 @@ export function planHinterland({ era, gridSize = 12, style, setting } = {}) {
  * truyền và rơi về mặc định, tức kỷ ấy lặng lẽ mất vùng phụ cận — đúng thứ mà cả
  * `isValidHinterland` lẫn phép đếm ở đầu bên kia sinh ra để chặn.
  */
-export function deriveHinterland({ era, gridSize = 12 } = {}) {
+export function deriveHinterland({ era, gridSize = 12, sessionCount = 0 } = {}) {
   const key = Number.isFinite(era) ? era : 1;
   const style = getHinterlandStyle(key);
   if (!isValidHinterland(style)) return [];
   const setting = buildSetting({ era: key, gridSize });
-  return planHinterland({ era: key, gridSize, style, setting }).map((item) => ({
+  const hamletExtra = hamletBonus(landStage(sessionCount));   // round 48: the land grows with the player
+  return planHinterland({ era: key, gridSize, style, setting, hamletExtra }).map((item) => ({
     ...item,
     spec: buildHinterlandSpec({ kind: item.kind, style, seed: item.seed, detail: item.detail }),
   }));

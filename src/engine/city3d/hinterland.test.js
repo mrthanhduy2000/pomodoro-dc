@@ -103,7 +103,7 @@ test('KHÔNG phụ thuộc tiến độ chơi — gọi kèm DỮ LIỆU RÁC ph
     const sach = deriveHinterland({ era, gridSize: G });
     const rac = deriveHinterland({
       era, gridSize: G,
-      built: ['a', 'b', 'c'], buildings: [1, 2, 3], sessionCount: 999,
+      built: ['a', 'b', 'c'], buildings: [1, 2, 3],   // round 48: `sessionCount` may ADD hamlets (landGrowth.test.js)
       levels: { 1: 3 }, craftingQueue: [{ bpId: 'x' }],
     });
     assert.deepEqual(rac, sach, `kỷ ${era}: vùng phụ cận ĐỔI khi có dữ liệu tiến độ`);

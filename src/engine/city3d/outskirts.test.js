@@ -86,10 +86,15 @@ test('BẤT BIẾN: vùng quê KHÔNG phụ thuộc việc Đàm đã xây gì',
     const sach = deriveOutskirts({ era, gridSize: GRID });
     const rac = deriveOutskirts({
       era, gridSize: GRID,
-      built: ['a', 'b', 'c'], levels: { a: 3 }, sessionCount: 999,
+      built: ['a', 'b', 'c'], levels: { a: 3 },
       buildings: [1, 2, 3], layout: { props: [] }, stats: { streakLength: 40 },
     });
     assert.deepEqual(rac, sach, `kỷ ${era}: vùng quê đổi khi thêm dữ liệu tiến độ`);
+    // Round 48 (ADR-088, #74): `sessionCount` is the ONE progress input that may matter — and only by
+    // ADDING (see `landGrowth.test.js`): every old tree keeps its place when the land grows.
+    const lon = deriveOutskirts({ era, gridSize: GRID, sessionCount: 999 });
+    const co = new Set(lon.map((it) => `${it.kind}|${it.x}|${it.y}|${it.seed}`));
+    for (const it of sach) assert.ok(co.has(`${it.kind}|${it.x}|${it.y}|${it.seed}`), `kỷ ${era}: một cây cũ dời chỗ khi đất lớn`);
   }
 });
 

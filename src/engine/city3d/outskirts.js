@@ -43,6 +43,7 @@
  */
 
 import { hashId } from '../cityLayout';
+import { landStage, outskirtReach } from './landGrowth';
 import { valueNoise } from './noise';
 import { getFloraStyle } from './floraStyle';
 import { PROP_SHORE_CLEAR, buildSetting, distanceOutsideGrid } from './setting';
@@ -61,6 +62,8 @@ export { distanceOutsideGrid };
  * (xem `daylight.js`), nên mỗi cái cây thêm vào chỉ là tam giác chứ không phải điểm ảnh.
  */
 export const OUTSKIRT_REACH = 8;
+/** Round 48: the farthest the ring can ever grow (stage 4) — the lattice is laid out at this size. */
+export const OUTSKIRT_REACH_MAX = 11;
 
 /** Bước lưới rải, tính bằng ô. Mỗi mắt lưới nhiều nhất một vật. */
 export const OUTSKIRT_STEP = 0.8;
@@ -105,7 +108,15 @@ function lerp(a, b, t) { return a + (b - a) * t; }
  * @returns {Array<{x:number, y:number, kind:string, scale:number, seed:string,
  *   detail:'high'|'low'}>} toạ độ theo Ô (nhận số lẻ và số âm), giống `layout.props`.
  */
-export function deriveOutskirts({ era, gridSize = 12 } = {}) {
+/**
+ * ROUND 48 (ADR-088, closes #74): `sessionCount` lets the ring GROW — `outskirtReach(landStage(n))`
+ * is 8 cells at stage 0 (exactly the ring every era has had since Phase 8D) and 11 at stage 4. The
+ * lattice, the jitter, the density curve and the species draw of every node are unchanged and keyed by
+ * grid index, so a node that exists at stage k exists at stage k+1 with the same coordinates; growth
+ * only admits nodes farther out. Omit `sessionCount` (tools, old tests) ⇒ stage 0 ⇒ the old ring.
+ */
+export function deriveOutskirts({ era, gridSize = 12, sessionCount = 0 } = {}) {
+  const reach = outskirtReach(landStage(sessionCount));
   const key = Number.isFinite(era) ? era : 1;
   const style = getFloraStyle(key);
   // ⚠️ QUAN HỆ MỘT CHIỀU — luật Đàm ra cho VIỆC 2: `settingStyle` → `setting` → `outskirts`. Vùng
@@ -115,12 +126,18 @@ export function deriveOutskirts({ era, gridSize = 12 } = {}) {
   const setting = buildSetting({ era: key, gridSize });
   const out = [];
 
+  // ⚠️ The lattice ORIGIN and index range of the stage-0 ring are exactly Phase 8D's, so every node
+  // a sealed era has ever shown keeps its index — and with it its jitter, density draw and species.
+  // Growth adds nodes at NEGATIVE / beyond-range indices only (`outer`), never re-rolls the inner ones.
   const lo = -0.5 - OUTSKIRT_REACH;
   const hi = gridSize - 0.5 + OUTSKIRT_REACH;
   const steps = Math.round((hi - lo) / OUTSKIRT_STEP);
+  const extra = Math.ceil((OUTSKIRT_REACH_MAX - OUTSKIRT_REACH) / OUTSKIRT_STEP);
+  const grown = reach > OUTSKIRT_REACH + 1e-9;
 
-  for (let iy = 0; iy < steps; iy += 1) {
-    for (let ix = 0; ix < steps; ix += 1) {
+  for (let iy = grown ? -extra : 0; iy < steps + (grown ? extra : 0); iy += 1) {
+    for (let ix = grown ? -extra : 0; ix < steps + (grown ? extra : 0); ix += 1) {
+      const outer = ix < 0 || iy < 0 || ix >= steps || iy >= steps;
       // Lệch ngẫu nhiên TRONG mắt lưới: rải trên đúng mắt lưới thì cả vùng quê thành một bàn cờ
       // thứ hai — đúng thứ mà cả Phase 7B lẫn Phase 8D đã phải gỡ ở hai chỗ khác.
       const nut = `${key}|o|${ix}|${iy}`;
@@ -131,6 +148,7 @@ export function deriveOutskirts({ era, gridSize = 12 } = {}) {
 
       const d = distanceOutsideGrid(u, v, gridSize);
       if (d <= 0) continue;                       // trong lưới là việc của `computeCityLayout`
+      if (outer && d > reach) continue;           // round 48: the grown ring stops at this stage's reach
 
       // ⚠️ CHỪA CẢ MÉP ƯỚT, KHÔNG CHỈ CHỪA MẶT NƯỚC. Ngưỡng là `> -PROP_SHORE_CLEAR` chứ không phải
       // `> 0`: một cái cây đứng đúng mép nước sẽ có gốc nằm trên sườn lòng sông, tức nó chúi xuống
@@ -139,7 +157,11 @@ export function deriveOutskirts({ era, gridSize = 12 } = {}) {
       if (setting.insetAt(u, v) > -PROP_SHORE_CLEAR) continue;
 
       const xa = smoothstep(Math.min(1, d / OUTSKIRT_REACH));
-      const nen = lerp(OUTSKIRT_EDGE_DENSITY, OUTSKIRT_FAR_DENSITY, xa);
+      // The grown ring (round 48) is planted denser than the old far edge, so a milestone is SEEN:
+      // 0,32 at the old edge thinning to 0,12 at the farthest reach — woods that arrive, not a haze.
+      const nen = outer
+        ? lerp(0.32, 0.12, Math.min(1, (d - OUTSKIRT_REACH) / (OUTSKIRT_REACH_MAX - OUTSKIRT_REACH)))
+        : lerp(OUTSKIRT_EDGE_DENSITY, OUTSKIRT_FAR_DENSITY, xa);
       // Trường "lùm": chỗ dày chỗ thưa ở tần số KHÔNG liên quan bước rải, nên không sinh hàng lối.
       const lum = 0.35 + valueNoise(`${key}|lum`, u / CLUMP_CELL, v / CLUMP_CELL) * 1.3;
       const p = nen * lum * style.density;

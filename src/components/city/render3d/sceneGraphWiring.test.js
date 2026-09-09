@@ -895,7 +895,11 @@ test('ROUND 49 (ADR-089): MƯA PHẢI LÀM ƯỚT ĐẤT — ba vật liệu n�
   }
   assert.match(CODE, /weatherParticle\(weather\)/, 'vạch mưa phải đọc từ `weatherParticle(weather)` — cùng một hàng thời tiết với đất ướt');
   // The shell: the weather reads the same clock as the light, and a museum piece the museum hour.
-  assert.match(SHELL_SOURCE, /dimmed \? museumWeather\(layout\.era\) : weatherAt\(layout\.era, getVietnamHour\(\)\)/,
-    'Dòng chọn thời tiết phải là `dimmed ? museumWeather(layout.era) : weatherAt(layout.era, getVietnamHour())`');
+  // round 50 (ADR-090): the same `hourNow` as the light, and the same `seasonNow` as the palette
+  assert.match(SHELL_SOURCE, /dimmed \? museumWeather\(layout\.era\) : weatherAt\(layout\.era, hourNow, seasonNow\)/,
+    'Dòng chọn thời tiết phải là `dimmed ? museumWeather(layout.era) : weatherAt(layout.era, hourNow, seasonNow)`');
+  assert.match(SHELL_SOURCE, /const seasonNow = dimmed \? museumSeason\(layout\.era\) : \(season \?\? seasonForMonth\(getVietnamMonthIndex\(\)\)\)/,
+    'Mùa: bảo tàng đóng băng `museumSeason`, kỷ đang chơi theo nút chọn hoặc LỊCH — một dòng, một luật');
+  assert.match(SHELL_SOURCE, /season: seasonNow,/, 'vỏ React phải ĐƯA `season` vào bảng màu và vào cảnh');
   assert.match(SHELL_SOURCE, /\n\s+weather,/, 'vỏ React phải ĐƯA `weather` vào `createCityScene` — tính ra mà không đưa thì mưa không bao giờ rơi');
 });

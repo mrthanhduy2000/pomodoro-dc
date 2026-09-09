@@ -48,8 +48,10 @@ export function wrapYaw(value) {
  * Vị trí camera trong không gian, nhìn về `target`.
  * @returns {{x:number, y:number, z:number}}
  */
-export function orbitPosition({ yaw, pitch, distance, target = { x: 0, y: 0, z: 0 } }) {
-  const safePitch = clampPitch(pitch);
+export function orbitPosition({ yaw, pitch, distance, target = { x: 0, y: 0, z: 0 } }, { free = false } = {}) {
+  // Round 50 (ADR-090): `free` = walk mode — the pitch may be negative (looking UP a facade from the
+  // street). The overview keeps its floor; the same formula serves both, which is the whole point.
+  const safePitch = free ? Math.max(-Math.PI / 2 + 0.05, Math.min(Math.PI / 2 - 0.05, pitch)) : clampPitch(pitch);
   const horizontal = Math.cos(safePitch) * distance;
   return {
     x: target.x + Math.sin(yaw) * horizontal,
@@ -377,9 +379,16 @@ export function createOrbit({
    */
   let pitchFloor = MIN_PITCH;
   let distFloor = minDistance;
+  // Round 50 (ADR-090): walk mode — the SAME crane, freed: pitch may go below the overview floor and
+  // the distance is the look-ahead, not a zoom. Entered/left with `setWalk`; nothing else changes.
+  let walking = false;
+  let walkPitchMin = -0.95;
+  let walkPitchMax = 0.6;
 
-  const clampPitchNow = (value) => Math.min(MAX_PITCH, Math.max(pitchFloor, value));
-  const clampDistNow = (value) => Math.min(maxDistance, Math.max(distFloor, value));
+  const clampPitchNow = (value) => (walking
+    ? Math.min(walkPitchMax, Math.max(walkPitchMin, value))
+    : Math.min(MAX_PITCH, Math.max(pitchFloor, value)));
+  const clampDistNow = (value) => (walking ? value : Math.min(maxDistance, Math.max(distFloor, value)));
 
   return {
     /**
@@ -426,9 +435,9 @@ export function createOrbit({
      */
     set({ yaw: nextYaw, pitch: nextPitch, distance: nextDistance, target: nextTarget }) {
       if (Number.isFinite(nextYaw)) yaw = wrapYaw(nextYaw);
-      if (Number.isFinite(nextPitch)) pitch = clampPitch(nextPitch);
+      if (Number.isFinite(nextPitch)) pitch = walking ? clampPitchNow(nextPitch) : clampPitch(nextPitch);
       if (Number.isFinite(nextDistance)) {
-        dist = Math.min(maxDistance, Math.max(0, nextDistance));
+        dist = walking ? Math.max(0.01, nextDistance) : Math.min(maxDistance, Math.max(0, nextDistance));
       }
       if (nextTarget) {
         tgt = {
@@ -455,10 +464,18 @@ export function createOrbit({
       }
     },
 
+    /** Round 50: enter (`true`) or leave (`false`) walk mode; leaving restores the overview's clamps. */
+    setWalk(on, { pitchMin, pitchMax } = {}) {
+      walking = Boolean(on);
+      if (Number.isFinite(pitchMin)) walkPitchMin = pitchMin;
+      if (Number.isFinite(pitchMax)) walkPitchMax = pitchMax;
+      if (!walking) { pitch = clampPitchNow(pitch); dist = clampDistNow(dist); }
+    },
+    isWalking: () => walking,
     getLimits: () => ({ minPitch: pitchFloor, minDistance: distFloor }),
     getHome: () => ({ target: { ...homeTarget }, distance, minDistance: homeMinDistance }),
     getState: () => ({ yaw, pitch, distance: dist, target: { ...tgt } }),
-    getPosition: () => orbitPosition({ yaw, pitch, distance: dist, target: tgt }),
+    getPosition: () => orbitPosition({ yaw, pitch, distance: dist, target: tgt }, { free: walking }),
     getTarget: () => ({ ...tgt }),
   };
 }

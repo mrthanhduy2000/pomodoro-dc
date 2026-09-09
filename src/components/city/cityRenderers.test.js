@@ -306,7 +306,9 @@ test('BAY VÀO KHU PHỐ PHẢI CÓ BA ĐƯỜNG THOÁT, và cả ba đều nằ
   assert.match(code, /pointer-events-auto rounded-full[\s\S]{0,300}?⤺ Toàn cảnh/,
     'mất nút “Toàn cảnh” — lối thoát nhìn thấy được duy nhất trên iPhone');
   assert.match(code, /event\.key === 'Escape'/, 'mất lối thoát bằng phím Esc');
-  assert.match(code, /onClick=\{\(\) => onPick\?\.\(null\)\}/,
+  // round 50 (ADR-090): the same button climbs out of the STREET too when walking, so the call is
+  // inside a branch now — but it must still be there, and it must still be `onPick(null)`.
+  assert.match(code, /onClick=\{\(\) => \{ if \(walking\) setWalking\(false\); else onPick\?\.\(null\); \}\}/,
     'nút thoát không còn gọi `onPick(null)` ⇒ bấm vào thì thẻ đóng mà camera vẫn kẹt trong phố');
   // Cùng luật với thẻ thông tin ngay trên: lớp bọc phủ ngang cả cảnh, thiếu `pointer-events-none`
   // thì dải trống cạnh nút nuốt mất thao tác kéo xoay.

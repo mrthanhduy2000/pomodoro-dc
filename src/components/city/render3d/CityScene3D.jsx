@@ -22,12 +22,14 @@ import { PerspectiveCamera, Raycaster, Vector2, WebGLRenderer } from 'three';
 import { buildScenePalette } from '../../../engine/city3d/palette3d';
 import { deriveDaylight, museumDaylight } from '../../../engine/city3d/daylight';
 import { museumWeather, weatherAt } from '../../../engine/city3d/weather';
+import { museumSeason, seasonForMonth } from '../../../engine/city3d/season';
 import { CITY_CAMERA_FOV, MIN_PITCH, cityOrbitOptions, createOrbit } from '../../../engine/city3d/orbit';
+import { STEP, WALK_FOV, WALK_NEAR, WALK_PITCH_MAX, WALK_PITCH_MIN, createWalker } from '../../../engine/city3d/walk';
 import { planCityFocus } from '../../../engine/city3d/cityFocus';
 import { createRenderLoop } from '../../../engine/city3d/renderLoop';
 import { pickNearest } from '../../../engine/city3d/pick';
 import { ERA_METADATA } from '../../../engine/constants';
-import { getVietnamHour } from '../../../engine/time';
+import { getVietnamHour, getVietnamMonthIndex } from '../../../engine/time';
 import { applyPaintedLook, createCityScene, MAX_PIXEL_RATIO } from './sceneGraph';
 import { readThemeSignature, readThemeTokens } from './themeBridge';
 
@@ -90,6 +92,11 @@ export default function CityScene3D({
    */
   focusKind = null,
   focusBpId = null,
+  hour = null,      // round 50 (ADR-090): Đàm's slider — a fixed hour instead of the clock (ignored by a museum piece)
+  season = null,    // round 50 (ADR-090): Đàm's picker — a season instead of the calendar (ignored by a museum piece)
+  walk = false,     // round 50 (ADR-090): down on the street — the same orbit crane in walk mode (`walk.js`)
+  walkApiRef = null, // round 50: the stage's buttons reach `{ step, turn }` through this ref
+  cameraApiRef = null, // round 50: the postcard button reaches `{ capture }` through this ref
 }) {
   const hostRef = useRef(null);
   const runtimeRef = useRef(null);
@@ -186,9 +193,14 @@ export default function CityScene3D({
       // ⚠️ MUSEUM LIGHT (round 46, ADR-086): a SEALED era (`dimmed`) is lit at one fixed hour,
       // never by tonight's clock — measured 2,5× darker at night than at noon on a city that will
       // never change again. Same daylight profile machinery, one constant hour (`daylight.js`).
-      const daylight = dimmed ? museumDaylight() : deriveDaylight(getVietnamHour());
+      // Round 50 (ADR-090): ONE hour and ONE season for light, weather and colour. The slider and the
+      // picker override the clock and the calendar; a museum piece ignores both (its hour, weather and
+      // season are frozen — ADR-086, ADR-089, ADR-090).
+      const hourNow = Number.isFinite(hour) ? hour : getVietnamHour();
+      const seasonNow = dimmed ? museumSeason(layout.era) : (season ?? seasonForMonth(getVietnamMonthIndex()));
+      const daylight = dimmed ? museumDaylight() : deriveDaylight(hourNow);
       // Round 49 (ADR-089): the weather reads the SAME hour, and a museum piece the museum hour — forever
-      const weather = dimmed ? museumWeather(layout.era) : weatherAt(layout.era, getVietnamHour());
+      const weather = dimmed ? museumWeather(layout.era) : weatherAt(layout.era, hourNow, seasonNow);
 
       const palette = buildScenePalette({
         tokens: readThemeTokens(canvas),
@@ -198,6 +210,7 @@ export default function CityScene3D({
         // Việt lại ra mái tím. Xem đầu `palette3d.js`.
         era: layout.era,
         daylight,
+        season: seasonNow,
       });
       // An toàn trong thân effect: `darkScene` KHÔNG nằm trong danh sách phụ thuộc, nên đổi nó
       // chỉ sinh thêm một lượt render chứ không dựng lại cảnh (càng không thành vòng lặp).
@@ -210,6 +223,7 @@ export default function CityScene3D({
         stats: { sessionCount, streakLength },
         daylight,
         weather,   // round 49 (ADR-089): same hour as `daylight`
+        season: seasonNow,   // round 50 (ADR-090)
         // ⚠️ CẢNH CẦN RENDERER để nướng bản đồ môi trường (PMREM) từ chính bầu trời của nó. Thiếu
         // tham số này thì cảnh vẫn dựng được nhưng mọi bề mặt kim loại sẽ ĐEN — xem
         // `createSkyEnvironment` ở `sceneGraph.js`.
@@ -232,6 +246,15 @@ export default function CityScene3D({
       // nếu không nửa vòm phía sau bị cắt và bầu trời chuyển sắc biến mất, chỉ còn màu nền phẳng.
       const camera = new PerspectiveCamera(CITY_CAMERA_FOV, 1, 0.5, layout.gridSize * 8);
       const orbit = createOrbit(cityOrbitOptions(layout.gridSize, layout.era, layout.sessionCount));
+      // Round 50 (ADR-090): the walker — a position on the road network; the orbit crane frames it.
+      const walker = createWalker({
+        roadCells: (layout.props ?? []).filter((p) => p.kind === 'road'),
+        gridSize: layout.gridSize,
+        groundAt: (wx, wz) => city.groundHeightAt(wx, wz),   // the eye stands ON the street, not at y = 0
+      });
+      let walking = false;
+      let walkHome = null;   // the overview state to fly back to when climbing out
+      const OVERVIEW_NEAR = 0.5;
 
       // Dùng LẠI hai đối tượng này cho mọi cú chạm. Tạo mới mỗi lần chạm thì chẳng chết ai, nhưng
       // đây là file mà cả bộ dọn rác lẫn nhịp vẽ đều đang được giữ gìn từng chút một.
@@ -243,7 +266,14 @@ export default function CityScene3D({
         const target = orbit.getTarget();
         camera.position.set(eye.x, eye.y, eye.z);
         camera.lookAt(target.x, target.y, target.z);
+        // Round 50: on the street the lens is wider and the near plane closer (else every facade clips)
+        const fov = walking ? WALK_FOV : CITY_CAMERA_FOV;
+        const near = walking ? WALK_NEAR : OVERVIEW_NEAR;
+        if (camera.fov !== fov || camera.near !== near) {
+          camera.fov = fov; camera.near = near; camera.updateProjectionMatrix();
+        }
       }
+
 
       function resize() {
         const width = Math.max(1, host.clientWidth);
@@ -393,6 +423,44 @@ export default function CityScene3D({
       // (`visibilitychange`), và tắt sạch khi bật giảm chuyển động.
       if (city.isAnimated) loop.beginSustained('cư-dân');
 
+      // ── Round 50 (ADR-090): DOWN TO THE STREET ────────────────────────────────
+      // One crane. `orbit.setWalk(true)` frees its pitch floor and its distance clamp; the walker
+      // produces orbit states; drag looks around, wheel/keys/buttons walk. Leaving flies back to the
+      // overview the way a focus flight does (`beginFlight`), so nothing about the return is new.
+      function syncWalk() { orbit.set(walker.orbitState()); loop.invalidate(); }
+      function setWalk(on) {
+        if (on === walking) return;
+        if (on) {
+          if (!walker.start()) return;
+          flight = null;
+          walkHome = orbit.getState();
+          walking = true;
+          orbit.setWalk(true, { pitchMin: WALK_PITCH_MIN, pitchMax: WALK_PITCH_MAX });
+          syncWalk();
+        } else {
+          walking = false;
+          orbit.setWalk(false);
+          if (walkHome) {
+            beginFlight(walkHome, { minPitch: MIN_PITCH, minDistance: orbit.getHome().minDistance });
+            walkHome = null;
+          }
+          applyCamera();
+          loop.invalidate();
+        }
+      }
+      function walkStep(steps) { if (walking && walker.advance(steps)) syncWalk(); }
+      function walkTurn(rad) { if (walking) { walker.turn(rad); syncWalk(); } }
+      function onWalkKey(event) {
+        if (!walking) return;
+        const k = event.key;
+        if (k === 'ArrowUp' || k === 'w' || k === 'W') { walkStep(2); event.preventDefault(); }
+        else if (k === 'ArrowDown' || k === 's' || k === 'S') { walkStep(-2); event.preventDefault(); }
+        else if (k === 'ArrowLeft' || k === 'a' || k === 'A') { walkTurn(-Math.PI / 12); event.preventDefault(); }
+        else if (k === 'ArrowRight' || k === 'd' || k === 'D') { walkTurn(Math.PI / 12); event.preventDefault(); }
+      }
+      window.addEventListener('keydown', onWalkKey);
+      if (walkApiRef) walkApiRef.current = { step: walkStep, turn: walkTurn };
+
       // ── Tương tác: kéo để xoay, CHẠM để xem công trình ──────────────────────
       let dragPointer = null;
       let lastX = 0;
@@ -433,7 +501,13 @@ export default function CityScene3D({
           if (onPickRef.current) updateHoverCursor(event);
           return;
         }
-        orbit.drag(event.clientX - lastX, event.clientY - lastY);
+        if (walking) {
+          // look around: yaw with the finger, pitch inverted like a head (drag down = look down)
+          walker.look((event.clientX - lastX) * 0.006, (event.clientY - lastY) * 0.005);
+          syncWalk();
+        } else {
+          orbit.drag(event.clientX - lastX, event.clientY - lastY);
+        }
         lastX = event.clientX;
         lastY = event.clientY;
         // ⚠️ Giữ khoảng cách XA NHẤT đã rời khỏi điểm đặt tay, không lấy khoảng cách lúc nhấc tay.
@@ -482,6 +556,7 @@ export default function CityScene3D({
 
       function onWheel(event) {
         event.preventDefault();
+        if (walking) { walkStep(event.deltaY > 0 ? -1 : 1); return; }   // round 50: the wheel walks
         if (orbit.zoom(event.deltaY > 0 ? 1.12 : 0.89)) loop.invalidate();
       }
 
@@ -573,6 +648,19 @@ export default function CityScene3D({
         themeSignature,
         invalidate: () => loop.invalidate(),
         applyFocus,
+        /**
+         * Round 50 (ADR-090): THE POSTCARD. A WebGL drawing buffer is cleared the moment the browser
+         * composites it, so `toDataURL` on a canvas that was drawn last frame returns black. The only
+         * honest way without `preserveDrawingBuffer` (which costs memory on every frame of every
+         * session) is to render and read IN THE SAME TURN — that is exactly what this does.
+         */
+        capture() {
+          renderFrame();
+          return { url: canvas.toDataURL('image/png'), width: canvas.width, height: canvas.height };
+        },
+        setWalk,
+        walkStep,
+        walkTurn,
         markShadowsDirty: () => { shadowsDirty = true; city.invalidateShadows(); },
         dispose() {
           window.clearTimeout(statsTimer);
@@ -584,6 +672,9 @@ export default function CityScene3D({
           canvas.removeEventListener('pointercancel', endDrag);
           canvas.removeEventListener('wheel', onWheel);
           canvas.removeEventListener('webglcontextlost', onContextLost);
+          window.removeEventListener('keydown', onWalkKey);
+          if (walkApiRef) walkApiRef.current = null;
+          if (cameraApiRef) cameraApiRef.current = null;
           document.removeEventListener('visibilitychange', onVisibility);
           city.dispose();
           renderer.dispose();
@@ -594,6 +685,7 @@ export default function CityScene3D({
         },
       };
       runtimeRef.current = runtime;
+      if (cameraApiRef) cameraApiRef.current = { capture: runtime.capture };
     } catch (error) {
       // Dựng WebGL thất bại (máy từ chối, hết bộ nhớ đồ hoạ...) → lùi về 2D, không để màn hình trống.
       runtime?.dispose?.();
@@ -621,7 +713,7 @@ export default function CityScene3D({
     // đồng hồ tươi qua `getVietnamHour()`, là nguồn sự thật duy nhất); có mặt ở đây thuần tuý làm
     // TÍN HIỆU dựng lại. Bỏ nó ra = bầu trời đứng im khi mở lại app trên iPhone.
   }, [layout, dimmed, failed, giveUp, reduceMotion, sessionCount, streakLength,
-    still, fill, interactive, dayPhase]);
+    still, fill, interactive, dayPhase, hour, season, walkApiRef, cameraApiRef]);
 
   // Chạm vào công trình → bay tới. Effect RIÊNG, cố ý tách khỏi effect dựng cảnh: nó chỉ gọi một
   // hàm trên cảnh đang sống, không dựng lại gì cả. Gộp chung thì mỗi cú chạm sẽ tháo cả WebGL
@@ -629,6 +721,11 @@ export default function CityScene3D({
   useEffect(() => {
     runtimeRef.current?.applyFocus(focusBpId ? { kind: focusKind, bpId: focusBpId } : null);
   }, [focusKind, focusBpId]);
+
+  // Round 50 (ADR-090): walk mode is a flag on the living scene — never a rebuild.
+  useEffect(() => {
+    runtimeRef.current?.setWalk(Boolean(walk));
+  }, [walk]);
 
   if (failed) return null;
 

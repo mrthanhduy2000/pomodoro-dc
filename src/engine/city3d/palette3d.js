@@ -29,6 +29,7 @@
 import { getEraStyle } from './eraStyle';
 import { getFloraStyle } from './floraStyle';
 import { getHumanStyle } from './humanStyle';
+import { seasonLook } from './season';
 
 /**
  * Trần độ tươi của MÁI — hướng mỹ thuật trầm (Townscaper): mái là vật liệu lợp, không phải nhựa dẻo.
@@ -233,7 +234,7 @@ const FLAG_HUE = Object.freeze({
   9: 222, 10: 5, 11: 214, 12: 358, 13: 358, 14: 352, 15: 138,
 });
 
-export function buildScenePalette({ tokens, eraColor, era: eraNumber, daylight } = {}) {
+export function buildScenePalette({ tokens, eraColor, era: eraNumber, daylight, season = null } = {}) {
   const t = { ...FALLBACK_TOKENS, ...(tokens ?? {}) };
   const base = parseCssColor(t.canvas2) ?? parseCssColor(FALLBACK_TOKENS.canvas2);
   // ⚠️ TÊN BIẾN NÀY TỪNG LÀ `era`, VÀ CÁI TÊN ẤY ĐÃ GIẾT HAI TÍNH NĂNG TRONG IM LẶNG.
@@ -390,7 +391,15 @@ export function buildScenePalette({ tokens, eraColor, era: eraNumber, daylight }
    * Kết quả đo lại: cặp gần nhau nhất từ **0,0 → 8,4**; 15 góc màu trải từ 3° tới 307° thay vì dồn
    * hai cụm. Trần độ tươi 0,62 giữ đúng hướng mỹ thuật trầm (Townscaper), không cho mái nhựa dẻo.
    */
-  const roofHsl = rgbToHsl(roofSource);
+  // Round 50 (ADR-090): THE SEASON. Identity in summer (the base every table was tuned on) and for
+  // callers without an era; otherwise it leans the leaves, the ground and the roofs — see `season.js`.
+  const look = seasonLook(Number.isFinite(eraNumber) ? eraNumber : null, Number.isFinite(eraNumber) ? season : null);
+  const snowK = Number.isFinite(eraNumber) ? look.snow : 0;
+  const roofHslDry = rgbToHsl(roofSource);
+  // a roof under snow is mostly white — mix toward it by the snow cover (0,75 × snow keeps a hint of tile)
+  const roofHsl = snowK > 0
+    ? { h: roofHslDry.h, s: roofHslDry.s * (1 - 0.75 * snowK), l: roofHslDry.l * (1 - 0.75 * snowK) + (isDark ? 0.58 : 0.86) * 0.75 * snowK }
+    : roofHslDry;
   const eraRoof = (sat, light) => {
     // Độ tươi: một phần của vai màu + phần còn lại kéo theo độ tươi của sắc kỷ. Kẹp hai đầu để kỷ
     // nhợt nhất vẫn còn là một màu (không thành xám chì) và kỷ rực nhất vẫn là ngói (không nhựa).
@@ -606,7 +615,9 @@ export function buildScenePalette({ tokens, eraColor, era: eraNumber, daylight }
   const human = getHumanStyle(eraNumber);
   // Theme tối cắt độ tươi đi một nửa: ban đêm mắt người gần như không đọc được sắc ở vùng tối
   // (thị giác chuyển sang tế bào que), nên giữ nguyên độ tươi chỉ làm tán lá thành mảng xanh giả.
-  const leafSat = isDark ? flora.leafSat * 0.52 : flora.leafSat;
+  const leafSat = (isDark ? flora.leafSat * 0.52 : flora.leafSat) * look.leafSatMul;
+  const leafHue = flora.leafHue + look.leafHueShift;
+  const leafL = (v) => Math.min(0.9, v * look.leafLightMul);
 
   /**
    * ⭐ THE ERA'S OWN WALLS (round 47). `wallColor` is the real wall material of the country — dry
@@ -672,10 +683,14 @@ export function buildScenePalette({ tokens, eraColor, era: eraNumber, daylight }
     //
     // Sắc kỷ chỉ ngấm 0,10 (bản cũ 0,20): nay chính GÓC MÀU đã mang bản sắc kỷ rồi, mượn thêm
     // màu nhấn giao diện chỉ kéo 15 kỷ xích lại gần nhau — cùng lý lẽ với `WALL_ERA` ở trên.
-    leaf:  material(flora.leafHue, 0.10, leafSat, 0.33, 0.28),
+    leaf:  material(leafHue, 0.10, leafSat, leafL(0.33), leafL(0.28)),
     // Mặt lá trong bóng: cùng họ màu, ĐẬM hơn và bớt tươi. Chênh lệch phải đủ để đọc ra hai lớp
     // tán chồng nhau, nhưng không được thành hai loài cây khác nhau — nên lệch góc màu chỉ 6°.
-    leaf2: material(flora.leafHue - 6, 0.10, leafSat * 0.88, 0.23, 0.19),
+    // Round 50: in blossom (spring, `season.js`) the second canopy colour IS the blossom — sakura pink
+    // over Tokyo, peach over Chang'an, yellow steppe flowers — never a third role, never a new mesh.
+    leaf2: look.blossom >= 0.5
+      ? paint(look.blossomHue, 0.42 + 0.18 * look.blossom, 0.78, 0.58)
+      : material(leafHue - 6, 0.10, leafSat * 0.88, leafL(0.23), leafL(0.19)),
     // Bóng tối sâu nhất. Gần như đen ở mọi kỷ nên góc màu hầu như không đọc ra, nhưng vẫn pha bằng
     // `material` cho nhất quán — không để sót một chỗ nào dùng thẳng sắc kỷ chưa qua bảng pha.
     dark:  material(24, 0.45, 0.24, 0.19, 0.09),
@@ -780,11 +795,18 @@ export function buildScenePalette({ tokens, eraColor, era: eraNumber, daylight }
   const GROUND_NIGHT_SAT = 0.62;
   const GROUND_NIGHT_L = 0.75;
   const groundHsl = groundSource ? rgbToHsl(groundSource) : null;
-  const eraGroundHsl = (dh = 0, ds = 0, dl = 0) => ({
-    h: ((groundHsl.h + dh) % 360 + 360) % 360,
-    s: clamp01(groundHsl.s * (isDark ? GROUND_NIGHT_SAT : 1) + ds),
-    l: clamp01(groundHsl.l * (isDark ? GROUND_NIGHT_L : 1) + dl),
-  });
+  // Round 50 (ADR-090): the season leans the ground (harvest gold, autumn brown, spring green) and
+  // snow whitens it — applied at the CENTRE so all four shades move together (the checkerboard law).
+  const snowL = isDark ? 0.62 : 0.90;
+  const eraGroundHsl = (dh = 0, ds = 0, dl = 0) => {
+    const s0 = clamp01(groundHsl.s * (isDark ? GROUND_NIGHT_SAT : 1) * look.groundSatMul + ds);
+    const l0 = clamp01(groundHsl.l * (isDark ? GROUND_NIGHT_L : 1) + look.groundLightAdd + dl);
+    return {
+      h: ((groundHsl.h + look.groundHueShift + dh) % 360 + 360) % 360,
+      s: clamp01(s0 * (1 - snowK) + 0.04 * snowK),
+      l: clamp01(l0 * (1 - snowK) + snowL * snowK),
+    };
+  };
   const eraGround = (dh = 0, ds = 0, dl = 0) => rgbToHexNumber(hslToRgb(eraGroundHsl(dh, ds, dl)));
 
   /**

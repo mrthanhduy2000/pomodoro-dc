@@ -115,9 +115,15 @@ test('BẢO TÀNG THẮP CỐ ĐỊNH: cảnh `dimmed` đọc `museumDaylight()`
     /import\s*\{[^}]*\bmuseumDaylight\b[^}]*\}\s*from\s*'\.\.\/\.\.\/\.\.\/engine\/city3d\/daylight'/.test(CODE),
     'Cảnh không còn import `museumDaylight` — bảo tàng lại theo đồng hồ tối nay.',
   );
+  // Round 50 (ADR-090): the live city may take Đàm's slider hour (`hourNow`), but the clock is still
+  // the default and the museum still ignores both — the three lines below are the whole law.
   assert.ok(
-    /const daylight = dimmed \? museumDaylight\(\) : deriveDaylight\(getVietnamHour\(\)\);/.test(CODE),
-    'Dòng chọn ánh sáng phải là `dimmed ? museumDaylight() : deriveDaylight(getVietnamHour())` — '
-    + 'kỷ niêm phong một giờ cố định, kỷ đang chơi theo giờ thật.',
+    /const hourNow = Number\.isFinite\(hour\) \? hour : getVietnamHour\(\);/.test(CODE),
+    '`hourNow` phải là giờ thanh trượt nếu có, còn không thì ĐỒNG HỒ — mất dòng này là bầu trời đứng im.',
+  );
+  assert.ok(
+    /const daylight = dimmed \? museumDaylight\(\) : deriveDaylight\(hourNow\);/.test(CODE),
+    'Dòng chọn ánh sáng phải là `dimmed ? museumDaylight() : deriveDaylight(hourNow)` — '
+    + 'kỷ niêm phong một giờ cố định, kỷ đang chơi theo giờ thật (hoặc giờ Đàm kéo).',
   );
 });

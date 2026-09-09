@@ -13,6 +13,7 @@
  * cannot disagree because they come from the same row through `normalize`.
  */
 import { MUSEUM_HOUR, phaseForHour } from './daylight';
+import { ERA_CLIMATE, isSeason, museumSeason } from './season';
 
 export const WEATHER_KINDS = Object.freeze(['clear', 'haze', 'fog', 'drizzle', 'rain', 'snow', 'sand']);
 
@@ -42,24 +43,66 @@ const ERA_WEATHER = Object.freeze({
 
 const CLEAR = Object.freeze({ kind: 'clear', rain: 0, wet: 0, fog: 0 });
 
-function normalize(row, phase) {
+/**
+ * Round 50 (ADR-090): THE SEASON'S SAY. Per climate × season × phase, a row that REPLACES the era's
+ * own row for that phase. Summer is absent on purpose — it is the base every era row was written
+ * for. A cold winter turns every rain into snow (`snowify`), whatever the era row said.
+ */
+const SEASON_WEATHER = Object.freeze({
+  cold: {
+    spring:  { afternoon: { kind: 'rain', rain: 0.6, wet: 0.85, fog: 0.1 }, dawn: { kind: 'fog', fog: 0.35 } },
+    autumn:  { dawn: { kind: 'fog', fog: 0.6, wet: 0.4 }, dusk: { kind: 'drizzle', rain: 0.45, wet: 0.7, fog: 0.2 }, night: { kind: 'fog', fog: 0.3, wet: 0.4 } },
+    winter:  { dawn: { kind: 'snow', snowfall: 0.5, fog: 0.35 }, morning: { kind: 'snow', snowfall: 0.35, fog: 0.2 }, noon: { kind: 'clear', fog: 0.1 }, afternoon: { kind: 'snow', snowfall: 0.6, fog: 0.2 }, dusk: { kind: 'snow', snowfall: 0.8, fog: 0.3 }, night: { kind: 'snow', snowfall: 1.0, fog: 0.35 } },
+  },
+  temperate: {
+    spring:  { afternoon: { kind: 'rain', rain: 0.5, wet: 0.8, fog: 0.1 }, dusk: { kind: 'clear', wet: 0.5 } },
+    autumn:  { dawn: { kind: 'fog', fog: 0.4 }, dusk: { kind: 'haze', fog: 0.15 } },
+    winter:  { dawn: { kind: 'fog', fog: 0.5, wet: 0.3 }, night: { kind: 'drizzle', rain: 0.4, wet: 0.6, fog: 0.15 } },
+  },
+  tropical: {
+    spring:  { dawn: { kind: 'drizzle', rain: 0.4, wet: 0.6, fog: 0.2 } },
+    autumn:  { afternoon: { kind: 'rain', rain: 0.8, wet: 1.0, fog: 0.15 } },
+    winter:  { morning: { kind: 'fog', fog: 0.35 }, afternoon: { kind: 'clear' }, dusk: { kind: 'haze', fog: 0.12 } },   // the dry season
+  },
+  arid: {
+    spring:  { noon: { kind: 'clear' }, afternoon: { kind: 'clear' } },
+    autumn:  { afternoon: { kind: 'haze', fog: 0.15 } },
+    winter:  { dawn: { kind: 'fog', fog: 0.25 }, noon: { kind: 'clear' }, afternoon: { kind: 'clear' } },
+  },
+});
+
+/** A cold winter: whatever was going to fall, falls as snow. */
+function snowify(row) {
+  if (!(row.rain > 0)) return row;
+  return { ...row, kind: 'snow', snowfall: Math.max(row.snowfall ?? 0, row.rain), rain: 0, wet: Math.max(row.wet ?? 0, 0.4) };
+}
+
+function normalize(row, phase, season) {
   const rain = Math.min(1, Math.max(0, row.rain ?? 0));
   const wet = Math.min(1, Math.max(rain, row.wet ?? 0));   // ⚠️ the one law: wet ≥ rain
   const fog = Math.min(1, Math.max(0, row.fog ?? 0));
   const kind = WEATHER_KINDS.includes(row.kind) ? row.kind : 'clear';
-  return Object.freeze({ kind, rain, wet, fog, phase });
+  const snowfall = kind === 'snow' ? Math.min(1, Math.max(0, row.snowfall ?? 0)) : 0;   // only snow snows
+  return Object.freeze({ kind, rain, wet, fog, snowfall, phase, season: season ?? null });
 }
 
-/** The weather over `era` at `hour` (0–24, Vietnam clock like `deriveDaylight`). Pure, total. */
-export function weatherAt(era, hour) {
+/**
+ * The weather over `era` at `hour` (0–24, Vietnam clock like `deriveDaylight`), in `season`
+ * (round 50; `null`/`'summer'` = the era's own rows). Pure, total.
+ */
+export function weatherAt(era, hour, season = null) {
   const phase = phaseForHour(hour);
-  const row = ERA_WEATHER[Number(era)]?.[phase] ?? CLEAR;
-  return normalize(row, phase);
+  const base = ERA_WEATHER[Number(era)]?.[phase] ?? CLEAR;
+  const s = isSeason(season) ? season : null;
+  const climate = ERA_CLIMATE[Number(era)] ?? 'temperate';
+  let row = (s && SEASON_WEATHER[climate]?.[s]?.[phase]) || base;
+  if (s === 'winter' && climate === 'cold') row = snowify(row);
+  return normalize(row, phase, s);
 }
 
-/** A sealed era is lit once (`museumDaylight`) — and rained on once, at the same hour. */
+/** A sealed era is lit once (`museumDaylight`) — and rained on once, at the same hour, in ITS season. */
 export function museumWeather(era) {
-  return weatherAt(era, MUSEUM_HOUR);
+  return weatherAt(era, MUSEUM_HOUR, museumSeason(era));
 }
 
 /**
@@ -81,6 +124,8 @@ export function wetSurface({ roughness, specularGain = 1 }, wet) {
 
 /** Which particle system the weather adds on top of the era's own vocabulary (`ERA_MOTION`). */
 export function weatherParticle(weather) {
-  if (!weather || !(weather.rain > 0)) return null;
-  return weather.rain >= 0.6 ? 'rain' : 'drizzle';
+  if (!weather) return null;
+  if (weather.rain > 0) return weather.rain >= 0.6 ? 'rain' : 'drizzle';
+  if (weather.snowfall > 0) return 'snow';   // round 50: a cold winter snows in eras that have no snow of their own
+  return null;
 }

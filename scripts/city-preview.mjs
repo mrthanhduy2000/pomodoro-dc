@@ -170,6 +170,9 @@ function parseArgs(argv) {
      * 0 = tắt (khung toàn cảnh như cũ).
      */
     focus: 0,
+    walk: 0,
+    walkTurn: 0,
+    walkLook: 0,
     /**
      * `--topdown` — NHÌN THẲNG TỪ TRÊN XUỐNG (bản đồ quy hoạch).
      *
@@ -258,6 +261,7 @@ function parseArgs(argv) {
     // tự trấn an mà dự án này đã trả giá nhiều lần.
     noAo: false,
     dry: false,      // round 49: force clear weather (the A/B control for wet ground)
+    season: 'summer', // round 50: the season (spring · summer · autumn · winter); summer = the base look
     // ⚠️ DÙNG GPU THẬT thay vì SwiftShader. Mặc định TẮT vì hộp cát dựng ảnh không có card đồ hoạ —
     // nhưng trên MacBook của Đàm thì BẮT BUỘC bật, nếu không mọi con số đo được vẫn là số của một
     // cỗ máy tô hình bằng CPU, chỉ khác là lần này nó đội lốt "đo trên máy thật". Công cụ luôn in
@@ -275,6 +279,9 @@ function parseArgs(argv) {
     else if (key === '--height') { args.height = Number(value); i += 1; }
     else if (key === '--zoom') { args.zoom = Number(value); i += 1; }
     else if (key === '--focus') { args.focus = Number(value); i += 1; }
+    else if (key === '--walk') { args.walk = Number(value); i += 1; }        // round 50: N steps down the street
+    else if (key === '--walk-turn') { args.walkTurn = Number(value); i += 1; }  // …then turn this many degrees
+    else if (key === '--walk-look') { args.walkLook = Number(value); i += 1; }  // …and look up this many degrees
     else if (key === '--topdown') args.topdown = true;
     else if (key === '--hour') { args.hours.push(Number(value)); i += 1; }
     else if (key === '--sweep') args.sweep = true;
@@ -291,6 +298,7 @@ function parseArgs(argv) {
     else if (key === '--no-shadow') args.noShadow = true;
     else if (key === '--no-ao') args.noAo = true;
     else if (key === '--dry') args.dry = true;
+    else if (key === '--season') { args.season = String(value); i += 1; }
     else if (key === '--gpu') args.gpu = true;
     // Chỉ KIỂM xem có Chromium không rồi thoát — không gói bundle, không mở trình duyệt.
     // ⚠️ Tồn tại để `bench-macbook.sh` hỏi được câu "máy này có Chromium chưa" mà KHÔNG phải chép
@@ -315,13 +323,16 @@ function run(cmd, cmdArgs, options = {}) {
  */
 function entrySource({
   era, level, theme, zoom = 1, focus = 0, hour = null, pending = 0, sessions = 40, dpr = null, bench = 0,
-  mask = null, noShadow = false, noAo = false, t = 17.5, lowDetail = false, topdown = false, noMotion = false, dry = false,
+  mask = null, noShadow = false, noAo = false, t = 17.5, lowDetail = false, topdown = false, noMotion = false, dry = false, season = 'summer',
+  walk = 0, walkTurn = 0, walkLook = 0,
 }) {
   return `
 import { computeCityLayout, roadCellCount } from '${ROOT}/src/engine/cityLayout.js';
 import { buildScenePalette } from '${ROOT}/src/engine/city3d/palette3d.js';
 import { deriveDaylight } from '${ROOT}/src/engine/city3d/daylight.js';
 import { weatherAt } from '${ROOT}/src/engine/city3d/weather.js';
+import { isSeason } from '${ROOT}/src/engine/city3d/season.js';
+import { WALK_FOV, WALK_NEAR, WALK_PITCH_MAX, WALK_PITCH_MIN, createWalker } from '${ROOT}/src/engine/city3d/walk.js';
 import { applyPaintedLook, createCityScene, MAX_PIXEL_RATIO } from '${ROOT}/src/components/city/render3d/sceneGraph.js';
 import { CITY_CAMERA_FOV, cityOrbitOptions, createOrbit } from '${ROOT}/src/engine/city3d/orbit.js';
 import { planCityFocus } from '${ROOT}/src/engine/city3d/cityFocus.js';
@@ -337,6 +348,10 @@ const MASK_NAMES = MASK ? MASK.split(',').map((s) => s.trim()).filter(Boolean) :
 const NO_SHADOW = ${noShadow ? 'true' : 'false'};
 const NO_AO = ${noAo ? 'true' : 'false'};
 const DRY = ${dry ? 'true' : 'false'};
+const SEASON = ${JSON.stringify(season)};
+const WALK = ${Number(walk) || 0};
+const WALK_TURN = ${Number(walkTurn) || 0};
+const WALK_LOOK = ${Number(walkLook) || 0};
 const NO_MOTION = ${noMotion ? 'true' : 'false'};
 
 const ERA = ${era};
@@ -373,7 +388,8 @@ const soODuong = (layout.props ?? []).filter((p) => p.kind === 'road').length;
 // không phải chỉ chặng đang diễn ra lúc chạy lệnh.
 const daylight = HOUR === null ? null : deriveDaylight(HOUR);
 // round 49 (ADR-089): the weather of THIS hour, like the app; --dry is the control photo
-const weather = HOUR === null || DRY ? null : weatherAt(ERA, HOUR);
+if (!isSeason(SEASON)) throw new Error('--season phải là spring · summer · autumn · winter, nhận: ' + SEASON);
+const weather = HOUR === null || DRY ? null : weatherAt(ERA, HOUR, SEASON);
 const palette = buildScenePalette({
   tokens: IS_DARK
     ? { canvas2: '#1d1c1a', ink: '#f2efe6', line: '#33312d', accent: '#c96442' }
@@ -381,6 +397,7 @@ const palette = buildScenePalette({
   eraColor: ERA_METADATA[ERA]?.accentColor,
   era: ERA,
   daylight,
+  season: SEASON,
 });
 
 const canvas = document.getElementById('stage');
@@ -411,7 +428,7 @@ renderer.shadowMap.needsUpdate = true;
 //
 // lowDetail: cờ LOD thấp, dùng làm ĐỐI CHỨNG khi đo cư dân (mô hình 2 hộp không có khớp nào).
 const city = createCityScene({
-  layout, palette, daylight, weather, renderer, lowDetail: LOW_DETAIL,
+  layout, palette, daylight, weather, season: SEASON, renderer, lowDetail: LOW_DETAIL,
   stats: { sessionCount: SESSIONS, streakLength: 9 },
   tachDeDo: MASK_NAMES,
   ao: !NO_AO,
@@ -455,6 +472,29 @@ if (FOCUS > 0) {
     + ' · thoáng ' + plan.clearance.toFixed(2)
     + ' · ngẩng thêm ' + (plan.raisedPitch * 180 / Math.PI).toFixed(1) + ' độ'
     + ' · lùi thêm ' + plan.raisedDistance.toFixed(2));
+}
+
+// Round 50 (ADR-090): --walk N puts the camera on the street — the SAME crane, in walk mode, N
+// steps along the road from where a walker starts. --walk-turn and --walk-look are degrees.
+// (no backticks in this block: it lives INSIDE the entry template literal)
+if (WALK > 0) {
+  const walker = createWalker({
+    roadCells: (layout.props ?? []).filter((p) => p.kind === 'road'),
+    gridSize: layout.gridSize,
+    groundAt: (wx, wz) => city.groundHeightAt(wx, wz),
+  });
+  if (!walker.start()) throw new Error('kỷ này chưa có đường để đi bộ');
+  walker.advance(WALK);
+  if (WALK_TURN) walker.turn(WALK_TURN * Math.PI / 180);
+  if (WALK_LOOK) walker.look(0, -Math.abs(WALK_LOOK) * Math.PI / 180);
+  orbit.setWalk(true, { pitchMin: WALK_PITCH_MIN, pitchMax: WALK_PITCH_MAX });
+  orbit.set(walker.orbitState());
+  camera.fov = WALK_FOV;
+  camera.near = WALK_NEAR;
+  camera.updateProjectionMatrix();
+  const w = walker.state();
+  console.log('[walk] ' + WALK + ' bước · ô (' + w.x.toFixed(2) + ', ' + w.z.toFixed(2) + ')'
+    + ' · hướng ' + (w.heading * 180 / Math.PI).toFixed(0) + ' độ');
 }
 
 const eye = orbit.getPosition();
@@ -753,11 +793,15 @@ document.body.dataset.ready = '1';
  * 74 ô đầu trống trơn, và không có lỗi nào hiện ra. Ở đây: vẽ một cảnh → sao chép điểm ảnh sang
  * canvas 2D của bảng → DỌN cảnh → dựng cảnh kế tiếp trên đúng context cũ.
  */
-function sweepSource({ level, theme, cell, combos, sessions = 40, t = 17.5 }) {
+function sweepSource({ level, theme, cell, combos, sessions = 40, t = 17.5, season = 'summer' }) {
   return `
 import { computeCityLayout } from '${ROOT}/src/engine/cityLayout.js';
 import { buildScenePalette } from '${ROOT}/src/engine/city3d/palette3d.js';
 import { deriveDaylight } from '${ROOT}/src/engine/city3d/daylight.js';
+import { weatherAt } from '${ROOT}/src/engine/city3d/weather.js';
+import { isSeason } from '${ROOT}/src/engine/city3d/season.js';
+const SEASON = ${JSON.stringify(season)};
+if (!isSeason(SEASON)) throw new Error('--season lạ: ' + SEASON);
 import { applyPaintedLook, createCityScene, MAX_PIXEL_RATIO } from '${ROOT}/src/components/city/render3d/sceneGraph.js';
 import { CITY_CAMERA_FOV, cityOrbitOptions, createOrbit } from '${ROOT}/src/engine/city3d/orbit.js';
 import { BLUEPRINT_CATALOG, ERA_METADATA } from '${ROOT}/src/engine/constants.js';
@@ -833,9 +877,11 @@ for (let row = 0; row < eras.length; row += 1) {
 
   hours.forEach((hour, col) => {
     const daylight = deriveDaylight(hour);
-    const palette = buildScenePalette({ tokens, eraColor: ERA_METADATA[era]?.accentColor, era, daylight });
+    // round 49/50: the sweep sheet carries the weather and the season of its hour, like the app
+    const weather = weatherAt(era, hour, SEASON);
+    const palette = buildScenePalette({ tokens, eraColor: ERA_METADATA[era]?.accentColor, era, daylight, season: SEASON });
     const city = createCityScene({
-      layout, palette, daylight, renderer, stats: { sessionCount: SESSIONS, streakLength: 9 },
+      layout, palette, daylight, weather, season: SEASON, renderer, stats: { sessionCount: SESSIONS, streakLength: 9 },
     });
     renderer.shadowMap.needsUpdate = true;
     city.updateResidents(ANIM_T);
@@ -1688,12 +1734,14 @@ async function main() {
       // vứt đi vì tấm "cận mái" trùng TỪNG BYTE với ảnh khung thường.
       const aoTag = args.noAo ? '-noao' : '';
       const dryTag = args.dry ? '-dry' : '';
+      const seasonTag = args.season === 'summer' ? '' : `-${args.season}`;
       const motionTag = args.noMotion ? '-nomotion' : '';
       // ⚠️ CHẾ ĐỘ CẬN CẢNH CŨNG PHẢI CÓ TÊN RIÊNG, cùng lý do với mặt nạ ở trên — mà lý do ấy vừa
       // trả giá thật ngày 2026-08-18: hai con số nghiệm thu mái (4,5% / 16,5%) phải vứt đi vì tấm
       // ảnh mang tên "cận mái" hoá ra trùng TỪNG BYTE với ảnh khung thường. Một khung hình khác
       // hẳn mà dùng chung tên file là cách chắc chắn nhất để một phép đo đúng cho ra kết luận sai.
       const focusTag = args.focus > 0 ? `-focus${args.focus}` : '';
+      const walkTag = args.walk > 0 ? `-walk${args.walk}${args.walkTurn ? `t${args.walkTurn}` : ''}${args.walkLook ? `u${args.walkLook}` : ''}` : '';
       // ⚠️ SỐ PHIÊN CŨNG PHẢI CÓ TÊN RIÊNG — VÀ ĐÂY LÀ LẦN THỨ TƯ CÙNG MỘT CÁI BẪY TRONG CHÍNH
       // FILE NÀY (giờ · mặt nạ · cận cảnh, nay tới số phiên). `--sessions` quyết mạng đường mở tới
       // đâu và có bao nhiêu cảnh vật, tức hai lượt chụp cùng kỷ ở 20 và 80 phiên là HAI THÀNH PHỐ
@@ -1724,7 +1772,7 @@ async function main() {
       // HẲN (nhìn thẳng xuống, không phải khung app), nên dùng chung tên file với ảnh thường là
       // cách chắc chắn nhất để một phép so trước/sau chấm hai thứ không so được với nhau.
       const topTag = args.topdown ? '-topdown' : '';
-      const pngPath = resolve(OUT_DIR, `city-era${String(era).padStart(2, '0')}-${args.theme}${hourTag}${sessTag}${widthTag}${zoomTag}${tTag}${lodTag}${maskTag}${shadowTag}${aoTag}${dryTag}${motionTag}${focusTag}${topTag}.png`);
+      const pngPath = resolve(OUT_DIR, `city-era${String(era).padStart(2, '0')}-${args.theme}${hourTag}${sessTag}${widthTag}${zoomTag}${tTag}${lodTag}${maskTag}${shadowTag}${aoTag}${dryTag}${seasonTag}${motionTag}${focusTag}${walkTag}${topTag}.png`);
       let info = '';
       let hop = null;
       try {

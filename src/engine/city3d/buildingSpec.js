@@ -15,6 +15,8 @@
 
 import { unit, signed } from '../hashId';
 import { emitGroundFloor } from './groundFloor';
+import { interiorKindFor } from './interiors';
+import { emitFacadeDetail } from './facadeDetail';
 import { emitRooftop } from './rooftop';
 import { getGroundFloor } from './groundFloorStyle';
 import { getRoofStyle } from './roofStyle';
@@ -940,6 +942,19 @@ export function buildBuildingSpec({
 
       if (!mass.tower) emitWindows(parts, { w, d, base, height, x, z }, style, plot?.faces);
 
+      // Round 50 (ADR-090, Việc 6): the front of a building is not a blank wall — string courses,
+      // shutters, brackets, balconies, signs, downpipes, each era from its own vocabulary. Nothing
+      // protrudes further than the cornice, so no span and no dwelling size moves (`facadeDetail.js`).
+      if (!mass.tower) {
+        emitFacadeDetail(parts, {
+          bpId: id, index, era,
+          x, z, y: base, w, d, height, ry: jitterR,
+          storeys: Math.max(1, Math.round(height / style.storyHeight)),
+          plain: Boolean(archetype.plain),
+          symmetric: Boolean(archetype.symmetric),
+        });
+      }
+
       // ⚠️ THÁP GÓC KHÔNG CÓ CỬA, cùng lý do với cửa sổ: chúng chỉ rộng ~0,2 ô, và một công trình
       // phòng thủ hạng epic có tới bốn cái — bốn cái cửa tí hon trên bốn cái tháp canh đọc ra là
       // lỗi dựng hình chứ không phải chi tiết. Mảng nhà thường mà quá hẹp thì `doorMetrics` tự trả
@@ -953,6 +968,8 @@ export function buildBuildingSpec({
         const beforeGround = parts.length;
         emitGroundFloor(parts, {
           gf,
+          // round 50 (ADR-090): what is inside this building — the era and the type know it
+          interiorKind: interiorKindFor(era, type, unit(`${id}|inside|${index}`)),
           bpId: id, index,
           x, z, base, w, d, height,
           // Cửa phải nghiêng ĐÚNG BẰNG thân nhà, nếu không nó rời khỏi mặt tường ở những kỷ có

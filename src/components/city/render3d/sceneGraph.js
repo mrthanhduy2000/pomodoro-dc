@@ -59,6 +59,7 @@ import { buildMergedGeometry, partTopWorld } from './geometryFactory';
 import { createMotionUniforms, createParticles, createWaterUniforms, injectWater } from './motion';
 import { FIRE_LIGHT, FIRE_TAG, fireFlicker, getEraMotion, motionTime, SMOKE_INTENSITY, smokeLightFor } from '../../../engine/city3d/motion';
 import { weatherParticle, wetSurface } from '../../../engine/city3d/weather';
+import { seasonLook, seasonParticle } from '../../../engine/city3d/season';
 import {
   ROAD_LIFT, buildHorizonSurface, buildRoadSurface, buildTerrainSurface, buildWaterSurface,
 } from './terrainMesh';
@@ -608,10 +609,14 @@ function createSkyEnvironment(renderer, skyLook, groundColor) {
 export function createCityScene({
   layout, palette, dimmed = false, lowDetail = false, stats = {}, still = false, daylight = null,
   weather = null,  // round 49 (ADR-089): `weatherAt(era, hour)` — rain wets the ground, fog thickens, streaks fall
+  season = null,   // round 50 (ADR-090): the season — wind, fog, falling petals/leaves; colours came in through `palette`
   motion = true,   // round 48: false = a still photograph of a living city (tools only; residents stay)
   maxLamps = 3, renderer = null, isMobile = false, tachDeDo = null, ao = true,
 }) {
   const nhomCanTach = new Set(Array.isArray(tachDeDo) ? tachDeDo : []);
+  // Round 50 (ADR-090): the season's say on the air — wind amplitude, fog, what falls (colours came
+  // in through `palette`). Declared first: the fog below reads it before the motion layer does.
+  const look = seasonLook(layout.era, season);
   const tachThanhPho = NHOM_TACH_THANH_PHO.some((ten) => nhomCanTach.has(ten));
   const tachMatDat = NHOM_TACH_MAT_DAT.some((ten) => nhomCanTach.has(ten));
   const gridSize = layout.gridSize;
@@ -650,7 +655,7 @@ export function createCityScene({
   // smog, a Dubai sandstorm — as a multiplier on the same exponential fog, never a second fog.
   scene.fog = new FogExp2(
     palette.sky2?.horizon ?? palette.background,
-    fogDensityFor(daylight?.haze ?? 0, gridSize) * (1 + 2.5 * (weather?.fog ?? 0)),
+    fogDensityFor(daylight?.haze ?? 0, gridSize) * (1 + 2.5 * ((weather?.fog ?? 0) + look.fog)),
   );
   // Round 49 (ADR-089): WET GROUND. One law for the three ground materials (`wetSurface`): roughness
   // falls so the sky reflects, the albedo darkens, the specular gain rises. `weather.wet` is never
@@ -677,7 +682,7 @@ export function createCityScene({
    * photo tools that ask for stillness) get none of it, exactly as they get no residents.
    */
   const eraMotion = (still || motion === false) ? null : getEraMotion(layout.era);
-  const motionUniforms = createMotionUniforms(eraMotion?.wind);
+  const motionUniforms = createMotionUniforms(eraMotion?.wind ? { amp: eraMotion.wind.amp * look.wind, speed: eraMotion.wind.speed } : eraMotion?.wind);
   let waterUniforms = null;
   const particleSystems = [];
 
@@ -1394,9 +1399,17 @@ export function createCityScene({
     }
     // Round 49 (ADR-089): the weather's own particles — rain or drizzle — on top of the era's list.
     // Only when the ground is wet (`weatherParticle` reads `rain`, and `wet ≥ rain` by construction).
+    // Round 50 (ADR-090): a cold winter may add `snow` — but never a second system of a kind the era's
+    // own list already runs (the one-mesh-per-kind law of `sceneStats.test.js`).
     const rainKind = weatherParticle(weather);
-    if (rainKind) {
+    if (rainKind && !eraMotion.particles.includes(rainKind)) {
       const sys = createParticles({ kind: rainKind, bounds: { ...bounds, y0: 0.1, y1: 4.6 }, sky, light });
+      if (sys) { addMesh(sys.mesh); track(sys); particleSystems.push(sys); }
+    }
+    // Round 50 (ADR-090): what the season drops — cherry petals in spring, leaves in autumn.
+    const fallKind = seasonParticle(look);
+    if (fallKind && !eraMotion.particles.includes(fallKind)) {
+      const sys = createParticles({ kind: fallKind, bounds: { ...bounds, y0: 0.2, y1: 2.6 }, sky, light });
       if (sys) { addMesh(sys.mesh); track(sys); particleSystems.push(sys); }
     }
   }
@@ -1881,6 +1894,15 @@ export function createCityScene({
      */
     pickTargets,
     /**
+     * Round 50 (ADR-090): the height of the GROUND at a world point — the walker's floor. It reads
+     * the ONE terrain this scene was built from (`buildTerrain` above); a second copy in the walker
+     * would be the same lesson as `cityFocus` (a rebuilt input measures the rebuild, not the city).
+     */
+    groundHeightAt(worldX, worldZ) {
+      const half = (gridSize - 1) / 2;
+      return terrain.surfaceHeightAt(worldX / TILE_UNIT + half, worldZ / TILE_UNIT + half);
+    },
+    /**
      * Hộp bao của mọi khối đứng trên đất — camera cận cảnh dùng để tránh bay vào trong phố.
      * Cùng tính chất với `pickTargets`: thuần dữ liệu, không tốn gì.
      */
@@ -1900,6 +1922,7 @@ export function createCityScene({
       fires: fireSources.length,
       fireLights: fireLights.length,
       weather: weather ? { kind: weather.kind, wet: weather.wet, rain: weather.rain, fog: weather.fog } : null,
+      season: look.season,
       // ⚠️ ĐẾM CẢ CẢNH, KHÔNG TỰ TÍNH NỮA (xem `measureSceneGeometry` ở đầu file để biết vì sao —
       // công thức tự tính cũ đã báo THIẾU 56% suốt từ Phase 9A mà không có gì đỏ lên).
       // Hai con số phẳng dưới đây là TỔNG, và chúng suy ra từ ĐÚNG một phép đo ở dòng trên — không

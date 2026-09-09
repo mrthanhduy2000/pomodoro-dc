@@ -57,6 +57,7 @@
  */
 
 import { prism, gable } from './parts';
+import { emitInterior } from './interiors';
 import { unit } from '../hashId';
 
 /**
@@ -311,7 +312,7 @@ function emitSteps(out, { cx, face, base, m, ry }) {
 
 /** Hốc cửa + má cửa + khung + cánh. */
 function emitDoorway(out, ctx) {
-  const { gf, cx, face, sill, m, ry, plain } = ctx;
+  const { gf, cx, face, sill, m, ry, plain, seed } = ctx;
   const inset = Math.max(0, gf.recess) * DOOR_RECESS_DEPTH;
 
   // Khối cổng nhô ra: `recess` âm nghĩa là lối vào ĐẨY RA khỏi mặt tường thay vì thụt vào.
@@ -325,10 +326,31 @@ function emitDoorway(out, ctx) {
 
   // Lòng cửa: mảng tối nằm LÙI vào so với mặt tường. Đây là thứ tạo ra chiều sâu — cái khung ở
   // dưới chỉ viền quanh nó.
-  out.push(prism({
-    x: cx, z: face - inset, y: sill,
-    w: m.doorW, d: DOOR_LEAF_RELIEF, h: m.doorH, sides: 4, ry, role: 'dark',
-  }));
+  // Round 50 (ADR-090): THE DOOR MAY STAND OPEN, and behind an open door there is a room. Which
+  // buildings are open is deterministic (the seed), so a city looks the same every time it is drawn;
+  // everything the interior adds sits BEHIND the facade plane, so no box, no camera plan and no
+  // symmetry test moves. `interiorKind` comes down from `buildingSpec` (it knows the era and type).
+  // ⚠️ TWO CLAMPS, BOTH MEASURED. (1) The cavity may never be deeper than a THIRD of the building's
+  // own depth: a shallow dwelling unit is ~0,3 deep, and a fixed 0,11 cavity poked out through its
+  // back wall — `specSpan` grew, `block.js` scaled the unit down to fit its cell, and era 12 came out
+  // SHORTER than before (`block.test.js` «CAO LÊN, KHÔNG THẤP ĐI»). (2) A SYMMETRIC building (every
+  // era's landmark) keeps its door shut: a room is asymmetric by nature, and the wonder standing at
+  // the centre of the city must stay mirror-perfect (`symmetry.test.js`).
+  const roomDepth = Math.min(Math.max(0.06, (ctx.d ?? 1) * 0.33), inset + DOOR_RECESS_DEPTH * 0.7);
+  const opened = Boolean(ctx.interiorKind) && !ctx.symmetric && roomDepth > 0.05 && seed('open') > 0.38;
+  if (opened) {
+    emitInterior(out, {
+      x: cx, z: face - inset, y: sill + m.doorH * 0.5, ry,
+      width: m.doorW * 0.94, height: m.doorH * 0.92,
+      depth: roomDepth,
+      kind: ctx.interiorKind,
+    });
+  } else {
+    out.push(prism({
+      x: cx, z: face - inset, y: sill,
+      w: m.doorW, d: DOOR_LEAF_RELIEF, h: m.doorH, sides: 4, ry, role: 'dark',
+    }));
+  }
 
   // Má cửa: hai mảng tường hai bên hốc. Chỉ có ở hốc sâu, và chỉ ở công trình chính — xem
   // `VERNACULAR_DOOR_SHRINK` để biết vì sao nhà dân không có.
@@ -356,12 +378,23 @@ function emitDoorway(out, ctx) {
     }));
   }
 
-  emitLeaf(out, ctx);
+  emitLeaf(out, { ...ctx, opened });
 }
 
 /** Cánh cửa — chỗ DUY NHẤT ba kiểu cửa khác nhau về hình học, không phải về màu. */
-function emitLeaf(out, { gf, cx, face, sill, m, ry, plain, symmetric, seed }) {
+function emitLeaf(out, { gf, cx, face, sill, m, ry, plain, symmetric, seed, opened = false }) {
   const z = face - Math.max(0, gf.recess) * DOOR_RECESS_DEPTH + DOOR_LEAF_RELIEF * 0.4;
+  // Round 50: an OPEN door is the same leaf, swung back against the jamb — narrow, to one side, so
+  // the room behind it is what the eye reads. Never a missing leaf: a doorway with no door at all
+  // looks like a hole punched in the wall.
+  if (opened) {
+    out.push(prism({
+      x: cx + m.doorW * 0.34, z: z - DOOR_LEAF_RELIEF, y: sill,
+      w: m.doorW * 0.3, d: DOOR_LEAF_RELIEF, h: m.doorH * 0.98,
+      sides: 4, ry, role: gf.door === 'flap' ? 'canvas' : 'wood',
+    }));
+    return;
+  }
 
   switch (gf.door) {
     case 'flap': {

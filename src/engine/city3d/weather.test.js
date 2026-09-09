@@ -3,6 +3,7 @@ import assert from 'node:assert/strict';
 
 import { MUSEUM_HOUR, DAY_PHASES } from './daylight.js';
 import { PARTICLE_STYLE } from './motion.js';
+import { museumSeason } from './season.js';
 import {
   WEATHER_KINDS, WET_GROUND, museumWeather, weatherAt, weatherParticle, wetSurface,
 } from './weather.js';
@@ -54,9 +55,10 @@ test('MỖI KỶ CÓ THỜI TIẾT RIÊNG, và ít nhất một khung mưa/mù/t
   for (const era of [1, 2, 7]) assert.ok(!kinds.get(era).has('rain'), `kỷ ${era} là kỷ khô — không mưa`);
 });
 
-test('KỶ NIÊM PHONG CÓ MỘT THỜI TIẾT, MÃI MÃI: `museumWeather` = `weatherAt(era, MUSEUM_HOUR)`', () => {
+test('KỶ NIÊM PHONG CÓ MỘT THỜI TIẾT, MÃI MÃI: `museumWeather` = `weatherAt(era, MUSEUM_HOUR, museumSeason(era))`', () => {
+  // round 50 (ADR-090): a sealed era is frozen in ITS season too — see `season.test.js`
   for (let era = 1; era <= 15; era += 1) {
-    assert.deepEqual(museumWeather(era), weatherAt(era, MUSEUM_HOUR));
+    assert.deepEqual(museumWeather(era), weatherAt(era, MUSEUM_HOUR, museumSeason(era)));
   }
 });
 

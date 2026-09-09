@@ -32,6 +32,13 @@ import CityPerfHud from './CityPerfHud';
 import BuildingCard from './BuildingCard';
 import CityMoment from './CityMoment';
 import { stageFrameStyle } from './stageMetrics';
+import CityTimeControls from './CityTimeControls';
+import { composePostcard, downloadDataUrl, postcardFileName, postcardLines } from './cityPostcard';
+import { hourCaption } from './cityTimeCopy';
+import { SEASON_LABEL, museumSeason, seasonForMonth } from '../../engine/city3d/season';
+import { getEraStyle } from '../../engine/city3d/eraStyle';
+import { getVietnamHour, getVietnamMonthIndex } from '../../engine/time';
+import { MUSEUM_HOUR } from '../../engine/city3d/daylight';
 
 const CityScene3D = lazy(() => import('./render3d/CityScene3D'));
 
@@ -133,20 +140,66 @@ export default function CityStage({
     }
   }, [preference]);
 
+  // Round 50 (ADR-090): down on the street. A flag on the living scene; the buttons reach the walker
+  // through `walkApi` (filled by `CityScene3D`), never through a second camera.
+  const [walking, setWalking] = useState(false);
+  const walkApi = useRef(null);
+
   // Phím Esc = lối thoát thứ ba. Chỉ gắn khi ĐANG ngắm một công trình: gắn thường trực thì Esc ở
   // màn hình Thành Phố sẽ âm thầm "làm gì đó" ngay cả lúc chẳng có gì để đóng.
   useEffect(() => {
-    if (!selection || !interactive) return undefined;
-    const onKey = (event) => { if (event.key === 'Escape') onPick?.(null); };
+    if ((!selection && !walking) || !interactive) return undefined;
+    // round 50: Esc also climbs out of the street
+    const onKey = (event) => { if (event.key === 'Escape') { if (walking) setWalking(false); else onPick?.(null); } };
     window.addEventListener('keydown', onKey);
     return () => window.removeEventListener('keydown', onKey);
-  }, [selection, interactive, onPick]);
+  }, [selection, interactive, onPick, walking]);
 
   const handleFallback = useCallback((reason) => {
     // Chỉ ghi nhận lần hỏng ĐẦU TIÊN: `lost-context` và `slow` có thể bắn liên tiếp, mà lý do đầu
     // mới là lý do thật.
     setFailure((current) => current ?? reason);
   }, []);
+
+  // Round 50 (ADR-090): Đàm's hour and season. `null` = the real clock / the real calendar. The hour
+  // is committed 150 ms after the slider stops (each commit rebuilds the WebGL scene), the caption
+  // follows the thumb at once. A museum piece ignores both — `CityScene3D` freezes them itself.
+  const [hourDraft, setHourDraft] = useState(null);
+  const [hour, setHour] = useState(null);
+  const [season, setSeason] = useState(null);
+  const hourTimer = useRef(null);
+  const pickHour = useCallback((next) => {
+    setHourDraft(next);
+    if (hourTimer.current) window.clearTimeout(hourTimer.current);
+    hourTimer.current = window.setTimeout(() => { setHour(next); hourTimer.current = null; }, 150);
+  }, []);
+  useEffect(() => () => { if (hourTimer.current) window.clearTimeout(hourTimer.current); }, []);
+
+  // Round 50 (ADR-090): the postcard — the scene hands back its own frame, this composes the caption.
+  const cameraApi = useRef(null);
+  const [saving, setSaving] = useState(false);
+  const savePostcard = useCallback(async () => {
+    const frame = cameraApi.current?.capture?.();
+    if (!frame) return;
+    setSaving(true);
+    try {
+      const style = getEraStyle(layout.era);
+      const shownSeason = dimmed ? museumSeason(layout.era) : (season ?? seasonForMonth(getVietnamMonthIndex()));
+      const shownHour = dimmed ? MUSEUM_HOUR : (hour ?? getVietnamHour());
+      const url = await composePostcard(frame, postcardLines({
+        era: layout.era,
+        country: style?.country,
+        landmark: style?.landmark,
+        buildings: (layout.buildings ?? []).length,
+        sessions: sessionCount,
+        season: SEASON_LABEL[shownSeason],
+        hour: hourCaption(shownHour),
+      }));
+      if (url) downloadDataUrl(url, postcardFileName({ era: layout.era, season: shownSeason, hour: hourCaption(shownHour) }));
+    } finally {
+      setSaving(false);
+    }
+  }, [layout, dimmed, season, hour, sessionCount]);
 
   const decision = decideRenderMode({ preference, hasWebGL2, hints });
   const mode = failure ? '2d' : decision.mode;
@@ -188,6 +241,11 @@ export default function CityStage({
               // Cũng chỉ truyền khi `interactive` — lớp nền trang chủ không được tự bay đi đâu cả.
               focusKind={selection?.kind ?? null}
               focusBpId={selection?.bpId ?? null}
+              hour={hour}
+              season={season}
+              walk={walking}
+              walkApiRef={walkApi}
+              cameraApiRef={cameraApi}
             />
           </Suspense>
 
@@ -225,15 +283,15 @@ export default function CityStage({
               </span>
             ) : <span />}
             <AnimatePresence>
-              {interactive && selection && !moment && (
+              {interactive && (selection || walking) && !moment && (
                 <motion.button
                   type="button"
                   {...enterMotion}
-                  onClick={() => onPick?.(null)}
+                  onClick={() => { if (walking) setWalking(false); else onPick?.(null); }}
                   className="pointer-events-auto rounded-full px-3 py-1.5 text-[11px] font-medium shadow-sm"
                   style={{ background: 'var(--canvas)', color: 'var(--ink)', border: '1px solid var(--line)' }}
                 >
-                  ⤺ Toàn cảnh
+                  {walking ? '⤴ Lên cao' : '⤺ Toàn cảnh'}
                 </motion.button>
               )}
             </AnimatePresence>
@@ -241,6 +299,24 @@ export default function CityStage({
 
           {/* ⚠️ `pointer-events-none` trên lớp bọc, `pointer-events-auto` trên chính thẻ: thiếu
               luật này thì cả vùng trống quanh thẻ nuốt mất thao tác kéo xoay của Đàm. */}
+          {/* Round 50 (ADR-090): the walking pad — turn · step · turn. Hold-to-walk is a repeat on
+              pointerdown; keys ←↑→↓ / WASD and the wheel do the same inside `CityScene3D`. */}
+          {interactive && walking && (
+            <div className="pointer-events-none absolute bottom-2 right-2 flex items-center gap-1" data-city-walk="pad">
+              {[['◀', () => walkApi.current?.turn(-Math.PI / 8), 'Rẽ trái'], ['▲', () => walkApi.current?.step(3), 'Đi tới'], ['▶', () => walkApi.current?.turn(Math.PI / 8), 'Rẽ phải']].map(([glyph, act, label]) => (
+                <button
+                  key={label}
+                  type="button"
+                  aria-label={label}
+                  onClick={act}
+                  className="pointer-events-auto h-9 w-9 rounded-full text-[14px] font-medium shadow-sm"
+                  style={{ background: 'var(--canvas)', color: 'var(--ink)', border: '1px solid var(--line)' }}
+                >
+                  {glyph}
+                </button>
+              ))}
+            </div>
+          )}
           <div className="pointer-events-none absolute inset-x-2 bottom-2 flex justify-start">
             <AnimatePresence>
               {moment ? (
@@ -281,6 +357,43 @@ export default function CityStage({
 
       {/* Khi 3D bỏ cuộc GIỮA CHỪNG, phải nói cho Đàm biết — nếu không anh chỉ thấy hình đột nhiên
           đổi kiểu mà không hiểu vì sao, rồi tưởng app hỏng. */}
+      {/* Round 50 (ADR-090): the handle on the clock and the calendar — under the picture, never on it */}
+      {chrome && mode === '3d' && (
+        <div className="flex flex-wrap items-center gap-2">
+          <div className="min-w-0 flex-1">
+            <CityTimeControls
+              era={layout.era}
+              dimmed={dimmed}
+              hour={hourDraft ?? hour}
+              season={season}
+              onHour={pickHour}
+              onSeason={setSeason}
+            />
+          </div>
+          {interactive && !walking && (
+            <button
+              type="button"
+              onClick={() => { onPick?.(null); setWalking(true); }}
+              className="rounded-full px-3 py-1 text-[11px] font-medium"
+              style={{ background: 'var(--canvas)', color: 'var(--ink)', border: '1px solid var(--line)' }}
+              data-city-walk="enter"
+            >
+              🚶 Xuống phố
+            </button>
+          )}
+          <button
+            type="button"
+            onClick={savePostcard}
+            disabled={saving}
+            className="mr-3 rounded-full px-3 py-1 text-[11px] font-medium sm:mr-4"
+            style={{ background: 'var(--canvas)', color: 'var(--ink)', border: '1px solid var(--line)' }}
+            data-city-postcard="save"
+          >
+            {saving ? '📷 Đang lưu…' : '📷 Chụp ảnh'}
+          </button>
+        </div>
+      )}
+
       {chrome && failure && (
         <p className="px-3 text-[11px] sm:px-4" style={{ color: 'var(--muted)' }}>
           Đã chuyển về bản vẽ 2D: {FAILURE_LABEL[failure] ?? 'bản 3D gặp sự cố'}.

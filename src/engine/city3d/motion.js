@@ -97,6 +97,10 @@ export const PARTICLE_STYLE = Object.freeze({
   // come from `weather.js`, never from an era's own list — and never without wet ground.
   rain:    { life: 1.2, rise: -3.3, drift: 0.25, size: [0.011, 0.011], tint: 0xdde6ee, alpha: 0.55, perSource: 0, wide: true, count: 640, streak: 9 },
   drizzle: { life: 1.5, rise: -2.6, drift: 0.18, size: [0.008, 0.008], tint: 0xd8e0e8, alpha: 0.38, perSource: 0, wide: true, count: 300, streak: 5 },
+  // Round 50 (ADR-090): what the SEASON drops — cherry petals in spring, leaves in autumn. Slow,
+  // wandering falls (the snow path), tinted, never streaked.
+  petals:  { life: 7.0, rise: -0.16, drift: 0.22, size: [0.022, 0.022], tint: 0xffb3c6, alpha: 0.95, perSource: 0, wide: true, count: 260 },
+  leaves:  { life: 6.5, rise: -0.24, drift: 0.30, size: [0.026, 0.026], tint: 0xc9762c, alpha: 0.95, perSource: 0, wide: true, count: 170 },
 });
 
 /**

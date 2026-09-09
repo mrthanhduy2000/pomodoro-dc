@@ -313,3 +313,29 @@ test('TRỤC NGHIÊNG: `specFootprint` đếm cả phần ngọn vươn ra — n
   assert.ok(specFootprint([lean]).w > specFootprint([upright]).w + 0.9,
     'khối nằm dọc +X phải có hình bao rộng hơn khối đứng gần đúng chiều cao của nó');
 });
+
+// ── ROUND 48 (ADR-088): THE SCENERY MOVES — the `aMotion` vertex attribute ────────────────────
+test('CHUYỂN ĐỘNG: tán lá mang thuộc tính lay (trọng số tăng theo độ cao), tường mang số 0', () => {
+  const trunk = prism({ w: 0.1, d: 0.1, h: 0.8, sides: 5, role: 'wood' });
+  const crown = prism({ y: 0.8, w: 0.6, d: 0.6, h: 0.9, sides: 6, role: 'leaf' });
+  const merged = buildMergedGeometry(placement([trunk, crown]), PALETTE, { era: 9 });
+  const mot = merged.geometry.getAttribute('aMotion');
+  const pos = merged.geometry.getAttribute('position');
+  assert.ok(mot && mot.itemSize === 4, 'thiếu thuộc tính aMotion (4 số mỗi đỉnh)');
+  assert.equal(mot.count, pos.count, 'mỗi đỉnh đúng một bộ aMotion');
+  let leafLow = null; let leafHigh = null; let woodMoving = 0;
+  for (let i = 0; i < mot.count; i += 1) {
+    const kind = mot.getX(i); const w = mot.getW(i); const y = pos.getY(i);
+    if (kind === 0) { assert.equal(w, 0); if (y < 0.79) continue; }
+    if (kind === 1) {
+      if (y < 0.85) leafLow = leafLow === null ? w : Math.min(leafLow, w);
+      if (y > 1.6) leafHigh = leafHigh === null ? w : Math.max(leafHigh, w);
+    }
+    if (kind !== 0 && y < 0.79) woodMoving += 1;
+  }
+  assert.equal(woodMoving, 0, 'thân gỗ không được lay');
+  assert.ok(leafHigh !== null && leafLow !== null && leafHigh > leafLow, `ngọn (${leafHigh}) phải lay hơn gốc tán (${leafLow})`);
+  // deterministic: build twice ⇒ identical attribute (the phase comes from position, not a clock)
+  const again = buildMergedGeometry(placement([trunk, crown]), PALETTE, { era: 9 }).geometry.getAttribute('aMotion');
+  assert.deepEqual(Array.from(again.array.slice(0, 40)), Array.from(mot.array.slice(0, 40)));
+});

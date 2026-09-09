@@ -441,19 +441,21 @@ test('CHI TIẾT MÁI KHÔNG ĐƯỢC CHẾT — và danh sách kỷ mất một
   ("ADR-007 QUA THỜI GIAN") and by `cityPlan.test.js`; both stayed green through the re-base. The
   table still does its job: a shape change that nobody meant to make goes red here.
 */
+// ⚠️ ROUND 48 (ADR-088): re-based ONCE MORE, for one key only — chimney stacks now carry `tag: 'stack'`
+// (the smoke source). Eras without chimneys did not move; positions never did (ADR-007 tests separate).
 const GOLDEN = {
   1: '4c896bf47cd9be2b890076367b9dcf83',
   2: 'cc4b87555564ea8be02d40da1a1c18db',
   3: 'e23de6560e4d2353683268033641197d',
   4: 'f48a5f9bb6069a8b88700a7c59927a13',
-  5: 'a50a206cbd920f9444b0b315906df4c2',
+  5: '55381b569bc6cdfb4e3558b2fc2baeab',
   6: 'e5dbe9f55e821766a2838207d2ababaf',
-  7: '9d5839cbfdb89b30bbd39cb6227cfb1a',
+  7: '9916f70d8e5a4f21b154840760f4ea96',
   8: '0427cf1eb12183ad22d776b8fb215e08',
   9: '145497ad0146e09fadbf125af368e241',
-  10: '293fe08398125557c0b5111d369bda1b',
+  10: '7ce4bf401753bee6de0ad1142dca9a75',
   11: 'e7a34d023abff4a5e51b945b9623dc0c',
-  12: 'db7057705f79cad514a7145d29ef4000',
+  12: '6206bf14a5320b62f66d1be3f0071f2b',
   13: 'd0c4421023c13400a3f196d138215fee',
   14: '757c9d1d65394af11830524679b89f6d',
   15: 'e541cc2cf9b2376e0921399dfab6ad0e',

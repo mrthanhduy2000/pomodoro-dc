@@ -359,7 +359,7 @@ export default function CityScene3D({
       function renderFrame() {
         const now = performance.now();
         stepFlight(now);
-        if (city.isAnimated) city.updateResidents((now - startedAt) / 1000);
+        if (city.isAnimated) city.update((now - startedAt) / 1000);
         applyCamera();
         if (shadowsDirty) {
           // Chỉ vẽ lại bóng đúng khung hình cần. Bật `autoUpdate` lên một nhịp rồi tắt ngay là

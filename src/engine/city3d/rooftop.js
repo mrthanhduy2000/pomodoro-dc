@@ -429,7 +429,7 @@ function emitChimney(out, a, ctx) {
   for (const off of spreadOffsets(n, a.rw * 0.62)) {
     const jitter = 0.86 + at('chim', off) * 0.28;
     const h = Math.max(a.apexY - a.eaveY, 0) + tall * jitter;
-    out.push(prism({ x: a.x + off, z: a.z - a.rd * 0.18, y, w, d: w * 0.78, h, sides: 4, role: 'trim' }));
+    out.push(prism({ x: a.x + off, z: a.z - a.rd * 0.18, y, w, d: w * 0.78, h, sides: 4, role: 'trim', tag: 'stack' }));
     out.push(prism({
       x: a.x + off, z: a.z - a.rd * 0.18, y: y + h, w: w * 1.3, d: w * 1.05,
       h: w * 0.24, sides: 4, role: 'stone',

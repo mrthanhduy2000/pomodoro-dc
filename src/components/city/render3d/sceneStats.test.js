@@ -15,6 +15,7 @@
  * con số thứ ba.
  */
 import { test } from 'node:test';
+import { getEraMotion } from '../../../engine/city3d/motion.js';
 import assert from 'node:assert/strict';
 import { Frustum, Matrix4, PerspectiveCamera } from 'three';
 
@@ -383,8 +384,17 @@ test('CƯ DÂN PHẢI CÓ TÊN — không thì phép đo mật độ đọc họ
   const cưDân = [];
   city.scene.traverse((o) => { if (o.isInstancedMesh) cưDân.push(o.name); });
   assert.ok(cưDân.length > 0, 'không có InstancedMesh nào — fixture hỏng, bài test đang chạy rỗng');
-  assert.deepEqual([...new Set(cưDân)], ['residents'],
-    `cư dân đang mang tên ${JSON.stringify(cưDân)} — mặt nạ sẽ không hỏi được họ`);
+  // Round 48 (ADR-088): particle systems (smoke · snow · sand · dust · birds) are InstancedMeshes too,
+  // each named `particles-<kind>` — the law is still "every InstancedMesh carries a name a mask can ask".
+  const tên = [...new Set(cưDân)].sort();
+  assert.ok(tên.includes('residents'), `cư dân đang mang tên ${JSON.stringify(cưDân)} — mặt nạ sẽ không hỏi được họ`);
+  for (const t of tên) assert.ok(t === 'residents' || /^particles-[a-z]+$/.test(t), `InstancedMesh không tên/lạ: "${t}"`);
+  // …and the particle systems are exactly the ones the era's vocabulary declares — one mesh each. The
+  // draw-call arithmetic of `drawCallBudget.test.js` counts families + fixed sheets + resident shapes;
+  // this is the +N on top of it (round 48), owned by `engine/city3d/motion.js`.
+  const hạt = cưDân.filter((n) => n.startsWith('particles-')).sort();
+  assert.deepEqual(hạt, [...getEraMotion(7).particles].map((k) => `particles-${k}`).sort(),
+    'số hệ hạt trong cảnh phải đúng bằng danh sách kỷ 7 khai — không hơn (một hệ đi ké), không kém (một hệ không dựng nổi)');
   city.dispose();
 });
 

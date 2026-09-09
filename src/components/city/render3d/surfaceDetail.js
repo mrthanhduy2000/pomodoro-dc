@@ -63,6 +63,7 @@
  * ⇒ Luật rút ra, áp cho mọi lần sau: **bóc phanh phản chiếu chỉ có nghĩa trên bề mặt đủ nhẵn để
  * phản chiếu thành hình. Trên bề mặt rất nhám nó chỉ là ánh sáng nền đội lốt phản chiếu.**
  */
+import { injectMotion } from './motion';
 
 /**
  * Mức phản chiếu môi trường ĐẦY ĐỦ. 1,0 = đúng vật lý (mặt bóng ngoài trời nhận trọn bầu trời).
@@ -135,12 +136,16 @@ float detailNoise(vec3 x) {
  * @returns {object} chính `material`, để gọi lồng được vào `track(new MeshStandardMaterial(...))`
  */
 export function applySurfaceDetail(material, opts = {}) {
+  // Round 48 (ADR-088): the merged city materials also carry the motion uniforms; `three` allows one
+  // `onBeforeCompile` per material, so the injection happens INSIDE this hook, never as a second one.
+  const motion = opts.motion ?? null;
   const scale = Number.isFinite(opts.scale) ? opts.scale : 6;
   const strength = Number.isFinite(opts.strength) ? opts.strength : 0.09;
   const roughness = Number.isFinite(opts.roughness) ? opts.roughness : 0.12;
   const specularGain = Number.isFinite(opts.specularGain) ? opts.specularGain : 1;
 
   material.onBeforeCompile = (shader) => {
+    if (motion) injectMotion(shader, motion);
     shader.uniforms.uDetailScale = { value: scale };
     shader.uniforms.uDetailStrength = { value: strength };
     shader.uniforms.uDetailRough = { value: roughness };

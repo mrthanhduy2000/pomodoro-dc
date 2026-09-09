@@ -864,3 +864,20 @@ test('⚠️ NGÂN SÁCH TAM GIÁC CƯ DÂN — chấm TỪNG KỶ trên cảnh 
     + ` ${(TRAN_TY_LE * 100).toFixed(0)}%)`
     + ` · nặng nhất ${Math.max(...Object.keys(CANH_TAM_GIAC).map((e) => humanBodyTriangles(+e)))} tam giác/người`);
 });
+
+// ── ROUND 48 (ADR-088): THE SCENERY MOVES ────────────────────────────────────────────────────────
+test('CHUYỂN ĐỘNG: cảnh có ĐỘNG cả khi không có cư dân; `update(t)` đẩy đúng một đồng hồ vào mọi thứ đang động', () => {
+  assert.ok(/isAnimated: residents\.length > 0 \|\| eraMotion !== null/.test(CODE),
+    '`isAnimated` lại chỉ còn dựa vào cư dân — thành phố không người thành tấm ảnh');
+  const upd = CODE.slice(CODE.indexOf('function update(timeSeconds)'), CODE.indexOf('const updateResidents = update;'));
+  assert.ok(/motionUniforms\.uTime\.value = t/.test(upd), 'gió không nhận đồng hồ');
+  assert.ok(/waterUniforms\.uTime\.value = t/.test(upd), 'nước không nhận đồng hồ');
+  assert.ok(/sys\.update\(t\)/.test(upd), 'hạt không nhận đồng hồ');
+  assert.ok(/placeResidents\?\.\(timeSeconds\)/.test(upd), 'cư dân không còn được đặt chân');
+  assert.ok(/const t = motionTime\(timeSeconds\)/.test(upd), 'đồng hồ phải đi qua `motionTime` để cuộn lại sau một giờ');
+  // `still` scenes (museum previews) get no motion, exactly as they get no residents
+  assert.ok(/const eraMotion = \(still \|\| motion === false\) \? null : getEraMotion\(layout\.era\)/.test(CODE), 'cảnh tĩnh (bảo tàng) và cờ `motion: false` phải tắt được chuyển động');
+  // the merged materials receive the motion uniforms through the ONE onBeforeCompile hook
+  assert.ok(/motion: eraMotion \? motionUniforms : null/.test(CODE), 'vật liệu thành phố không nhận uniform gió');
+  assert.ok(/injectWater\(waterMaterial, waterUniforms\)/.test(CODE), 'mặt nước không gợn');
+});

@@ -55,7 +55,9 @@ import { buildHumanBody, buildHumanBodyLowDetail } from '../../../engine/city3d/
 import { buildHumanShapeGeometry } from './humanGeometry';
 import { poseAt } from '../../../engine/city3d/humanPose';
 import { fogDensityFor, sunDirectionAt } from '../../../engine/city3d/daylight';
-import { buildMergedGeometry } from './geometryFactory';
+import { buildMergedGeometry, partTopWorld } from './geometryFactory';
+import { createMotionUniforms, createParticles, createWaterUniforms, injectWater } from './motion';
+import { getEraMotion, motionTime, SMOKE_INTENSITY } from '../../../engine/city3d/motion';
 import {
   ROAD_LIFT, buildHorizonSurface, buildRoadSurface, buildTerrainSurface, buildWaterSurface,
 } from './terrainMesh';
@@ -604,6 +606,7 @@ function createSkyEnvironment(renderer, skyLook, groundColor) {
  */
 export function createCityScene({
   layout, palette, dimmed = false, lowDetail = false, stats = {}, still = false, daylight = null,
+  motion = true,   // round 48: false = a still photograph of a living city (tools only; residents stay)
   maxLamps = 3, renderer = null, isMobile = false, tachDeDo = null, ao = true,
 }) {
   const nhomCanTach = new Set(Array.isArray(tachDeDo) ? tachDeDo : []);
@@ -651,6 +654,16 @@ export function createCityScene({
   const track = (resource) => { disposables.push(resource); return resource; };
   const meshes = [];
   const addMesh = (mesh) => { if (mesh) { scene.add(mesh); meshes.push(mesh); } return mesh; };
+
+  /**
+   * ROUND 48 (ADR-088) — THE SCENERY MOVES. One clock (`motionUniforms.uTime`) drives the vertex
+   * sway of foliage and cloth, the water's waves and the particles; `still` scenes (museum previews,
+   * photo tools that ask for stillness) get none of it, exactly as they get no residents.
+   */
+  const eraMotion = (still || motion === false) ? null : getEraMotion(layout.era);
+  const motionUniforms = createMotionUniforms(eraMotion?.wind);
+  let waterUniforms = null;
+  const particleSystems = [];
 
   const skyLook = {
     top: new Color(palette.sky2?.top ?? palette.background),
@@ -912,6 +925,13 @@ export function createCityScene({
       // ghi cho kim loại (*"kim loại không có gì để phản chiếu thì render ra đen"*).
       envMapIntensity: ENV_DIFFUSE * 4,
     }));
+    if (eraMotion) {
+      // Sea and estuary heave; a canal or a river only shivers.
+      const kind = terrain.setting?.style?.water;
+      const amp = kind === 'sea' ? 0.035 : kind === 'estuary' ? 0.025 : 0.012;
+      waterUniforms = createWaterUniforms(amp);
+      injectWater(waterMaterial, waterUniforms);
+    }
     const water = new Mesh(water3d.geometry, waterMaterial);
     water.name = 'water';
     // ⚠️ KHÔNG nhận bóng — cùng lý do với `outskirts`, và nó KHÔNG phải tối ưu hiệu năng mà là bắt
@@ -1258,7 +1278,7 @@ export function createCityScene({
           envMapIntensity: envIntensity,
           transparent: dimmed,
           opacity: dimmed ? 0.62 : 1,
-        }), { ...GRAIN.building, specularGain: specularGainFor(envIntensity) }));
+        }), { ...GRAIN.building, specularGain: specularGainFor(envIntensity), motion: eraMotion ? motionUniforms : null }));
       });
       const mesh = new Mesh(merged.geometry, buildingMaterial);
       mesh.name = tenNhom;   // để `city-preview.mjs --mask buildings` hỏi được, xem chú thích trên
@@ -1296,6 +1316,36 @@ export function createCityScene({
   // hơn tuần trước". Cả cộng đồng đi qua MỘT `InstancedMesh` cho MỖI KHUÔN cơ thể (2026-08-23,
   // ADR-055) — trước đó là đúng một mesh duy nhất, vì mọi bộ phận đều là hộp. Xem chú thích
   // "GOM KHỐI THEO KHUÔN" ngay bên dưới để biết vì sao không thể gộp lại làm một.
+  if (eraMotion) {
+    // Smoke is born at every tagged chimney stack; wide particles (snow, sand, dust, birds) fill the
+    // city's air. Sources come from the SPECS the city was built from, so they sit exactly on the roofs.
+    const sources = [];
+    const hearths = [];
+    for (const pl of placements) {
+      const ps = pl?.spec?.parts;
+      if (!Array.isArray(ps) || pl.nhomDo !== 'buildings') continue;
+      let stacked = false;
+      for (const part of ps) if (part.tag === 'stack') { sources.push(partTopWorld(pl, part)); stacked = true; }
+      // A house without a chimney still has a hearth: its smoke leaves through the roof (eras 1–4, 6)
+      // and a vent on a flat roof steams (11, 13). One in three, at the roof's top centre.
+      if (!stacked && Number.isFinite(pl.spec.height) && pl.spec.height < 1.4 && hearths.length % 3 === 0) {
+        sources.push({ x: pl.x, y: (pl.y ?? 0) + pl.spec.height * (pl.scale ?? 1), z: pl.z });
+      }
+      if (!stacked) hearths.push(pl);
+    }
+    const half = gridSize / 2 + 1.5;
+    const bounds = { x0: -half, x1: half, z0: -half, z1: half, y0: 0.3, y1: 4.2 };
+    const sky = palette.lights?.skyDome ?? palette.sky ?? 0xcfd8e0;
+    for (const kind of eraMotion.particles) {
+      const fromStacks = kind === 'smoke' || kind === 'steam';
+      const sys = createParticles({
+        kind, sources: fromStacks ? sources : [], bounds,
+        intensity: SMOKE_INTENSITY[eraMotion.smoke] ?? 1, sky,
+      });
+      if (sys) { addMesh(sys.mesh); track(sys); particleSystems.push(sys); }
+    }
+  }
+
   const residents = still ? [] : buildResidents(layout, stats);
   /** Đặt lại vị trí cả cộng đồng theo thời gian. `null` khi thành phố không có ai. */
   let placeResidents = null;
@@ -1461,10 +1511,17 @@ export function createCityScene({
     };
   }
 
-  function updateResidents(timeSeconds) {
+  /** Advance the whole scene to `timeSeconds` — a pure function of time (round 48, ADR-088). */
+  function update(timeSeconds) {
+    const t = motionTime(timeSeconds);
+    motionUniforms.uTime.value = t;
+    if (waterUniforms) waterUniforms.uTime.value = t;
+    for (const sys of particleSystems) sys.update(t);
     placeResidents?.(timeSeconds);
   }
-  updateResidents(0);
+  /** Kept for callers that predate round 48 (`city-preview.mjs`, tests). */
+  const updateResidents = update;
+  update(0);
 
   // ── Ánh sáng: BA nguồn, cố ý khác nhiệt độ ────────────────────────────────
   // Đây là phần rẻ nhất mà ăn tiền nhất. Một đèn trắng duy nhất cho ra cảnh "đồ hoạ máy tính";
@@ -1736,8 +1793,11 @@ export function createCityScene({
     sun,
     dispose,
     updateResidents,
+    update,
     /** Có gì đang chuyển động không — bên gọi dùng để quyết định có cần vẽ liên tục hay không. */
-    isAnimated: residents.length > 0,
+    isAnimated: residents.length > 0 || eraMotion !== null,
+    /** What moves this century (round 48) — for tools and tests, not for the renderer. */
+    motion: eraMotion ? { wind: eraMotion.wind, particles: particleSystems.map((p) => [p.mesh.name, p.count]), water: waterUniforms !== null } : null,
     /**
      * Hộp bao để dò xem ngón tay chỉ vào công trình nào (`engine/city3d/pick.js`).
      * ⚠️ Chỉ là DỮ LIỆU — không phải đối tượng GPU, không tốn lệnh vẽ nào, không cần dọn ở

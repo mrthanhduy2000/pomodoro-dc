@@ -31,6 +31,7 @@
  */
 
 import { BufferAttribute, BufferGeometry, Color } from 'three';
+import { MOTION_KIND, motionKindForRole, phaseAt, swayWeight } from '../../../engine/city3d/motion';
 
 import { getEraStyle } from '../../../engine/city3d/eraStyle';
 import { MATERIAL_ORDER, contactShade, materialFamilyFor } from '../../../engine/city3d/materials';
@@ -39,7 +40,33 @@ import { CORNER_SEGMENTS, bevelWidth, cornerRadius } from '../../../engine/city3
 
 /** Bộ đệm tích luỹ trong lúc dựng. Mảng JS thường rồi mới đổ sang Float32Array một lần. */
 function createSink() {
-  return { pos: [], nor: [], col: [], triangles: 0 };
+  // `mot` = the per-vertex `aMotion` attribute (kind · amplitude · phase · weight) — round 48.
+  // `motion` = the descriptor of the part being emitted right now, or null for a still part.
+  return { pos: [], nor: [], col: [], mot: [], motion: null, triangles: 0 };
+}
+
+/**
+ * ROUND 48 (ADR-088): what moves, decided at build time from the part's ROLE — foliage sways, cloth
+ * flaps — and written as a vertex attribute so the shader can move it with zero CPU per frame.
+ * The weight grows with height above the placement's base (trunks stay planted, crowns move) and the
+ * amplitude scales with the part's own height, so a 0,05-high paddy row does not swing like a tree.
+ */
+function motionFor(item, part, scaled, transform) {
+  const kind = motionKindForRole(part.role);
+  if (kind === MOTION_KIND.none) return null;
+  const baseY = Number.isFinite(item.y) ? item.y : 0;
+  const reach = Math.max(0.5, (item.motionReach ?? 1.2));
+  const amp = kind === MOTION_KIND.sway ? Math.min(1, Math.max(0.15, scaled.h / 0.6)) : 1;
+  return {
+    kind, amp, phase: phaseAt(transform.ox, transform.oz), baseY, reach,
+    ox: transform.ox, oz: transform.oz, span: Math.max(1e-3, scaled.w, scaled.d, scaled.h),
+  };
+}
+
+function motionWeightAt(motion, p) {
+  if (motion.kind === MOTION_KIND.sway) return swayWeight(p[1] - motion.baseY, motion.reach);
+  if (motion.kind === MOTION_KIND.flap) return Math.min(1, Math.hypot(p[0] - motion.ox, p[2] - motion.oz) / motion.span);
+  return 1;
 }
 
 /**
@@ -93,6 +120,9 @@ function pushTriangle(sink, a, b, c, rgb, shadeBase, occ = null) {
     const k = (shadeBase === null ? 1 : contactShade(p[1] - shadeBase))
       * (shadeBase !== null && occ ? occlusionShade(occ, p[0], p[1], p[2], nx, ny, nz) : 1);
     sink.col.push(rgb.r * k, rgb.g * k, rgb.b * k);
+    const mo = sink.motion;
+    if (mo) sink.mot.push(mo.kind, mo.amp, mo.phase, motionWeightAt(mo, p));
+    else sink.mot.push(0, 0, 0, 0);
   }
   sink.triangles += 1;
 }
@@ -343,6 +373,12 @@ function partWorld(item, part) {
   };
 }
 
+/** World-space top centre of one part of a placement — where a chimney's smoke is born (round 48). */
+export function partTopWorld(item, part) {
+  const { transform, scaled } = partWorld(item, part);
+  return { x: transform.ox, y: transform.oy + scaled.h, z: transform.oz };
+}
+
 export function buildMergedGeometry(
   placements, palette, { skipDeco = false, glowRole = null, era = null, ao = true } = {},
 ) {
@@ -418,8 +454,10 @@ export function buildMergedGeometry(
       // cùng một câu trên cùng một dữ liệu là cách duy nhất giữ hai bên không bao giờ lệch. Hỏi
       // trên số đã nhân 1,3 thì những khối nằm sát ngưỡng sẽ được vát ở đây mà không được đếm ở
       // kia, và cái lệch đó im lặng: nó chỉ hiện ra dưới dạng bảng ngân sách báo sai.
+      target.motion = glowing ? null : motionFor(item, part, scaled, transform);
       if (part.shape === 'gable') emitGable(target, scaled, transform, rgb, shadeBase, occ, bevelWidth(part) * scale);
       else emitPrism(target, scaled, transform, rgb, shadeBase, bevelWidth(part) * scale, occ, cornerRadius(part) * scale);
+      target.motion = null;
     }
   }
 
@@ -451,6 +489,7 @@ function mergeSinks(sinks) {
   const pos = [];
   const nor = [];
   const col = [];
+  const mot = [];
   const groups = [];
 
   for (const family of MATERIAL_ORDER) {
@@ -460,6 +499,7 @@ function mergeSinks(sinks) {
     for (let i = 0; i < sink.pos.length; i += 1) pos.push(sink.pos[i]);
     for (let i = 0; i < sink.nor.length; i += 1) nor.push(sink.nor[i]);
     for (let i = 0; i < sink.col.length; i += 1) col.push(sink.col[i]);
+    for (let i = 0; i < sink.mot.length; i += 1) mot.push(sink.mot[i]);
     groups.push({ start, count: sink.triangles * 3, index: families.length });
     families.push(family);
   }
@@ -470,6 +510,7 @@ function mergeSinks(sinks) {
   geometry.setAttribute('position', new BufferAttribute(new Float32Array(pos), 3));
   geometry.setAttribute('normal', new BufferAttribute(new Float32Array(nor), 3));
   geometry.setAttribute('color', new BufferAttribute(new Float32Array(col), 3));
+  geometry.setAttribute('aMotion', new BufferAttribute(new Float32Array(mot), 4));
   for (const g of groups) geometry.addGroup(g.start, g.count, g.index);
   geometry.computeBoundingSphere();
   return { geometry, families };
@@ -482,6 +523,7 @@ function toGeometry(sink) {
   geometry.setAttribute('position', new BufferAttribute(new Float32Array(sink.pos), 3));
   geometry.setAttribute('normal', new BufferAttribute(new Float32Array(sink.nor), 3));
   geometry.setAttribute('color', new BufferAttribute(new Float32Array(sink.col), 3));
+  geometry.setAttribute('aMotion', new BufferAttribute(new Float32Array(sink.mot), 4));
   geometry.computeBoundingSphere();
   return geometry;
 }

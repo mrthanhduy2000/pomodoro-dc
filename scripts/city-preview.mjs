@@ -285,6 +285,7 @@ function parseArgs(argv) {
     else if (key === '--lowdetail') { args.lowDetail = true; }
     else if (key === '--dpr') { args.dpr = Number(value); i += 1; }
     else if (key === '--bench') { args.bench = Number(value); i += 1; }
+    else if (key === '--nomotion') args.noMotion = true;   // round 48: freeze the scenery (residents stay) for A/B strips
     else if (key === '--mask') { args.mask = String(value); i += 1; }
     else if (key === '--no-shadow') args.noShadow = true;
     else if (key === '--no-ao') args.noAo = true;
@@ -312,7 +313,7 @@ function run(cmd, cmdArgs, options = {}) {
  */
 function entrySource({
   era, level, theme, zoom = 1, focus = 0, hour = null, pending = 0, sessions = 40, dpr = null, bench = 0,
-  mask = null, noShadow = false, noAo = false, t = 17.5, lowDetail = false, topdown = false,
+  mask = null, noShadow = false, noAo = false, t = 17.5, lowDetail = false, topdown = false, noMotion = false,
 }) {
   return `
 import { computeCityLayout, roadCellCount } from '${ROOT}/src/engine/cityLayout.js';
@@ -332,6 +333,7 @@ const MASK = ${mask === null ? 'null' : JSON.stringify(mask)};
 const MASK_NAMES = MASK ? MASK.split(',').map((s) => s.trim()).filter(Boolean) : [];
 const NO_SHADOW = ${noShadow ? 'true' : 'false'};
 const NO_AO = ${noAo ? 'true' : 'false'};
+const NO_MOTION = ${noMotion ? 'true' : 'false'};
 
 const ERA = ${era};
 const LEVEL = ${level};
@@ -407,6 +409,7 @@ const city = createCityScene({
   stats: { sessionCount: SESSIONS, streakLength: 9 },
   tachDeDo: MASK_NAMES,
   ao: !NO_AO,
+  motion: !NO_MOTION,
 });
 
 // Đẩy đồng hồ tới một thời điểm giữa chừng. Ở t = 0 mọi cư dân đều đứng ở đầu tuyến của mình —
@@ -867,7 +870,7 @@ window.__SWEEP_NOTES__ = notes;
 async function buildBundle(options) {
   mkdirSync(WORK_DIR, { recursive: true });
   const entryPath = resolve(WORK_DIR, 'entry.js');
-  writeFileSync(entryPath, options.sweep ? sweepSource(options) : entrySource(options), 'utf8');
+  writeFileSync(entryPath, options.sweep ? sweepSource(options) : entrySource({ ...options, noMotion: Boolean(options.noMotion) }), 'utf8');
 
   const configPath = resolve(WORK_DIR, 'vite.preview.config.mjs');
   writeFileSync(configPath, `
@@ -1678,6 +1681,7 @@ async function main() {
       // tấm ảnh với chính nó — đúng bài học `MAI-SAU-ky9.png`, nơi hai con số nghiệm thu mái phải
       // vứt đi vì tấm "cận mái" trùng TỪNG BYTE với ảnh khung thường.
       const aoTag = args.noAo ? '-noao' : '';
+      const motionTag = args.noMotion ? '-nomotion' : '';
       // ⚠️ CHẾ ĐỘ CẬN CẢNH CŨNG PHẢI CÓ TÊN RIÊNG, cùng lý do với mặt nạ ở trên — mà lý do ấy vừa
       // trả giá thật ngày 2026-08-18: hai con số nghiệm thu mái (4,5% / 16,5%) phải vứt đi vì tấm
       // ảnh mang tên "cận mái" hoá ra trùng TỪNG BYTE với ảnh khung thường. Một khung hình khác
@@ -1713,7 +1717,7 @@ async function main() {
       // HẲN (nhìn thẳng xuống, không phải khung app), nên dùng chung tên file với ảnh thường là
       // cách chắc chắn nhất để một phép so trước/sau chấm hai thứ không so được với nhau.
       const topTag = args.topdown ? '-topdown' : '';
-      const pngPath = resolve(OUT_DIR, `city-era${String(era).padStart(2, '0')}-${args.theme}${hourTag}${sessTag}${widthTag}${zoomTag}${tTag}${lodTag}${maskTag}${shadowTag}${aoTag}${focusTag}${topTag}.png`);
+      const pngPath = resolve(OUT_DIR, `city-era${String(era).padStart(2, '0')}-${args.theme}${hourTag}${sessTag}${widthTag}${zoomTag}${tTag}${lodTag}${maskTag}${shadowTag}${aoTag}${motionTag}${focusTag}${topTag}.png`);
       let info = '';
       let hop = null;
       try {

@@ -144,6 +144,7 @@ export function prism({
   rx = 0,
   rz = 0,
   role = 'wall',
+  tag = null,
 } = {}) {
   const width = Math.max(0, finite(w, 1));
   return {
@@ -160,6 +161,9 @@ export function prism({
     taper: clamp(finite(taper, 1), 0, 1),
     ry: finite(ry, 0),
     ...tiltKeys(rx, rz),
+    // round 48: an optional semantic tag (`'stack'` = a chimney the smoke rises from). Written only
+    // when given, so untagged specs serialise as before.
+    ...(tag ? { tag: String(tag) } : {}),
     role: safeRole(role),
   };
 }

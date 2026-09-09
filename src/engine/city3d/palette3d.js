@@ -694,6 +694,10 @@ export function buildScenePalette({ tokens, eraColor, era: eraNumber, daylight, 
     // Bóng tối sâu nhất. Gần như đen ở mọi kỷ nên góc màu hầu như không đọc ra, nhưng vẫn pha bằng
     // `material` cho nhất quán — không để sót một chỗ nào dùng thẳng sắc kỷ chưa qua bảng pha.
     dark:  material(24, 0.45, 0.24, 0.19, 0.09),
+    // Round 51 (ADR-091): CAST IRON — a lamp column, a hydrant, a manhole cover, a tram rail. Almost
+    // no era hue (0,12): iron looked the same in Paris and in Manchester, and that sameness is the
+    // point. Cool and dark, so it reads as metal against brick, stone and plaster alike.
+    iron:  material(214, 0.12, 0.09, 0.29, 0.21),
     // Round 49 (ADR-089): hulls are tarred wood, hooks and ropes are dark, a flame is ALWAYS the same
     // orange — it does not follow the era or the hour (it is its own light source; the glow sink
     // draws it unlit). `flameHot` is the core of a forge.

@@ -75,10 +75,23 @@ const CO_BE = new Set(['building', 'scaffold', 'dwelling']);
 // signs, downpipes, awnings, tile panels — a vocabulary per era. +3 % … +19 % on top of the roofs;
 // era 5 (Fachwerk framing on every wall) and era 14 (glass fins) gain the most. Round 50 was told
 // explicitly to stop counting triangles — these marks stay only as a CHANGE alarm, not as a budget.
+// ROUND 51 (ADR-091), measured 2026-09-09: STREET FURNITURE (`streetFurniture.js`) — what stands
+// beside the road. A lamp post, a bollard, a hydrant, a bin, a bench, a milestone, a manhole, tram
+// rails, a gutter, weeds in the cracks; a kit per century, placed on the kerb line of a road cell
+// that already exists (no cell is consumed, nothing already placed moves — ADR-007 holds).
+// +1,6 % … +4,8 % per era. The two ends say what the feature is: era 3 (+1,4 %) has only bollards
+// and torch posts on a wide processional way, era 10 (+4,8 %) has cast-iron lamps, manholes,
+// hydrants and tram rails on a dense grid of narrow streets — the century with the most street to
+// furnish gains the most, which is the whole point of the table being fifteen rows.
+// ⚠️ ANCHORED, not self-measured: `scripts/scene-tri.mjs --era 11 --sessions 40 --level 1` reports
+// the merged `city` block at 147.748 — the same number this table now holds for era 11.
+// NO era gained a MATERIAL FAMILY (checked across all 15): every piece rides `wood`, `stone`,
+// `trim`, `dark`, `roof`, `leaf`, plus `glass` only where the era already has glass and `gold` only
+// where it already has gold. So the draw-call table below did NOT move, and that is by design.
 const MOC_TAM_GIAC = {
-  1: 100666, 2: 127166, 3: 123992, 4: 185584, 5: 119110,
-  6: 237632, 7: 189096, 8: 143584, 9: 166796, 10: 116424,
-  11: 141876, 12: 116504, 13: 136764, 14: 158976, 15: 108718,
+  1: 102266, 2: 128686, 3: 125752, 4: 189008, 5: 121302,
+  6: 240820, 7: 191656, 8: 145632, 9: 171068, 10: 122024,
+  11: 147748, 12: 120888, 13: 142956, 14: 164016, 15: 112110,
 };
 
 /** Số BỆ KÈ của từng kỷ — tách riêng vì nó là hàm của ĐỊA HÌNH, không của kiến trúc. */

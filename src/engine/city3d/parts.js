@@ -38,6 +38,17 @@ export const PART_ROLES = [
   // ngay cả khi đứng trong bóng râm.
   'leaf2',
   'dark',    // bóng sâu, cửa ra vào, khe hở
+  /**
+   * ROUND 51 (ADR-091): SẮT ĐÚC — cột đèn, trụ nước cứu hoả, nắp cống, ray tàu, cột chắn hiện đại.
+   *
+   * ⚠️ VÌ SAO PHẢI LÀ MỘT VAI RIÊNG chứ không dùng lại `trim`. Màu của `trim` là màu VẬT LIỆU DIỀM
+   * của kỷ ấy, nên ở Manchester nó là GẠCH ĐỎ — và bức ảnh đầu tiên có cột đèn khí đỏ gạch cùng
+   * một cái nắp cống MÀU HỒNG. Sắt đúc thì thời nào cũng gần như cùng một màu, đó chính là điều
+   * đáng nói về nó; một vai lấy màu từ kỷ không thể phát biểu được câu ấy.
+   * ⚠️ Nó cưỡi họ vật liệu `wood` (`materials.js`) — họ mà MỌI kỷ đều đã vẽ — nên không kỷ nào tốn
+   * thêm một lệnh vẽ. Đó là điều kiện để thêm một vai mới ở dự án này.
+   */
+  'iron',
   // round 49 (ADR-089): the props that move, and fire — see `motion.js` (cloth flaps, hull/hook bob)
   // and `materials.js` (all ride the `wood` family so no era gains a draw call).
   'cloth',   // cờ, phướn, buồm, bạt, quần áo phơi — BAY theo gió

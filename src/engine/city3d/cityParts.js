@@ -160,6 +160,22 @@ export function collectCitySpecs({ layout, detail = 'high' } = {}) {
     });
   }
 
+  // ROUND 51 (ADR-091): street furniture. Its own layout array (a piece takes no cell — see
+  // `cityLayout.js`), but from here on it is an ordinary prop: same geometry pipeline, same merged
+  // mesh, same zero extra draw calls.
+  for (const piece of layout.street ?? []) {
+    out.push({
+      kind: 'prop',
+      source: piece,
+      spec: buildPropSpec({
+        kind:   piece.kind,
+        era,
+        seed:   `${era}|sf|${piece.kind}|${piece.x}|${piece.y}|${piece.variant}`,
+        detail,
+      }),
+    });
+  }
+
   for (const cover of layout.covers ?? []) {
     out.push({
       kind: 'prop',

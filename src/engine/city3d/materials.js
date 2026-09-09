@@ -106,6 +106,9 @@ const ROLE_FAMILY = {
   hull: 'wood',
   hook: 'wood',
   flame: 'wood',
+  // round 51 (ADR-091): cast iron. Matte and dark, so the `wood` family's roughness fits it exactly —
+  // and `wood` is drawn by all 15 eras, which is the condition for adding a role at all.
+  iron: 'wood',
 };
 
 /**

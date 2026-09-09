@@ -22,6 +22,7 @@
 
 import { BLUEPRINT_CATALOG, BUILDING_EFFECTS } from './constants';
 import { deriveLifeProps } from './city3d/lifeProps';
+import { deriveStreetFurniture } from './city3d/streetFurniture';
 import { deriveDwellings } from './city3d/dwellings';
 import { getFloraStyle } from './city3d/floraStyle';
 import { getGroundCoverStyle, pickCoverKind } from './city3d/groundCoverStyle';
@@ -889,6 +890,21 @@ export function computeCityLayout({ built, levels, era, stats, pending } = {}) {
   const life = deriveLifeProps({ era: eraNum, blocked: blockedForLife, roads: roadCells, homes: nhaCua });
   for (const item of life) props.push(item);
 
+  /**
+   * ROUND 51 (ADR-091): what stands BESIDE the road — lamp posts, bollards, hydrants, bins, rails,
+   * weeds in the cracks.
+   *
+   * ⚠️ ITS OWN ARRAY, NOT `props`, AND FOR THE REASON ALREADY WRITTEN DOWN FOR GROUND COVER: *"a
+   * grid cell is allowed to hold both a standing tree and a paved yard, so those two must not fight
+   * over one slot in one list"*. `props` carries a one-thing-per-cell invariant that six tests
+   * guard, and they are RIGHT to: two trees in one cell is a bug. But a lamp post on the kerb of a
+   * road cell is not a second occupant of that cell — it takes no cell at all, it hangs on an edge.
+   * Putting it in `props` made six tests go red at once, and every one of them was telling the
+   * truth. A separate list keeps their law intact and gives this one its own (`streetFurniture.test.js`).
+   */
+  const roadProps = props.filter((p) => p.kind === 'road');
+  const street = deriveStreetFurniture({ era: eraNum, roads: roadProps });
+
   return {
     era:       eraNum,
     gridSize:  CITY_GRID_SIZE,
@@ -896,6 +912,8 @@ export function computeCityLayout({ built, levels, era, stats, pending } = {}) {
     dwellings: dwellings.sort(byIsometricDepth),
     props:     props.sort(byIsometricDepth),
     covers:    covers.sort(byIsometricDepth),
+    // round 51 (ADR-091): street furniture — hangs on the EDGE of a road cell, occupies none
+    street:    street.sort(byIsometricDepth),
     scaffolds: scaffolds.sort(byIsometricDepth),
     ground:    buildGround(eraNum),
     // ⚠️ "Trống" vẫn CHỈ tính công trình đã xây. Một bãi đất chỉ có giàn giáo thì đúng là chưa có

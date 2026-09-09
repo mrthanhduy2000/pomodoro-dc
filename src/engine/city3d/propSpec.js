@@ -29,6 +29,7 @@ import { prism, countSpecTriangles, specHeight } from './parts';
 import { growEraTree } from './flora';
 import { buildGroundCover } from './groundCover';
 import { COVER_KINDS, getGroundCoverStyle } from './groundCoverStyle';
+import { STREET_BUILDERS } from './streetFurnitureSpec';
 
 /** Cây thân gỗ — loài do `floraStyle.js` quyết định theo kỷ. */
 function tree(seed, era, detail) {
@@ -536,6 +537,9 @@ const BUILDERS = {
   tree, bush: bushProp, rock, lamp, water, field,
   // round 49 (ADR-089): the props that move, and the signs of life
   boat, stall, laundry, tent, campfire, brazier, forge, well, barrels, firewood, lantern, cart, animal, bench,
+  // round 51 (ADR-091): what stands beside the road — lamp posts, bollards, hydrants, rails, weeds.
+  // Shapes live in their own file for the same reason flora does: this file is the CONNECTOR.
+  ...STREET_BUILDERS,
   ...Object.fromEntries(COVER_KINDS.map((kind) => [kind, coverBuilder(kind)])),
 };
 

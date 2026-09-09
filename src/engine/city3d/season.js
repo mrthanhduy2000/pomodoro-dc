@@ -83,13 +83,28 @@ const LOOK = Object.freeze({
 });
 
 /** Per-era touches on top of the climate look — the country's own signature of that season. */
+/**
+ * ⚠️ WINTER IS WHERE FIFTEEN CITIES GO WHITE. The first draft gave every cold era `snow: 1,0`, and the
+ * only numeric gate of round 50 caught it at once: **10 of the 105 era pairs** fell under the eye
+ * threshold (5↔9 was 1,0 apart), because snow paints ground and roof the same colour everywhere.
+ * The fix is not a lower threshold, it is SNOW THAT BELONGS TO ITS CITY — and each depth is a fact
+ * about the place, not a number picked to pass a test:
+ *   · Stalingrad (12) — deep, untouched snow, the whole point of that winter;
+ *   · Burg Eltz (5) — an Eifel forest under thick snow, but the castle's slate keeps showing;
+ *   · Paris (9) — a city that clears its boulevards; snow lies in the gardens;
+ *   · Manchester (10) — snow goes GREY within a day under the mills (soot is the era's own material);
+ *   · New York (11) — the least: ploughed streets, dark stone, steam.
+ */
 const ERA_TOUCH = Object.freeze({
   13: { spring: { blossom: 1.0, blossomHue: 345, particle: 'petals' } },   // sakura
   4:  { spring: { blossom: 0.7, blossomHue: 350 } },                        // peach blossom over Chang'an
   1:  { spring: { blossom: 0.45, blossomHue: 48, particle: null } },          // steppe wildflowers, yellow
   6:  { spring: { leafSatMul: 1.35, leafLightMul: 1.2 }, autumn: { groundHueShift: -28, groundSatMul: 1.25 } },   // young rice · ripe rice
-  12: { spring: { snow: 0.3 }, autumn: { snow: 0.2 }, summer: { snow: 0 } },  // Stalingrad: its own ground is snow all year (`groundKind`)
-  10: { autumn: { fog: 0.3 }, winter: { fog: 0.3 } },                         // Manchester smog thickens
+  12: { spring: { snow: 0.3 }, autumn: { snow: 0.2 }, summer: { snow: 0 }, winter: { snow: 1.0 } },   // Stalingrad: deep snow
+  5:  { winter: { snow: 0.82 } },                                             // slate still shows through
+  9:  { winter: { snow: 0.62 } },                                             // Paris clears its boulevards
+  11: { winter: { snow: 0.46 } },                                             // New York ploughs; dark stone, steam
+  10: { autumn: { fog: 0.3 }, winter: { fog: 0.34, snow: 0.55, groundSatMul: 0.5, groundLightAdd: -0.06 } },   // Manchester: snow goes grey with soot
 });
 
 const IDENTITY = Object.freeze({

@@ -803,7 +803,9 @@ export function buildScenePalette({ tokens, eraColor, era: eraNumber, daylight, 
     const l0 = clamp01(groundHsl.l * (isDark ? GROUND_NIGHT_L : 1) + look.groundLightAdd + dl);
     return {
       h: ((groundHsl.h + look.groundHueShift + dh) % 360 + 360) % 360,
-      s: clamp01(s0 * (1 - snowK) + 0.04 * snowK),
+      // ⚠️ SNOW KEEPS A LITTLE OF THE COUNTRY. Wiping saturation to 0,04 made five cold eras identical
+      // (see the winter note in `season.js`); 0,45 of the era's own saturation survives at full cover.
+      s: clamp01(s0 * (1 - 0.55 * snowK) + 0.03 * snowK),
       l: clamp01(l0 * (1 - snowK) + snowL * snowK),
     };
   };

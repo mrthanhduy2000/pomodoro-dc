@@ -110,7 +110,16 @@ export function humanDims(style) {
   // 1,8 điểm ảnh và biến mất; mà cái đầu chính là thứ DUY NHẤT làm mắt đọc ra "người" thay vì
   // "viên gạch" — đó là toàn bộ ngôn ngữ của quân cờ và của hình nhân Lego, và mô hình 2 hộp cũ
   // đã chọn đúng như vậy (28%). Đây là một quyết định về KHẢ ĐỌC, không phải về giải phẫu.
-  const headH = H * 0.20;
+  // ⚠️ ROUND 50 (ADR-090) — `TECH_DEBT_3D #81` FIXED AT THE ROOT, ON ĐÀM'S EXPLICIT ORDER: *"sửa gốc
+  // của #81, không sửa triệu chứng: cái ĐẦU to gấp 1,54 lần đời thật, nên mọi thứ đội lên nó đều sai
+  // theo. Sửa cái đầu thì cái mũ tự đúng."* Round 49 had shrunk the HAT (1,9 → 1,7 `headW`) and hit a
+  // floor at 1,62, because the crown must still fit the skull — which is the symptom talking.
+  // 0,20 → 0,16 of body height (real ≈ 0,13, so 1,23× instead of 1,54×). Every hat, every helmet and
+  // the conical nón lá are expressed in `headW`, so they all come right without touching one of them:
+  // the brim goes from 1,36× the shoulders to ≈ 1,09×, against 0,67× in life.
+  // Why the enlargement existed at all: at 14 px a true-scale head is 1,8 px. That reason weakened
+  // twice — round 47 doubled the resident's on-screen size, and round 50 lets Đàm WALK UP to them.
+  const headH = H * 0.16;
   const torsoH = H - legLen - headH;
   const b = style.build;
   const armLen = (H - legLen - headH) + legLen * 0.22;
@@ -131,7 +140,7 @@ export function humanDims(style) {
      */
     torsoW: H * 0.25 * b,
     torsoD: H * 0.155 * b,
-    headW: H * 0.20,
+    headW: H * 0.16,   // round 50 (#81): the head is the root — see the note at `headH`
     limbW: H * 0.085 * b,
     /**
      * Khoảng cách từ trục giữa ra tâm mỗi hông / mỗi vai.

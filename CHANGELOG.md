@@ -10,6 +10,29 @@
 > **Muốn hiểu VÌ SAO một quyết định được chọn** → `ARCHITECTURE_DECISIONS.md`. **Muốn biết migration
 > cụ thể nào cần chạy** → `MIGRATION.md`.
 
+## 2026-09-09 — Round 50: more to see, more to do (ADR-090)
+
+**Purpose.** Đàm's brief: *"THÊM TIỂU TIẾT VÀ TÍNH NĂNG … CHỈ THÊM, KHÔNG BỚT … BỎ HẾT VIỆC NGƯỠNG VÀ
+TRẦN"*. Measured by two questions only: how much more is there to see, and how much more can he do.
+
+**Scope.** New engine modules `season.js` · `walk.js` · `interiors.js` · `facadeDetail.js`; `weather.js`
+· `palette3d.js` · `motion.js` · `orbit.js` · `daylight.js` · `groundFloor.js` · `buildingSpec.js` ·
+`rooftop.js` · `blockStyle.js` · `human.js`; UI `CityStage` · `CityTimeControls` · `cityPostcard` ·
+`CityScene3D` · `sceneGraph`; `scripts/city-preview.mjs` (`--season`, `--walk`). No store, no sync, no 2D.
+- **Four seasons** — 15 eras × 4 = 60 looks: leaves, blossom, ground, snow, wind, fog, falling petals
+  and leaves, and a season row for the weather. Deterministic; a sealed era freezes its own season.
+- **An hour slider and season chips** under the picture; a museum piece shows its frozen state instead.
+- **Walk mode** — eye level, on the road network, as a mode of the SAME orbit crane.
+- **Postcard** — the current frame plus a caption band (era, country, buildings, sessions, season, hour),
+  saved as a PNG.
+- **Interiors** — open doors with a room behind them; a forge's fire is a real fire source at night.
+- **`#77` + `#90(b)` closed together**: the rooftop ceiling is a relation (0,24 → 0,083 derived from
+  `CELL_PIXELS`/`EYE_PIXELS`), the land floor keeps 0,24 under its own name. 473/473 units keep detail.
+- **`#81` closed at the root**: the head is 0,16 of body height, not 0,20, so every hat came right.
+- **18 kinds of facade detail**, per-era vocabulary, all flush with the wall.
+- Re-based on purpose: GOLDEN (15), triangle marks (15), plinth count and distribution, the cityFocus
+  control list, one named zoom pair. `npm run test:quiet` **1 733 pass · 0 fail · skipped 1**.
+
 ## 2026-09-09 — Round 49: something to blow, and a fire lit (ADR-089)
 
 **Purpose.** Đàm's brief: *"CHO CÁI MÁY THỨ ĐỂ THỔI, VÀ THẮP LỬA LÊN"* — props that move (flags, sails,

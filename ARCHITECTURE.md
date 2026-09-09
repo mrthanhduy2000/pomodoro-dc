@@ -859,6 +859,25 @@ now feed the renderer:
   smooths the three ground materials (specular gain only when wet), adds rain/drizzle streak particles, and tints
   smoke by phase. The preview tool renders the weather of `--hour`; `--dry` is the control frame.
 
+### 7.14 Seasons, the hour handle, walking, and insides (round 50, ADR-090)
+- **`engine/city3d/season.js`** — `seasonLook(era, season)` per CLIMATE with per-era touches; it moves
+  colour (through `palette3d`), air (wind and fog, through `sceneGraph`) and what falls (petals, leaves).
+  `weatherAt(era, hour, season)` takes the season as its second axis and `museumSeason` freezes a sealed
+  era, exactly as `MUSEUM_HOUR` freezes its light. Everything is a pure function; nothing reads a clock.
+- **The handle.** `CityStage` owns two pieces of state (`hour`, `season`, both `null` = the real clock and
+  calendar) and passes them to `CityScene3D`, which derives `hourNow`/`seasonNow` in ONE place and hands
+  them to `deriveDaylight`, `weatherAt`, `buildScenePalette` and `createCityScene`. `CityTimeControls`
+  renders the slider and the chips and holds no logic. A `dimmed` (museum) scene ignores both.
+- **`engine/city3d/walk.js`** — the walker owns a position, a heading and a pitch, and emits ORBIT states;
+  `orbit.setWalk(true)` frees the crane's clamps and `orbitPosition(state, { free: true })` allows a
+  negative pitch (looking up a facade). The floor comes from the scene (`city.groundHeightAt`), so there
+  is one terrain, not two. `CityScene3D` switches the lens (`WALK_FOV`, `WALK_NEAR`) and routes drag,
+  keys and the wheel; leaving flies home through the same `beginFlight` a focus flight uses.
+- **`engine/city3d/interiors.js` and `facadeDetail.js`** are emitters called from `buildingSpec`/
+  `groundFloor` like `rooftop` and `signature`: they only ADD parts, they use no role an era does not
+  already draw, and nothing they emit protrudes past the wall (footprints, spans, plinths and camera
+  plans are unchanged by construction — see the notes in each file).
+
 ### 7.12 Geometry vocabulary and roof grammar
 
 **Ngôn ngữ hình khối 3 trục — vì sao mô tả hình học lại là ENGINE THUẦN (2026-08-12)**: hình dáng

@@ -53,7 +53,14 @@ test('60 DIỆN MẠO: mỗi kỷ có ≥ 3 mùa KHÁC nền — và đông lạ
     const khac = SEASONS.filter((s) => JSON.stringify(seasonLook(era, s)) !== base).length;
     assert.ok(khac >= 3, `kỷ ${era}: chỉ ${khac} mùa khác nền — mùa không nhân được nội dung`);
   }
-  for (const era of [5, 9, 10, 11, 12]) assert.equal(seasonLook(era, 'winter').snow, 1, `kỷ ${era}: mùa đông lạnh phải có tuyết`);
+  // round 50: each cold era has its OWN snow depth — a uniform 1,0 made five cities identical and the
+  // 105-pair gate went red (see the winter note in `season.js`). Deep in Stalingrad, thin in New York.
+  for (const era of [5, 9, 10, 11, 12]) {
+    const snow = seasonLook(era, 'winter').snow;
+    assert.ok(snow >= 0.4, `kỷ ${era}: mùa đông lạnh phải có tuyết, đang ${snow}`);
+  }
+  assert.equal(seasonLook(12, 'winter').snow, 1, 'Stalingrad phải là tuyết dày nhất bảng');
+  assert.ok(seasonLook(11, 'winter').snow < seasonLook(5, 'winter').snow, 'New York dọn tuyết, rừng Eifel thì không');
   assert.ok(seasonLook(13, 'spring').blossom >= 0.9 && seasonParticle(seasonLook(13, 'spring')) === 'petals', 'Tokyo mùa xuân: anh đào và cánh hoa rơi');
   assert.equal(seasonParticle(seasonLook(9, 'autumn')), 'leaves', 'Paris mùa thu: lá rơi');
   assert.equal(seasonLook(6, 'autumn').groundHueShift < 0, true, 'Bắc Bộ mùa thu: lúa chín vàng');

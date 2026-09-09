@@ -1,3 +1,58 @@
+> Last update: **2026-09-09** — **ROUND 50: MORE TO SEE, MORE TO DO (ADR-090).**
+> Order: *"THÊM TIỂU TIẾT VÀ TÍNH NĂNG. CHỈ THÊM, KHÔNG BỚT. BỎ HẾT VIỆC NGƯỠNG VÀ TRẦN."* Everything on
+> `main`, on top of round 49. Three laws only: ADR-007 · determinism · the 105 era pairs.
+>
+> ### Measured before
+> 15 looks (one per era) · the city could only be seen at the current hour · no way down to the street ·
+> no way to keep a picture · 0/75 buildings had an inside · 0 kinds of facade detail · 4 eras losing
+> rooftop detail (worst ratio 0,844) · the head 1,54× life size with `#81` half-fixed at the hat.
+>
+> ### Done
+> 1. **Four seasons** (`season.js`) — climate × season tables (`cold · temperate · tropical · arid`) plus
+>    per-era touches: sakura (13), peach (4), young rice then harvest gold (6), snow (5·9·10·11·12),
+>    steppe flowers (1). Moves leaves, blossom, ground, snow on roofs and ground, wind, fog, and what
+>    falls. Summer is the identity look. `museumSeason` freezes a sealed era. `weather.js` gained
+>    `SEASON_WEATHER`; a cold winter snows instead of raining; `wet ≥ rain` still holds by construction.
+> 2. **The handle** (`CityTimeControls`) — a 0–23 h slider and four season chips under the picture, the
+>    hour committed 150 ms after the slider stops (each commit rebuilds the scene). A museum piece has no
+>    handle, only a caption naming its frozen hour and season.
+> 3. **Walk mode** (`walk.js` + `orbit.setWalk`) — eye level on the road network, as a MODE of the same
+>    crane: the walker emits orbit states, the pitch floor and distance clamp are freed and restored, the
+>    lens widens to 62° with a 0,03 near plane. It stands on the scene's own terrain (`groundHeightAt`).
+>    Keys · buttons · wheel walk, drag looks around, Esc and the corner button fly home.
+> 4. **Postcard** (`cityPostcard.js`) — render and read the canvas in the same turn, then a caption band
+>    (era · country · landmark · buildings · sessions · season · hour) and a PNG download.
+> 5. **Interiors** (`interiors.js`) — ~60 % of non-symmetric buildings open their door onto a room: forge
+>    (with a real `fire` source), shelves, table, loom, bookcase, altar, bar, bed, sacks, desk. Cavity
+>    depth ≤ a third of the building; landmarks stay shut (symmetry).
+> 6. **`#77` + `#90(b)` closed together** — `ROOFTOP_MIN_SPAN` is a relation now (0,083, derived from
+>    `CELL_PIXELS`/`EYE_PIXELS`/`BUILDING_SCALE`/`STACK_W_RATIO` and the close-up frame's 3,4× gain); the
+>    LAND floor keeps 0,24 as `ROOFTOP_LAND_SPAN`, so no dwelling moved. Eras losing rooftop detail:
+>    [6,10,11,13] → **[]**; worst ratio 0,844 → **1,000** (473/473 units).
+> 7. **Facade vocabulary** (`facadeDetail.js`) — 18 kinds, per era, all flush with the wall.
+> 8. **`#81` closed at the root** — head 0,20 → 0,16 of body height; every hat came right untouched.
+> 9. **The one numeric gate caught a real one.** The 105-pair measurement now runs over all four seasons
+>    (`palette3d.test.js`). First run: **10/105 pairs under the eye threshold in winter** (eras 5·9·10·11·12,
+>    5↔9 just 1,0 apart) because `snow: 1,0` paints every city white. Fixed with snow that belongs to its
+>    city — deep in Stalingrad, cleared in Paris, ploughed in New York, grey with soot in Manchester — and
+>    45 % of each era's ground saturation surviving. Re-measured **0/105 in all four seasons**.
+> 10. **Re-based on purpose:** GOLDEN (15) · triangle marks (15) · plinth count era 5 0→1 and its
+>    distribution 26→27 · cityFocus control list [1,7,8,10,12,15] / 9 flights · one named zoom pair [10,11].
+>
+> ### Measured after
+> looks 15 → **60** · hours viewable 1 → **24** · street level **yes** · postcard **yes** · buildings with
+> an inside 0 → **~60 % of non-symmetric** · facade detail kinds 0 → **18** · rooftop detail 473/473 ·
+> falling kinds +petals +leaves · draw calls **unchanged** · triangles era 6 200 308 → 237 632 ·
+> 3D debts 46 → **43 open** · `npm run test:quiet` **1 733 pass · 0 fail · skipped 1** · lint 0 · build ✓.
+>
+> ### Not done · why
+> `#65` (river · canal · estuary share one geometry) and the rest of Việc 8's ground work · more resident
+> roles and animals beyond the head fix (Việc 10) · traces of habitation beyond round 49's life props
+> (Việc 11). All additive, none blocked — the budget went to Part A and the two roof debts, in the order
+> the brief itself asked for.
+
+---
+
 > Last update: **2026-09-09** — **ROUND 49: SOMETHING TO BLOW, AND A FIRE LIT (ADR-089).**
 > Order: *"CHO CÁI MÁY THỨ ĐỂ THỔI, VÀ THẮP LỬA LÊN … lúc 10 giờ tối, không chạm gì, nhìn 10 giây — và tôi thấy
 > lửa cháy, cờ bay, thuyền nhấp nhô."* Everything on `main`, on top of round 48. No performance numbers (Đàm).

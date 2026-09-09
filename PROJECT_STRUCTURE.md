@@ -581,7 +581,11 @@
 │   │   │   ├── flora.js           # 7 LOÀI CÂY (Phase 8D): tán rộng · thông · cọ · trắc bách diệp
 │   │   │   ├── landGrowth.js      # ROUND 48 (ADR-088): land grows with sessions — milestones 0·25·50·90·140, outskirt reach 8→11, hamlet bonus, camera pull-back; only add, never move
 │   │   │   ├── motion.js          # ROUND 48 (ADR-088): what moves per era (wind · smoke · particles), phaseAt(x,z), motionTime — pure, no three
-│   │   │   ├── weather.js         # ROUND 49 (ADR-089): weatherAt(era, hour) per day phase — rain · drizzle · fog · snow · sand; wet ≥ rain by construction; wetSurface; museumWeather
+│   │   │   ├── weather.js         # ROUND 49 (ADR-089): weatherAt(era, hour, season) per day phase — rain · drizzle · fog · snow · sand; wet ≥ rain by construction; wetSurface; museumWeather
+│   │   │   ├── season.js          # ROUND 50 (ADR-090): the second axis — 15 eras × 4 seasons; leaves · blossom · snow · wind · fog · what falls; museumSeason freezes a sealed era
+│   │   │   ├── walk.js            # ROUND 50 (ADR-090): the walker — eye height, road-network positions, orbit states; walk mode is a MODE of orbit.js, not a second camera
+│   │   │   ├── interiors.js       # ROUND 50 (ADR-090): what an open door reveals — forge (a real fire source) · shelves · table · loom · books · altar · bar · bed · grain · desk
+│   │   │   ├── facadeDetail.js    # ROUND 50 (ADR-090): 18 kinds of facade ornament, a vocabulary per era, all flush with the wall
 │   │   │   ├── waterProps.js      # ROUND 49 (ADR-089): boats on the water — cells with insetAt above a per-water threshold, 1,7 apart, yaw along the open axis; item kind `water` (landscape)
 │   │   │   ├── lifeProps.js       # ROUND 49 (ADR-089): ERA_LIFE — stalls, laundry, tents, campfires, braziers, forges, wells, carts, animals… on free cells by roads/homes; only-add
 │   │   │   │                      #   · đa · cây phố · bụi. Luật chống-primitive: tán là NHIỀU

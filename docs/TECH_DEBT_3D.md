@@ -1,4 +1,4 @@
-# TECH_DEBT — 3D city subsystem (46 open entries · 3 closed in round 47 · 2 in round 48 · 1 in round 49)
+# TECH_DEBT — 3D city subsystem (43 open entries · 3 closed in round 47 · 2 in round 48 · 1 in round 49 · 3 in round 50)
 
 > Split out of the active `TECH_DEBT.md` on 2026-09-06 (ADR-075). **These are still OPEN debts, not
 > archived history** — they were moved by SUBSYSTEM, not by status.
@@ -2129,7 +2129,13 @@ hai con số. Việc *nâng* 9 kỷ kia lên trên 5% nếu có làm thì thuộ
   nhỏ thêm khối lần nữa. Cổng đếm nằm ở `block.test.js` (bài `CHI TIẾT MÁI KHÔNG ĐƯỢC CHẾT`), và nó
   kể tên chín kỷ BẰNG chứ không "bao gồm" — kỷ thứ mười rơi vào thì ĐỎ, mà một kỷ được chữa xong
   cũng ĐỎ.
-- **Owner**: chưa phân công · **Status**: Open
+- **Owner**: round 50 (2026-09-09) · **Status**: ✅ **CLOSED 2026-09-09 (ADR-090)** — rewritten as the
+  RELATION the entry asked for, using the two calibrations that already existed (`CELL_PIXELS = 64`,
+  `EYE_PIXELS = 4`) plus `BUILDING_SCALE`, `STACK_W_RATIO` and the close-up frame's 3,4× gain:
+  `ROOFTOP_MIN_SPAN` = 0,083 instead of 0,24. The land floor stayed at 0,24 under its own name
+  (`ROOFTOP_LAND_SPAN`) because it answers a different question — exactly the distinction this entry
+  drew. Measured after: the list of eras losing rooftop detail is EMPTY and the worst ratio is 1,000
+  (473/473 units), against 0,844 before.
 
 ## #76 — Từ vựng mái NHÀ DÂN chỉ có **3 giá trị cho 15 kỷ**, trong khi mái KỲ QUAN đã có 10
 
@@ -2290,7 +2296,10 @@ hai con số. Việc *nâng* 9 kỷ kia lên trên 5% nếu có làm thì thuộ
   không vá riêng kỷ 6.
 - **Review Trigger**: mỗi lần chạm `block.js`, `blockStyle.js`, cột `storey`, `ROOFTOP_MIN_SPAN`,
   **hoặc bảng `networkStyle.js`** (cột `parcels`/`minSide` — xem cập nhật bên dưới).
-- **Owner**: round 47 (2026-09-08) · **Status**: (a) ✅ **CLOSED 2026-09-08 (ADR-087)** · (b) still OPEN
+- **Owner**: round 50 (2026-09-09) · **Status**: (a) ✅ **CLOSED 2026-09-08 (ADR-087)** · (b) ✅ **CLOSED
+  2026-09-09 (ADR-090)** — together with `#77`, as this entry required (*"nên làm CÙNG LÚC, không vá
+  riêng kỷ 6"*): the ceiling became a relation, so era 6 — widest alleys, thinnest units — keeps all
+  its rooftop detail again. No absolute number was lowered and no era's land changed.
 
 ### ⚠️ CẬP NHẬT 2026-08-24 (Phase 21) — CẢ HAI NỬA ĐỀU THU HẸP, VÀ CẢ HAI ĐỀU KHÔNG PHẢI DO AI ĐI CHỮA CHÚNG
 
@@ -2558,11 +2567,14 @@ trong chú thích thì đừng để `--selftest` của chính nó vẫn dùng �
   nhìn thấy khác biệt này, nên sửa nó bây giờ là tiêu công cho một thứ chưa ai thấy.
 - **Review Trigger**: khi cư dân được vẽ lớn hơn trên khung mặc định, HOẶC khi có kỷ thứ tư khai
   `headgear: 'brim'`.
-- **Owner**: round 49 (2026-09-09) · **Status**: 🟡 **PARTIAL 2026-09-09 (ADR-089)** — brim 1,9 → 1,7 `headW`
-  (1,52× → 1,36× the shoulders). The floor is 1,62: `humanShape.test.js` demands the crown (0,62 × brim)
-  clear the skull, and the skull carries the head's deliberate 1,54× enlargement. Going further means
-  a hat that does not fit the head it sits on — the entry's own diagnosis. Left open for the day the
-  head ratio itself is revisited.
+- **Owner**: round 50 (2026-09-09) · **Status**: ✅ **CLOSED 2026-09-09 (ADR-090)** — at the ROOT, on
+  Đàm's explicit order. Round 49 had shrunk the HAT (1,9 → 1,7 `headW`) and hit a floor of 1,62,
+  because the crown must fit the skull; that was the symptom. Round 50 shrank the SKULL: `headH`/`headW`
+  0,20 → **0,16** of body height (real ≈ 0,13, so 1,23× instead of 1,54×). Every hat, helmet and the
+  conical nón lá is expressed in `headW`, so they all came right without touching one of them — the
+  brim went from 1,36× the shoulders to **≈ 1,09×**, against 0,67× in life. The reason the enlargement
+  existed (a true-scale head is 1,8 px at 14 px tall) weakened twice: round 47 doubled the resident's
+  on-screen size and round 50 lets Đàm WALK UP to them (`walk.js`).
 
 ---
 

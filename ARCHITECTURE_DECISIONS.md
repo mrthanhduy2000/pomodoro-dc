@@ -1292,3 +1292,55 @@ Round 48 built the motion machine — one clock, a per-vertex `aMotion`, particl
 - `--dry` is the only fair control for a weather frame: same hour, same light, same clock, no weather.
 
 ---
+
+## ADR-090 — Round 50: more to see and more to do — four seasons, a handle on the clock, a walk down the street, a postcard, and insides
+
+**Date**: 2026-09-09 · **Order**: *"VÒNG 50 — THÊM TIỂU TIẾT VÀ TÍNH NĂNG … CHỈ THÊM, KHÔNG BỚT … BỎ HẾT VIỆC NGƯỠNG VÀ TRẦN … Vòng này đo bằng đúng hai câu: thành phố có thêm bao nhiêu thứ để nhìn, và tôi làm được thêm bao nhiêu việc với nó."* Three laws only: ADR-007, determinism, and the 105 era pairs.
+
+### Context
+Rounds 47–49 built a city that is a place: fifteen grounds, motion, fire, weather. But Đàm could only ever see it at the hour it happened to be, from above, and could not keep a picture of it; and seventy-five buildings were seventy-five shells. Two debts about roof detail (`#77`, `#90(b)`) had been deferred three rounds running because they touch twelve green tests, and `#81` had been half-fixed at the symptom.
+
+### Decisions
+1. **The season is the second axis of the sky** (`season.js`). Fifteen eras × four seasons = sixty looks on machinery that already existed. `seasonLook(era, season)` is a pure table per CLIMATE (`cold · temperate · tropical · arid`) with per-era touches: sakura over Tokyo, peach over Chang'an, young rice then harvest gold in the Red River delta, snow on Stalingrad, Manchester's smog thickening in autumn. It moves leaf hue/saturation/lightness, the blossom (leaf2 becomes the blossom colour, never a new role), the ground's hue and lightness, snow cover on ground and roofs, wind, fog, and what falls (petals, leaves). Summer is the identity look — every table of rounds 47–49 was tuned on it. A sealed era freezes its own season (`museumSeason`) the way ADR-086 froze its hour.
+2. **The weather gained the same axis** (`SEASON_WEATHER` per climate replaces the era's row for that phase; a cold winter turns any rain into snow). The one law of round 49 still holds by construction: `wet ≥ rain`, swept over 15 × 24 × 4 in `season.test.js`.
+3. **A handle on the clock and the calendar** (`CityTimeControls`): a 0–23 h slider and four season chips under the picture. No logic of its own — `deriveDaylight(hour)`, `weatherAt(era, hour, season)` and `seasonLook` already took these as parameters. The hour commits 150 ms after the slider stops because each commit rebuilds the WebGL scene; the caption follows the thumb immediately. A museum piece has NO handle: it shows its frozen hour and season as a caption, because a slider that does nothing would be a lie about the museum.
+4. **Walk mode is a mode of the same crane** (`walk.js` + `orbit.setWalk`), never a second camera — the trap `cityFocus.js` has warned about since Phase 3. The walker holds a position on the road network and produces ORBIT STATES; the crane's pitch floor and distance clamp are freed while walking and restored on exit; the lens widens (62°) and its near plane comes in (0,03). It stands on the scene's own terrain (`groundHeightAt`) — at y = 0 the eye was under the ground plate, and the first photos showed the underside of the world. Keys, buttons and the wheel walk; drag looks around; Esc and the corner button fly home through the existing focus-flight mechanism.
+5. **The postcard** (`cityPostcard.js`): the scene renders and reads its canvas in the SAME turn (a WebGL drawing buffer is cleared at composite time, so a frame-late `toDataURL` returns black, and `preserveDrawingBuffer` would tax every frame of every session). A caption band names era, country, landmark, buildings, sessions, season and hour.
+6. **The shells got insides** (`interiors.js`): ~60 % of non-symmetric buildings stand with the door open, and behind it a dark cavity with two or three objects — forge, shelves, table, loom, bookcase, altar, bar, bed, sacks, desk — chosen by (era, type, seed). A forge's flame carries `tag: 'fire'`, so round 49's fire layer turns it into particles, a glow at night and a flickering local light. Two clamps, both measured: the cavity is never deeper than a third of the building, and a symmetric landmark keeps its door shut.
+7. **`#77` and `#90(b)` closed together, as `#77` demanded.** `ROOFTOP_MIN_SPAN` is now a RELATION, derived from the two calibrations that already existed (`CELL_PIXELS = 64`, `EYE_PIXELS = 4`), `BUILDING_SCALE`, `STACK_W_RATIO` and the close-up frame's 3,4× gain: **0,083** instead of 0,24. The LAND floor stayed at 0,24 under its own name (`ROOFTOP_LAND_SPAN`) — it decides how much ground a dwelling gets, and every dwelling ever built stands where it stands. Measured: eras losing rooftop detail went from [6, 10, 11, 13] to **[]**, worst ratio 0,844 → **1,000** (473/473 units).
+8. **Every facade speaks its era** (`facadeDetail.js`): string courses, pilasters, Fachwerk framing, bracket sets, brick arches, shutters, balconies with a plant, fire escapes, downpipes, signs and vertical signs, lanterns, lamps, awnings, tile panels, niches, air-conditioners, glass fins. Three rules make it safe at this scale: every item is FLUSH with the wall (a 0,022 protrusion tipped era 5 into another cell and gave it a plinth it never had — a test about TERRAIN caught a wall ornament), only roles every era already draws, and a landmark gets only the symmetric half of the vocabulary.
+9. **`#81` fixed at the root**, on Đàm's explicit order: the HEAD, not the hat. `headH`/`headW` 0,20 → **0,16** of body height (real ≈ 0,13). Every hat, helmet and nón lá is expressed in `headW`, so they all came right untouched: the brim went from 1,36× the shoulders to ≈ 1,09× (0,67× in life). The enlargement's original reason — a true-scale head is 1,8 px at 14 px tall — weakened twice: round 47 doubled the resident's size and round 50 lets Đàm walk up to them.
+
+### Consequences
+| | Before (round 49) | After |
+|---|---|---|
+| Looks (era × season) | 15 | **60** |
+| See the city at any hour | no | **yes** — slider 0–23 h, scene rebuilt |
+| Walk down the street | no | **yes** — eye level, on the roads, all 15 eras |
+| Keep a picture | no | **yes** — PNG with a caption band |
+| Buildings you can see into | 0/75 | **~60 % of every non-symmetric building** |
+| Facade detail kinds | 0 | **18**, per-era vocabulary |
+| Rooftop detail kept | 0,844 worst (4 eras losing) | **1,000 — 473/473 units** |
+| Falling things | rain · drizzle · snow · sand · dust | **+ petals · leaves** |
+| Triangles (era 6, the largest) | 200 308 | **237 632** (+18,6 %) |
+| Draw calls | unchanged | **unchanged** (no era gained a material family) |
+| 3D debts | 46 open | **43 open** — `#77` · `#81` · `#90(b)` closed |
+
+**Not done, on purpose:** `#65` (river · canal · estuary still share one geometry) and the rest of Việc 8's ground work; more resident roles and animals (Việc 10 beyond the head fix); traces of habitation beyond round 49's life props (Việc 11). All three are additive and none is blocked — they are simply the next round's, and the budget went to Part A and the two roof debts, as the brief's own ordering asked.
+
+### The one numeric gate, and what it caught
+Four seasons are four new chances for fifteen cities to converge, so the round-47 pair measurement was
+extended to run over EVERY season, on roofs AND ground (`palette3d.test.js`). It went red immediately:
+in winter, **10 of the 105 pairs** fell under the eye threshold (eras 5 · 9 · 10 · 11 · 12, with 5↔9 at
+1,0), because a uniform `snow: 1,0` paints every ground and roof the same white. The fix was not a
+lower threshold but snow that belongs to its city — deep in Stalingrad, thinner in the Eifel, cleared
+in Paris, ploughed in New York, and grey with soot in Manchester — plus 45 % of each era's own ground
+saturation surviving at full cover. Re-measured: **0/105 in all four seasons**, and the gate now runs
+in the suite forever.
+
+### Tool lessons
+- A walker without the ground under it stands at y = 0 and photographs the underside of the world — the scene must lend its own terrain, never a second copy.
+- A wall ornament that protrudes 0,022 changed a PLINTH count: `round(specSpan × BUILDING_SCALE)` is a cliff, and anything decorative must be flush.
+- `--season`, `--walk N`, `--walk-turn` and `--walk-look` were added to the preview tool so every claim in this ADR was photographed, not asserted.
+
+---

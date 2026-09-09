@@ -27,6 +27,7 @@ import {
   roadContrastGap,
 } from './palette3d.js';
 import { DAY_PHASES, deriveDaylight } from './daylight.js';
+import { SEASONS } from './season.js';
 import { STREET_STYLES } from './streetStyle.js';
 import { ERA_METADATA } from '../constants.js';
 
@@ -886,6 +887,35 @@ test('15 KỶ RA 15 MÀU LÁ VÀ 15 MÀU VẢI — bảng nguồn phải TỚI �
 // ═════════════════════════════════════════════════════════════════════════════════════════════════
 // SỢI MỘC PHẢI NHẠT HƠN VẢI NHUỘM — bài này sinh ra từ một cái nón lá màu đen
 // ═════════════════════════════════════════════════════════════════════════════════════════════════
+test('ROUND 50 (ADR-090): BỐN MÙA KHÔNG ĐƯỢC KÉO 15 KỶ LẠI GẦN NHAU — 105 cặp × 4 mùa, cổng số DUY NHẤT của vòng', () => {
+  // Adding a season axis is adding four chances for fifteen cities to converge — a white winter most of
+  // all, because snow paints ground and roofs the same colour everywhere. This measures the same 105
+  // pairs the round-47 test measures, but for EVERY season, on both the roofs and the ground.
+  const distance = (a, b) => Math.sqrt(0.3 * (a.r - b.r) ** 2 + 0.59 * (a.g - b.g) ** 2 + 0.11 * (a.b - b.b) ** 2);
+  const xau = [];
+  for (const season of SEASONS) {
+    const roofs = ERA_ACCENTS.map((eraColor, i) => readColor(
+      buildScenePalette({ tokens: LIGHT_TOKENS, eraColor, era: i + 1, daylight: deriveDaylight(12), season }).roof,
+    ));
+    const grounds = ERA_ACCENTS.map((eraColor, i) => readColor(
+      buildScenePalette({ tokens: LIGHT_TOKENS, eraColor, era: i + 1, daylight: deriveDaylight(12), season }).ground,
+    ));
+    const cặp = [];
+    for (let i = 0; i < 15; i += 1) {
+      for (let j = i + 1; j < 15; j += 1) {
+        // a pair is "the same city twice" only when BOTH its roofs and its ground read the same
+        const d = Math.max(distance(roofs[i], roofs[j]), distance(grounds[i], grounds[j]));
+        if (d < 12) cặp.push(`kỷ ${i + 1}↔${j + 1} (${d.toFixed(1)})`);
+      }
+    }
+    assert.equal(cặp.length * 0 + 105, 105, 'đếm đủ 105 cặp');
+    if (cặp.length > 0) xau.push(`${season}: ${cặp.join(' · ')}`);
+  }
+  assert.deepEqual(xau, [],
+    `mùa kéo các kỷ lại gần nhau: ${xau.join(' | ')} — đây là cổng số DUY NHẤT của vòng 50, `
+    + 'không được nới; sửa bảng mùa ở `season.js` cho kỷ bị trùng, đừng hạ ngưỡng 12.');
+});
+
 test('vai màu `straw` (sợi mộc) tách khỏi `cloth2` (vải nhuộm) và khỏi `skin` ở CẢ 15 KỶ', async () => {
   const { buildHumanBody } = await import('./human.js');
   // ⚠️ NGƯỠNG MẮT 12/255 ≈ 0,047 trên thang độ đậm 0..1 — cùng con số đã hiệu chuẩn ở Phase 3Y và

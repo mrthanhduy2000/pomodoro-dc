@@ -99,7 +99,15 @@ function pushTriangle(sink, a, b, c, rgb, shadeBase, occ = null) {
 
 /** Đặt một điểm cục bộ của khối vào toạ độ thế giới: xoay quanh trục đứng rồi dời. */
 function place(px, py, pz, transform) {
-  const { cos, sin, ox, oy, oz } = transform;
+  const { cos, sin, ox, oy, oz, m } = transform;
+  if (m) {
+    // Round 48 (ADR-088): a tilted part carries a full 3×3 matrix (Ry · Rz · Rx, row-major).
+    return [
+      ox + m[0] * px + m[1] * py + m[2] * pz,
+      oy + m[3] * px + m[4] * py + m[5] * pz,
+      oz + m[6] * px + m[7] * py + m[8] * pz,
+    ];
+  }
   return [
     ox + px * cos - pz * sin,
     oy + py,
@@ -305,7 +313,26 @@ function partWorld(item, part) {
     ox: item.x + (lx * baseCos - lz * baseSin),
     oy: (item.y ?? 0) + part.y * scale,
     oz: item.z + (lx * baseSin + lz * baseCos),
+    m: null,
   };
+  // Round 48 (ADR-088): the second axis. `Ry(spin) · Rz(rz) · Rx(rx)` about the part's base centre.
+  const rx = part.rx ?? 0;
+  const rz = part.rz ?? 0;
+  if (rx !== 0 || rz !== 0) {
+    const cy = transform.cos; const sy = transform.sin;
+    const cz = Math.cos(rz); const sz = Math.sin(rz);
+    const cx = Math.cos(rx); const sx = Math.sin(rx);
+    // Rz · Rx
+    const a00 = cz; const a01 = -sz * cx; const a02 = sz * sx;
+    const a10 = sz; const a11 = cz * cx; const a12 = -cz * sx;
+    const a20 = 0; const a21 = sx; const a22 = cx;
+    // Ry · (Rz · Rx) — Ry here matches `place`'s yaw: x' = x·cos − z·sin, z' = x·sin + z·cos
+    transform.m = [
+      cy * a00 - sy * a20, cy * a01 - sy * a21, cy * a02 - sy * a22,
+      a10, a11, a12,
+      sy * a00 + cy * a20, sy * a01 + cy * a21, sy * a02 + cy * a22,
+    ];
+  }
   // Toạ độ của khối đã nằm trọn trong `transform`, nên bản sao dưới đây lấy gốc y = 0 và chỉ giữ
   // kích thước. Nhân `scale` ở đây thay vì ở tầng mô tả để tầng mô tả luôn thuần đơn vị ô.
   const scaled = {

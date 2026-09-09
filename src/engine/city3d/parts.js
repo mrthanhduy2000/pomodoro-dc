@@ -95,6 +95,32 @@ function safeRole(role) {
 }
 
 /**
+ * ROUND 48 (ADR-088) — THE SECOND AXIS. Until this round a part could only spin about the vertical
+ * (`ry`), so a palm frond was a flat plate (a "✳" from the camera's height, `TECH_DEBT_3D #29`) and a
+ * barrel tile could only stand up, never lie on its slope (#40). `rx`/`rz` tilt the part about its
+ * OWN BASE CENTRE: the base stays where `x`/`z` put it and the top leans — `Rz(rz)` leans local +Y
+ * toward local −X, `Rx(rx)` leans it toward local +Z, and the yaw `ry` turns the result last
+ * (`geometryFactory.partWorld` builds `Ry · Rz · Rx`). A vertical prism tilted past 90° is a hinge:
+ * that is how a frond now hangs from the crown instead of lying on it.
+ * ⚠️ The keys are written ONLY when non-zero, so every spec that never asked for a tilt serialises
+ * byte for byte as before — the GOLDEN digests of `block.test.js` must not move for a no-op.
+ */
+function tiltKeys(rx, rz) {
+  const tx = finite(rx, 0);
+  const tz = finite(rz, 0);
+  if (tx === 0 && tz === 0) return {};
+  return { rx: tx, rz: tz };
+}
+
+/** How far a tilted part's top sweeps outward from its base — 0 for an upright part. */
+export function tiltReach(part) {
+  const tx = part?.rx ?? 0;
+  const tz = part?.rz ?? 0;
+  if (!tx && !tz) return 0;
+  return (part.h ?? 0) * Math.sin(Math.min(Math.PI / 2, Math.hypot(tx, tz)));
+}
+
+/**
  * Lăng trụ đều có thể thóp dần — hình nguyên thuỷ chủ lực.
  *
  * `sides` + `taper` phủ gần hết nhu cầu:
@@ -115,6 +141,8 @@ export function prism({
   sides = 4,
   taper = 1,
   ry = 0,
+  rx = 0,
+  rz = 0,
   role = 'wall',
 } = {}) {
   const width = Math.max(0, finite(w, 1));
@@ -131,6 +159,7 @@ export function prism({
     sides: Math.round(clamp(finite(sides, 4), MIN_SIDES, MAX_SIDES)),
     taper: clamp(finite(taper, 1), 0, 1),
     ry: finite(ry, 0),
+    ...tiltKeys(rx, rz),
     role: safeRole(role),
   };
 }
@@ -146,6 +175,8 @@ export function gable({
   x = 0, y = 0, z = 0,
   w = 1, h = 0.5, d = null,
   ry = 0,
+  rx = 0,
+  rz = 0,
   role = 'roof',
 } = {}) {
   const width = Math.max(0, finite(w, 1));
@@ -158,6 +189,7 @@ export function gable({
     h: Math.max(0, finite(h, 0.5)),
     d: Math.max(0, finite(d, width)),
     ry: finite(ry, 0),
+    ...tiltKeys(rx, rz),
     role: safeRole(role),
   };
 }
@@ -361,7 +393,7 @@ export function specSpan(parts) {
     const halfW = (part.w ?? 0) / 2;
     const halfD = (part.d ?? 0) / 2;
     // khối xoay thì hình bao của nó nở ra tới đường chéo
-    const reach = part.ry ? Math.hypot(halfW, halfD) : Math.max(halfW, halfD);
+    const reach = (part.ry ? Math.hypot(halfW, halfD) : Math.max(halfW, halfD)) + tiltReach(part);
     span = Math.max(
       span,
       Math.abs(part.x ?? 0) + reach,
@@ -429,8 +461,9 @@ export function specFootprint(parts) {
     const ry = part.ry ?? 0;
     const c = Math.abs(Math.cos(ry));
     const s = Math.abs(Math.sin(ry));
-    const halfW = ((part.w ?? 0) / 2) * c + ((part.d ?? 0) / 2) * s;
-    const halfD = ((part.w ?? 0) / 2) * s + ((part.d ?? 0) / 2) * c;
+    const lean = tiltReach(part);   // round 48: a leaning top sweeps outward — count it, conservatively on both axes
+    const halfW = ((part.w ?? 0) / 2) * c + ((part.d ?? 0) / 2) * s + lean;
+    const halfD = ((part.w ?? 0) / 2) * s + ((part.d ?? 0) / 2) * c + lean;
     const x = part.x ?? 0;
     const z = part.z ?? 0;
     x0 = Math.min(x0, x - halfW); x1 = Math.max(x1, x + halfW);

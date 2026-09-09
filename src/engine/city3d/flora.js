@@ -155,18 +155,17 @@ function palm(seed, size, lobeBudget) {
   for (let i = 0; i < fronds; i += 1) {
     const ang = (i / fronds) * Math.PI * 2 + spin;
     const len = 0.78 + unit(`${seed}|fl${i}`) * 0.32;   // tàu lá dài ngắn khác nhau
+    // ROUND 48 (ADR-088, closes #29): the frond is a VERTICAL blade hinged at the crown and tilted
+    // past horizontal about its own base — `rz = −(90° + droop)` — so it hangs outward and DOWN like a
+    // real frond instead of lying flat. The longer the frond, the deeper it droops (13° → 29°).
+    // From the camera's height the crown now reads as a dome of blades, not a "✳".
+    const droop = 0.22 + (len - 0.78) * 0.9;
     parts.push(prism({
-      x: shift + Math.cos(ang) * reach * 0.5,
-      z: shift * 0.42 + Math.sin(ang) * reach * 0.5,
-      // ⚠️ TÀU LÁ CÀNG DÀI CÀNG RỦ THẤP — và đây là bản vá của một thứ chỉ ảnh chụp mới thấy.
-      // `parts.js` không nghiêng được khối, nên tàu lá là những tấm NẰM NGANG. Nhìn từ bên hông thì
-      // đúng là một cây cọ; nhưng camera của màn Thành Phố nhìn CHÉO TỪ TRÊN XUỐNG, và ở góc đó cả
-      // vòng lá dẹt lại thành một dấu hoa thị "✳" phẳng lì. Cọ thật thì tàu càng dài càng oằn
-      // xuống, nên buộc độ rủ vào chính chiều dài (chứ không rắc ngẫu nhiên như bản cũ) sẽ dựng lại
-      // được cái phễu lá — tốn 0 tam giác, vì chỉ đổi toạ độ của những khối vốn đã có.
-      y: y - (0.02 + (len - 0.78) * 0.42) * size - unit(`${seed}|fd${i}`) * 0.05 * size,
-      w: reach * len, d: 0.09 * size, h: 0.036 * size,
-      sides: 4, taper: 0.18 + unit(`${seed}|ft${i}`) * 0.26, ry: ang,
+      x: shift + Math.cos(ang) * 0.03 * size,
+      z: shift * 0.42 + Math.sin(ang) * 0.03 * size,
+      y: y + 0.02 * size - unit(`${seed}|fd${i}`) * 0.03 * size,
+      w: 0.09 * size, d: 0.036 * size, h: reach * len,
+      sides: 4, taper: 0.18 + unit(`${seed}|ft${i}`) * 0.26, ry: ang, rz: -(Math.PI / 2 + droop),
       role: i % 2 === 0 ? SUN : SHADE,
     }));
   }

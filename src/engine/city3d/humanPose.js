@@ -81,6 +81,16 @@ const PELVIS_LIST_RAD = 0.09;
 
 /** Thân trên nghiêng ngược lại bấy nhiêu radian để cái đầu bớt lắc theo hông. */
 const TRUNK_COUNTER_RAD = 0.12;
+/**
+ * ROUND 48 (ADR-088) — THE THIRD JOINT AXIS: `c`, a twist about the vertical. Round 47's report
+ * cited `#82` as open; it was closed in ADR-057 with two axes (`a` pitch, `b` list), and what was
+ * still missing is exactly this one: the pelvis girdle and the shoulder girdle twist AGAINST each
+ * other as we walk (the twist already moved the hip and shoulder POINTS, but the blocks between them
+ * stayed square to the street), and the head looks around instead of staring down the road.
+ * `HEAD_LOOK_RAD` is a slow, deterministic glance keyed to distance travelled — no clock, no random —
+ * so two frames of the same walker at the same spot are the same picture.
+ */
+const HEAD_LOOK_RAD = 0.42;
 
 /**
  * XOAY MỘT ĐỘ LỆCH QUANH MỘT KHỚP — **một hàm, một chỗ khai, bốn chỗ đọc.**
@@ -272,6 +282,9 @@ export function poseAt(body, travelled) {
   // Người thật đi bộ thì lồng ngực xoay ngược chiều với đai hông, để triệt mô men xoắn. Bỏ nó đi
   // chính là thứ làm một hình nhân trông như robot dù chân tay đã đúng pha.
   const shoulderTwist = -g.twist * THORAX_TWIST_RAD * Math.cos(turn);
+  // A glance every few metres: mostly straight ahead, a slow turn of the head to one side and back.
+  // Keyed to distance, so a standing walker holds its gaze and a walking one looks around.
+  const headLook = HEAD_LOOK_RAD * Math.sin(dist * 0.55) * Math.max(0, Math.sin(dist * 0.55 + 1.2));
   const cosSw = Math.cos(shoulderTwist);
   const sinSw = Math.sin(shoulderTwist);
   const shoulderY = d.torsoH * 0.88;
@@ -324,8 +337,8 @@ export function poseAt(body, travelled) {
      */
     reach,
     joints: {
-      pelvis: { x: pelvisPos.x, y: pelvisPos.y, z: pelvisPos.z, a: 0, b: list },
-      torso: { x: pelvisPos.x, y: pelvisPos.y, z: pelvisPos.z, a: aTorso, b: bTorso },
+      pelvis: { x: pelvisPos.x, y: pelvisPos.y, z: pelvisPos.z, a: 0, b: list, c: pelvisTwist },
+      torso: { x: pelvisPos.x, y: pelvisPos.y, z: pelvisPos.z, a: aTorso, b: bTorso, c: shoulderTwist },
       head: {
         x: headPos.x,
         y: headPos.y,
@@ -334,15 +347,16 @@ export function poseAt(body, travelled) {
         // xuống chân. Đây là góc TUYỆT ĐỐI, không phải góc so với thân.
         a: aTorso * 0.5,
         b: bTorso * 0.5,
+        c: shoulderTwist * 0.5 + headLook,
       },
-      hipL: { x: hipPosL.x, y: hipPosL.y, z: hipPosL.z, a: legL.a1, b: legL.b },
-      hipR: { x: hipPosR.x, y: hipPosR.y, z: hipPosR.z, a: legR.a1, b: legR.b },
-      kneeL: { x: legL.mid.x, y: legL.mid.y, z: legL.mid.z, a: legL.a2, b: legL.b },
-      kneeR: { x: legR.mid.x, y: legR.mid.y, z: legR.mid.z, a: legR.a2, b: legR.b },
-      shoulderL: { x: shoulderPosL.x, y: shoulderPosL.y, z: shoulderPosL.z, a: aArmL, b: bArmL },
-      shoulderR: { x: shoulderPosR.x, y: shoulderPosR.y, z: shoulderPosR.z, a: aArmR, b: bArmR },
-      elbowL: { ...elbowPos(shoulderPosL, aArmL, bArmL), a: aArmL + elbowL, b: bArmL },
-      elbowR: { ...elbowPos(shoulderPosR, aArmR, bArmR), a: aArmR + elbowR, b: bArmR },
+      hipL: { x: hipPosL.x, y: hipPosL.y, z: hipPosL.z, a: legL.a1, b: legL.b, c: pelvisTwist },
+      hipR: { x: hipPosR.x, y: hipPosR.y, z: hipPosR.z, a: legR.a1, b: legR.b, c: pelvisTwist },
+      kneeL: { x: legL.mid.x, y: legL.mid.y, z: legL.mid.z, a: legL.a2, b: legL.b, c: pelvisTwist },
+      kneeR: { x: legR.mid.x, y: legR.mid.y, z: legR.mid.z, a: legR.a2, b: legR.b, c: pelvisTwist },
+      shoulderL: { x: shoulderPosL.x, y: shoulderPosL.y, z: shoulderPosL.z, a: aArmL, b: bArmL, c: shoulderTwist },
+      shoulderR: { x: shoulderPosR.x, y: shoulderPosR.y, z: shoulderPosR.z, a: aArmR, b: bArmR, c: shoulderTwist },
+      elbowL: { ...elbowPos(shoulderPosL, aArmL, bArmL), a: aArmL + elbowL, b: bArmL, c: shoulderTwist },
+      elbowR: { ...elbowPos(shoulderPosR, aArmR, bArmR), a: aArmR + elbowR, b: bArmR, c: shoulderTwist },
     },
   };
 }

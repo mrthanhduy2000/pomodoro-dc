@@ -5,7 +5,7 @@ import { buildMergedGeometry } from './geometryFactory.js';
 import { MATERIAL_ORDER, contactShade, materialFamilyFor } from '../../../engine/city3d/materials.js';
 import { getEraStyle } from '../../../engine/city3d/eraStyle.js';
 import { buildBuildingSpec } from '../../../engine/city3d/buildingSpec.js';
-import { cornerRadius, countTriangles, bevelWidth, countSpecTriangles, gable, prism } from '../../../engine/city3d/parts.js';
+import { cornerRadius, countTriangles, bevelWidth, countSpecTriangles, gable, prism, specFootprint } from '../../../engine/city3d/parts.js';
 import { buildScenePalette } from '../../../engine/city3d/palette3d.js';
 
 /**
@@ -287,4 +287,29 @@ test('DẢI VÁT NẰM ĐÚNG BÊN TRONG KHỐI — không phình ra, không th�
     if (Math.abs(pos.getY(i)) < 1e-9) mépĐáy = Math.max(mépĐáy, Math.abs(pos.getX(i)));
   }
   assert.ok(mépĐáy < 0.5 - 1e-6, `vòng đáy rộng ${mépĐáy.toFixed(4)} — không hề thóp vào, tức không có dải vát`);
+});
+
+// ── ROUND 48 (ADR-088): THE SECOND AXIS ──────────────────────────────────────────────────────────
+test('TRỤC NGHIÊNG: khối đứng nghiêng 90° về +X thì NẰM dọc +X, gốc vẫn ở chân', () => {
+  // A vertical 0,2 × 0,2 × 1,0 prism with rz = −90° must lie along +X: max x ≈ 1, max y ≈ 0,1.
+  const p = prism({ w: 0.2, d: 0.2, h: 1, sides: 4, rz: -Math.PI / 2, role: 'wood' });
+  const pos = buildMergedGeometry(placement([p]), PALETTE, { era: 9 }).geometry.getAttribute('position');
+  let maxX = -Infinity; let maxY = -Infinity; let minX = Infinity;
+  for (let i = 0; i < pos.count; i += 1) {
+    maxX = Math.max(maxX, pos.getX(i)); minX = Math.min(minX, pos.getX(i)); maxY = Math.max(maxY, pos.getY(i));
+  }
+  assert.ok(Math.abs(maxX - 1) < 0.02, `đỉnh khối phải vươn tới x ≈ 1, đo được ${maxX.toFixed(3)}`);
+  assert.ok(minX > -0.15, `chân khối phải ở gần x = 0, đo được ${minX.toFixed(3)}`);
+  assert.ok(maxY < 0.16, `khối nằm ngang thì cao nhất ≈ nửa bề ngang, đo được ${maxY.toFixed(3)}`);
+  // …and an upright prism serialises WITHOUT rx/rz keys — the GOLDEN digests must not move for a no-op.
+  const upright = prism({ w: 0.2, d: 0.2, h: 1, sides: 4, role: 'wood' });
+  assert.equal('rx' in upright, false); assert.equal('rz' in upright, false);
+  assert.equal(countTriangles(p), countTriangles(upright), 'nghiêng không đổi số tam giác');
+});
+
+test('TRỤC NGHIÊNG: `specFootprint` đếm cả phần ngọn vươn ra — nhà nghiêng không lấn sang ô bên trong im lặng', () => {
+  const lean = prism({ w: 0.2, d: 0.2, h: 1, sides: 4, rz: -Math.PI / 2, role: 'wood' });
+  const upright = prism({ w: 0.2, d: 0.2, h: 1, sides: 4, role: 'wood' });
+  assert.ok(specFootprint([lean]).w > specFootprint([upright]).w + 0.9,
+    'khối nằm dọc +X phải có hình bao rộng hơn khối đứng gần đúng chiều cao của nó');
 });

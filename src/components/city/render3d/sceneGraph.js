@@ -720,6 +720,7 @@ export function createCityScene({
   const heading = new Quaternion();
   const jointSpin = new Quaternion();
   const jointRoll = new Quaternion();
+  const jointYaw = new Quaternion();   // round 48 (ADR-088): the third joint axis — twist about the vertical
   const limb = new Vector3();
 
   /**
@@ -1433,6 +1434,9 @@ export function createCityScene({
           jointSpin.setFromAxisAngle(FORWARD_AXIS, joint.a);
           jointRoll.setFromAxisAngle(TRAVEL_AXIS, joint.b);
           jointSpin.premultiply(jointRoll);
+          // Round 48 (ADR-088): `c` twists the block about the vertical — pelvis and shoulder girdles
+          // counter-rotate, the head looks around. Applied last so it turns the already-posed limb.
+          if (joint.c) { jointYaw.setFromAxisAngle(UP, joint.c); jointSpin.premultiply(jointYaw); }
           // Tâm khối trong hệ CỤC BỘ: gốc khớp cộng phần tịnh tiến đã bị khớp xoay.
           // ⚠️ KHÔNG CÒN HỆ SỐ RÚT CHÂN NÀO. Trước ADR-057, chi treo vào hông bị rút ngắn giữa pha
           // đưa chân (đầu gối GIẢ) nên cả `rest.y` lẫn `part.h` phải nhân thêm một hệ số. Nay đầu

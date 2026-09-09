@@ -438,3 +438,23 @@ test('TAY ĐANG CẦM ĐỒ gần như không vung — cây giáo không đượ
       `kỷ ${era} mang đồ mà khai armSwing ${getHumanStyle(era).armSwing} — phép so hai tay mất nghĩa`);
   }
 });
+
+// ── ROUND 48 (ADR-088): THE THIRD JOINT AXIS ────────────────────────────────────────────────────
+test('TRỤC THỨ BA: đai hông và đai vai xoay NGƯỢC chiều nhau quanh trục đứng, đầu nhìn quanh có giới hạn, tất định', () => {
+  const body = buildHumanBody(8);
+  let opposite = 0; let samples = 0; let headMax = 0;
+  for (let dist = 0; dist < 12; dist += 0.13) {
+    const pose = poseAt(body, dist);
+    const { pelvis, torso, head, hipL, shoulderL } = pose.joints;
+    for (const j of [pelvis, torso, head, hipL, shoulderL]) assert.ok(Number.isFinite(j.c), 'mọi khớp phải mang góc xoay đứng `c`');
+    if (Math.abs(pelvis.c) > 1e-4) { samples += 1; if (Math.sign(pelvis.c) === -Math.sign(torso.c)) opposite += 1; }
+    assert.equal(hipL.c, pelvis.c, 'đùi đi theo đai hông');
+    assert.equal(shoulderL.c, torso.c, 'cánh tay đi theo đai vai');
+    headMax = Math.max(headMax, Math.abs(head.c));
+    assert.ok(Math.abs(head.c) < 0.6, `đầu quay ${head.c.toFixed(2)} rad — quá 34°`);
+  }
+  assert.ok(samples > 20 && opposite === samples, `đai hông/đai vai phải NGƯỢC chiều ở mọi mẫu (${opposite}/${samples})`);
+  assert.ok(headMax > 0.15, 'đầu phải có lúc quay đi (nhìn quanh), không đứng yên mãi');
+  const a = poseAt(body, 3.7).joints.head.c; const b = poseAt(body, 3.7).joints.head.c;
+  assert.equal(a, b, 'cùng quãng đường ⇒ cùng góc — không có đồng hồ, không có ngẫu nhiên');
+});

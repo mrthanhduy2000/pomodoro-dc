@@ -16,7 +16,7 @@ grep -n 'CÔNG CỤ ĐO NÓI DỐI' docs/LESSONS_3D.md   # 28 lần công cụ t
 grep -n 'GÁNH HAI VIỆC' docs/LESSONS_3D.md        # 7 lần một trường gánh hai việc
 ```
 
-## Mục lục (103 bài học cấp 1)
+## Mục lục (104 bài học cấp 1)
 
 1. QUÉT XONG PHẢI CHẤM BẰNG SỐ
 2. CÔNG CỤ ĐO NÓI DỐI LẦN THỨ 20 VÀ 21
@@ -121,6 +121,7 @@ grep -n 'GÁNH HAI VIỆC' docs/LESSONS_3D.md        # 7 lần một trường g
 101. THE BOX LOOK LIVES IN THE THIN PLATES, NOT IN THE WALLS (round 47)
 102. A GROUND IS A WINDOW PER ERA, NOT ONE ANCHOR FOR FIFTEEN (round 47)
 103. `--all` AND `--era N` DREW THE SAME ERA DIFFERENTLY IN THE SAME MINUTE (round 47)
+104. THE 29TH LIE WAS A STALE FILE IN A SHARED FOLDER, NOT TWO CODE PATHS (round 48, root cause of 103)
 
 ---
 
@@ -330,6 +331,8 @@ grep -n 'GÁNH HAI VIỆC' docs/LESSONS_3D.md        # 7 lần một trường g
 - ⚠️ **102. A GROUND IS A WINDOW PER ERA, NOT ONE ANCHOR FOR FIFTEEN** (round 47, ADR-087). One `GROUND_ANCHOR` (58°, 22%) under Ur, Florence, Stalingrad and Dubai made every noon photo the same olive lawn; the road palette carried the whole century alone. `GROUND_KINDS` declares eight materials as hue/saturation/lightness WINDOWS and every era must land inside one — the test fails on a colour that is "nice" but not that material (astroturf on a desert). Measured: eras with median saturation ≥ 0,20 went 2/15 → 10/15; the five that stay grey (calçada · soot · asphalt · snow · concrete) are grey on purpose, and the report must say so instead of counting them as failures.
   - ⚠️ **KÈM THEO — a full-frame saturation gate is dominated by whatever is LARGEST in the frame.** Era 3's ground was right in `eraStyle` yet read 0,16 in the photo, because the pale outskirts plain and the empty-plot frames covered more pixels than the city. Fix the colour that covers the pixels (deepen the ground), never the metric.
 - ⚠️ **103. `--all` AND `--era N` DREW THE SAME ERA DIFFERENTLY IN THE SAME MINUTE** (round 47). `city-preview.mjs --all` rendered era 12's dwellings with flat, parapeted roofs while `--era 12` — same code, one minute later — drew the snow gables the code declares. Not root-caused this round (out of budget); the 15 final photos were taken with `--era N` one at a time, and every before/after pair in the report comes from the same path. Rule: two photos are comparable only if they came out of the SAME tool path — the measuring tool lied for the 29th time.
+  - ⚠️ **KÈM THEO (round 48) — the diagnosis above was WRONG, see lesson 104.** `--eras 11,12,13` and `--era 12` render byte-for-byte the same frame (0 of 980 000 pixels differ). The "other" era 12 was a file from an earlier run that the `--all` pass never replaced.
+- ⚠️ **104. THE 29TH LIE WAS A STALE FILE IN A SHARED FOLDER, NOT TWO CODE PATHS** (round 48, 2026-09-09, root cause of lesson 103). Reproduced first: `city-preview.mjs --eras 11,12,13` and `--era 12`, same code, same flags, one after the other — **0 pixels differ**. Then the md5 of the "flat-roofed" era 12 from round 47 matched a frame rendered HOURS earlier (the 0,12-pitch gable that looks like a lid), from a different code state. Three things had lined up: (1) every run writes into ONE folder with FIXED names and never removes what was there, so `cp .city-preview/city-era*.png` after a run copies whatever happens to be on disk; (2) the run's own `✓ kỷ N` lines were filtered out with `grep`, so nobody saw which eras had actually rendered; (3) another invocation (a leftover pipeline, or `test:quiet`) can overlap — two runs share ONE `.build/entry.js` and ONE `dist/preview.js`, the second overwrites the first's bundle mid-flight, and CPU contention tears frames (the torn eras 10–13). Fixed at the root in `city-preview.mjs`: a **lock** (an overlapping run exits with code 3 and says who holds it), every target PNG and `.geom.json` is **deleted before its render** (a failed render leaves no file — a missing file is honest, a stale file lies), and **`last-run.json`** lists exactly the files this run produced together with a **`sourceStamp`** (sha1 of the 3D sources bundled, also written into every `.geom.json`). Rule: copy from `last-run.json`, never from `ls`; two frames are comparable only if their `sourceStamp` is what you think it is. `scripts/cityPreviewSource.test.js` fails if any of the three guards is removed.
 
 ---
 

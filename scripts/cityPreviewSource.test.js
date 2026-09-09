@@ -505,3 +505,33 @@ test('⚠️ ĐỐI CHỨNG: gọi bằng ĐƯỜNG DẪN TƯƠNG ĐỐI thì c�
   assert.match(ra, /Cách dùng/,
     'Gọi `node scripts/png-probe.mjs` (đường dẫn TƯƠNG ĐỐI) không in gì — cổng "chạy thẳng" đóng.');
 });
+
+// ── ROUND 48 (lesson 104): the three guards against a stale frame ────────────────────────────────
+// The "flat-roofed era 12" of round 47 was a file rendered hours earlier that the next run never
+// replaced. Each guard below was removed once to confirm the test goes red.
+test('BÀI 104 — khoá thư mục: một lần chạy chồng lên lần khác phải bị TỪ CHỐI, không im lặng ghi đè', () => {
+  assert.match(NGUỒN, /function acquireLock\(\)/, 'hàm khoá đã biến mất');
+  const main = NGUỒN.slice(NGUỒN.indexOf('async function main()'));
+  assert.ok(main.indexOf('acquireLock();') > 0 && main.indexOf('acquireLock();') < main.indexOf('const eras ='),
+    'main() phải lấy khoá TRƯỚC khi quyết định vẽ kỷ nào');
+  assert.match(NGUỒN, /process\.exit\(3\)/, 'lần chạy thứ hai phải thoát bằng mã 3, không phải chạy tiếp');
+});
+
+test('BÀI 104 — mọi ảnh đích bị XOÁ trước khi vẽ: vẽ hỏng thì KHÔNG còn file, chứ không còn file cũ', () => {
+  const shoots = [...NGUỒN.matchAll(/await shoot\(chrome,/g)].map((m) => m.index);
+  assert.equal(shoots.length, 2, 'công cụ có đúng hai chỗ chụp (quét và từng kỷ)');
+  for (const at of shoots) {
+    const before = NGUỒN.slice(Math.max(0, at - 1200), at);
+    assert.match(before, /clearTarget\(pngPath\);/, `chỗ chụp ở ký tự ${at} không xoá ảnh đích trước khi vẽ`);
+  }
+  assert.match(NGUỒN, /function clearTarget\(pngPath\)[\s\S]*?rmSync\(pngPath, \{ force: true \}\);[\s\S]*?geom\.json/,
+    'clearTarget phải xoá CẢ ảnh lẫn hồ sơ .geom.json');
+});
+
+test('BÀI 104 — hồ sơ lần chạy: last-run.json kể đúng những file lần này tạo ra, kèm dấu mã nguồn', () => {
+  assert.match(NGUỒN, /const MANIFEST_PATH = resolve\(OUT_DIR, 'last-run\.json'\)/);
+  assert.equal((NGUỒN.match(/manifestAdd\(pngPath, \{/g) ?? []).length, 2, 'cả hai chỗ chụp đều phải ghi vào hồ sơ');
+  assert.equal((NGUỒN.match(/sourceStamp: SOURCE_STAMP,/g) ?? []).length, 2, 'cả hai .geom.json đều phải mang dấu mã nguồn');
+  assert.match(NGUỒN, /STAMP_DIRS = \['src\/engine\/city3d', 'src\/components\/city\/render3d'/,
+    'dấu mã nguồn phải băm đúng hai thư mục 3D mà bundle gói vào');
+});

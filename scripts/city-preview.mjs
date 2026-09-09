@@ -20,7 +20,8 @@
 
 import { spawn } from 'node:child_process';
 import { createServer, get as httpGet } from 'node:http';
-import { appendFileSync, existsSync, mkdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
+import { appendFileSync, closeSync, existsSync, mkdirSync, openSync, readdirSync, readFileSync, rmSync, statSync, writeFileSync } from 'node:fs';
+import { createHash } from 'node:crypto';
 import { basename, dirname, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
@@ -30,6 +31,87 @@ import { pathToFileURL } from 'node:url';
 const ROOT = resolve(dirname(fileURLToPath(import.meta.url)), '..');
 const OUT_DIR = resolve(ROOT, '.city-preview');
 const WORK_DIR = resolve(OUT_DIR, '.build');
+
+/**
+ * ROUND 48 (lesson 104) — THE RULER LIED FOR THE 29TH TIME, AND IT WAS NOT `--all` VS `--era`.
+ * Round 47 blamed two code paths; the reproduction showed them byte-identical. The real causes:
+ *   (1) every run writes into ONE shared directory with FIXED file names and never clears what was
+ *       there, so a caller that copies `city-era12-*.png` after a run can pick up a frame rendered
+ *       hours earlier by a different code state (era 12's "flat" roofs were the 0,12-pitch render);
+ *   (2) two invocations that overlap share ONE `.build/entry.js` and ONE `dist/preview.js`, so the
+ *       second overwrites the first's bundle mid-flight, and CPU contention tears frames.
+ * Three guards, none of them a promise:
+ *   • a LOCK — a second overlapping run fails loudly instead of silently corrupting the first;
+ *   • every target PNG (and its .geom.json) is DELETED before its render, so a failed or skipped
+ *     render leaves NO file — a missing file is honest, a stale file lies;
+ *   • `last-run.json` lists exactly the files THIS run produced, with a hash of the 3D sources it
+ *     bundled (`sourceStamp`, also stamped into every .geom.json). Copy from that list, never `ls`.
+ */
+const LOCK_PATH = resolve(OUT_DIR, '.lock');
+const MANIFEST_PATH = resolve(OUT_DIR, 'last-run.json');
+const STAMP_DIRS = ['src/engine/city3d', 'src/components/city/render3d', 'src/engine'];
+
+function pidAlive(pid) {
+  try { process.kill(pid, 0); return true; } catch (e) { return e.code === 'EPERM'; }
+}
+
+/** Take the work-dir lock or die. Returns a release function. */
+function acquireLock() {
+  mkdirSync(OUT_DIR, { recursive: true });
+  for (let attempt = 0; attempt < 2; attempt += 1) {
+    try {
+      const fd = openSync(LOCK_PATH, 'wx');
+      writeFileSync(fd, JSON.stringify({ pid: process.pid, argv: process.argv.slice(2), at: new Date().toISOString() }));
+      closeSync(fd);
+      const release = () => { try { rmSync(LOCK_PATH, { force: true }); } catch { /* gone */ } };
+      process.on('exit', release);
+      return release;
+    } catch (e) {
+      if (e.code !== 'EEXIST') throw e;
+      let other = null;
+      try { other = JSON.parse(readFileSync(LOCK_PATH, 'utf8')); } catch { other = null; }
+      if (other && pidAlive(other.pid)) {
+        console.error(`✗ Một city-preview KHÁC đang chạy (pid ${other.pid}, từ ${other.at}, cờ: ${(other.argv ?? []).join(' ')}).`);
+        console.error('  Hai lần chạy chồng nhau dùng CHUNG một bundle và một thư mục ảnh — lần sau sẽ ghi đè bundle của');
+        console.error('  lần trước giữa chừng và ảnh ra không thuộc mã nào cả (bài học 104). Đợi nó xong rồi chạy lại.');
+        process.exit(3);
+      }
+      rmSync(LOCK_PATH, { force: true });   // stale lock from a dead process — take it
+    }
+  }
+  throw new Error('không lấy được khoá ' + LOCK_PATH);
+}
+
+/** Hash of every source file the preview bundles — the fingerprint a frame carries. */
+function sourceStamp() {
+  const h = createHash('sha1');
+  const walk = (dir) => {
+    for (const name of readdirSync(dir).sort()) {
+      const full = resolve(dir, name);
+      if (statSync(full).isDirectory()) { if (name !== 'node_modules') walk(full); continue; }
+      if (!/\.(js|jsx|mjs|json)$/.test(name) || /\.test\.(js|mjs)$/.test(name)) continue;
+      h.update(full.slice(ROOT.length)); h.update(readFileSync(full));
+    }
+  };
+  for (const d of STAMP_DIRS) if (existsSync(resolve(ROOT, d))) walk(resolve(ROOT, d));
+  return h.digest('hex').slice(0, 12);
+}
+
+let manifest = null;
+function manifestStart(argv, stamp) {
+  manifest = { started: new Date().toISOString(), argv, sourceStamp: stamp, files: [] };
+  writeFileSync(MANIFEST_PATH, JSON.stringify(manifest, null, 2));
+}
+/** Delete the target before rendering — a failed render must leave NO file. */
+function clearTarget(pngPath) {
+  rmSync(pngPath, { force: true });
+  rmSync(pngPath.replace(/\.png$/, '.geom.json'), { force: true });
+}
+function manifestAdd(pngPath, extra = {}) {
+  if (!manifest) return;
+  manifest.files.push({ file: basename(pngPath), at: new Date().toISOString(), ...extra });
+  writeFileSync(MANIFEST_PATH, JSON.stringify(manifest, null, 2));
+}
 
 /**
  * Chromium do môi trường cài sẵn (Playwright). Không tự tải về.
@@ -1479,6 +1561,10 @@ async function main() {
   }
 
   mkdirSync(OUT_DIR, { recursive: true });
+  acquireLock();
+  const SOURCE_STAMP = sourceStamp();
+  manifestStart(process.argv.slice(2), SOURCE_STAMP);
+  console.log(`[stamp] mã nguồn 3D = ${SOURCE_STAMP} · hồ sơ lần chạy → ${MANIFEST_PATH}`);
   const eras = args.eraList ?? (args.all ? Array.from({ length: 15 }, (_, i) => i + 1) : [args.era]);
 
   // Không truyền `--hour` ⇒ một lượt với giờ trung tính (`null`), y như trước.
@@ -1500,6 +1586,7 @@ async function main() {
     const tag = `${eras[0]}-${eras[eras.length - 1]}`;
     const pngPath = resolve(OUT_DIR, `sweep-${args.theme}-ky${tag}.png`);
     try {
+      clearTarget(pngPath);
       const { info } = await shoot(chrome, `http://127.0.0.1:${port}/index.html`, pngPath, {
         width: sweepHours.length * args.cell + 64,
         // +40: chỗ cho hàng tiêu đề giờ và dòng chữ số liệu ở dưới cùng.
@@ -1524,6 +1611,7 @@ async function main() {
     // ⇒ Nay ảnh nào cũng đi kèm đúng bộ số đã DÙNG để dựng nó. Bên chấm điểm KHÔNG được đoán nữa.
     const geomPath = pngPath.replace(/\.png$/, '.geom.json');
     writeFileSync(geomPath, `${JSON.stringify({
+      sourceStamp: SOURCE_STAMP,
       png: pngPath.split('/').pop(),
       // ⚠️ `pad: 0` — KHÔNG PHẢI 8. Từ 2026-08-19 ảnh được cắt ĐÚNG hộp bao canvas bằng CDP
       // `clip` (xem `shoot`), nên phần đệm `#wrap { padding: 8px }` KHÔNG còn trong ảnh nữa.
@@ -1548,6 +1636,7 @@ async function main() {
     }, null, 2)}\n`);
 
     console.log(`✓ quét ${eras.length} kỷ × ${sweepHours.length} chặng → ${pngPath}`);
+    manifestAdd(pngPath, { kind: 'sweep', eras });
     console.log(`  hồ sơ hình học → ${geomPath}  (sweep-score.mjs đọc file này, không tự đoán)`);
     // ⚠️ NÓI THẲNG RA, VÌ CÁI TÊN CỜ `--theme` GÂY HIỂU NHẦM — và nó đã lừa được một phiên AI thật
     // (2026-08-13): tôi dựng cả hai theme rồi báo cáo "đã kiểm đủ 180 ô", trong khi phép so từng
@@ -1628,6 +1717,7 @@ async function main() {
       let info = '';
       let hop = null;
       try {
+        clearTarget(pngPath);
         ({ info, hop } = await shoot(chrome, `http://127.0.0.1:${port}/index.html`, pngPath, options));
       } finally {
         server.close();
@@ -1646,6 +1736,7 @@ async function main() {
       // kèm công cụ VÀ đầu vào đã đo ra nó.
       const geomPath = pngPath.replace(/\.png$/, '.geom.json');
       writeFileSync(geomPath, `${JSON.stringify({
+      sourceStamp: SOURCE_STAMP,
         png: pngPath.split('/').pop(),
         pad: 0,
         canvasW: options.width,
@@ -1667,6 +1758,7 @@ async function main() {
         zoom: args.zoom,
         theme: args.theme,
       }, null, 2)}\n`);
+      manifestAdd(pngPath, { era, hour });
       console.log(`✓ kỷ ${era} · ${hour === null ? 'giờ trung tính' : `${hour} giờ`} → ${pngPath}`);
       // ⚠️ IN DÒNG SỐ LIỆU RA TERMINAL. Ảnh nay cắt đúng khung hình nên dòng chữ dưới ảnh không
       // còn nằm trong PNG — nhưng nó là chỗ DUY NHẤT Đàm đọc được số lệnh vẽ / số tam giác mà

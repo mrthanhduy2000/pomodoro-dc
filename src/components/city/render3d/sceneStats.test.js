@@ -178,14 +178,18 @@ test('BA con số: thành phố + nền = tổng, và phần nền tách theo NG
   // 15 kỷ, và một hằng số cộng vào cả tử lẫn mẫu thì pha loãng khác biệt. Trên 4 kỷ của ma trận
   // đo, chênh lệch thật 1,43 lần bị đọc thành 1,16 lần.
   const nềnTheoKỷ = [];
+  const trờiTheoKỷ = [];
+  let cóTrời = 0;
   for (let era = 1; era <= 15; era += 1) {
     const city = dựngCảnh(era);
     const g = city.stats.geometry;
 
-    assert.equal(g.triangles.city + g.triangles.backdrop, g.triangles.total,
-      `kỷ ${era}: thành phố + nền không bằng tổng tam giác`);
-    assert.equal(g.drawCalls.city + g.drawCalls.backdrop, g.drawCalls.total,
-      `kỷ ${era}: thành phố + nền không bằng tổng lệnh vẽ`);
+    // Round 51 (ADR-091): BỐN cột, không còn ba — `sky` (mây/sao/trăng) tách khỏi `backdrop` vì nó
+    // ĐỔI theo kỷ, mà cả lý lẽ của phép chia này là "tách phần KHÔNG đổi ra". Xem `SCENE_LAYER_SKY`.
+    assert.equal(g.triangles.city + g.triangles.backdrop + g.triangles.sky, g.triangles.total,
+      `kỷ ${era}: thành phố + nền + trời không bằng tổng tam giác`);
+    assert.equal(g.drawCalls.city + g.drawCalls.backdrop + g.drawCalls.sky, g.drawCalls.total,
+      `kỷ ${era}: thành phố + nền + trời không bằng tổng lệnh vẽ`);
     assert.equal(g.triangles.total, city.stats.triangles, `kỷ ${era}: tổng phẳng lệch tổng tách`);
     assert.equal(g.drawCalls.total, city.stats.drawCalls, `kỷ ${era}: tổng phẳng lệch tổng tách`);
 
@@ -205,8 +209,13 @@ test('BA con số: thành phố + nền = tổng, và phần nền tách theo NG
     assert.equal(khốiNền, 2, `kỷ ${era}: nền phải đúng 2 khối (vòm trời + rặng núi), thấy ${khốiNền}`);
 
     nềnTheoKỷ.push(g.triangles.backdrop);
+    trờiTheoKỷ.push(g.triangles.sky);
     assert.ok(g.triangles.city > 0 && g.triangles.backdrop > 0,
       `kỷ ${era}: một trong hai phần bằng 0 — nhãn nguồn gốc đã rơi mất?`);
+    // ⚠️ KHÔNG đòi kỷ NÀO cũng có mây. Kỷ 3 (Lưỡng Hà) và kỷ 15 (Dubai) giữa trưa mùa hè là trời
+    // QUANG — đó là đặc điểm của chúng, không phải thiếu sót. Điều phải đúng là ở dưới: cả bảng
+    // không được rỗng, và 15 kỷ không được ra cùng một bầu trời.
+    if (g.triangles.sky > 0) cóTrời += 1;
     city.dispose();
   }
 
@@ -214,6 +223,17 @@ test('BA con số: thành phố + nền = tổng, và phần nền tách theo NG
   // ra mới so được kỷ" phải được viết lại, và bài này phải đỏ để bắt người ta viết lại.
   assert.equal(new Set(nềnTheoKỷ).size, 1,
     `phần nền đáng lẽ giống hệt ở cả 15 kỷ, nhưng thấy ${new Set(nềnTheoKỷ).size} giá trị khác nhau`);
+
+  /**
+   * ⚠️ ĐỐI CHỨNG NGƯỢC LẠI, và đây mới là lý do cột `sky` phải tồn tại riêng (round 51, ADR-091).
+   * Cột `backdrop` được tách ra vì nó là HẰNG SỐ; cột `sky` được tách ra vì nó KHÔNG. Nếu bầu trời
+   * ra cùng một lượng mây ở cả 15 kỷ thì "mỗi kỷ một bầu trời" chỉ là một câu nói, và bài này phải
+   * đỏ để bắt người ta chứng minh lại — đúng luật *"một câu trấn an phải được kiểm như một con số"*.
+   */
+  assert.ok(new Set(trờiTheoKỷ).size >= 5,
+    `bầu trời đáng lẽ mỗi kỷ một khác, nhưng 15 kỷ chỉ cho ${new Set(trờiTheoKỷ).size} giá trị`);
+  assert.ok(cóTrời >= 10,
+    `chỉ ${cóTrời}/15 kỷ có gì đó trên trời — trời quang là một câu trả lời thật, nhưng không phải cho mười kỷ`);
 });
 
 test('"ĐÃ VẼ" ≤ "TRONG CẢNH" ở mọi camera, và BẰNG NHAU ở camera mặc định', () => {
@@ -287,8 +307,36 @@ test('ĐỐI CHỨNG cho bài trên: phép cắt của bài test PHẢI có răn
     new Matrix4().multiplyMatrices(camera.projectionMatrix, camera.matrixWorldInverse),
   );
   const đãVẽ = đếmĐộcLập(city.scene, quayLưng);
-  assert.equal(đãVẽ.tam, 0,
-    `đứng xa quay lưng lại thành phố mà vẫn "vẽ" ${đãVẽ.tam} tam giác — phép cắt của bài test không nối vào đâu cả`);
+
+  /**
+   * ⚠️ ROUND 51 (ADR-091) — CÂU HỎI PHẢI ĐỔI, VÌ CẢNH NAY CÓ KHỐI **KHÔNG BAO GIỜ BỊ CẮT**.
+   *
+   * Mây và sao khai `frustumCulled = false`, cố ý: chúng LÀ bầu trời, và một đám mây biến mất vì
+   * hộp bao của nó trượt khỏi khung nhìn thì mắt đọc ra ngay là lỗi. Nên "quay lưng lại thì phải
+   * bằng 0" nay là một câu SAI — không phải vì phép cắt hỏng, mà vì có những khối đã tự nói rằng
+   * chúng không nhận phép cắt.
+   *
+   * Điều bài này thật sự canh vẫn nguyên: *phép cắt của bài test có RĂNG không*. Nên hỏi lại đúng
+   * chỗ ấy — phần CÓ NHẬN CẮT phải rơi về 0 — và cộng thêm một vế mạnh hơn bản cũ: phần còn lại
+   * phải ĐÚNG BẰNG những khối đã khai không cắt, không hơn một tam giác nào.
+   */
+  let luônVẽ = 0;
+  const tênLuônVẽ = new Set();
+  city.scene.traverse((o) => {
+    if (!o.isMesh || o.visible === false || !o.geometry || o.frustumCulled) return;
+    const đỉnh = o.geometry.index ? o.geometry.index.count : (o.geometry.attributes?.position?.count ?? 0);
+    luônVẽ += ((o.isInstancedMesh ? o.count : 1) * đỉnh) / 3;
+    tênLuônVẽ.add(o.name || '(không tên)');
+  });
+  assert.equal(đãVẽ.tam, luônVẽ,
+    `đứng xa quay lưng lại thành phố mà vẫn "vẽ" ${đãVẽ.tam} tam giác, trong khi chỉ ${luônVẽ} là của khối khai không-cắt — phép cắt của bài test không nối vào đâu cả`);
+  assert.ok(trongCảnh.tam > luônVẽ,
+    'cả cảnh đều khai không-cắt thì đối chứng này vô nghĩa — phép cắt không còn gì để cắt');
+  // ⚠️ VÀ AI ĐƯỢC PHÉP KHAI KHÔNG-CẮT LÀ MỘT DANH SÁCH, KHÔNG PHẢI MỘT CON SỐ. Ngày nào ai đó tắt
+  // `frustumCulled` của khối công trình để "chữa" một lỗi nhấp nháy, bài này phải đỏ ngay.
+  for (const tên of tênLuônVẽ) {
+    assert.ok(/^sky-/.test(tên), `khối "${tên}" khai không-cắt mà không phải bầu trời`);
+  }
   assert.ok(trongCảnh.tam > 0, 'cảnh rỗng thì đối chứng này vô nghĩa');
   city.dispose();
 });
@@ -388,7 +436,9 @@ test('CƯ DÂN PHẢI CÓ TÊN — không thì phép đo mật độ đọc họ
   // each named `particles-<kind>` — the law is still "every InstancedMesh carries a name a mask can ask".
   const tên = [...new Set(cưDân)].sort();
   assert.ok(tên.includes('residents'), `cư dân đang mang tên ${JSON.stringify(cưDân)} — mặt nạ sẽ không hỏi được họ`);
-  for (const t of tên) assert.ok(t === 'residents' || /^particles-[a-z]+$/.test(t), `InstancedMesh không tên/lạ: "${t}"`);
+  // Round 51 (ADR-091): mây và sao cũng là InstancedMesh, tên `sky-cloud` · `sky-star` — luật vẫn
+  // nguyên văn "mọi InstancedMesh đều mang một cái tên mà mặt nạ hỏi được", chỉ rộng thêm một họ.
+  for (const t of tên) assert.ok(t === 'residents' || /^(particles|sky)-[a-z]+$/.test(t), `InstancedMesh không tên/lạ: "${t}"`);
   // …and the particle systems are exactly the ones the era's vocabulary declares — one mesh each. The
   // draw-call arithmetic of `drawCallBudget.test.js` counts families + fixed sheets + resident shapes;
   // this is the +N on top of it (round 48), owned by `engine/city3d/motion.js`.

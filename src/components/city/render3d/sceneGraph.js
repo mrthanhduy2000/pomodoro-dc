@@ -60,6 +60,8 @@ import { createMotionUniforms, createParticles, createWaterUniforms, injectWater
 import { FIRE_LIGHT, FIRE_TAG, fireFlicker, getEraMotion, motionTime, SMOKE_INTENSITY, smokeLightFor } from '../../../engine/city3d/motion';
 import { weatherParticle, wetSurface } from '../../../engine/city3d/weather';
 import { seasonLook, seasonParticle } from '../../../engine/city3d/season';
+import { skyAt } from '../../../engine/city3d/sky';
+import { createSkyLayer } from './skyLayer';
 import {
   ROAD_LIFT, buildHorizonSurface, buildRoadSurface, buildTerrainSurface, buildWaterSurface,
 } from './terrainMesh';
@@ -206,6 +208,17 @@ function drawCallsOfMesh(mesh) {
 /** Nhãn nguồn gốc: khối thuộc PHÔNG NỀN (vòm trời + rặng núi chân trời), không phải thành phố. */
 export const SCENE_LAYER_BACKDROP = 'backdrop';
 
+/**
+ * Nhãn nguồn gốc THỨ BA (round 51, ADR-091): thứ TREO TRÊN trời — mây, sao, mặt trăng.
+ *
+ * ⚠️ VÌ SAO KHÔNG GỘP VÀO `backdrop`. Lý lẽ sinh ra phép chia hai cột là *"phần KHÔNG ĐỔI qua các
+ * kỷ phải tách ra, vì một hằng số cộng vào cả tử lẫn mẫu thì pha loãng khác biệt"* — và vòm trời +
+ * rặng núi đúng là hằng số ở cả 15 kỷ. Mây thì KHÔNG: kỷ 10 Manchester trời thấp phủ kín, kỷ 3 sa
+ * mạc gần như quang. Ném mây vào cột `backdrop` là phá chính lý lẽ ấy, mà ném vào `city` là nói
+ * dối câu *"kỷ nào nặng"*. Nên nó có cột riêng: `thành phố · nền · trời · tổng`.
+ */
+export const SCENE_LAYER_SKY = 'sky';
+
 /** Gắn nhãn nền cho một khối. Một chỗ duy nhất viết nhãn ⇒ không có hai cách khai. */
 function markBackdrop(mesh, name) {
   mesh.userData.sceneLayer = SCENE_LAYER_BACKDROP;
@@ -213,19 +226,30 @@ function markBackdrop(mesh, name) {
   return mesh;
 }
 
+/** Gắn nhãn trời cho một khối (mây/sao/trăng). Cùng luật một-chỗ-viết như `markBackdrop`. */
+function markSky(mesh, name) {
+  mesh.userData.sceneLayer = SCENE_LAYER_SKY;
+  if (name) mesh.name = name;
+  return mesh;
+}
+
 /** Khối này thuộc lớp nào — ĐỌC nhãn, không suy đoán. Không nhãn ⇒ thành phố. */
 function layerOfMesh(mesh) {
-  return mesh.userData?.sceneLayer === SCENE_LAYER_BACKDROP ? 'backdrop' : 'city';
+  const nhan = mesh.userData?.sceneLayer;
+  if (nhan === SCENE_LAYER_BACKDROP) return 'backdrop';
+  if (nhan === SCENE_LAYER_SKY) return 'sky';
+  return 'city';
 }
 
 /**
- * MỘT lượt duyệt, ra cả tam giác lẫn lệnh vẽ, mỗi thứ ba con số: thành phố · nền · tổng.
- * @returns {{triangles:{city:number,backdrop:number,total:number},
- *            drawCalls:{city:number,backdrop:number,total:number}}}
+ * MỘT lượt duyệt, ra cả tam giác lẫn lệnh vẽ, mỗi thứ BỐN con số: thành phố · nền · trời · tổng.
+ * (Cột `sky` thêm ở round 51 — lý do ở `SCENE_LAYER_SKY`.)
+ * @returns {{triangles:{city:number,backdrop:number,sky:number,total:number},
+ *            drawCalls:{city:number,backdrop:number,sky:number,total:number}}}
  */
 export function measureSceneGeometry(root) {
-  const triangles = { city: 0, backdrop: 0, total: 0 };
-  const drawCalls = { city: 0, backdrop: 0, total: 0 };
+  const triangles = { city: 0, backdrop: 0, sky: 0, total: 0 };
+  const drawCalls = { city: 0, backdrop: 0, sky: 0, total: 0 };
   root.traverse((obj) => {
     if (!obj.isMesh || obj.visible === false) return;
     const lớp = layerOfMesh(obj);
@@ -610,6 +634,10 @@ export function createCityScene({
   layout, palette, dimmed = false, lowDetail = false, stats = {}, still = false, daylight = null,
   weather = null,  // round 49 (ADR-089): `weatherAt(era, hour)` — rain wets the ground, fog thickens, streaks fall
   season = null,   // round 50 (ADR-090): the season — wind, fog, falling petals/leaves; colours came in through `palette`
+  hour = null,     // round 51 (ADR-091): the hour itself. `daylight` carries the SUN, not the clock — and clouds,
+                   //   stars and the moon need the clock. Absent ⇒ noon.
+  dayIndex = 0,    // round 51: which day, for the moon's 29.53-day cycle. The caller reads the clock ONCE and
+                   //   passes a number in, so the scene stays a pure function of its input.
   motion = true,   // round 48: false = a still photograph of a living city (tools only; residents stay)
   maxLamps = 3, renderer = null, isMobile = false, tachDeDo = null, ao = true,
 }) {
@@ -791,6 +819,16 @@ export function createCityScene({
   // đã trả giá ("một luật mới làm điều kiện cũ hết đúng ⇒ phải tìm MỌI chỗ phát biểu lại nó").
   const terrain = buildTerrain({ era: layout.era, gridSize });
 
+  /**
+   * Cao độ MẶT ĐẤT ở một điểm thế giới — MỘT định nghĩa, hai bên đọc: người đi bộ (qua
+   * `groundHeightAt` trong đối tượng trả về, round 50) và bóng mây (round 51). Viết hai lần thì
+   * ngày nào ai đó sửa một cái, người đi bộ và bóng mây sẽ đứng trên hai mặt đất khác nhau.
+   */
+  const groundHeightAt = (worldX, worldZ) => {
+    const half = (gridSize - 1) / 2;
+    return terrain.surfaceHeightAt(worldX / TILE_UNIT + half, worldZ / TILE_UNIT + half);
+  };
+
   // ── Vòm trời chuyển sắc ───────────────────────────────────────────────────
   // Một mảng nền phẳng làm cả cảnh trông như dán lên giấy. Vòm trời đổi màu từ đỉnh xuống chân
   // trời cho không gian có "trên" và "dưới" — và vì nó nằm sau sương mù cùng màu chân trời, thành
@@ -824,6 +862,23 @@ export function createCityScene({
   markBackdrop(skyMesh, 'sky');
   scene.add(skyMesh);
   meshes.push(skyMesh);
+
+  // ── Round 51 (ADR-091): THỨ TREO TRÊN TRỜI ────────────────────────────────
+  // Ở tầm mắt bầu trời chiếm gần nửa khung hình, và tới hết vòng 50 nửa ấy là MỘT DẢI CHUYỂN SẮC —
+  // giống hệt nhau ở cả 15 kỷ, cả bốn mùa. `skyAt` (thuần, ở engine) quyết định thứ treo trong đó:
+  // loại mây và lượng mây theo kỷ · mùa · thời tiết; sao chỉ ban đêm và chỉ tới mức ô nhiễm ánh
+  // sáng của kỷ ấy còn cho phép (kỷ 1 thấy cả Ngân Hà, kỷ 13 gần như không sao); mặt trăng theo
+  // đúng chu kỳ 29,53 ngày. Không có `Math.random` ở bất kỳ đâu trong đường này.
+  const skyState = skyAt({
+    era: layout.era,
+    season: look.season,
+    hour: Number.isFinite(hour) ? hour : 12,
+    weather,
+    dayIndex,
+  });
+  // ⚠️ QUYẾT ĐỊNH ở đây, DỰNG ở dưới — ngay sau vùng đất ngoại ô. Bóng mây phải nằm trên ĐÚNG mặt
+  // đất mà `horizon.js` dựng ra, mà mặt đất ấy chưa tồn tại ở dòng này. Tách "quyết định" khỏi
+  // "dựng" là cách rẻ nhất để không phải dựng một bản sao mặt đất thứ hai (bài học `cityFocus`).
 
   // ── Vùng đất bao quanh ────────────────────────────────────────────────────
   // ⚠️ ĐÂY LÀ THỨ TÁCH "MỘT NƠI CHỐN" KHỎI "MÔ HÌNH TRÊN BÀN".
@@ -866,6 +921,32 @@ export function createCityScene({
     markBackdrop(outskirts, 'horizon');
     scene.add(outskirts);
     meshes.push(outskirts);
+  }
+
+  const skyLayer = createSkyLayer({
+    sky: skyState,
+    gridSize,
+    dayTop: skyLook.top,
+    glow: skyLook.glow,
+    night: !!palette.isDark,
+    // Bóng mây đi theo TIA NẮNG THẬT của cảnh này và nằm trên ĐÚNG mặt đất mà người đi bộ giẫm lên
+    // — hai thứ ấy đã có sẵn ở đây, nên bóng mây không được tự dựng lấy một bản sao.
+    skyRadius: SKY_RADIUS,
+    groundAt: (x, z) => horizon.heightAt(x / TILE_UNIT, z / TILE_UNIT),
+    sunDir,
+    // Vành đất mà bóng mây được phép rơi vào. ⚠️ KHÔNG phải `horizon.innerEdge` (9,5 ô): mặt trời
+    // đứng 30°, nên bóng của một đám mây cao 16 đơn vị rơi cách nó gần 28 đơn vị — lấy vành 9,5 thì
+    // đo được ĐÚNG KHÔNG có bóng nào, và bức ảnh đầu tiên đã cho thấy đúng thế. Vùng đất ngoại ô
+    // trải tới `reach` = 36 và còn thoải tới quãng 18; `skyLayer` tự kiểm độ dốc ở từng chỗ đặt.
+    shadowReach: gridSize * 1.5 * TILE_UNIT,
+  });
+  if (skyLayer) {
+    for (const mesh of skyLayer.meshes) {
+      markSky(mesh);
+      scene.add(mesh);
+      meshes.push(mesh);
+    }
+    track(skyLayer);
   }
 
   // ── MẶT ĐẤT + MẶT ĐƯỜNG: MỘT TẤM LIỀN ─────────────────────────────────────
@@ -1585,6 +1666,8 @@ export function createCityScene({
     motionUniforms.uTime.value = t;
     if (waterUniforms) waterUniforms.uTime.value = t;
     for (const sys of particleSystems) sys.update(t);
+    // Round 51 (ADR-091): the clouds drift on the era's wind — same clock, same determinism.
+    skyLayer?.update(t);
     // Round 49 (ADR-089): the fires flicker — deterministic in t, see `fireFlicker`
     for (const f of fireLights) f.light.intensity = f.base * fireFlicker(t, f.phase);
     placeResidents?.(timeSeconds);
@@ -1898,10 +1981,7 @@ export function createCityScene({
      * the ONE terrain this scene was built from (`buildTerrain` above); a second copy in the walker
      * would be the same lesson as `cityFocus` (a rebuilt input measures the rebuild, not the city).
      */
-    groundHeightAt(worldX, worldZ) {
-      const half = (gridSize - 1) / 2;
-      return terrain.surfaceHeightAt(worldX / TILE_UNIT + half, worldZ / TILE_UNIT + half);
-    },
+    groundHeightAt,
     /**
      * Hộp bao của mọi khối đứng trên đất — camera cận cảnh dùng để tránh bay vào trong phố.
      * Cùng tính chất với `pickTargets`: thuần dữ liệu, không tốn gì.
@@ -1923,6 +2003,11 @@ export function createCityScene({
       fireLights: fireLights.length,
       weather: weather ? { kind: weather.kind, wet: weather.wet, rain: weather.rain, fog: weather.fog } : null,
       season: look.season,
+      // Round 51 (ADR-091): what hangs in the sky right now — HUD and tools read it, nothing renders from it.
+      sky: skyState ? {
+        kind: skyState.kind, amount: skyState.amount, stars: skyState.stars,
+        milkyWay: skyState.milkyWay, moon: skyState.moon ? skyState.moon.lit : null,
+      } : null,
       // ⚠️ ĐẾM CẢ CẢNH, KHÔNG TỰ TÍNH NỮA (xem `measureSceneGeometry` ở đầu file để biết vì sao —
       // công thức tự tính cũ đã báo THIẾU 56% suốt từ Phase 9A mà không có gì đỏ lên).
       // Hai con số phẳng dưới đây là TỔNG, và chúng suy ra từ ĐÚNG một phép đo ở dòng trên — không

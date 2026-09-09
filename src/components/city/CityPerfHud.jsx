@@ -82,7 +82,10 @@ export default function CityPerfHud({ stats, mode, reason }) {
               là dòng trả lời câu Đàm thật sự hỏi — "xây thêm nhà có nặng máy không" — vì nhà không
               nằm ở phần nền. Xem `measureSceneGeometry` để biết vì sao gộp lại là đọc sai. */}
           <Row label="↳ thành phố" value={hìnhHọc ? hìnhHọc.triangles.city.toLocaleString('vi-VN') : '—'} />
-          <Row label="↳ nền (trời + núi)" value={hìnhHọc ? hìnhHọc.triangles.backdrop.toLocaleString('vi-VN') : '—'} />
+          <Row label="↳ nền (vòm + núi)" value={hìnhHọc ? hìnhHọc.triangles.backdrop.toLocaleString('vi-VN') : '—'} />
+          {/* Round 51 (ADR-091): cột thứ ba — mây, sao, trăng. Tách khỏi "nền" vì nó ĐỔI theo kỷ,
+              theo giờ và theo thời tiết, còn "nền" thì không. Xem `SCENE_LAYER_SKY`. */}
+          <Row label="↳ trời (mây/sao)" value={hìnhHọc ? (hìnhHọc.triangles.sky ?? 0).toLocaleString('vi-VN') : '—'} />
           <Row label="Mỗi khung" value={stats?.lastFrameMs != null ? `${stats.lastFrameMs} ms` : '—'} />
           <Row label="Đã vẽ" value={stats?.framesRendered ?? '—'} />
           <Row

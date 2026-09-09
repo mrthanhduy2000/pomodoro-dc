@@ -20,7 +20,7 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import { PerspectiveCamera, Raycaster, Vector2, WebGLRenderer } from 'three';
 
 import { buildScenePalette } from '../../../engine/city3d/palette3d';
-import { deriveDaylight, museumDaylight } from '../../../engine/city3d/daylight';
+import { deriveDaylight, museumDaylight, MUSEUM_HOUR } from '../../../engine/city3d/daylight';
 import { museumWeather, weatherAt } from '../../../engine/city3d/weather';
 import { museumSeason, seasonForMonth } from '../../../engine/city3d/season';
 import { CITY_CAMERA_FOV, MIN_PITCH, cityOrbitOptions, createOrbit } from '../../../engine/city3d/orbit';
@@ -29,7 +29,7 @@ import { planCityFocus } from '../../../engine/city3d/cityFocus';
 import { createRenderLoop } from '../../../engine/city3d/renderLoop';
 import { pickNearest } from '../../../engine/city3d/pick';
 import { ERA_METADATA } from '../../../engine/constants';
-import { getVietnamHour, getVietnamMonthIndex } from '../../../engine/time';
+import { getVietnamDayIndex, getVietnamHour, getVietnamMonthIndex } from '../../../engine/time';
 import { applyPaintedLook, createCityScene, MAX_PIXEL_RATIO } from './sceneGraph';
 import { readThemeSignature, readThemeTokens } from './themeBridge';
 
@@ -201,6 +201,13 @@ export default function CityScene3D({
       const daylight = dimmed ? museumDaylight() : deriveDaylight(hourNow);
       // Round 49 (ADR-089): the weather reads the SAME hour, and a museum piece the museum hour — forever
       const weather = dimmed ? museumWeather(layout.era) : weatherAt(layout.era, hourNow, seasonNow);
+      // Round 51 (ADR-091): the sky reads the SAME hour, and a museum piece the museum hour — a sealed
+      // era must not gain a different cloud when the slider moves (ADR-007).
+      const skyHour = dimmed ? MUSEUM_HOUR : hourNow;
+      // Which day it is, for the moon's 29,53-day cycle. Read ONCE here, through the SAME Vietnam
+      // clock the hour comes from (`engine/time.js`) — a machine on the wrong timezone must not give
+      // Đàm a different moon, and `Date.now()` in this file is forbidden for that exact reason.
+      const dayIndex = dimmed ? 0 : getVietnamDayIndex();
 
       const palette = buildScenePalette({
         tokens: readThemeTokens(canvas),
@@ -224,6 +231,8 @@ export default function CityScene3D({
         daylight,
         weather,   // round 49 (ADR-089): same hour as `daylight`
         season: seasonNow,   // round 50 (ADR-090)
+        hour: skyHour,       // round 51 (ADR-091): clouds, stars and the moon need the CLOCK, not just the sun
+        dayIndex,            // round 51: the moon's phase
         // ⚠️ CẢNH CẦN RENDERER để nướng bản đồ môi trường (PMREM) từ chính bầu trời của nó. Thiếu
         // tham số này thì cảnh vẫn dựng được nhưng mọi bề mặt kim loại sẽ ĐEN — xem
         // `createSkyEnvironment` ở `sceneGraph.js`.

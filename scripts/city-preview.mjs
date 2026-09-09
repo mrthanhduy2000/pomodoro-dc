@@ -299,6 +299,7 @@ function parseArgs(argv) {
     else if (key === '--no-ao') args.noAo = true;
     else if (key === '--dry') args.dry = true;
     else if (key === '--season') { args.season = String(value); i += 1; }
+    else if (key === '--day') { args.day = Number(value); i += 1; }   // round 51: which day, for the moon phase
     else if (key === '--gpu') args.gpu = true;
     // Chỉ KIỂM xem có Chromium không rồi thoát — không gói bundle, không mở trình duyệt.
     // ⚠️ Tồn tại để `bench-macbook.sh` hỏi được câu "máy này có Chromium chưa" mà KHÔNG phải chép
@@ -324,7 +325,7 @@ function run(cmd, cmdArgs, options = {}) {
 function entrySource({
   era, level, theme, zoom = 1, focus = 0, hour = null, pending = 0, sessions = 40, dpr = null, bench = 0,
   mask = null, noShadow = false, noAo = false, t = 17.5, lowDetail = false, topdown = false, noMotion = false, dry = false, season = 'summer',
-  walk = 0, walkTurn = 0, walkLook = 0,
+  walk = 0, walkTurn = 0, walkLook = 0, day = 0,
 }) {
   return `
 import { computeCityLayout, roadCellCount } from '${ROOT}/src/engine/cityLayout.js';
@@ -349,6 +350,7 @@ const NO_SHADOW = ${noShadow ? 'true' : 'false'};
 const NO_AO = ${noAo ? 'true' : 'false'};
 const DRY = ${dry ? 'true' : 'false'};
 const SEASON = ${JSON.stringify(season)};
+const DAY_INDEX = ${Number(day) || 0};
 const WALK = ${Number(walk) || 0};
 const WALK_TURN = ${Number(walkTurn) || 0};
 const WALK_LOOK = ${Number(walkLook) || 0};
@@ -429,6 +431,7 @@ renderer.shadowMap.needsUpdate = true;
 // lowDetail: cờ LOD thấp, dùng làm ĐỐI CHỨNG khi đo cư dân (mô hình 2 hộp không có khớp nào).
 const city = createCityScene({
   layout, palette, daylight, weather, season: SEASON, renderer, lowDetail: LOW_DETAIL,
+  hour: HOUR === null ? 12 : HOUR, dayIndex: DAY_INDEX,
   stats: { sessionCount: SESSIONS, streakLength: 9 },
   tachDeDo: MASK_NAMES,
   ao: !NO_AO,
@@ -729,12 +732,12 @@ if (BENCH > 0) {
   const g = city.stats.geometry;
   const n = (x) => x.toLocaleString('vi-VN');
   const pct = (a, b) => (b === 0 ? '—' : (100 * a / b).toFixed(1).replace('.', ',') + '%');
-  console.log('[stats] | đại lượng | trong cảnh: thành phố | nền (trời+núi) | trong cảnh: tổng'
+  console.log('[stats] | đại lượng | trong cảnh: thành phố | nền (vòm+núi) | trời (mây/sao) | trong cảnh: tổng'
     + ' | đã vẽ (sau khi cắt) |');
   console.log('[stats] | lệnh vẽ | ' + g.drawCalls.city + ' | ' + g.drawCalls.backdrop
-    + ' | ' + g.drawCalls.total + ' | ' + thật.calls + ' |');
+    + ' | ' + g.drawCalls.sky + ' | ' + g.drawCalls.total + ' | ' + thật.calls + ' |');
   console.log('[stats] | tam giác | ' + n(g.triangles.city) + ' | ' + n(g.triangles.backdrop)
-    + ' | ' + n(g.triangles.total) + ' | ' + n(thật.triangles) + ' |');
+    + ' | ' + n(g.triangles.sky) + ' | ' + n(g.triangles.total) + ' | ' + n(thật.triangles) + ' |');
   console.log('[stats] nền chiếm ' + pct(g.triangles.backdrop, g.triangles.total)
     + ' tam giác trong cảnh (hằng số ở mọi kỷ) ⇒ so kỷ nặng nhẹ phải đọc cột THÀNH PHỐ.');
 
@@ -779,7 +782,8 @@ document.getElementById('info').textContent =
   // Ba con số, theo đúng thứ tự bảng [stats]: thành phố + nền = tổng. Dòng chú thích dưới ảnh xem
   // thử là chỗ DUY NHẤT Đàm đọc mà không cần mở terminal, nên nó không được nói ít hơn bảng đo.
   + city.stats.geometry.triangles.city.toLocaleString('vi-VN') + ' tam giác thành phố + '
-  + city.stats.geometry.triangles.backdrop.toLocaleString('vi-VN') + ' nền = '
+  + city.stats.geometry.triangles.backdrop.toLocaleString('vi-VN') + ' nền + '
+  + city.stats.geometry.triangles.sky.toLocaleString('vi-VN') + ' trời = '
   + city.stats.triangles.toLocaleString('vi-VN');
 document.body.dataset.ready = '1';
 `;
@@ -793,7 +797,7 @@ document.body.dataset.ready = '1';
  * 74 ô đầu trống trơn, và không có lỗi nào hiện ra. Ở đây: vẽ một cảnh → sao chép điểm ảnh sang
  * canvas 2D của bảng → DỌN cảnh → dựng cảnh kế tiếp trên đúng context cũ.
  */
-function sweepSource({ level, theme, cell, combos, sessions = 40, t = 17.5, season = 'summer' }) {
+function sweepSource({ level, theme, cell, combos, sessions = 40, t = 17.5, season = 'summer', day = 0 }) {
   return `
 import { computeCityLayout } from '${ROOT}/src/engine/cityLayout.js';
 import { buildScenePalette } from '${ROOT}/src/engine/city3d/palette3d.js';
@@ -801,6 +805,7 @@ import { deriveDaylight } from '${ROOT}/src/engine/city3d/daylight.js';
 import { weatherAt } from '${ROOT}/src/engine/city3d/weather.js';
 import { isSeason } from '${ROOT}/src/engine/city3d/season.js';
 const SEASON = ${JSON.stringify(season)};
+const DAY_INDEX = ${Number(day) || 0};
 if (!isSeason(SEASON)) throw new Error('--season lạ: ' + SEASON);
 import { applyPaintedLook, createCityScene, MAX_PIXEL_RATIO } from '${ROOT}/src/components/city/render3d/sceneGraph.js';
 import { CITY_CAMERA_FOV, cityOrbitOptions, createOrbit } from '${ROOT}/src/engine/city3d/orbit.js';
@@ -882,6 +887,7 @@ for (let row = 0; row < eras.length; row += 1) {
     const palette = buildScenePalette({ tokens, eraColor: ERA_METADATA[era]?.accentColor, era, daylight, season: SEASON });
     const city = createCityScene({
       layout, palette, daylight, weather, season: SEASON, renderer, stats: { sessionCount: SESSIONS, streakLength: 9 },
+      hour, dayIndex: DAY_INDEX,
     });
     renderer.shadowMap.needsUpdate = true;
     city.updateResidents(ANIM_T);
@@ -1735,6 +1741,7 @@ async function main() {
       const aoTag = args.noAo ? '-noao' : '';
       const dryTag = args.dry ? '-dry' : '';
       const seasonTag = args.season === 'summer' ? '' : `-${args.season}`;
+      const dayTag = args.day ? `-d${args.day}` : '';
       const motionTag = args.noMotion ? '-nomotion' : '';
       // ⚠️ CHẾ ĐỘ CẬN CẢNH CŨNG PHẢI CÓ TÊN RIÊNG, cùng lý do với mặt nạ ở trên — mà lý do ấy vừa
       // trả giá thật ngày 2026-08-18: hai con số nghiệm thu mái (4,5% / 16,5%) phải vứt đi vì tấm
@@ -1772,7 +1779,7 @@ async function main() {
       // HẲN (nhìn thẳng xuống, không phải khung app), nên dùng chung tên file với ảnh thường là
       // cách chắc chắn nhất để một phép so trước/sau chấm hai thứ không so được với nhau.
       const topTag = args.topdown ? '-topdown' : '';
-      const pngPath = resolve(OUT_DIR, `city-era${String(era).padStart(2, '0')}-${args.theme}${hourTag}${sessTag}${widthTag}${zoomTag}${tTag}${lodTag}${maskTag}${shadowTag}${aoTag}${dryTag}${seasonTag}${motionTag}${focusTag}${walkTag}${topTag}.png`);
+      const pngPath = resolve(OUT_DIR, `city-era${String(era).padStart(2, '0')}-${args.theme}${hourTag}${sessTag}${widthTag}${zoomTag}${tTag}${lodTag}${maskTag}${shadowTag}${aoTag}${dryTag}${seasonTag}${dayTag}${motionTag}${focusTag}${walkTag}${topTag}.png`);
       let info = '';
       let hop = null;
       try {

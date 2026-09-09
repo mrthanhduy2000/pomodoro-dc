@@ -158,6 +158,20 @@ export function startOfVietnamDayTs(date = new Date()) {
   return vietnamDateTimeToTs({ year, month, day });
 }
 
+/**
+ * Round 51 (ADR-091): WHICH DAY IT IS, as one whole number — the moon's phase counter.
+ *
+ * ⚠️ WHY IT LIVES HERE AND NOT AT THE CALL SITE. The 3D scene needs a day index to place the moon
+ * in its 29,53-day cycle, and the obvious `Math.floor(Date.now() / 86 400 000)` is wrong twice: it
+ * counts UTC days, so it turns over at 07:00 in Hanoi, and it reads the machine clock directly —
+ * which `CityScene3D.test.js` forbids for exactly the reason this file exists (a machine on the
+ * wrong timezone must not give Đàm a different sky). Counting whole VIETNAM days from the epoch
+ * fixes both, and keeps the rule "one place reads the clock" intact.
+ */
+export function getVietnamDayIndex(date = new Date()) {
+  return Math.floor(startOfVietnamDayTs(date) / 86400000);
+}
+
 export function startOfVietnamWeekTs(date = new Date()) {
   const { year, month, day } = parseLocalDateStr(localWeekMondayStr(date));
   return vietnamDateTimeToTs({ year, month, day });

@@ -169,7 +169,8 @@ test('VẬT LIỆU ĐỘI ĐẦU — trục mới phải THẬT SỰ tới đư�
   const theoVai = { straw: [], cloth2: [] };
   for (let era = 1; era <= 15; era += 1) {
     const hg = buildHumanBody(era).parts.find((x) => x.id === 'headgear');
-    if (!hg || hg.role === 'hair' || hg.role === 'gear') { trơ.push(era); continue; }
+    // round 49 (debt #79): `steel` is the helmet's own material role now — inert to this axis like `gear`
+    if (!hg || hg.role === 'hair' || hg.role === 'gear' || hg.role === 'steel') { trơ.push(era); continue; }
     assert.ok(Object.hasOwn(theoVai, hg.role), `kỷ ${era}: vai đội đầu lạ "${hg.role}"`);
     theoVai[hg.role].push(era);
   }

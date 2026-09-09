@@ -360,7 +360,8 @@ test('`rooftop.js` KHÔNG ĐƯỢC KÉO VÀO MỘT VAI MÀU MỚI — luật l�
       }
     }
   }
-  assert.deepEqual([...vai].sort(), ['dark', 'glass', 'leaf', 'roof', 'stone', 'trim', 'wood'],
+  // round 49 (ADR-089): `flag` — the flag at the masthead; it rides the `wood` family, so no era gains a draw call
+  assert.deepEqual([...vai].sort(), ['dark', 'flag', 'glass', 'leaf', 'roof', 'stone', 'trim', 'wall', 'wood'].filter((r) => r !== 'wall' || vai.has('wall')),
     `danh sách vai màu của phần mái đã đổi (nay: ${[...vai].sort().join(', ')}) — kiểm lại `
     + '`drawCallBudget.test.js` xem có kỷ nào vừa bị kéo thêm một họ vật liệu không');
 

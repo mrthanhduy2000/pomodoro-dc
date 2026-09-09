@@ -16,7 +16,8 @@
  * no surface detail, so it gets `injectWater` directly. Never set `onBeforeCompile` twice.
  */
 import {
-  Color, DynamicDrawUsage, InstancedMesh, Matrix4, MeshBasicMaterial, Object3D, Sphere, SphereGeometry, Vector3,
+  AdditiveBlending, Color, DynamicDrawUsage, InstancedMesh, Matrix4, MeshBasicMaterial, Object3D, Sphere,
+  SphereGeometry, Vector3,
 } from 'three';
 import { MOTION_KIND, PARTICLE_STYLE, SMOKE_INTENSITY, phaseAt } from '../../../engine/city3d/motion';
 
@@ -129,15 +130,18 @@ const colour = new Color();
  * style is `wide`, particles instead fill `bounds` = { x0, x1, z0, z1, y0, y1 }.
  * Returns `{ mesh, update(t), count }`; `mesh` is an `InstancedMesh` to add to the scene.
  */
-export function createParticles({ kind, sources = [], bounds = null, intensity = 1, sky = 0xcfd8e0 }) {
+export function createParticles({ kind, sources = [], bounds = null, intensity = 1, sky = 0xcfd8e0, light = 1 }) {
   const style = PARTICLE_STYLE[kind];
   if (!style) return null;
-  const count = style.wide ? style.count : Math.round(sources.length * style.perSource * intensity);
+  const count = style.wide ? style.count : Math.round(sources.length * style.perSource * (kind === 'fire' ? 1 : intensity));
   if (!(count > 0)) return null;
   if (style.wide && !bounds) return null;
 
   const material = new MeshBasicMaterial({
-    color: style.tint, transparent: style.alpha < 1, opacity: style.alpha, depthWrite: false, fog: true,
+    color: style.tint, transparent: style.alpha < 1 || Boolean(style.additive), opacity: style.alpha,
+    depthWrite: false, fog: style.fog ?? true,
+    // Round 49 (ADR-089): fire ADDS light to what is behind it instead of painting over it
+    ...(style.additive ? { blending: AdditiveBlending } : {}),
   });
   const mesh = new InstancedMesh(SPHERE, material, count);
   mesh.instanceMatrix.setUsage(DynamicDrawUsage);
@@ -163,7 +167,12 @@ export function createParticles({ kind, sources = [], bounds = null, intensity =
     mesh.frustumCulled = true;
   }
   const tint = new Color(style.tint);
-  const fade = new Color(sky);
+  // Round 49: smoke and steam are LIT by the sky (`light`, see `smokeLightFor`); fire lights itself
+  if (!style.wide && !style.additive) tint.multiplyScalar(light);
+  // a smoke puff fades into the SKY; a tongue of fire cools into dark red (`tintEnd`)
+  const fade = new Color(style.tintEnd ?? sky);
+  const emberTint = new Color(0xffd98a);
+  const isFire = kind === 'fire';
 
   const spanX = bounds ? bounds.x1 - bounds.x0 : 0;
   const spanZ = bounds ? bounds.z1 - bounds.z0 : 0;
@@ -200,8 +209,32 @@ export function createParticles({ kind, sources = [], bounds = null, intensity =
         y = style.rise < 0
           ? bounds.y1 - (bounds.y1 - bounds.y0) * u
           : bounds.y0 + unitHash(i, 6) * spanY + style.rise * age;
-        x += Math.sin(t * 1.3 + i) * 0.08;
+        if (!style.streak) x += Math.sin(t * 1.3 + i) * 0.08;   // snow wanders; rain does not
         s = style.size[0] + (style.size[1] - style.size[0]) * u;
+      } else if (isFire) {
+        // Round 49 (ADR-089): tongues rise straight and fast from the flame top, wobbling; every
+        // fourth particle is an EMBER — a speck that lives longer, drifts wider, stays bright.
+        const src = sources[Math.floor(i / style.perSource) % sources.length];
+        const ph = phaseAt(src.x, src.z);
+        const ember = i % 4 === 3;
+        const lifeF = ember ? life * 2.2 : life;
+        const ageF = (t + unitHash(i, 2) * lifeF) % lifeF;
+        const uF = ageF / lifeF;
+        const wob = ember ? 0.05 : 0.018;
+        x = src.x + Math.sin(ageF * 7.1 + ph + i) * wob * (1 + uF * 2) + (unitHash(i, 4) - 0.5) * 0.05;
+        z = src.z + Math.cos(ageF * 6.3 + ph * 1.7 + i) * wob * (1 + uF * 2) + (unitHash(i, 5) - 0.5) * 0.05;
+        y = src.y - 0.03 + style.rise * ageF * (ember ? 0.75 : 1);
+        s = ember
+          ? 0.011 * (0.8 + 0.4 * Math.abs(Math.sin(t * 21 + i)))
+          : (style.size[0] + (style.size[1] - style.size[0]) * uF) * (0.85 + 0.3 * Math.abs(Math.sin(t * 23 + i * 1.3)));
+        dummy.position.set(x, y, z);
+        dummy.rotation.set(0, 0, 0);
+        dummy.scale.setScalar(Math.max(1e-4, s));
+        dummy.updateMatrix();
+        mesh.setMatrixAt(i, dummy.matrix);
+        if (ember) colour.copy(emberTint); else colour.copy(tint).lerp(fade, uF * uF);
+        mesh.setColorAt(i, colour);
+        continue;
       } else {
         const src = sources[Math.floor(i / Math.max(1, style.perSource * intensity)) % sources.length];
         const ph = phaseAt(src.x, src.z);
@@ -217,6 +250,7 @@ export function createParticles({ kind, sources = [], bounds = null, intensity =
       dummy.position.set(x, y, z);
       dummy.rotation.set(0, 0, 0);
       dummy.scale.setScalar(Math.max(1e-4, s * shrink));
+      if (style.streak) dummy.scale.y *= style.streak;   // a raindrop is a streak, not a bead
       dummy.updateMatrix();
       mesh.setMatrixAt(i, dummy.matrix);
       if (!style.wide) {

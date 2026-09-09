@@ -201,6 +201,11 @@ export function applySurfaceDetail(material, opts = {}) {
   // vật liệu ĐÃ vá và một vật liệu CHƯA vá có cùng cấu hình gốc sẽ dùng chung một chương trình đã
   // biên dịch — tức bản vá hoặc rò sang chỗ không nên có, hoặc biến mất ở chỗ nên có, tuỳ cái nào
   // biên dịch trước. Chuỗi hằng là đủ: mọi khác biệt giữa các vật liệu đã vá đều đi qua uniform.
-  material.customProgramCacheKey = () => 'city-surface-detail-v1';
+  // ⚠️ ROUND 49 (ADR-089, lesson 106): AND THE MOTION INJECTION CHANGES THE SHADER **CODE**, not a
+  // uniform — so a material WITH motion and one WITHOUT (ground, roads, outskirts) must NOT share a
+  // key. With one key for both, whichever compiled first won: the merged city got the ground's
+  // program and nothing moved — trees, flags, sails stood still for a whole round while the
+  // photo measure was carried by smoke and residents, which have their own clock.
+  material.customProgramCacheKey = () => (motion ? 'city-surface-detail-v1+motion' : 'city-surface-detail-v1');
   return material;
 }

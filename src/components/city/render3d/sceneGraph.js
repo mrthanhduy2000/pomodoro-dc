@@ -47,7 +47,7 @@ import { applySurfaceDetail, specularGainFor } from './surfaceDetail';
 import { getEraStyle } from '../../../engine/city3d/eraStyle';
 import { collectCitySpecs, KIND_NGOAI_LUOI, NHOM_CUA_KIND } from '../../../engine/city3d/cityParts';
 import { BUILDING_SCALE, buildingSpanCells, plinthParts } from '../../../engine/city3d/parts';
-import { buildTerrain } from '../../../engine/city3d/terrain';
+import { buildTerrain, WATER_SURFACE_Y } from '../../../engine/city3d/terrain';
 import { buildHorizon } from '../../../engine/city3d/horizon';
 import { placeBounds, specBounds } from '../../../engine/city3d/pick';
 import { buildResidents, residentAt } from '../../../engine/city3d/residents';
@@ -57,7 +57,8 @@ import { poseAt } from '../../../engine/city3d/humanPose';
 import { fogDensityFor, sunDirectionAt } from '../../../engine/city3d/daylight';
 import { buildMergedGeometry, partTopWorld } from './geometryFactory';
 import { createMotionUniforms, createParticles, createWaterUniforms, injectWater } from './motion';
-import { getEraMotion, motionTime, SMOKE_INTENSITY } from '../../../engine/city3d/motion';
+import { FIRE_LIGHT, FIRE_TAG, fireFlicker, getEraMotion, motionTime, SMOKE_INTENSITY, smokeLightFor } from '../../../engine/city3d/motion';
+import { weatherParticle, wetSurface } from '../../../engine/city3d/weather';
 import {
   ROAD_LIFT, buildHorizonSurface, buildRoadSurface, buildTerrainSurface, buildWaterSurface,
 } from './terrainMesh';
@@ -606,6 +607,7 @@ function createSkyEnvironment(renderer, skyLook, groundColor) {
  */
 export function createCityScene({
   layout, palette, dimmed = false, lowDetail = false, stats = {}, still = false, daylight = null,
+  weather = null,  // round 49 (ADR-089): `weatherAt(era, hour)` — rain wets the ground, fog thickens, streaks fall
   motion = true,   // round 48: false = a still photograph of a living city (tools only; residents stay)
   maxLamps = 3, renderer = null, isMobile = false, tachDeDo = null, ao = true,
 }) {
@@ -644,10 +646,24 @@ export function createCityScene({
   // mảng phẳng lì MỘT màu, và bất cứ thứ gì đứng ngoài đó đều tàng hình tuyệt đối. Chính vì vậy
   // dòng này phải đổi TRƯỚC khi dựng vùng đất xa bên dưới, nếu không cả dãy núi sẽ là mã chết ngay
   // từ lúc sinh ra (đúng cái bẫy Phase 8D đã sập một lần với cơ chế "lùm cây").
+  // Round 49 (ADR-089): the weather adds to the daylight haze — a foggy dawn in the Eifel, Manchester
+  // smog, a Dubai sandstorm — as a multiplier on the same exponential fog, never a second fog.
   scene.fog = new FogExp2(
     palette.sky2?.horizon ?? palette.background,
-    fogDensityFor(daylight?.haze ?? 0, gridSize),
+    fogDensityFor(daylight?.haze ?? 0, gridSize) * (1 + 2.5 * (weather?.fog ?? 0)),
   );
+  // Round 49 (ADR-089): WET GROUND. One law for the three ground materials (`wetSurface`): roughness
+  // falls so the sky reflects, the albedo darkens, the specular gain rises. `weather.wet` is never
+  // below `weather.rain`, so streaks over a dry street cannot happen.
+  const wet = weather?.wet ?? 0;
+  const wetTile = wetSurface({ roughness: 0.96 }, wet);
+  const wetOutskirts = wetSurface({ roughness: 0.98 }, wet);
+  // ⚠️ The measured law of `sceneGraphWiring.test.js` still holds: DRY ground (roughness 0,96–0,98)
+  // gains nothing from a specular gain and loses saturation. Wet ground is a different surface —
+  // roughness 0,34, and the sky really does reflect in it — so the gain is applied ONLY when wet
+  // (`wetSurface` returns exactly 1 at wet = 0), through this one helper, which spreads NOTHING
+  // into the grain when the ground is dry.
+  const wetGain = (wetness) => (wetness.specularGain > 1 ? { specularGain: wetness.specularGain } : {});
 
   // three KHÔNG tự giải phóng bộ nhớ GPU — mọi thứ tạo ra ở đây phải tự dọn trong `dispose`.
   const disposables = [];
@@ -710,8 +726,9 @@ export function createCityScene({
   // Mặt đất, mặt đường, vùng đất bao quanh: nhám gần như tuyệt đối. Chúng KHÔNG được bóng — một
   // con đường bắt sáng là con đường vừa mưa xong, và cả 15 kỷ đều không mưa.
   const tileMaterial = track(applySurfaceDetail(new MeshStandardMaterial({
-    roughness: 0.96,
+    roughness: wetTile.roughness,
     metalness: 0,
+    color: new Color(wetTile.darken, wetTile.darken, wetTile.darken),   // round 49: wet earth is darker
     // ⚠️ TỪ PHASE 8C MÀU ĐI QUA ĐỈNH, KHÔNG QUA `setColorAt` NỮA. Mặt đất thôi là 144 khối hộp có
     // màu riêng từng khối; nó là MỘT tấm liền, và màu nội suy dọc theo các đỉnh chính là thứ xoá
     // được cái bàn cờ. Bỏ dòng này thì tấm lưới ra màu trắng trơn — im lặng, không lỗi.
@@ -720,7 +737,7 @@ export function createCityScene({
     envMapIntensity: ENV_DIFFUSE,
     transparent: dimmed,
     opacity: dimmed ? 0.62 : 1,
-  }), { ...GRAIN.ground }));
+  }), { ...GRAIN.ground, ...wetGain(wetTile) }));
 
   // Dùng lại vài đối tượng tạm cho mọi thực thể — tạo mới trong vòng lặp là rác cho bộ dọn.
   const matrix = new Matrix4();
@@ -749,15 +766,17 @@ export function createCityScene({
    * tới Phase 8B, một tấm lưới bám sườn dốc từ Phase 8C).
    */
   const roadProfile = materialProfile(getEraStyle(layout.era)?.roadMaterial);
+  const wetRoad = wetSurface({ roughness: roadProfile.roughness }, wet);
   const roadMaterial = track(applySurfaceDetail(new MeshStandardMaterial({
-    roughness: roadProfile.roughness,
+    roughness: wetRoad.roughness,
     metalness: roadProfile.metalness,
     vertexColors: true,
+    color: new Color(wetRoad.darken, wetRoad.darken, wetRoad.darken),   // round 49: wet stone is darker
     envMap,
     envMapIntensity: ENV_DIFFUSE,
     transparent: dimmed,
     opacity: dimmed ? 0.62 : 1,
-  }), { ...GRAIN.road }));
+  }), { ...GRAIN.road, ...wetGain(wetRoad) }));
 
   // ── ĐỊA HÌNH ──────────────────────────────────────────────────────────────
   // ⚠️ MỌI THỨ ĐỨNG TRÊN ĐẤT ĐỀU PHẢI HỎI Ở ĐÂY, KHÔNG ĐƯỢC AI TỰ GIẢ ĐỊNH y = 0.
@@ -823,11 +842,12 @@ export function createCityScene({
   const horizonSurface = buildHorizonSurface({ horizon, palette, terrain, gridSize });
   const outskirtsMaterial = track(applySurfaceDetail(new MeshStandardMaterial({
     vertexColors: true,
-    roughness: 0.98,
+    roughness: wetOutskirts.roughness,
     metalness: 0,
+    color: new Color(wetOutskirts.darken, wetOutskirts.darken, wetOutskirts.darken),   // round 49
     envMap,
     envMapIntensity: ENV_DIFFUSE,
-  }), { ...GRAIN.outskirts }));
+  }), { ...GRAIN.outskirts, ...wetGain(wetOutskirts) }));
   if (horizonSurface) {
     track(horizonSurface.geometry);
     const outskirts = new Mesh(horizonSurface.geometry, outskirtsMaterial);
@@ -1102,7 +1122,7 @@ export function createCityScene({
       // ⚠️ TRỪ MẢNG PHỦ ĐẤT (`gridAligned`, xem `deriveGroundCover` ở `cityLayout.js`): nó là một
       // hình VUÔNG rộng gần trọn ô, xoay một góc bất kỳ là nó thò sang ô bên. Bội số 90° thì góc
       // nào cũng vẫn nằm gọn trong ô, mà vẫn đủ bốn hướng cho những kiểu không đối xứng.
-      ry: prop.gridAligned
+      ry: Number.isFinite(prop.ry) ? prop.ry : prop.gridAligned
         ? ((prop.variant + prop.x + prop.y) % 4) * (Math.PI / 2)
         : (prop.variant + prop.x * 0.7 + prop.y * 1.3) % (Math.PI * 2),
       spec: item.spec,
@@ -1112,6 +1132,23 @@ export function createCityScene({
   // Móng xếp SAU cùng: chúng chỉ là khối lấp, không phải thứ chạm vào được, nên phải nằm ngoài
   // vùng chỉ số mà `addPickTarget` đã bám theo (`placements[index]`).
   // ⚠️ Móng mang nhãn `buildings` vì nó luôn thuộc về một thứ ĐÃ XÂY — cảnh vật không có móng.
+  // ── Round 49 (ADR-089): boats on the water ────────────────────────────────
+  // A boat is LANDSCAPE, not city (`NHOM_CUA_KIND.water`): it rides the water surface, not the
+  // terrain, and its whole hull bobs with the waves (`motion: 'bob'`, read by `geometryFactory`).
+  for (const item of cityParts) {
+    if (item.kind !== 'water') continue;
+    const boat = item.source;
+    const { x, z } = cellToWorld(boat.x, boat.y, gridSize);
+    dayKhoi(NHOM_CUA_KIND.water, {
+      x, z, y: WATER_SURFACE_Y + 0.01,
+      // 1,3× — at 1,0 a 0,6-long hull was 12 px at the default camera, under the eye threshold
+      scale: 1.3,
+      motion: 'bob',
+      ry: boat.ry,
+      spec: item.spec,
+    });
+  }
+
   for (const plinth of plinths) dayKhoi(NHOM_CUA_KIND.building, plinth);
 
   // ── Vùng quê: cây cối, bờ bụi, đá tảng NGOÀI lưới thành phố ──────────────
@@ -1245,7 +1282,8 @@ export function createCityScene({
     skipDeco: lowDetail,
     // Trời đã tối ⇒ tách ô cửa ra khối "tự phát sáng" riêng. Ban ngày `null` ⇒ không tách, không
     // tốn thêm lệnh vẽ nào.
-    glowRole: daylight?.windowsLit ? 'glass' : null,
+    // Round 49 (ADR-089): at night the flames glow with the windows (their own colour, unlit, unfogged)
+    glowRole: daylight?.windowsLit ? ['glass', 'flame'] : null,
     era: layout.era,
     // ⚠️ CHE KHUẤT MÔI TRƯỜNG (AO) — CỜ NÀY TỒN TẠI ĐỂ CÓ ĐỐI CHỨNG, KHÔNG PHẢI ĐỂ CHỈNH.
     // Nó nướng sẵn vào MÀU ĐỈNH nên bật/tắt KHÔNG đổi một lệnh vẽ nào, không đổi một tam giác nào
@@ -1316,6 +1354,8 @@ export function createCityScene({
   // hơn tuần trước". Cả cộng đồng đi qua MỘT `InstancedMesh` cho MỖI KHUÔN cơ thể (2026-08-23,
   // ADR-055) — trước đó là đúng một mesh duy nhất, vì mọi bộ phận đều là hộp. Xem chú thích
   // "GOM KHỐI THEO KHUÔN" ngay bên dưới để biết vì sao không thể gộp lại làm một.
+  const fireSources = [];
+  const fireLights = [];
   if (eraMotion) {
     // Smoke is born at every tagged chimney stack; wide particles (snow, sand, dust, birds) fill the
     // city's air. Sources come from the SPECS the city was built from, so they sit exactly on the roofs.
@@ -1333,15 +1373,30 @@ export function createCityScene({
       }
       if (!stacked) hearths.push(pl);
     }
+    // Round 49 (ADR-089): FIRE SOURCES — every part tagged `fire` in ANY group (a campfire is a prop,
+    // a firepit is a building motif, a torch is a lamp post). The particle spawns at the flame's top.
+    for (const pl of placements) {
+      const ps = pl?.spec?.parts;
+      if (!Array.isArray(ps)) continue;
+      for (const part of ps) if (part.tag === FIRE_TAG) fireSources.push(partTopWorld(pl, part));
+    }
     const half = gridSize / 2 + 1.5;
     const bounds = { x0: -half, x1: half, z0: -half, z1: half, y0: 0.3, y1: 4.2 };
     const sky = palette.lights?.skyDome ?? palette.sky ?? 0xcfd8e0;
+    const light = smokeLightFor(daylight?.phase);
     for (const kind of eraMotion.particles) {
       const fromStacks = kind === 'smoke' || kind === 'steam';
       const sys = createParticles({
-        kind, sources: fromStacks ? sources : [], bounds,
-        intensity: SMOKE_INTENSITY[eraMotion.smoke] ?? 1, sky,
+        kind, sources: kind === 'fire' ? fireSources : fromStacks ? sources : [], bounds,
+        intensity: SMOKE_INTENSITY[eraMotion.smoke] ?? 1, sky, light,
       });
+      if (sys) { addMesh(sys.mesh); track(sys); particleSystems.push(sys); }
+    }
+    // Round 49 (ADR-089): the weather's own particles — rain or drizzle — on top of the era's list.
+    // Only when the ground is wet (`weatherParticle` reads `rain`, and `wet ≥ rain` by construction).
+    const rainKind = weatherParticle(weather);
+    if (rainKind) {
+      const sys = createParticles({ kind: rainKind, bounds: { ...bounds, y0: 0.1, y1: 4.6 }, sky, light });
       if (sys) { addMesh(sys.mesh); track(sys); particleSystems.push(sys); }
     }
   }
@@ -1517,6 +1572,8 @@ export function createCityScene({
     motionUniforms.uTime.value = t;
     if (waterUniforms) waterUniforms.uTime.value = t;
     for (const sys of particleSystems) sys.update(t);
+    // Round 49 (ADR-089): the fires flicker — deterministic in t, see `fireFlicker`
+    for (const f of fireLights) f.light.intensity = f.base * fireFlicker(t, f.phase);
     placeResidents?.(timeSeconds);
   }
   /** Kept for callers that predate round 48 (`city-preview.mjs`, tests). */
@@ -1751,6 +1808,25 @@ export function createCityScene({
     }
   }
 
+  /**
+   * Round 49 (ADR-089): LOCAL point lights around the fires at night. Not a 4th fill light — each one
+   * reaches a quarter of a cell and lights the ground and walls around ITS fire, orange, flickering
+   * (`update`). Capped at `FIRE_LIGHT.max`, nearest to the city centre first, deterministic order.
+   * Off in `lowDetail`, off by day (`lampEnergy` = 0), off in the museum (its hour is daytime).
+   */
+  if (lampEnergy > 0 && !lowDetail && fireSources.length > 0) {
+    const ranked = [...fireSources]
+      .map((src, i) => ({ src, i, d: Math.hypot(src.x, src.z) }))
+      .sort((a, b) => a.d - b.d || a.i - b.i)
+      .slice(0, FIRE_LIGHT.max);
+    for (const { src } of ranked) {
+      const light = new PointLight(FIRE_LIGHT.color, FIRE_LIGHT.intensity * lampEnergy, gridSize * FIRE_LIGHT.reachCells, FIRE_LIGHT.decay);
+      light.position.set(src.x, src.y + 0.12, src.z);
+      scene.add(light);
+      fireLights.push({ light, base: light.intensity, phase: (src.x * 1.7 + src.z * 2.3) % 6.283 });
+    }
+  }
+
   let disposed = false;
   function dispose() {
     // ⚠️ Phải chịu được gọi NHIỀU LẦN: React StrictMode ở dev mount → unmount → mount, và
@@ -1821,6 +1897,9 @@ export function createCityScene({
       // Đèn điểm là nguồn sáng DUY NHẤT ở đây tính tiền theo từng điểm ảnh — hiện lên HUD để lúc
       // Đàm chụp màn hình báo máy nóng, ta biết ngay lúc đó có mấy cái đang bật.
       lamps: lampCount,
+      fires: fireSources.length,
+      fireLights: fireLights.length,
+      weather: weather ? { kind: weather.kind, wet: weather.wet, rain: weather.rain, fog: weather.fog } : null,
       // ⚠️ ĐẾM CẢ CẢNH, KHÔNG TỰ TÍNH NỮA (xem `measureSceneGeometry` ở đầu file để biết vì sao —
       // công thức tự tính cũ đã báo THIẾU 56% suốt từ Phase 9A mà không có gì đỏ lên).
       // Hai con số phẳng dưới đây là TỔNG, và chúng suy ra từ ĐÚNG một phép đo ở dòng trên — không

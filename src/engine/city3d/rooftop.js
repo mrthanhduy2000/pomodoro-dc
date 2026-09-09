@@ -527,6 +527,16 @@ function emitMast(out, a, ctx) {
     const cx = a.deck.x + off;
     const tall = w * MAST_TALL * (0.8 + at('mast', off) * 0.5);
     out.push(prism({ x: cx, z: a.deck.z, y: a.deck.y, w, d: w, h: tall, sides: 4, taper: 0.6, role: 'dark' }));
+    // Round 49 (ADR-089): a flag at the masthead — a MIRRORED pair (one each side, the mirrored one
+    // yawed 180° so its attached −X edge still faces the pole), because a landmark must stay
+    // symmetric to the digit (`rooftop.test.js` sums x over every stack part). The motion layer holds
+    // the pole edge still and flaps the free ends.
+    for (const side of [1, -1]) {
+      out.push(prism({
+        x: cx + side * w * 2.2, z: a.deck.z, y: a.deck.y + tall * 0.86,
+        w: w * 4.2, d: w * 0.3, h: w * 2.4, sides: 4, ry: side < 0 ? Math.PI : 0, role: 'flag',
+      }));
+    }
     for (const t of [0.55, 0.8]) {
       out.push(prism({
         x: cx, z: a.deck.z, y: a.deck.y + tall * t, w: w * 5.5, d: w * 0.7, h: w * 0.7,

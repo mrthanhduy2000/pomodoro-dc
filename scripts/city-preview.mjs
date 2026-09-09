@@ -257,6 +257,7 @@ function parseArgs(argv) {
     // đi thì mọi câu "nhờ AO mà khối đọc ra là 3D" là một lời nói không kiểm được, đúng loại câu
     // tự trấn an mà dự án này đã trả giá nhiều lần.
     noAo: false,
+    dry: false,      // round 49: force clear weather (the A/B control for wet ground)
     // ⚠️ DÙNG GPU THẬT thay vì SwiftShader. Mặc định TẮT vì hộp cát dựng ảnh không có card đồ hoạ —
     // nhưng trên MacBook của Đàm thì BẮT BUỘC bật, nếu không mọi con số đo được vẫn là số của một
     // cỗ máy tô hình bằng CPU, chỉ khác là lần này nó đội lốt "đo trên máy thật". Công cụ luôn in
@@ -289,6 +290,7 @@ function parseArgs(argv) {
     else if (key === '--mask') { args.mask = String(value); i += 1; }
     else if (key === '--no-shadow') args.noShadow = true;
     else if (key === '--no-ao') args.noAo = true;
+    else if (key === '--dry') args.dry = true;
     else if (key === '--gpu') args.gpu = true;
     // Chỉ KIỂM xem có Chromium không rồi thoát — không gói bundle, không mở trình duyệt.
     // ⚠️ Tồn tại để `bench-macbook.sh` hỏi được câu "máy này có Chromium chưa" mà KHÔNG phải chép
@@ -313,12 +315,13 @@ function run(cmd, cmdArgs, options = {}) {
  */
 function entrySource({
   era, level, theme, zoom = 1, focus = 0, hour = null, pending = 0, sessions = 40, dpr = null, bench = 0,
-  mask = null, noShadow = false, noAo = false, t = 17.5, lowDetail = false, topdown = false, noMotion = false,
+  mask = null, noShadow = false, noAo = false, t = 17.5, lowDetail = false, topdown = false, noMotion = false, dry = false,
 }) {
   return `
 import { computeCityLayout, roadCellCount } from '${ROOT}/src/engine/cityLayout.js';
 import { buildScenePalette } from '${ROOT}/src/engine/city3d/palette3d.js';
 import { deriveDaylight } from '${ROOT}/src/engine/city3d/daylight.js';
+import { weatherAt } from '${ROOT}/src/engine/city3d/weather.js';
 import { applyPaintedLook, createCityScene, MAX_PIXEL_RATIO } from '${ROOT}/src/components/city/render3d/sceneGraph.js';
 import { CITY_CAMERA_FOV, cityOrbitOptions, createOrbit } from '${ROOT}/src/engine/city3d/orbit.js';
 import { planCityFocus } from '${ROOT}/src/engine/city3d/cityFocus.js';
@@ -333,6 +336,7 @@ const MASK = ${mask === null ? 'null' : JSON.stringify(mask)};
 const MASK_NAMES = MASK ? MASK.split(',').map((s) => s.trim()).filter(Boolean) : [];
 const NO_SHADOW = ${noShadow ? 'true' : 'false'};
 const NO_AO = ${noAo ? 'true' : 'false'};
+const DRY = ${dry ? 'true' : 'false'};
 const NO_MOTION = ${noMotion ? 'true' : 'false'};
 
 const ERA = ${era};
@@ -368,6 +372,8 @@ const soODuong = (layout.props ?? []).filter((p) => p.kind === 'road').length;
 // Giờ TRUYỀN VÀO chứ không đọc đồng hồ thật: trang xem thử phải chụp được mọi chặng trong ngày,
 // không phải chỉ chặng đang diễn ra lúc chạy lệnh.
 const daylight = HOUR === null ? null : deriveDaylight(HOUR);
+// round 49 (ADR-089): the weather of THIS hour, like the app; --dry is the control photo
+const weather = HOUR === null || DRY ? null : weatherAt(ERA, HOUR);
 const palette = buildScenePalette({
   tokens: IS_DARK
     ? { canvas2: '#1d1c1a', ink: '#f2efe6', line: '#33312d', accent: '#c96442' }
@@ -405,7 +411,7 @@ renderer.shadowMap.needsUpdate = true;
 //
 // lowDetail: cờ LOD thấp, dùng làm ĐỐI CHỨNG khi đo cư dân (mô hình 2 hộp không có khớp nào).
 const city = createCityScene({
-  layout, palette, daylight, renderer, lowDetail: LOW_DETAIL,
+  layout, palette, daylight, weather, renderer, lowDetail: LOW_DETAIL,
   stats: { sessionCount: SESSIONS, streakLength: 9 },
   tachDeDo: MASK_NAMES,
   ao: !NO_AO,
@@ -1681,6 +1687,7 @@ async function main() {
       // tấm ảnh với chính nó — đúng bài học `MAI-SAU-ky9.png`, nơi hai con số nghiệm thu mái phải
       // vứt đi vì tấm "cận mái" trùng TỪNG BYTE với ảnh khung thường.
       const aoTag = args.noAo ? '-noao' : '';
+      const dryTag = args.dry ? '-dry' : '';
       const motionTag = args.noMotion ? '-nomotion' : '';
       // ⚠️ CHẾ ĐỘ CẬN CẢNH CŨNG PHẢI CÓ TÊN RIÊNG, cùng lý do với mặt nạ ở trên — mà lý do ấy vừa
       // trả giá thật ngày 2026-08-18: hai con số nghiệm thu mái (4,5% / 16,5%) phải vứt đi vì tấm
@@ -1717,7 +1724,7 @@ async function main() {
       // HẲN (nhìn thẳng xuống, không phải khung app), nên dùng chung tên file với ảnh thường là
       // cách chắc chắn nhất để một phép so trước/sau chấm hai thứ không so được với nhau.
       const topTag = args.topdown ? '-topdown' : '';
-      const pngPath = resolve(OUT_DIR, `city-era${String(era).padStart(2, '0')}-${args.theme}${hourTag}${sessTag}${widthTag}${zoomTag}${tTag}${lodTag}${maskTag}${shadowTag}${aoTag}${motionTag}${focusTag}${topTag}.png`);
+      const pngPath = resolve(OUT_DIR, `city-era${String(era).padStart(2, '0')}-${args.theme}${hourTag}${sessTag}${widthTag}${zoomTag}${tTag}${lodTag}${maskTag}${shadowTag}${aoTag}${dryTag}${motionTag}${focusTag}${topTag}.png`);
       let info = '';
       let hop = null;
       try {

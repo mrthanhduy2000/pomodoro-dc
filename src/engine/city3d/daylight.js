@@ -442,13 +442,17 @@ export function sunDirectionAt(base, altitude) {
  * wears. The shell had even hidden the "đang là hoàng hôn" caption for sealed eras because "that
  * is a place that no longer changes" — but the LIGHT still changed. Half a rule.
  *
- * So the museum has one hour. 15:00 is a warm, low sun with a golden horizon — gallery light, the
- * classic hero-shot hour — and it is a plain daylight profile, not a fourth light source or a new
- * material: the black box renders it exactly as it renders any afternoon. The current era keeps
- * following the real clock; the promise "every time you open the app it is a different scene"
- * belongs to the city that is still alive.
+ * So the museum has one hour. It was 15:00 (round 46) — a warm, low sun with a golden horizon,
+ * gallery light. Round 49 (ADR-089) moved it to 18:00, DUSK, re-checked by eye on two frames of
+ * Kỷ 1 (the prompt asked for exactly this re-check once fire existed): at 15:00 the fires are
+ * three orange dots in flat sun; at 18:00 the same city has warm side-light, long shadows, lit
+ * windows and a pool of firelight at every hearth — and every roof line is still readable. It is
+ * still a plain daylight profile plus the same local lights the living city gets at dusk, not a
+ * fourth fill light or a new material. The current era keeps following the real clock; the promise
+ * "every time you open the app it is a different scene" belongs to the city that is still alive.
+ * The weather of a sealed era is fixed at the same hour (`museumWeather`).
  */
-export const MUSEUM_HOUR = 15;
+export const MUSEUM_HOUR = 18;
 
 /** The fixed daylight of every sealed era. */
 export function museumDaylight() {

@@ -223,6 +223,16 @@ export function roadContrastGap(offsetAbs, {
  * @returns {{background:number, ground:number, groundAlt:number, wall:number, roof:number,
  *            edge:number, sky:number, sun:number, isDark:boolean}}
  */
+/**
+ * Round 49 (ADR-089): the dye of the era's flags and banners — heraldic, mostly red, because a red
+ * flag is what the eye reads as "a flag" at 4 px; blue for Paris and New York, green for Dubai,
+ * ochre/gold before dyes were bright. Hue only; saturation and lightness are fixed in `roles.flag`.
+ */
+const FLAG_HUE = Object.freeze({
+  1: 25, 2: 45, 3: 15, 4: 2, 5: 355, 6: 0, 7: 348, 8: 356,
+  9: 222, 10: 5, 11: 214, 12: 358, 13: 358, 14: 352, 15: 138,
+});
+
 export function buildScenePalette({ tokens, eraColor, era: eraNumber, daylight } = {}) {
   const t = { ...FALLBACK_TOKENS, ...(tokens ?? {}) };
   const base = parseCssColor(t.canvas2) ?? parseCssColor(FALLBACK_TOKENS.canvas2);
@@ -669,6 +679,20 @@ export function buildScenePalette({ tokens, eraColor, era: eraNumber, daylight }
     // Bóng tối sâu nhất. Gần như đen ở mọi kỷ nên góc màu hầu như không đọc ra, nhưng vẫn pha bằng
     // `material` cho nhất quán — không để sót một chỗ nào dùng thẳng sắc kỷ chưa qua bảng pha.
     dark:  material(24, 0.45, 0.24, 0.19, 0.09),
+    // Round 49 (ADR-089): hulls are tarred wood, hooks and ropes are dark, a flame is ALWAYS the same
+    // orange — it does not follow the era or the hour (it is its own light source; the glow sink
+    // draws it unlit). `flameHot` is the core of a forge.
+    hull:  paint(24, 0.42, 0.30, 0.24),
+    hook:  material(24, 0.45, 0.18, 0.14, 0.07),
+    flame: 0xff9a2e,
+    flameHot: 0xffd98a,
+    // Round 49 (ADR-089): `canvas` is UNDYED sailcloth — sails, awnings, tents, laundry sheets — the
+    // same sun-bleached linen in every era (no dye ⇒ no era hue, same logic as `straw`). `flag` is
+    // the one piece of cloth that IS dyed, and its hue comes from `FLAG_HUE`, NOT from the era's UI
+    // accent: the accent is a chip colour (era 6 is violet), and a violet flag fails the "no vivid
+    // magenta" test above for the same reason a violet roof did in Phase 6B.
+    canvas: paint(40, 0.22, 0.86, 0.74),
+    flag:   paint(FLAG_HUE[eraNumber] ?? 0, 0.66, 0.48, 0.42),
     // Da người. KHÔNG pha sắc kỷ vào — người thì thời nào cũng cùng một màu, và đây chính là chỗ
     // để mắt bám vào: một chấm ấm, nhạt, KHÔNG thuộc họ màu của công trình xung quanh, nhờ vậy
     // đọc ra "người" giữa một rừng tường và mái. Sáng hơn hẳn ở cả hai theme vì ở cỡ vài điểm ảnh,
@@ -701,6 +725,11 @@ export function buildScenePalette({ tokens, eraColor, era: eraNumber, daylight }
     // Đồ mang theo: gỗ, xương, kim loại xỉn. Phải TỐI hơn cả vải để cái giáo đọc ra là một vệt
     // riêng chứ không dính vào tay áo.
     gear: paint(28, 0.26, 0.34, 0.26),
+    // Round 49 (debt #79): metal on a person — helmet, tool head — split from `gear` (wood, leather)
+    // by HUE, not by lightness: a blue-grey against gear's brown. Deliberately as dark as gear, because
+    // the one helmet in the set (kỷ 12, SSh-40) was PAINTED the colour of the padded jacket — the
+    // `palette3d.test.js` exception list [12, 15] is a historical fact, not a threshold to beat.
+    steel: paint(212, 0.08, 0.36, 0.27),
     // Ô cửa ĐANG SÁNG ĐÈN (chỉ dùng khi trời đã tối — xem `daylight.js`).
     // ⚠️ Vẽ bằng vật liệu KHÔNG nhận ánh sáng, nên màu này hiện ra Y NGUYÊN chứ không bị nhân với
     // ánh sáng cảnh. Vì vậy nó phải là màu của **ánh đèn nhìn từ xa** — vàng ấm, sáng nhưng không

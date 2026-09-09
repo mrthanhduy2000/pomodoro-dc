@@ -138,7 +138,12 @@ function lamp(seed, era, detail) {
     parts.push(prism({ y: 0, w: 0.19, h: 0.07, sides: 6, taper: 0.78, role: 'stone' }));
     parts.push(prism({ y: 0.07, w: 0.10, h: 0.15, sides: 6, taper: 1, role: 'stone' }));
     parts.push(prism({ x: skew, y: 0.21, w: 0.17, h: 0.06, sides: 6, taper: 0.84, role: 'stone' }));
-    parts.push(prism({ x: skew, y: 0.26, w: 0.11, h: 0.14, sides: 5, taper: 0, role: 'gold' }));
+    // round 49 (ADR-089): before glass and oil, a street light IS a fire — a brazier bowl and a flame
+    // (the bronze collar keeps `gold` in eras 1–3: their lamps were the only gold part, and a family
+    // that vanishes moves five draw-call tables at once — `drawCallBudget.test.js`)
+    parts.push(prism({ x: skew, y: 0.24, w: 0.12, h: 0.03, sides: 6, taper: 0.9, role: 'gold' }));
+    parts.push(prism({ x: skew, y: 0.26, w: 0.13, h: 0.05, sides: 6, taper: 0.72, role: 'dark' }));
+    parts.push(prism({ x: skew, y: 0.30, w: 0.08, h: 0.13, sides: 5, taper: 0, role: 'flame', tag: 'fire' }));
     return parts;
   }
 
@@ -283,6 +288,243 @@ function field(seed, era, detail) {
  * gọi truyền vào thì sớm muộn sẽ có một chỗ gọi quên truyền và rơi về mặc định, tức kỷ ấy lặng lẽ
  * mất bản sắc — đúng thứ `isValidGroundCoverStyle` sinh ra để chặn ở đầu bên kia.
  */
+// ═══════════════════════════════════════════════════════════════════════════════════════════════
+// ROUND 49 (ADR-089) — SHAPES FOR THE MACHINE THAT ALREADY RUNS. Round 48 built motion for cloth
+// (`cloth` flaps), for things on water (`hull` bobs) and for ropes (`hook` bobs), and its own table
+// then blew wind into flags that did not exist. These builders are those shapes: boats with sails,
+// stalls with awnings, laundry lines, tents, campfires (a `flame` the fire layer picks up), wells,
+// barrels, firewood, lanterns, carts, animals, benches. Every prism is placed by hash from `seed`
+// — nothing here is random, and nothing here moves an existing prop (they are appended).
+// Cloth convention (see `geometryFactory.motionFor`): a cloth wider than tall is attached at its
+// −X edge (a flag on a pole), a cloth taller than wide hangs from its TOP (a banner, laundry).
+// ═══════════════════════════════════════════════════════════════════════════════════════════════
+
+function boat(seed, era, detail) {
+  const eraNum = Number.isFinite(era) ? era : 8;
+  const parts = [];
+  const len = 0.52 + unit(`${seed}|l`) * 0.16;
+  const beam = 0.17 + unit(`${seed}|b`) * 0.05;
+  // hull: a deck box riding the surface and a narrower keel just under it; role `hull` ⇒ bob
+  parts.push(prism({ y: -0.03, w: len * 0.86, d: beam * 0.7, h: 0.05, sides: 4, taper: 1, role: 'hull' }));
+  parts.push(prism({ y: 0.0, w: len, d: beam, h: 0.075, sides: 4, taper: 0.88, role: 'hull' }));
+  // prow and stern posts
+  parts.push(prism({ x: len * 0.5, y: 0.0, w: 0.05, d: beam * 0.45, h: 0.12, sides: 4, taper: 0.3, role: 'hull' }));
+  parts.push(prism({ x: -len * 0.5, y: 0.0, w: 0.05, d: beam * 0.45, h: 0.10, sides: 4, taper: 0.5, role: 'hull' }));
+  const kind = eraNum === 2 ? 'felucca' : eraNum === 6 ? 'sampan' : eraNum === 8 ? 'caravel'
+    : eraNum === 9 ? 'barge' : eraNum === 11 ? 'steamer' : eraNum === 13 ? 'motor' : eraNum === 14 ? 'yacht' : 'dhow';
+  if (kind === 'felucca' || kind === 'dhow') {
+    // lateen rig: a raked yard and a tall triangular sail
+    parts.push(prism({ x: -0.05, y: 0.07, w: 0.025, h: 0.55, sides: 4, role: 'wood' }));
+    parts.push(prism({ x: 0.1, y: 0.62, w: 0.03, d: 0.03, h: 0.55, sides: 4, rz: -1.15, role: 'wood' }));
+    parts.push(prism({ x: 0.16, y: 0.16, w: 0.34, d: 0.012, h: 0.44, sides: 4, taper: 0.06, role: 'canvas' }));
+  } else if (kind === 'caravel') {
+    for (const mx of [-0.12, 0.12]) {
+      parts.push(prism({ x: mx, y: 0.07, w: 0.025, h: 0.62, sides: 4, role: 'wood' }));
+      parts.push(prism({ x: mx + 0.13, y: 0.28, w: 0.26, d: 0.012, h: 0.3, sides: 4, role: 'canvas' }));
+    }
+    parts.push(prism({ x: 0.12 + 0.13, y: 0.66, w: 0.14, d: 0.01, h: 0.06, sides: 4, role: 'flag' }));   // pennant
+    parts.push(prism({ x: -len * 0.36, y: 0.075, w: len * 0.22, d: beam * 0.9, h: 0.09, sides: 4, role: 'wood' }));   // sterncastle
+  } else if (kind === 'sampan') {
+    parts.push(prism({ x: 0.02, y: 0.075, w: len * 0.42, d: beam * 0.95, h: 0.12, sides: 4, taper: 0.6, role: 'roof' }));
+  } else if (kind === 'barge') {
+    parts.push(prism({ x: -len * 0.3, y: 0.075, w: len * 0.3, d: beam * 0.85, h: 0.1, sides: 4, role: 'wall' }));
+    parts.push(prism({ x: 0.1, y: 0.075, w: len * 0.4, d: beam * 0.8, h: 0.03, sides: 4, role: 'dark' }));
+  } else if (kind === 'steamer') {
+    parts.push(prism({ y: 0.075, w: len * 0.6, d: beam * 0.85, h: 0.11, sides: 4, role: 'wall' }));
+    parts.push(prism({ x: 0.06, y: 0.185, w: 0.05, h: 0.16, sides: 6, taper: 0.9, role: 'dark', tag: 'stack' }));
+  } else if (kind === 'motor') {
+    parts.push(prism({ x: 0.05, y: 0.075, w: len * 0.36, d: beam * 0.8, h: 0.08, sides: 4, taper: 0.8, role: 'glass' }));
+  } else {   // yacht
+    parts.push(prism({ y: 0.07, w: 0.02, h: 0.7, sides: 4, role: 'trim' }));
+    parts.push(prism({ x: 0.13, y: 0.14, w: 0.26, d: 0.01, h: 0.55, sides: 4, taper: 0.05, role: 'canvas' }));
+    parts.push(prism({ x: 0.04, y: 0.075, w: len * 0.3, d: beam * 0.7, h: 0.06, sides: 4, taper: 0.7, role: 'trim' }));
+  }
+  if (detail === 'low') return parts.slice(0, 5);
+  return parts;
+}
+
+function stall(seed, era, detail) {
+  const parts = [];
+  const w = 0.5; const d = 0.4;
+  for (const [sx, sz] of [[-1, -1], [1, -1], [-1, 1], [1, 1]]) {
+    parts.push(prism({ x: sx * w * 0.45, z: sz * d * 0.45, y: 0, w: 0.03, h: 0.36, sides: 4, role: 'wood' }));
+  }
+  parts.push(prism({ y: 0.16, w: w * 0.9, d: d * 0.8, h: 0.035, sides: 4, role: 'wood' }));   // counter
+  // goods: three small blocks in the era's colours
+  for (let i = 0; i < 3; i += 1) {
+    parts.push(prism({ x: (i - 1) * 0.13, z: signed(`${seed}|g${i}`) * 0.08, y: 0.195, w: 0.08 + unit(`${seed}|gw${i}`) * 0.04, h: 0.05 + unit(`${seed}|gh${i}`) * 0.05, sides: 4 + (i % 2) * 2, role: i === 1 ? 'trim' : 'leaf' }));   // trim, not gold: era 13 draws no gold family
+  }
+  // awning: a cloth roof pitched toward the street, attached along its back (−X) edge
+  parts.push(prism({ x: 0.06, y: 0.36, w: w * 1.1, d: d * 1.05, h: 0.014, sides: 4, rz: 0.22, role: 'canvas' }));
+  if (detail === 'low') return parts.slice(0, 6);
+  return parts;
+}
+
+function laundry(seed, _era, detail) {
+  const parts = [];
+  const span = 0.7;
+  for (const sx of [-1, 1]) parts.push(prism({ x: sx * span * 0.5, y: 0, w: 0.03, h: 0.42, sides: 4, role: 'wood' }));
+  parts.push(prism({ y: 0.40, w: span, d: 0.012, h: 0.012, sides: 4, role: 'hook' }));   // the line (bobs a little)
+  const n = detail === 'low' ? 2 : 4;
+  for (let i = 0; i < n; i += 1) {
+    const t = (i + 0.5) / n - 0.5;
+    parts.push(prism({
+      x: t * span * 0.85, y: 0.40 - 0.15 - unit(`${seed}|h${i}`) * 0.04,
+      w: 0.1 + unit(`${seed}|w${i}`) * 0.05, d: 0.01, h: 0.15 + unit(`${seed}|l${i}`) * 0.05,
+      sides: 4, role: i % 2 === 0 ? 'canvas' : 'flag',
+    }));
+  }
+  return parts;
+}
+
+function tent(seed, era) {
+  const eraNum = Number.isFinite(era) ? era : 1;
+  const w = 0.42 + unit(`${seed}|w`) * 0.12;
+  const parts = [];
+  parts.push(prism({ y: 0, w: 0.03, h: 0.36, sides: 4, role: 'wood' }));
+  // a hide/canvas pyramid: `roof` role (thatch/hide colour of the era) — a tent does not flap like a flag
+  parts.push(prism({ y: 0.02, w, d: w * (eraNum === 15 ? 1.3 : 1), h: 0.34, sides: eraNum === 1 ? 6 : 4, taper: 0, role: 'roof' }));
+  if (eraNum === 15) parts.push(prism({ x: w * 0.5, y: 0.02, w: 0.28, d: 0.012, h: 0.22, sides: 4, role: 'canvas' }));   // open flap
+  return parts;
+}
+
+function campfire(seed, _era, detail) {
+  const parts = [];
+  const n = detail === 'low' ? 4 : 6;
+  for (let i = 0; i < n; i += 1) {
+    const a = (i / n) * Math.PI * 2;
+    parts.push(prism({ x: Math.cos(a) * 0.11, z: Math.sin(a) * 0.11, y: 0, w: 0.06, h: 0.045, sides: 5, taper: 0.7, ry: a, role: 'stone' }));
+  }
+  for (let i = 0; i < 3; i += 1) {
+    parts.push(prism({ y: 0.02, w: 0.03, h: 0.2, sides: 5, ry: (i / 3) * Math.PI, rz: 1.25, role: 'wood' }));
+  }
+  parts.push(prism({ y: 0.03, w: 0.1, h: 0.16, sides: 5, taper: 0, role: 'flame', tag: 'fire' }));
+  return parts;
+}
+
+/** Round 49 (ADR-089): a brazier — a bowl of fire on three legs (or a burning barrel after 1900). */
+function brazier(seed, era) {
+  const eraNum = Number.isFinite(era) ? era : 2;
+  const parts = [];
+  if (eraNum >= 12) {
+    // the oil drum of a besieged street
+    parts.push(prism({ y: 0, w: 0.16, h: 0.24, sides: 8, taper: 1, role: 'dark' }));
+    parts.push(prism({ y: 0.22, w: 0.11, h: 0.17, sides: 5, taper: 0, role: 'flame', tag: 'fire' }));
+    return parts;
+  }
+  for (let i = 0; i < 3; i += 1) {
+    const a = (i / 3) * Math.PI * 2 + signed(`${seed}|a`) * 0.3;
+    parts.push(prism({ x: Math.cos(a) * 0.07, z: Math.sin(a) * 0.07, y: 0, w: 0.02, h: 0.26, sides: 4, rz: 0.22, ry: a, role: 'dark' }));
+  }
+  parts.push(prism({ y: 0.24, w: 0.2, h: 0.07, sides: 8, taper: 0.55, role: 'dark' }));   // the bowl
+  parts.push(prism({ y: 0.29, w: 0.11, h: 0.17, sides: 5, taper: 0, role: 'flame', tag: 'fire' }));
+  return parts;
+}
+
+/** Round 49 (ADR-089): a smith's forge — a stone hearth with a stack (smoke), a fire, and an anvil. */
+function forge(seed, era, detail) {
+  const eraNum = Number.isFinite(era) ? era : 5;
+  const parts = [];
+  parts.push(prism({ x: -0.1, y: 0, w: 0.34, d: 0.3, h: 0.28, sides: 4, taper: 0.94, role: eraNum >= 10 ? 'dark' : 'stone' }));
+  parts.push(prism({ x: -0.18, y: 0.28, w: 0.09, d: 0.09, h: 0.34, sides: 4, taper: 0.85, role: eraNum >= 10 ? 'dark' : 'stone', tag: 'stack' }));
+  parts.push(prism({ x: -0.02, y: 0.28, w: 0.1, h: 0.14, sides: 5, taper: 0, role: 'flame', tag: 'fire' }));
+  parts.push(prism({ x: 0.16, y: 0, w: 0.06, h: 0.13, sides: 4, taper: 0.8, role: 'wood' }));            // the block
+  parts.push(prism({ x: 0.16, y: 0.13, w: 0.16, d: 0.06, h: 0.05, sides: 4, taper: 0.9, role: 'dark' })); // the anvil
+  if (detail !== 'low') parts.push(prism({ x: 0.26, y: 0, w: 0.05, h: 0.12, sides: 5, rz: 0.6, role: 'wood' }));   // a hammer leaning
+  return parts;
+}
+
+function well(seed, era, detail) {
+  const eraNum = Number.isFinite(era) ? era : 3;
+  const parts = [];
+  parts.push(prism({ y: 0, w: 0.26, h: 0.16, sides: 8, role: 'stone' }));
+  parts.push(prism({ y: 0.16, w: 0.28, h: 0.03, sides: 8, taper: 1, role: 'stone' }));
+  if (detail !== 'low' && eraNum >= 4) {
+    for (const sx of [-1, 1]) parts.push(prism({ x: sx * 0.12, y: 0.16, w: 0.03, h: 0.3, sides: 4, role: 'wood' }));
+    parts.push(prism({ y: 0.45, w: 0.34, d: 0.3, h: 0.1, sides: 4, taper: 0, role: 'roof' }));
+    parts.push(prism({ y: 0.30, w: 0.05, d: 0.05, h: 0.06, sides: 6, role: 'hook' }));   // the bucket, on a rope
+  }
+  return parts;
+}
+
+function barrels(seed, _era, detail) {
+  const parts = [];
+  const n = detail === 'low' ? 2 : 3;
+  for (let i = 0; i < n; i += 1) {
+    parts.push(prism({ x: (i - 1) * 0.13 + signed(`${seed}|x${i}`) * 0.03, z: signed(`${seed}|z${i}`) * 0.05, y: 0, w: 0.11, h: 0.15, sides: 8, taper: 0.92, role: 'wood' }));
+  }
+  return parts;
+}
+
+function firewood(seed, _era, detail) {
+  const parts = [];
+  const n = detail === 'low' ? 3 : 5;
+  for (let i = 0; i < n; i += 1) {
+    const row = Math.floor(i / 3);
+    parts.push(prism({ x: (i % 3 - 1) * 0.07, y: row * 0.065, w: 0.06, h: 0.32, sides: 6, rz: Math.PI / 2, role: 'wood' }));
+  }
+  return parts;
+}
+
+function lantern(seed, era) {
+  const eraNum = Number.isFinite(era) ? era : 4;
+  const parts = [];
+  parts.push(prism({ y: 0, w: 0.03, h: 0.5, sides: 4, role: 'wood' }));
+  parts.push(prism({ x: 0.07, y: 0.48, w: 0.14, d: 0.02, h: 0.02, sides: 4, role: 'wood' }));
+  // the lantern body: `glass` glows at night with the windows; red paper in China and Japan
+  parts.push(prism({ x: 0.13, y: 0.32, w: 0.09, d: 0.09, h: 0.13, sides: eraNum === 4 || eraNum === 13 ? 8 : 4, taper: 0.8, role: 'glass' }));
+  return parts;
+}
+
+function cart(seed, era, detail) {
+  const eraNum = Number.isFinite(era) ? era : 5;
+  const parts = [];
+  if (eraNum >= 12) {
+    // a motor car: body, cabin, four wheels
+    parts.push(prism({ y: 0.05, w: 0.34, d: 0.16, h: 0.08, sides: 4, role: 'trim' }));
+    parts.push(prism({ x: -0.02, y: 0.13, w: 0.18, d: 0.14, h: 0.08, sides: 4, taper: 0.7, role: 'glass' }));
+    for (const [sx, sz] of [[-1, -1], [1, -1], [-1, 1], [1, 1]]) {
+      parts.push(prism({ x: sx * 0.11, z: sz * 0.085, y: 0.0, w: 0.09, h: 0.03, sides: 8, rx: Math.PI / 2, role: 'dark' }));
+    }
+    return parts;
+  }
+  // a wooden cart: bed, two big wheels, shafts
+  parts.push(prism({ y: 0.09, w: 0.32, d: 0.2, h: 0.05, sides: 4, role: 'wood' }));
+  for (const sz of [-1, 1]) {
+    parts.push(prism({ z: sz * 0.115, y: 0.0, w: 0.16, h: 0.025, sides: 8, rx: Math.PI / 2, role: 'wood' }));
+  }
+  parts.push(prism({ x: 0.28, y: 0.09, w: 0.24, d: 0.03, h: 0.03, sides: 4, role: 'wood' }));
+  if (detail !== 'low') {
+    parts.push(prism({ y: 0.14, w: 0.2, d: 0.14, h: 0.08, sides: 4, taper: 0.8, role: eraNum <= 4 ? 'leaf' : 'gold' }));   // the load
+  }
+  return parts;
+}
+
+function animal(seed, era, detail) {
+  const eraNum = Number.isFinite(era) ? era : 6;
+  const parts = [];
+  // buffalo in the paddies (dark), camels in the desert (sand-coloured wood), horses elsewhere
+  const role = eraNum === 6 ? 'dark' : (eraNum === 3 || eraNum === 15) ? 'wood' : 'trim';
+  const camel = eraNum === 3 || eraNum === 15;
+  const bodyH = camel ? 0.22 : 0.18;
+  parts.push(prism({ y: bodyH * 0.55, w: 0.13, h: 0.3, sides: 6, rz: Math.PI / 2, role }));   // body lying along −X→+X
+  for (const [sx, sz] of [[-1, -1], [1, -1], [-1, 1], [1, 1]]) {
+    parts.push(prism({ x: sx * 0.1, z: sz * 0.045, y: 0, w: 0.03, h: bodyH * 0.6, sides: 4, role }));
+  }
+  parts.push(prism({ x: 0.17, y: bodyH * 0.75, w: 0.06, d: 0.05, h: 0.1, sides: 4, rz: -0.5, role }));   // neck + head
+  if (camel) parts.push(prism({ y: bodyH * 1.05, w: 0.09, h: 0.08, sides: 6, taper: 0.2, role }));   // hump
+  if (detail !== 'low' && eraNum === 6) parts.push(prism({ x: 0.2, y: bodyH * 1.0, w: 0.12, d: 0.02, h: 0.02, sides: 4, role: 'hook' }));   // horns
+  return parts;
+}
+
+function bench() {
+  const parts = [];
+  parts.push(prism({ y: 0.12, w: 0.36, d: 0.12, h: 0.03, sides: 4, role: 'wood' }));
+  for (const sx of [-1, 1]) parts.push(prism({ x: sx * 0.14, y: 0, w: 0.03, d: 0.1, h: 0.12, sides: 4, role: 'dark' }));
+  parts.push(prism({ z: -0.05, y: 0.15, w: 0.36, d: 0.02, h: 0.12, sides: 4, role: 'wood' }));
+  return parts;
+}
+
 function coverBuilder(kind) {
   return (seed, era, detail) => {
     const style = getGroundCoverStyle(era);
@@ -292,6 +534,8 @@ function coverBuilder(kind) {
 
 const BUILDERS = {
   tree, bush: bushProp, rock, lamp, water, field,
+  // round 49 (ADR-089): the props that move, and the signs of life
+  boat, stall, laundry, tent, campfire, brazier, forge, well, barrels, firewood, lantern, cart, animal, bench,
   ...Object.fromEntries(COVER_KINDS.map((kind) => [kind, coverBuilder(kind)])),
 };
 

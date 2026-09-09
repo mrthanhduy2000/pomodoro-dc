@@ -21,6 +21,7 @@ import { PerspectiveCamera, Raycaster, Vector2, WebGLRenderer } from 'three';
 
 import { buildScenePalette } from '../../../engine/city3d/palette3d';
 import { deriveDaylight, museumDaylight } from '../../../engine/city3d/daylight';
+import { museumWeather, weatherAt } from '../../../engine/city3d/weather';
 import { CITY_CAMERA_FOV, MIN_PITCH, cityOrbitOptions, createOrbit } from '../../../engine/city3d/orbit';
 import { planCityFocus } from '../../../engine/city3d/cityFocus';
 import { createRenderLoop } from '../../../engine/city3d/renderLoop';
@@ -186,6 +187,8 @@ export default function CityScene3D({
       // never by tonight's clock — measured 2,5× darker at night than at noon on a city that will
       // never change again. Same daylight profile machinery, one constant hour (`daylight.js`).
       const daylight = dimmed ? museumDaylight() : deriveDaylight(getVietnamHour());
+      // Round 49 (ADR-089): the weather reads the SAME hour, and a museum piece the museum hour — forever
+      const weather = dimmed ? museumWeather(layout.era) : weatherAt(layout.era, getVietnamHour());
 
       const palette = buildScenePalette({
         tokens: readThemeTokens(canvas),
@@ -206,6 +209,7 @@ export default function CityScene3D({
         dimmed,
         stats: { sessionCount, streakLength },
         daylight,
+        weather,   // round 49 (ADR-089): same hour as `daylight`
         // ⚠️ CẢNH CẦN RENDERER để nướng bản đồ môi trường (PMREM) từ chính bầu trời của nó. Thiếu
         // tham số này thì cảnh vẫn dựng được nhưng mọi bề mặt kim loại sẽ ĐEN — xem
         // `createSkyEnvironment` ở `sceneGraph.js`.

@@ -79,7 +79,9 @@ export { HUMAN_BASE_HEIGHT };
  * thêm một vai tốn **0 lệnh vẽ và 0 tam giác**. (Thứ TỐN lệnh vẽ là số KHUÔN — xem
  * `humanShapesUsed`.) Đừng tiết kiệm ở chỗ không tính tiền.
  */
-export const HUMAN_ROLES = ['skin', 'cloth', 'cloth2', 'straw', 'hair', 'gear'];
+// Round 49 (ADR-089, debt #79): `steel` split out of `gear` — a helmet and a tool head are metal,
+// a spear shaft, a bundle and a leather case are not. One role per material the eye can name.
+export const HUMAN_ROLES = ['skin', 'cloth', 'cloth2', 'straw', 'hair', 'gear', 'steel'];
 
 /**
  * Tên các khớp. `sceneGraph.js` và `humanPose.js` cùng đọc danh sách này — một chỗ khai duy nhất.
@@ -326,11 +328,14 @@ function headgearPieces(kind, d, material) {
     // đại của cái đầu, và đó là cái giá phải trả, không phải một khuyết tật sửa được bằng số.
     case 'brim':
       return [piece('headgear', vai, 'hat', 'head',
-        [d.headW * 1.9, d.headH * 0.78, d.headW * 1.9],
+        // round 49 (debt #81): 1,9 → 1,7 headW — the crown (0,62 × brim) must still clear the skull, so
+        // 1,62 is the floor (`humanShape.test.js`); 1,7 keeps a 5 % margin and takes the hat from
+        // 1,52× to 1,36× the shoulders — partial, the rest is the head's own 1,54× enlargement
+        [d.headW * 1.7, d.headH * 0.78, d.headW * 1.7],
         [0, d.headH * 1.19, 0])];
     // Mũ trụ: một cái VÒM kim loại. `dome` là hình học của chính vật ấy, không phải một cách điệu.
     case 'helm':
-      return [piece('headgear', 'gear', 'dome', 'head',
+      return [piece('headgear', 'steel', 'dome', 'head',
         [d.headW * 1.10, d.headH * 0.82, d.headW * 1.10],
         [0, d.headH * 0.88, 0])];
     // Mũ vải mềm ôm sát sọ (futou · casquette · mũ nồi tweed) — ôm sọ thì phải cùng khuôn với sọ.
@@ -390,7 +395,7 @@ function carryPiece(kind, d) {
         [0, d.headH * 1.36, 0]);
     // Cán cuốc / cán búa: gỗ vót tròn.
     case 'tool':
-      return piece('carry', 'gear', 'prism', 'shoulderR',
+      return piece('carry', 'steel', 'prism', 'shoulderR',
         [d.limbW * 0.5, d.armLen * 0.62, d.limbW * 0.5],
         [d.limbW * 1.1, -d.armLen * 0.78, -d.limbW * 0.4]);
     // Cặp / vali: đóng bằng ván và bản lề — vuông, và vuông là ĐÚNG.

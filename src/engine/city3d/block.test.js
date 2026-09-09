@@ -443,20 +443,22 @@ test('CHI TIẾT MÁI KHÔNG ĐƯỢC CHẾT — và danh sách kỷ mất một
 */
 // ⚠️ ROUND 48 (ADR-088): re-based ONCE MORE, for one key only — chimney stacks now carry `tag: 'stack'`
 // (the smoke source). Eras without chimneys did not move; positions never did (ADR-007 tests separate).
+// Round 49 (ADR-089): six eras re-based on purpose — a flag on every `mast` motif (8, 12), a hanging
+// cloth on every `banner` (4), a flame in every `firepit` (1, 6, 13). The other nine are untouched.
 const GOLDEN = {
-  1: '4c896bf47cd9be2b890076367b9dcf83',
+  1: '8ae813e41b413b26bd64db6741201585',
   2: 'cc4b87555564ea8be02d40da1a1c18db',
   3: 'e23de6560e4d2353683268033641197d',
-  4: 'f48a5f9bb6069a8b88700a7c59927a13',
+  4: '0e7dd1747958202540370ca9e4ae77fb',
   5: '55381b569bc6cdfb4e3558b2fc2baeab',
-  6: 'e5dbe9f55e821766a2838207d2ababaf',
+  6: '89b064b96a8556bb4684e996235919f5',
   7: '9916f70d8e5a4f21b154840760f4ea96',
-  8: '0427cf1eb12183ad22d776b8fb215e08',
+  8: 'a4b1c812f2c229b2ccc949b12622f9c3',
   9: '145497ad0146e09fadbf125af368e241',
   10: '7ce4bf401753bee6de0ad1142dca9a75',
   11: 'e7a34d023abff4a5e51b945b9623dc0c',
-  12: '6206bf14a5320b62f66d1be3f0071f2b',
-  13: 'd0c4421023c13400a3f196d138215fee',
+  12: '451780b9d1c2a52d4ef7e1f79281e723',
+  13: '6a24a8823ed3e5fb1a4b534bdec843f7',
   14: '757c9d1d65394af11830524679b89f6d',
   15: 'e541cc2cf9b2376e0921399dfab6ad0e',
 };

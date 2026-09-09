@@ -59,10 +59,16 @@ const CO_BE = new Set(['building', 'scaffold', 'dwelling']);
  */
 // ⚠️ Re-measured 2026-09-08 (round 47, ADR-087): rounded corners + wider bevels (parts.js), hip/mansard
 // vernacular roofs, relative window floor, 12-gon domes. Heaviest: era 6 198.388 → 307.904 (×1,55).
+// Round 49 (ADR-089), measured 2026-09-09: props that move — flags on masts, banners, a flame in
+// every firepit, boats on the water, cranes on scaffolds, and 3–8 life props per era (stalls,
+// laundry, tents, carts, animals, lanterns, benches). +0.5 % … +2.1 % per era, era 13 the most
+// (a boat fleet of 8 plus cloth on every dwelling).
+// Then fire (same round, same day): a brazier, forge or campfire first in every pre-electric era's
+// life list, torches on the oldest lamp posts — +40 … +184 triangles per era, eras 11 · 13–15 untouched.
 const MOC_TAM_GIAC = {
-  1: 92912, 2: 113350, 3: 104728, 4: 165096, 5: 96930,
-  6: 199252, 7: 161952, 8: 118508, 9: 143036, 10: 100536,
-  11: 123912, 12: 104424, 13: 120052, 14: 137600, 15: 95640,
+  1: 93546, 2: 114490, 3: 105936, 4: 166180, 5: 97710,
+  6: 200308, 7: 162968, 8: 120240, 9: 143844, 10: 101380,
+  11: 124688, 12: 105484, 13: 122584, 14: 138504, 15: 96434,
 };
 
 /** Số BỆ KÈ của từng kỷ — tách riêng vì nó là hàm của ĐỊA HÌNH, không của kiến trúc. */

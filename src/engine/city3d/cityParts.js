@@ -27,6 +27,7 @@
  */
 
 import { buildBuildingSpec, buildScaffoldSpec } from './buildingSpec.js';
+import { deriveWaterProps } from './waterProps';
 import { buildBlockSpec } from './block.js';
 import { deriveHinterland } from './hinterland.js';
 import { deriveOutskirts } from './outskirts.js';
@@ -52,6 +53,8 @@ export const NHOM_CUA_KIND = {
   prop:       'props',
   outskirt:   'landscape',
   hinterland: 'hinterland',
+  // round 49 (ADR-089): a boat on the water is landscape, like a tree — it is not part of the city box
+  water:      'landscape',
 };
 
 /**
@@ -62,7 +65,8 @@ export const NHOM_CUA_KIND = {
  * bay không hề biết; `TECH_DEBT #54`). Vùng phụ cận thừa hưởng đúng lý do ấy: nó cũng nằm ngoài
  * lưới, cũng đứng trên thứ địa hình mà `terrain.footprint` không mô tả.
  */
-export const KIND_NGOAI_LUOI = new Set(['outskirt', 'hinterland']);
+// round 49: boats ride the water, off the grid — they widen neither the city box nor the blocker list
+export const KIND_NGOAI_LUOI = new Set(['outskirt', 'hinterland', 'water']);
 
 /**
  * Nhà dân KHÔNG có bản vẽ nên không có `bpId` thật. Khoá hình dáng của nó gồm cả TOẠ ĐỘ, để hai căn
@@ -82,7 +86,7 @@ export function dwellingBpId(era, x, y) {
  * @param {object}  opts
  * @param {object}  opts.layout  kết quả `computeCityLayout` (thuần)
  * @param {'high'|'low'} [opts.detail]  mức chi tiết của cảnh vật (LOD)
- * @returns {Array<{kind:'building'|'scaffold'|'dwelling'|'prop', source:object, spec:object}>}
+ * @returns {Array<{kind:'building'|'scaffold'|'dwelling'|'prop'|'water', source:object, spec:object}>}
  */
 export function collectCitySpecs({ layout, detail = 'high' } = {}) {
   if (!layout) return [];
@@ -147,6 +151,15 @@ export function collectCitySpecs({ layout, detail = 'high' } = {}) {
   // máy thứ hai. Lý do nó nằm ở một MẢNG riêng của bố cục (chứ không lẫn vào `props`) là chuyện
   // của tầng ĐẶT CHỖ, không phải của tầng dựng hình: một ô lưới được phép vừa có cây đứng vừa có
   // sân lát, nên hai thứ ấy không được tranh nhau một chỗ trong danh sách. Xem `cityLayout.js`.
+  // ROUND 49 (ADR-089): boats on the water — placed by `waterProps.js`, bobbed by the motion layer.
+  for (const boat of deriveWaterProps({ era, gridSize: layout.gridSize })) {
+    out.push({
+      kind: 'water',
+      source: boat,
+      spec: buildPropSpec({ kind: 'boat', era, seed: `${era}|boat|${boat.x}|${boat.y}|${boat.variant}`, detail }),
+    });
+  }
+
   for (const cover of layout.covers ?? []) {
     out.push({
       kind: 'prop',

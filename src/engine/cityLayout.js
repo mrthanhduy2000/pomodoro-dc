@@ -21,6 +21,7 @@
  */
 
 import { BLUEPRINT_CATALOG, BUILDING_EFFECTS } from './constants';
+import { deriveLifeProps } from './city3d/lifeProps';
 import { deriveDwellings } from './city3d/dwellings';
 import { getFloraStyle } from './city3d/floraStyle';
 import { getGroundCoverStyle, pickCoverKind } from './city3d/groundCoverStyle';
@@ -879,6 +880,14 @@ export function computeCityLayout({ built, levels, era, stats, pending } = {}) {
     nhaCua,
     shareable: chiaDuoc,
   });
+
+  // ROUND 49 (ADR-089): signs of life, APPENDED after everything else on cells still free — a stall
+  // by the road, a well between houses, laundry, a campfire. Nothing above changes; see `lifeProps.js`.
+  const roadCells = new Set(props.filter((p) => p.kind === 'road').map((p) => cellKey(p.x, p.y)));
+  const blockedForLife = new Set(chan);
+  for (const cover of covers) blockedForLife.add(cellKey(cover.x, cover.y));
+  const life = deriveLifeProps({ era: eraNum, blocked: blockedForLife, roads: roadCells, homes: nhaCua });
+  for (const item of life) props.push(item);
 
   return {
     era:       eraNum,

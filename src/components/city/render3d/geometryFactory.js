@@ -52,20 +52,48 @@ function createSink() {
  * amplitude scales with the part's own height, so a 0,05-high paddy row does not swing like a tree.
  */
 function motionFor(item, part, scaled, transform) {
+  // Round 49 (ADR-089): a placement that RIDES THE WATER (`motion: 'bob'`, set by `sceneGraph` for
+  // boats) moves as ONE rigid body — every part, hull and sail alike, one phase, weight 1 — so the
+  // mast never floats free of the hull. Amplitude 0,35 × the era's wind ⇒ ±3–5 cm on a 0,6 boat.
+  if (item.motion === 'bob') {
+    return {
+      kind: MOTION_KIND.bob, amp: 0.35, phase: phaseAt(item.x, item.z), baseY: item.y ?? 0, reach: 1,
+      ox: item.x, oz: item.z, span: 1, rigid: true,
+    };
+  }
   const kind = motionKindForRole(part.role);
   if (kind === MOTION_KIND.none) return null;
   const baseY = Number.isFinite(item.y) ? item.y : 0;
   const reach = Math.max(0.5, (item.motionReach ?? 1.2));
   const amp = kind === MOTION_KIND.sway ? Math.min(1, Math.max(0.15, scaled.h / 0.6)) : 1;
-  return {
+  const motion = {
     kind, amp, phase: phaseAt(transform.ox, transform.oz), baseY, reach,
     ox: transform.ox, oz: transform.oz, span: Math.max(1e-3, scaled.w, scaled.d, scaled.h),
   };
+  if (kind === MOTION_KIND.flap) {
+    // Round 49 (ADR-089): the cloth convention of `propSpec`/`buildingSpec`/`rooftop` — a piece of
+    // cloth WIDER than tall is a flag or sail, attached along its −X edge and free at +X; one TALLER
+    // than wide hangs (banner, laundry, awning drop) and is held along its TOP edge. The held edge
+    // must stay still (weight 0) or the flag would slide off its pole; the free edge gets weight 1.
+    const hw = scaled.w / 2;
+    motion.hang = scaled.h > scaled.w;
+    motion.ax = transform.ox - hw * transform.cos;
+    motion.az = transform.oz - hw * transform.sin;
+    motion.topY = transform.oy + scaled.h;
+    motion.h = Math.max(1e-3, scaled.h);
+    motion.span = Math.max(1e-3, scaled.w);
+    motion.amp = motion.hang ? 0.5 : 1;
+  }
+  return motion;
 }
 
 function motionWeightAt(motion, p) {
+  if (motion.rigid) return 1;
   if (motion.kind === MOTION_KIND.sway) return swayWeight(p[1] - motion.baseY, motion.reach);
-  if (motion.kind === MOTION_KIND.flap) return Math.min(1, Math.hypot(p[0] - motion.ox, p[2] - motion.oz) / motion.span);
+  if (motion.kind === MOTION_KIND.flap) {
+    if (motion.hang) return Math.min(1, Math.max(0, (motion.topY - p[1]) / motion.h));
+    return Math.min(1, Math.hypot(p[0] - motion.ax, p[2] - motion.az) / motion.span);
+  }
   return 1;
 }
 
@@ -397,7 +425,9 @@ export function buildMergedGeometry(
   // những ô cửa sổ cần sáng nhất lại là những ô tối nhất. Tách chúng ra một khối riêng dùng vật
   // liệu KHÔNG nhận ánh sáng (`MeshBasicMaterial`) thì màu hiện đúng như đã ghi, bất kể đèn đóm —
   // và đó chính là cảm giác "ô cửa đang sáng đèn". Giá: thêm ĐÚNG một lệnh vẽ cho cả thành phố.
-  const glowSink = glowRole ? createSink() : null;
+  // Round 49 (ADR-089): `glowRole` may name several roles — lit windows AND flames at night.
+  const glowRoles = new Set(Array.isArray(glowRole) ? glowRole : glowRole ? [glowRole] : []);
+  const glowSink = glowRoles.size ? createSink() : null;
   const roles = palette?.roles ?? {};
 
   // Đổi mã màu → giá trị tuyến tính đúng MỘT LẦN cho mỗi vai, không phải mỗi đỉnh.
@@ -443,9 +473,10 @@ export function buildMergedGeometry(
       if (skipDeco && part.deco) continue;
       const { transform, scaled, scale } = partWorld(item, part);
 
-      const glowing = glowSink !== null && part.role === glowRole;
+      const glowing = glowSink !== null && glowRoles.has(part.role);
       const target = glowing ? glowSink : sinkFor(materialFamilyFor(part.role, style));
-      const rgb = colorFor(glowing ? 'glassLit' : part.role);
+      // a flame glows in its OWN colour; a window glows in the lamp colour
+      const rgb = colorFor(glowing ? (part.role === 'flame' ? 'flame' : 'glassLit') : part.role);
       // Ô cửa sáng đèn KHÔNG nhận bóng tiếp xúc — chúng tự phát sáng. Còn lại: đo độ cao từ CHÍNH
       // cao độ nền mà công trình này đứng lên (`item.y`), không phải từ y = 0 — xem `pushTriangle`.
       const shadeBase = glowing ? null : (Number.isFinite(item.y) ? item.y : 0);

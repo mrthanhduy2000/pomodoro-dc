@@ -38,6 +38,15 @@ export const PART_ROLES = [
   // ngay cả khi đứng trong bóng râm.
   'leaf2',
   'dark',    // bóng sâu, cửa ra vào, khe hở
+  // round 49 (ADR-089): the props that move, and fire — see `motion.js` (cloth flaps, hull/hook bob)
+  // and `materials.js` (all ride the `wood` family so no era gains a draw call).
+  'cloth',   // cờ, phướn, buồm, bạt, quần áo phơi — BAY theo gió
+  'cloth2',  // màu vải thứ hai (dây phơi)
+  'canvas',  // vải mộc chưa nhuộm: buồm, mái che, lều, khăn phơi — BAY
+  'flag',    // vải NHUỘM màu nhấn của kỷ: cờ, phướn, cờ đuôi nheo — BAY
+  'hull',    // thân thuyền — NHẤP NHÔ theo sóng
+  'hook',    // dây và móc cẩu, gàu giếng — nhấp nhô
+  'flame',   // ngọn lửa — tự phát sáng (khối glow), kèm `tag: 'fire'` cho lớp lửa
 ];
 
 /**

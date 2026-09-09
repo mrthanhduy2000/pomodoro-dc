@@ -67,6 +67,18 @@ test('applySurfaceDetail cắm đúng ba chỗ trong shader và không cắm nh�
   assert.equal(material.customProgramCacheKey(), 'city-surface-detail-v1');
 });
 
+test('ROUND 49 (lesson 106): vật liệu CÓ mã chuyển động phải có khoá chương trình KHÁC vật liệu không có', () => {
+  // The motion injection edits the vertex shader SOURCE. `three` caches compiled programs by key,
+  // so the ground (no motion) and the merged city (motion) sharing one key meant whichever compiled
+  // first decided whether anything moved — for a whole round, nothing did, and no test was red.
+  const still = applySurfaceDetail({});
+  const moving = applySurfaceDetail({}, {
+    motion: { uTime: { value: 0 }, uWindAmp: { value: 0.1 }, uWindSpeed: { value: 1 }, uMotionFade: { value: 1 } },
+  });
+  assert.notEqual(still.customProgramCacheKey(), moving.customProgramCacheKey(),
+    'cùng một khoá ⇒ three dùng chung một chương trình ⇒ mã chuyển động rơi mất tuỳ thứ tự biên dịch');
+});
+
 test('applySurfaceDetail có mặc định an toàn khi không truyền gì', () => {
   const material = {};
   applySurfaceDetail(material);

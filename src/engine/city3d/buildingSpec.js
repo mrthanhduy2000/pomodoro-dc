@@ -660,17 +660,25 @@ function emitMotif(out, name, ctx) {
       out.push(prism({ x, z, y: top, w: w * 0.22, h: (top - base) * 0.72, sides: 6, taper: 0, role: 'gold' }));
       break;
     case 'banner': {
+      // Round 49 (ADR-089): a banner is a POLE and a CLOTH. The cloth hangs from a short arm and
+      // flaps (role `cloth` ⇒ the motion layer); the old version was two gilded rods that never moved.
       for (let i = 0; i < 2; i += 1) {
-        out.push(prism({
-          x: x + (i - 0.5) * w * 0.72, z: z + d / 2 + 0.04, y: base + (top - base) * 0.35,
-          w: 0.05, d: 0.02, h: (top - base) * 0.5, sides: 4, role: 'gold',
-        }));
+        const bx = x + (i - 0.5) * w * 0.72;
+        const bz = z + d / 2 + 0.05;
+        const y0 = base + (top - base) * 0.30;
+        const hb = (top - base) * 0.55;
+        out.push(prism({ x: bx, z: bz, y: y0, w: 0.035, d: 0.035, h: hb, sides: 4, role: 'gold' }));
+        out.push(prism({ x: bx, z: bz + 0.05, y: y0 + hb - 0.03, w: 0.03, d: 0.13, h: 0.03, sides: 4, role: 'gold' }));
+        out.push(prism({ x: bx, z: bz + 0.09, y: y0 + hb * 0.25, w: 0.11, d: 0.012, h: hb * 0.72, sides: 4, role: 'flag' }));
       }
       break;
     }
     case 'mast':
       out.push(prism({ x: x + w * 0.34, z: z + d * 0.3, y: top, w: 0.03, h: 0.75, sides: 4, role: 'wood' }));
       out.push(prism({ x: x + w * 0.34, z: z + d * 0.3, y: top + 0.4, w: 0.28, d: 0.02, h: 0.02, sides: 4, role: 'wood' }));
+      // Round 49 (ADR-089): the flag of the era at the masthead — attached at its −X edge, so the
+      // motion layer holds that edge still and lets the free end fly.
+      out.push(prism({ x: x + w * 0.5, z: z + d * 0.3, y: top + 0.6, w: 0.24, d: 0.012, h: 0.13, sides: 4, role: 'flag' }));
       break;
     case 'crate':
       for (let i = 0; i < 3; i += 1) {
@@ -721,7 +729,9 @@ function emitMotif(out, name, ctx) {
       break;
     case 'firepit':
       out.push(prism({ x: x + w * 0.6, z: z + d * 0.5, y: base, w: 0.16, h: 0.05, sides: 8, role: 'stone' }));
-      out.push(prism({ x: x + w * 0.6, z: z + d * 0.5, y: base + 0.05, w: 0.08, h: 0.09, sides: 4, taper: 0, role: 'gold' }));
+      // Round 49 (ADR-089): the fire is a FLAME (glow role, tagged so fire particles and a local light
+      // are born here), no longer a gilded pyramid.
+      out.push(prism({ x: x + w * 0.6, z: z + d * 0.5, y: base + 0.05, w: 0.09, h: 0.13, sides: 5, taper: 0, role: 'flame', tag: 'fire' }));
       break;
     case 'pillar':
       for (let i = 0; i < 2; i += 1) {
@@ -1150,6 +1160,32 @@ export function buildScaffoldSpec({ bpId, era, progress = 0 } = {}) {
 
   // Đống vật liệu tập kết dưới chân — chi tiết nhỏ nhất mà lại là thứ nói to nhất rằng "chỗ này CÓ
   // NGƯỜI ĐANG LÀM". Vơi dần khi công trình gần xong: sắp hoàn thành thì vật liệu đã lên tường hết.
+  // ROUND 49 (ADR-089): A CRANE — a building site that stands still is a photograph of work; the
+  // hook (`hook` role) bobs on its rope, so the site is seen WORKING. Pre-industrial eras raise a
+  // wooden jib crane (a mast, a leaning jib, a rope, a stone on the hook); from Manchester on it is
+  // a tower crane with a horizontal jib and a counter-jib.
+  if (t > 0.3) {
+    const cx = -post * 1.15;
+    const cz = post * 1.15;
+    if (era < 10) {
+      const mastH = height * 1.35 + 0.2;
+      parts.push(prism({ x: cx, z: cz, y: 0, w: 0.05, h: mastH, sides: 4, taper: 0.8, role: 'wood' }));
+      parts.push(prism({ x: cx, z: cz, y: mastH * 0.78, w: 0.04, d: 0.04, h: 0.55, sides: 4, rz: -1.05, role: 'wood' }));
+      const tipX = cx + Math.sin(1.05) * 0.55;
+      const tipY = mastH * 0.78 + Math.cos(1.05) * 0.55;
+      parts.push(prism({ x: tipX, z: cz, y: tipY - 0.34, w: 0.012, h: 0.34, sides: 4, role: 'hook' }));
+      parts.push(prism({ x: tipX, z: cz, y: tipY - 0.42, w: 0.09, d: 0.07, h: 0.08, sides: 4, role: 'hook' }));
+    } else {
+      const mastH = height * 1.5 + 0.3;
+      parts.push(prism({ x: cx, z: cz, y: 0, w: 0.06, h: mastH, sides: 4, role: 'dark' }));
+      parts.push(prism({ x: cx + 0.3, z: cz, y: mastH, w: 0.7, d: 0.05, h: 0.05, sides: 4, role: 'dark' }));
+      parts.push(prism({ x: cx - 0.16, z: cz, y: mastH, w: 0.24, d: 0.05, h: 0.05, sides: 4, role: 'dark' }));
+      parts.push(prism({ x: cx - 0.25, z: cz, y: mastH - 0.03, w: 0.08, d: 0.08, h: 0.08, sides: 4, role: 'stone' }));
+      parts.push(prism({ x: cx + 0.42, z: cz, y: mastH - 0.5, w: 0.012, h: 0.5, sides: 4, role: 'hook' }));
+      parts.push(prism({ x: cx + 0.42, z: cz, y: mastH - 0.58, w: 0.1, d: 0.08, h: 0.08, sides: 4, role: 'hook' }));
+    }
+  }
+
   const piles = t < 0.85 ? 2 : 1;
   for (let i = 0; i < piles; i += 1) {
     parts.push(prism({

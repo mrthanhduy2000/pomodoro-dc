@@ -38,6 +38,11 @@ const TRUY_VAN = ['insetAt', 'blendAt', 'depthAt'];
  */
 const NGUOI_DOC_DAU_CHAN = [
   {
+    file: 'src/engine/city3d/waterProps.js',
+    dung: ['insetAt'],
+    de: 'đặt THUYỀN lên mặt nước (round 49, ADR-089): chỉ hỏi "điểm này có ở trong nước không", không đọc độ sâu',
+  },
+  {
     file: 'src/engine/city3d/terrain.js',
     dung: ['blendAt', 'depthAt'],
     de: 'khoét lòng nước vào TẤM ĐẤT THÀNH PHỐ (`khoetLongNuoc`)',

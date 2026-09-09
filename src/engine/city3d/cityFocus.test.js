@@ -361,9 +361,11 @@ test('ĐỐI CHỨNG: chỉ canh ĐIỂM ĐẾN thôi là chưa đủ — và đ
       }
     }
   }
+  // round 49 (ADR-089): era 12 joined — the flag at its masthead (`emitMast`) raised the landmark's top,
+  // and the whole-path check now catches a flight that only the destination check let through.
   assert.deepEqual(
     [...new Set(lotLuoi)].sort((a, b) => a - b),
-    [1, 8, 10, 15],
+    [1, 8, 10, 12, 15],
     'danh sách kỷ mà phép canh cả đường bay thật sự cứu — đổi là phải xem lại vì sao',
   );
   // ⚠️ 2026-08-24, PHASE 21 §5 (nâng số thửa của bảy kỷ) — **4 kỷ / 7 chuyến**: kỷ 2 · 6 · 13 RỜI,
@@ -427,7 +429,9 @@ test('ĐỐI CHỨNG: chỉ canh ĐIỂM ĐẾN thôi là chưa đủ — và đ
   // phình ra trùm lên ngõ — đúng chỗ camera bay ngang — không còn nữa.
   // ⚠️ Thứ ĐÁNG canh ở đây không phải danh sách mà là con số cuối: chừng nào nó còn khác 0 thì phép
   // canh cả-đường-bay vẫn đang cứu người thật, tức cơ chế lấy mẫu 48 chặng chưa thành mã chết.
-  assert.equal(lotLuoi.length, 7, 'đúng 7 chuyến trên 1200 lọt lưới nếu chỉ canh điểm đến');
+  // round 49 (ADR-089): 5 eras / 8 flights — era 12 joined with exactly ONE flight, the masthead flag
+  // (see the list note above); the other 7 flights are the same ones as before.
+  assert.equal(lotLuoi.length, 8, 'đúng 8 chuyến trên 1200 lọt lưới nếu chỉ canh điểm đến');
   assert.ok(cheoNhat > 1, `chênh lớn nhất giữa điểm-đến và cả-đường mới ${cheoNhat.toFixed(2)} — quá nhỏ để gọi là cứu được ai`);
 });
 

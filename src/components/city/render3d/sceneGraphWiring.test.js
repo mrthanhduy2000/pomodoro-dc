@@ -507,6 +507,8 @@ test('⚠️ BẢN VÁ BỀ MẶT CHỈ ĐƯỢC NHÂN PHẢN CHIẾU, KHÔNG Đ
   // hơn được một chút nào so với chỉ-bóc-công-trình (0,753 · 0,773 · 0,869 y hệt cả hai bên). Mặt
   // đất/đường/đồi nhám 0,96–0,98 nên "phản chiếu" của chúng là một lớp sáng đều đội lốt.
   // Ai đó "dọn cho nhất quán" bằng cách rắc `specularGain` vào cả ba sẽ mất màu mà không được gì.
+  // Round 49 (ADR-089): WET ground (roughness 0,34 — the sky reflects) is the one exception, and it
+  // goes through `wetGain`, which spreads nothing at wet = 0 — the dry law above is intact.
   for (const surface of ['ground', 'road', 'outskirts']) {
     const call = new RegExp(`\\.\\.\\.GRAIN\\.${surface}[^}]*specularGain`);
     assert.ok(!call.test(CODE),
@@ -880,4 +882,20 @@ test('CHUYỂN ĐỘNG: cảnh có ĐỘNG cả khi không có cư dân; `update
   // the merged materials receive the motion uniforms through the ONE onBeforeCompile hook
   assert.ok(/motion: eraMotion \? motionUniforms : null/.test(CODE), 'vật liệu thành phố không nhận uniform gió');
   assert.ok(/injectWater\(waterMaterial, waterUniforms\)/.test(CODE), 'mặt nước không gợn');
+});
+
+test('ROUND 49 (ADR-089): MƯA PHẢI LÀM ƯỚT ĐẤT — ba vật liệu nền đi qua MỘT luật `wetSurface`, và vỏ React đưa thời tiết của CÙNG một giờ', () => {
+  // The rain streaks are particles; the wet ground is three materials. If one of the three forgets
+  // `wetSurface`, the street shines while the fields stay matte — silently. Count the law, not a
+  // number: tile, road, outskirts ⇒ at least three calls.
+  const calls = (CODE.match(/wetSurface\(/g) ?? []).length;
+  assert.ok(calls >= 3, `\`wetSurface(\` được gọi ${calls} lần — mặt đất, đường, vùng quê phải cùng đi qua một luật`);
+  for (const surface of ['ground', 'road', 'outskirts']) {
+    assert.match(CODE, new RegExp(`\\.\\.\\.GRAIN\\.${surface}, \\.\\.\\.wetGain\\(`), `\`GRAIN.${surface}\` phải đi kèm \`wetGain\` — ướt thì phản chiếu, khô thì y nguyên`);
+  }
+  assert.match(CODE, /weatherParticle\(weather\)/, 'vạch mưa phải đọc từ `weatherParticle(weather)` — cùng một hàng thời tiết với đất ướt');
+  // The shell: the weather reads the same clock as the light, and a museum piece the museum hour.
+  assert.match(SHELL_SOURCE, /dimmed \? museumWeather\(layout\.era\) : weatherAt\(layout\.era, getVietnamHour\(\)\)/,
+    'Dòng chọn thời tiết phải là `dimmed ? museumWeather(layout.era) : weatherAt(layout.era, getVietnamHour())`');
+  assert.match(SHELL_SOURCE, /\n\s+weather,/, 'vỏ React phải ĐƯA `weather` vào `createCityScene` — tính ra mà không đưa thì mưa không bao giờ rơi');
 });

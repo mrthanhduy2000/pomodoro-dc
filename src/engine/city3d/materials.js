@@ -95,6 +95,17 @@ const ROLE_FAMILY = {
   // Mặt lá trong bóng vẫn là LÁ: cùng độ nhám, cùng độ bóng — chỉ khác màu. Cho nó một họ vật liệu
   // riêng là tự thêm một lệnh vẽ cho mỗi thành phố mà không đổi được gì trên màn hình.
   leaf2: 'foliage',
+  // Round 49 (ADR-089): the props that move. Every new role maps onto an EXISTING family on purpose —
+  // a new family is a new draw call in every era (`drawCallBudget.test.js`) and `thatch`/`gold` are
+  // not drawn by every era either — `wood` is, so all five ride on it (a cloth is matte enough). `flame` lives in the glow sink (unlit), so its
+  // family only matters for the rare part that is not glowing.
+  cloth: 'wood',
+  cloth2: 'wood',
+  canvas: 'wood',
+  flag: 'wood',
+  hull: 'wood',
+  hook: 'wood',
+  flame: 'wood',
 };
 
 /**

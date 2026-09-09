@@ -16,7 +16,7 @@ import {
   blockUnitCount, deriveBlockUnits, getBlockStyle, isValidBlockStyle, laLuoiDeu,
 } from './blockStyle.js';
 import { ERA_STYLES } from './eraStyle.js';
-import { ROOFTOP_MIN_SPAN } from './rooftop.js';
+import { ROOFTOP_LAND_SPAN } from './rooftop.js';
 import { BUILDING_SCALE } from './parts.js';
 import { CELL_PIXELS, EYE_PIXELS } from './streetStyle.js';
 
@@ -144,7 +144,10 @@ test('`MIN_UNIT_CELLS` là MAX của HAI ngưỡng đã hiệu chuẩn, không p
   // đã quét, và nếu ai nâng nó lên quá 1,3 thì đó là một quyết định mới cần đo lại, không phải
   // một phép chỉnh.
   const mat = (3 * EYE_PIXELS) / CELL_PIXELS;
-  const mai = ROOFTOP_MIN_SPAN * BUILDING_SCALE * EAVE_LAND_FACTOR;
+  // round 50 (ADR-090): the LAND floor is `ROOFTOP_LAND_SPAN` — its own constant since the rooftop
+  // ceiling became a pixel relation (`#77`); moving the land floor would move every dwelling ever
+  // built, which ADR-007 forbids, so the two questions now have two names.
+  const mai = ROOFTOP_LAND_SPAN * BUILDING_SCALE * EAVE_LAND_FACTOR;
   assert.equal(MIN_UNIT_CELLS, Math.max(mat, mai));
   assert.ok(mai > mat, 'vế mái không còn là vế chặt hơn — xem lại vì sao vẫn lấy MAX');
   assert.ok(EAVE_LAND_FACTOR >= 1 && EAVE_LAND_FACTOR <= 1.3,

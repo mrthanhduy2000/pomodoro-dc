@@ -57,7 +57,7 @@
 import { unit, signed } from '../hashId.js';
 import { BUILDING_SCALE } from './parts.js';
 import { CELL_PIXELS, EYE_PIXELS } from './streetStyle.js';
-import { ROOFTOP_MIN_SPAN } from './rooftop.js';
+import { ROOFTOP_LAND_SPAN } from './rooftop.js';
 
 /** Ba cách một khu phố xếp nhà. Đóng — thêm giá trị mới phải sửa cả `block.js`. */
 export const BLOCK_ATTACH = ['party', 'loose', 'court'];
@@ -159,7 +159,7 @@ export const EAVE_LAND_FACTOR = 1.05;
  */
 export const MIN_UNIT_CELLS = Math.max(
   (3 * EYE_PIXELS) / CELL_PIXELS,
-  ROOFTOP_MIN_SPAN * BUILDING_SCALE * EAVE_LAND_FACTOR,
+  ROOFTOP_LAND_SPAN * BUILDING_SCALE * EAVE_LAND_FACTOR,
 );
 
 /** Số đơn vị nhỏ nhất / lớn nhất một khu phố được phép có. Ngoài dải này thì bảng bị TỪ CHỐI. */

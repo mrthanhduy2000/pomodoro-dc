@@ -62,14 +62,45 @@
 import { prism } from './parts';
 import { unit } from '../hashId';
 import { isValidRoofStyle } from './roofStyle.js';
+import { CELL_PIXELS, EYE_PIXELS } from './streetStyle.js';
+import { BUILDING_SCALE } from './parts.js';
 
 // ─── HẰNG SỐ: TỈ LỆ VÀ TRẦN ──────────────────────────────────────────────────
 
-/** Mảng nhà hẹp hơn mức này thì không có gì trên mái. Dưới đây mọi chi tiết đều thành vệt bẩn. */
-export const ROOFTOP_MIN_SPAN = 0.24;
-
 /** Ống khói / bồn nước / buồng thang rộng bao nhiêu phần bề ngang mái. */
 const STACK_W_RATIO = 0.17;
+
+/**
+ * ⚠️ ROUND 50 (ADR-090) — `TECH_DEBT_3D #77` + `#90(b)` CLOSED TOGETHER: THE CEILING IS A RELATION NOW.
+ *
+ * It used to be one absolute number (0,24 in description units) applied to blocks that differ by
+ * several times in size — the same shape of defect as `eaves` (Phase 7C). What it MEANT was always a
+ * relation: *"a rooftop object must be wide enough for the eye to read"*, i.e. a number of PIXELS.
+ * Written as a relation it needs no third hand-picked constant, because both calibrations already
+ * exist and are exported: `CELL_PIXELS = 64` (a city cell at the app's real viewing distance) and
+ * `EYE_PIXELS = 4` (thinner than this and a strip is not readable) — `streetStyle.js`.
+ *
+ * The chain: a span `s` in description units is `s × BUILDING_SCALE` cells on the ground; a rooftop
+ * object is `STACK_W_RATIO` of that span; and the frame that decides is NOT the overview but the
+ * CLOSE-UP — ADR-034 flies the camera to 7,5 against an overview of 25–27, so a detail is about
+ * **3,4× larger** there, and since round 50 Đàm can also walk right up to a facade, closer still.
+ * That is the whole answer to Đàm's round-50 order: *"chi tiết nhỏ quá không thấy ở toàn cảnh thì
+ * kệ nó — nó sẽ thấy khi tôi ngắm gần, và đó là lý do nó đáng tồn tại."*
+ *
+ * ⚠️ AND IT IS DELIBERATELY **NOT** THE SAME NUMBER AS THE LAND FLOOR. `blockStyle.js` uses a floor
+ * to decide how much GROUND a dwelling unit gets; that question is about footprints, not about
+ * pixels, and moving it would move every dwelling in the museum (ADR-007). It keeps the historical
+ * 0,24 under its own name, `ROOFTOP_LAND_SPAN`, which is what the debt entry meant by *"hai thứ
+ * khác nhau"*.
+ */
+export const CLOSE_UP_GAIN = 3.4;
+export const ROOFTOP_MIN_SPAN = EYE_PIXELS / (STACK_W_RATIO * BUILDING_SCALE * CELL_PIXELS * CLOSE_UP_GAIN);
+
+/**
+ * The floor the LAND allocation uses (`blockStyle.js`) — the historical 0,24, frozen on purpose:
+ * it decides how big a dwelling unit is, and every dwelling ever built stands where it stands.
+ */
+export const ROOFTOP_LAND_SPAN = 0.24;
 /** …và không bao giờ rộng hơn mức này so với mái, dù kỷ khai gì. */
 export const STACK_W_MAX_RATIO = 0.3;
 /** Bề ngang tuyệt đối nhỏ nhất còn đọc ra được là một vật thể. */

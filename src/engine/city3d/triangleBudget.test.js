@@ -65,15 +65,31 @@ const CO_BE = new Set(['building', 'scaffold', 'dwelling']);
 // (a boat fleet of 8 plus cloth on every dwelling).
 // Then fire (same round, same day): a brazier, forge or campfire first in every pre-electric era's
 // life list, torches on the oldest lamp posts — +40 … +184 triangles per era, eras 11 · 13–15 untouched.
+// Round 50 (ADR-090), measured 2026-09-09: the shells got INSIDES — an open door on ~60 % of the
+// non-symmetric buildings, and behind it a dark cavity with two or three objects (`interiors.js`).
+// +0,2 % … +1,4 % per era; era 1 the most (its doorways are the widest share of its facade).
+// …and then the rooftop ceiling became a RELATION (`#77`/`#90(b)`, same round): every small unit
+// carries its chimney, vane and dormer again. +0,6 % … +8,2 % on top of the interiors; era 6 the
+// most (widest alleys ⇒ thinnest units ⇒ it had lost the most).
+// …and then FACADE DETAIL (`facadeDetail.js`, Việc 6): string courses, shutters, brackets, balconies,
+// signs, downpipes, awnings, tile panels — a vocabulary per era. +3 % … +19 % on top of the roofs;
+// era 5 (Fachwerk framing on every wall) and era 14 (glass fins) gain the most. Round 50 was told
+// explicitly to stop counting triangles — these marks stay only as a CHANGE alarm, not as a budget.
 const MOC_TAM_GIAC = {
-  1: 93546, 2: 114490, 3: 105936, 4: 166180, 5: 97710,
-  6: 200308, 7: 162968, 8: 120240, 9: 143844, 10: 101380,
-  11: 124688, 12: 105484, 13: 122584, 14: 138504, 15: 96434,
+  1: 100666, 2: 127166, 3: 123992, 4: 185584, 5: 119110,
+  6: 237632, 7: 189096, 8: 143584, 9: 166796, 10: 116424,
+  11: 141876, 12: 116504, 13: 136764, 14: 158976, 15: 108718,
 };
 
 /** Số BỆ KÈ của từng kỷ — tách riêng vì nó là hàm của ĐỊA HÌNH, không của kiến trúc. */
+// ⚠️ ROUND 50 (ADR-090): ERA 5 GOES 0 → 1, AND THE TERRAIN DID NOT MOVE. A plinth appears where a
+// building's FOOTPRINT crosses uneven ground, and the footprint is `round(specSpan × BUILDING_SCALE)`.
+// The rooftop ceiling became a relation this round (`#77`), so small units carry their chimneys and
+// vanes again — and one Burg-Eltz building's span crossed the rounding boundary into a second cell,
+// which is a foundation it genuinely needs. The wording of this test's name still holds: the number
+// only moves when the ground under a building changes, and here the BUILDING changed, not the hill.
 const MOC_SO_BE = {
-  1: 0, 2: 0, 3: 2, 4: 5, 5: 0, 6: 4, 7: 4, 8: 1,
+  1: 0, 2: 0, 3: 2, 4: 5, 5: 1, 6: 4, 7: 4, 8: 1,
   9: 5, 10: 3, 11: 3, 12: 0, 13: 0, 14: 0, 15: 0,
 };
 
@@ -88,7 +104,7 @@ const MOC_SO_BE = {
 const BE_CO_VAT = 92;
 const BE_KHONG_VAT = 12;
 /** Phân bố ĐO ĐƯỢC 2026-09-05 trên cả 15 kỷ: `{tam giác mỗi bệ: số bệ}`. */
-const PHAN_BO_BE = { 44: 1, 92: 26 };   // round 47: the one thin plate now rounds its plan corners (44), the 26 beveled boxes are 92
+const PHAN_BO_BE = { 44: 1, 92: 27 };   // round 47: the one thin plate rounds its plan corners (44); round 50: 27 beveled boxes (era 5 gained one, see `MOC_SO_BE`)
 
 function thanhPhoDoDuoc(era) {
   const built = BLUEPRINT_CATALOG[era].map((bp) => bp.id);

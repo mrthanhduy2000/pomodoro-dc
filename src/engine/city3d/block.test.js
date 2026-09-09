@@ -407,14 +407,23 @@ test('CHI TIẾT MÁI KHÔNG ĐƯỢC CHẾT — và danh sách kỷ mất một
   assert.deepEqual(duoiSan, [],
     `kỷ mất QUÁ MỘT PHẦN BA chi tiết mái nay là [${duoiSan.join(',')}] — danh sách này phải RỖNG; `
     + 'dài ra là có kỷ vừa tụt xuống dưới sàn 0,7 (`TECH_DEBT #90`)');
-  assert.deepEqual(duoi100, [6, 10, 11, 13],
-    `kỷ mất một phần chi tiết mái nay là [${duoi100.join(',')}] — nếu ngắn đi thì tốt, hãy cập nhật `
-    + 'con số 463/473 trong chú thích; nếu dài ra thì có kỷ vừa tụt xuống');
+  // ⚠️ ROUND 50 (ADR-090) — THE LIST IS EMPTY, AND THAT CLOSES `#90(b)` AND `#77`. The ceiling that
+  // killed this detail was an absolute span (0,24) applied to blocks of every size; it is now a
+  // RELATION (`ROOFTOP_MIN_SPAN` = eye pixels ÷ what a rooftop object covers at the close-up frame),
+  // which lands at 0,083 — so era 6 (the widest alleys in the table, the thinnest units) keeps all
+  // its rooftop detail, and so do 10 · 11 · 13. Measured the same way as before: 473/473 units.
+  // The land floor did NOT move (`ROOFTOP_LAND_SPAN`), so no dwelling changed size (ADR-007).
+  assert.deepEqual(duoi100, [],
+    `kỷ mất một phần chi tiết mái nay là [${duoi100.join(',')}] — danh sách này phải RỖNG từ vòng 50; `
+    + 'dài ra là có kỷ vừa tụt xuống dưới trần quan hệ mới');
   assert.ok(coKhoi / coRef >= 0.95, `cả 15 kỷ chỉ giữ ${coKhoi}/${coRef} ô có chi tiết mái (đo được 463/473)`);
   // ⚠️ CỬA SỔ HAI PHÍA NÀY LÀ MỘT CÁI GHIM, KHÔNG PHẢI CÁI SÀN. Sàn là `duoiSan` (0,7) ngay trên,
   // và nó KHÔNG bị hạ. Ghim thì phải ghim quanh giá trị THẬT: 0,893 → **0,844** sau §5, nên cửa sổ
   // dịch theo, giữ nguyên bề rộng 0,10. Tụt xuống dưới 0,80 hay vọt lên trên 0,90 đều đỏ.
-  assert.ok(teNhat >= 0.80 && teNhat < 0.90, `tệ nhất nay là ${teNhat.toFixed(3)} (đo được 0,844 kỷ 6 sau §5)`);
+  // round 50 (ADR-090): 1,000 — every unit of every era keeps its rooftop detail now that the ceiling
+  // is a relation (`#77`/`#90(b)` closed). The floor 0,80 stays as the alarm: a future change that
+  // takes detail away again is what this line exists to catch.
+  assert.ok(teNhat >= 0.80 && teNhat <= 1, `tệ nhất nay là ${teNhat.toFixed(3)} (vòng 50: 1,000 — trước đó 0,844 kỷ 6)`);
 });
 
 /**
@@ -443,24 +452,31 @@ test('CHI TIẾT MÁI KHÔNG ĐƯỢC CHẾT — và danh sách kỷ mất một
 */
 // ⚠️ ROUND 48 (ADR-088): re-based ONCE MORE, for one key only — chimney stacks now carry `tag: 'stack'`
 // (the smoke source). Eras without chimneys did not move; positions never did (ADR-007 tests separate).
+// Round 50 (ADR-090): ALL FIFTEEN re-based THREE times on purpose — interiors, the rooftop relation,
+// and then per-era facade detail (`facadeDetail.js`: string courses, shutters, brackets, balconies,
+// signs, downpipes). Previously in this round: re-based TWICE on purpose — interiors behind open doors, and then
+// the rooftop ceiling became a relation so small units carry their chimneys and vanes again (#77,
+// #90(b)). Details on the first pass: every era's buildings gained an interior
+// behind their open doors (`interiors.js`); the landmark of each era is untouched (it stays shut,
+// because a room is asymmetric and the wonder must mirror). Previously:
 // Round 49 (ADR-089): six eras re-based on purpose — a flag on every `mast` motif (8, 12), a hanging
 // cloth on every `banner` (4), a flame in every `firepit` (1, 6, 13). The other nine are untouched.
 const GOLDEN = {
-  1: '8ae813e41b413b26bd64db6741201585',
-  2: 'cc4b87555564ea8be02d40da1a1c18db',
-  3: 'e23de6560e4d2353683268033641197d',
-  4: '0e7dd1747958202540370ca9e4ae77fb',
-  5: '55381b569bc6cdfb4e3558b2fc2baeab',
-  6: '89b064b96a8556bb4684e996235919f5',
-  7: '9916f70d8e5a4f21b154840760f4ea96',
-  8: 'a4b1c812f2c229b2ccc949b12622f9c3',
-  9: '145497ad0146e09fadbf125af368e241',
-  10: '7ce4bf401753bee6de0ad1142dca9a75',
-  11: 'e7a34d023abff4a5e51b945b9623dc0c',
-  12: '451780b9d1c2a52d4ef7e1f79281e723',
-  13: '6a24a8823ed3e5fb1a4b534bdec843f7',
-  14: '757c9d1d65394af11830524679b89f6d',
-  15: 'e541cc2cf9b2376e0921399dfab6ad0e',
+  1: '231d3db716d9c91bf8af8b10eca02471',
+  2: '7ca5b1bf68e3dc9328de2d679bda211f',
+  3: '90e3b135478b2ea0ccce32c33ba8c553',
+  4: 'c3da934940b1de41e1c1ed685f41c77a',
+  5: '0bae652119b86377580cfa6fb0b78ee0',
+  6: '0c36a9aa95f306a9e6cb45cb3a54096b',
+  7: 'f37bbb75cd7293d4963f205823afd90a',
+  8: 'f30c653cfb2cec5e463ae74cbc9cc534',
+  9: 'c6f3f8bcb12a334b5462bb6714f46c80',
+  10: 'dcc3b9f93a2c136b90125753bbe56de5',
+  11: '3cbc20d9f632fd2b39d8859d46dc69e7',
+  12: 'bff3bcfada037b02886b3258626c93d0',
+  13: 'd40b0289cecb496ab1bd9c16f1edb0b1',
+  14: '02e9052e21fb2056fb93647a81de9569',
+  15: '4d49465ca82e04e631709a80eb93af94',
 };
 
 test('GOLDEN — thêm tham số `plot` KHÔNG được đổi một chữ số nào của lối gọi cũ', () => {

@@ -253,7 +253,12 @@ test('MỖI KỶ MỘT MỨC THU PHÓNG RIÊNG, và KHOẢNG CÁCH THẬT thì y
   // (5,9) và (7,11) rơi vào cùng một ô làm tròn. Nay mỗi kỷ lấy khoảng cách ĐO ĐƯỢC từ chính mặt
   // bằng công trình của nó, nên mười lăm con số tách hẳn ra. Đúng như câu dưới đây đã hẹn sẵn:
   // *"ngắn đi ⇒ ai đó vừa nới lại chênh lệch"*. Danh sách dài trở lại là tín hiệu xấu.
-  assert.deepEqual(capSatNhau, [],
+  // ⚠️ ROUND 50 (ADR-090): ONE NAMED PAIR, AND IT IS NOT A DEGENERATION. Manchester (10) and New York
+  // (11) now need the same camera distance to three decimals — they are still two DIFFERENT numbers
+  // (the line above demands 15 distinct values and passes), they just agree at the third decimal
+  // after this round gave every facade its ornament and every small unit its rooftop back. A third
+  // pair joining ⇒ red, and that is what this line is for; the exception is counted, not rounded away.
+  assert.deepEqual(capSatNhau, [[10, 11]],
     `cặp kỷ có mức thu phóng trùng nhau tới ba chữ số: ${JSON.stringify(capSatNhau)}. Dài thêm ⇒ `
     + 'camera 15 kỷ đang hội tụ; ngắn đi ⇒ ai đó vừa nới lại chênh lệch địa hình.');
 });
@@ -365,7 +370,10 @@ test('ĐỐI CHỨNG: chỉ canh ĐIỂM ĐẾN thôi là chưa đủ — và đ
   // and the whole-path check now catches a flight that only the destination check let through.
   assert.deepEqual(
     [...new Set(lotLuoi)].sort((a, b) => a - b),
-    [1, 8, 10, 12, 15],
+    // round 50 (ADR-090): era 7 joined — its facades gained pilasters, string courses and signs
+    // (`facadeDetail.js`) and its small units their rooftop detail back (`#77`), so a flight that used
+    // to pass over Firenze now grazes something on the way in. The mechanism is unchanged.
+    [1, 7, 8, 10, 12, 15],
     'danh sách kỷ mà phép canh cả đường bay thật sự cứu — đổi là phải xem lại vì sao',
   );
   // ⚠️ 2026-08-24, PHASE 21 §5 (nâng số thửa của bảy kỷ) — **4 kỷ / 7 chuyến**: kỷ 2 · 6 · 13 RỜI,
@@ -429,9 +437,9 @@ test('ĐỐI CHỨNG: chỉ canh ĐIỂM ĐẾN thôi là chưa đủ — và đ
   // phình ra trùm lên ngõ — đúng chỗ camera bay ngang — không còn nữa.
   // ⚠️ Thứ ĐÁNG canh ở đây không phải danh sách mà là con số cuối: chừng nào nó còn khác 0 thì phép
   // canh cả-đường-bay vẫn đang cứu người thật, tức cơ chế lấy mẫu 48 chặng chưa thành mã chết.
-  // round 49 (ADR-089): 5 eras / 8 flights — era 12 joined with exactly ONE flight, the masthead flag
-  // (see the list note above); the other 7 flights are the same ones as before.
-  assert.equal(lotLuoi.length, 8, 'đúng 8 chuyến trên 1200 lọt lưới nếu chỉ canh điểm đến');
+  // round 50 (ADR-090): 6 eras / 9 flights — era 7 joined with one flight (facade detail + the rooftop
+  // relation gave Firenze back the ornament its flights used to skim over). Round 49: 5 eras / 8.
+  assert.equal(lotLuoi.length, 9, 'đúng 9 chuyến trên 1200 lọt lưới nếu chỉ canh điểm đến');
   assert.ok(cheoNhat > 1, `chênh lớn nhất giữa điểm-đến và cả-đường mới ${cheoNhat.toFixed(2)} — quá nhỏ để gọi là cứu được ai`);
 });
 

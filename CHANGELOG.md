@@ -10,6 +10,31 @@
 > **Muốn hiểu VÌ SAO một quyết định được chọn** → `ARCHITECTURE_DECISIONS.md`. **Muốn biết migration
 > cụ thể nào cần chạy** → `MIGRATION.md`.
 
+## 2026-09-09 — Round 48: the city becomes a place (ADR-088)
+
+**Purpose.** Đàm's brief: *"thành phố đang là một tấm ảnh đẹp. Vòng này biến nó thành MỘT NƠI CÓ THẬT"*
+— motion, flat core with a wild hinterland, land that grows with the player, and the second rotation
+axis that three debts (#29 · #40 · #82) shared. Performance was explicitly NOT measured this round.
+
+**Scope.** `scripts/city-preview.mjs` (lock · pre-delete · `last-run.json` with `sourceStamp`);
+`src/engine/city3d/` (parts · geometry tilt · flora · humanPose · motion · landGrowth · outskirts ·
+hinterland · cityParts · orbit · terrain · horizon · rooftop) and `src/components/city/render3d/`
+(geometryFactory · motion · surfaceDetail · sceneGraph · CityScene3D). No store, no sync, no 2D screen.
+- **Việc 0 — the ruler.** `--eras` and `--era N` were byte-identical all along; the "other" era 12 was a
+  stale file in the shared folder. Lock + pre-delete + manifest; lesson 104.
+- **Second axis.** `rx`/`rz` tilt on parts (palms hang their fronds, #29 closed); `c` yaw on every human
+  joint (girdles counter-twist, head glances).
+- **The scenery moves.** Per-vertex `aMotion` + `uTime` in the one shader hook (foliage sways, cloth
+  flaps), water waves with live normals, particle systems per era (smoke · steam · snow · sand · dust ·
+  birds). Deterministic, no synchrony, distance fall-off, `still`/`--nomotion` freeze it.
+- **Flat core, wild outside.** 13 eras `terraces: 1`, Eltz and Lisbon one 0,07/0,06 kerb; hills start
+  closer and rise higher in the eight hill/mountain eras.
+- **The land grows.** Milestones 0 · 25 · 50 · 90 · 140 sessions → outskirts ring 8 → 11 cells, +1 hamlet
+  per stage appended, camera +5 % per stage. Only add, never move (15 × 5 sweep); sealed eras frozen.
+
+**Impact / compatibility.** Rendering and layout of the OUTSIDE only; saves untouched; ADR-007 15 × 120
+position tests green. Gates: `npm run test:quiet` **1 703 pass · 0 fail · skipped 1** (+16 tests vs round 47) · lint 0 · build ✓.
+
 ## 2026-09-08 — Round 47: the city is redrawn on the same map (ADR-087)
 
 **Purpose.** Đàm unlocked the 3D city ("hộp đen không còn") and asked for a breakthrough, not a touch-up:

@@ -1,4 +1,4 @@
-# TECH_DEBT — 3D city subsystem (49 open entries · 3 closed in round 47)
+# TECH_DEBT — 3D city subsystem (47 open entries · 3 closed in round 47 · 2 in round 48)
 
 > Split out of the active `TECH_DEBT.md` on 2026-09-06 (ADR-075). **These are still OPEN debts, not
 > archived history** — they were moved by SUBSYSTEM, not by status.
@@ -527,8 +527,13 @@
 - **Estimated Complexity**: (a) cao và rủi ro · (b) thấp nhưng đắt tam giác
 - **Blocking Conditions**: không có — nhưng ĐỪNG làm nếu chỉ vì cọ
 - **Review Trigger**: khi có một tính năng KHÁC cần trục nghiêng, hoặc khi Đàm nói cọ trông sai
-- **Owner**: phiên AI kế tiếp · **Status**: Open
+- **Owner**: round 48 (2026-09-09) · **Status**: ✅ **CLOSED 2026-09-09 (ADR-088)**
 
+
+> **Closed in round 48.** `parts.js` gained the tilt axes `rx`/`rz` (about the part's own base centre;
+> `geometryFactory.partWorld` builds `Ry·Rz·Rx`). A frond is now a vertical blade hinged at the crown and
+> tilted past horizontal (`rz = −(90° + droop)`), so from the default camera a palm is a dome of drooping
+> blades, not a "✳". Tilt keys are written only when non-zero — untilted specs serialise byte for byte.
 ---
 
 ## #33 — Ma trận 24 cảnh mở lại trình duyệt 25 lần thay vì gộp vào MỘT trang
@@ -1485,7 +1490,7 @@ hai con số. Việc *nâng* 9 kỷ kia lên trên 5% nếu có làm thì thuộ
 - **Blocking Conditions**: chờ Đàm chọn hướng.
 - **Review Trigger**: trước khi bắt đầu BẤT KỲ phase nội dung nào khác cho thành phố 3D — đọc mục
   này trước, vì nó nói ngay rằng trần của tầng nội dung là 37% chỗ trống, không phải 100%.
-- **Owner**: Đàm đã quyết · **Status**: ⚠️ **ĐANG ĐÓNG DẦN — nửa "lấp vành" ĐÃ LÀM (2026-08-19,
+- **Owner**: round 48 · **Status**: MỞ — narrowed: round 48 gave the ring hills, growth and motion
   VIỆC 1), nửa "địa thế theo kỷ" còn lại ở VIỆC 2.**
 - ⚠️ **ĐÀM ĐÃ CHỌN (2026-08-19), VÀ ANH BÁC CẢ HAI PHƯƠNG ÁN "THU NHỎ"**: không thu tấm đất, không
   siết khung hình — mà **LẤP**. Lý do anh nêu thẳng vào bản chất chứ không vào con số: *"Tại sao một
@@ -1515,6 +1520,11 @@ hai con số. Việc *nâng* 9 kỷ kia lên trên 5% nếu có làm thì thuộ
   (mặc định TẮT, có test khoá ở `sceneStats.test.js`) là thứ tách được hai vùng đất — **không** dò
   bằng màu, vì hai vùng dùng chung dải sắc độ (`TECH_DEBT #22`).
 
+
+> **Round 48 (ADR-088):** the ring is no longer untouched by content — the horizon rim now climbs inside
+> the frame for hill/mountain eras (`HORIZON_NEAR_STEEP`), the ring grows with sessions (#74 closed),
+> and its foliage sways. What is still missing is what this entry asked for: a phase that DESIGNS the
+> ring per era (roads out, fields, a river's meander) rather than a density curve.
 ---
 
 ## #52 — Một ảnh nghiệm thu đã bị RÁCH NGANG và ta KHÔNG biết vì sao; nay có cổng chặn nhưng chưa có chẩn đoán
@@ -1847,8 +1857,13 @@ hai con số. Việc *nâng* 9 kỷ kia lên trên 5% nếu có làm thì thuộ
 - **Estimated Complexity**: Trung bình.
 - **Blocking Conditions**: nên có một phase riêng, không gộp.
 - **Review Trigger**: khi có phase cần khối nghiêng, hoặc khi camera xuống gần mái.
-- **Owner**: chưa phân công · **Status**: Open
+- **Owner**: round 48 · **Status**: MỞ — the AXIS exists since ADR-088; the tiles are not yet re-laid
 
+
+> **Round 48 (ADR-088):** the missing axis is there (`rx`/`rz`), so a barrel tile CAN lie on its slope.
+> Not done this round on purpose: at the default camera a tile end is under 12 px (`PHASE_RULES §10.1`),
+> so re-laying them is work the eye would not receive. When a close-up mode earns it, `emitBarrel` should
+> give each eave tile `rx = ∓(90° − atan(rise / (d/2)))` and a body along the slope.
 ---
 
 ## #71 — Khu 3×3 quanh kỳ quan KHÔNG giữ chỗ cho một Ô, nó giữ chỗ cho HÌNH CHIẾU ĐÁY — và 225/225 công trình đều tràn ra ngoài ô neo
@@ -1981,7 +1996,7 @@ hai con số. Việc *nâng* 9 kỷ kia lên trên 5% nếu có làm thì thuộ
   #14.
 - **Review Trigger**: khi #14 được chốt, hoặc lần đầu Đàm nói *"vùng quanh thành phố nên lớn lên
   theo tôi"*.
-- **Owner**: chưa ai · **Status**: MỞ, CHỜ ĐÀM QUYẾT
+- **Owner**: round 48 (2026-09-09) · **Status**: ✅ **CLOSED 2026-09-09 (ADR-088)**
 
 ## #73 — Camera bị buộc cứng vào `CITY_GRID_SIZE`, nên "lưới to hơn" và "nhà cao hơn" TỰ TRIỆT TIÊU nhau
 
@@ -2008,12 +2023,25 @@ hai con số. Việc *nâng* 9 kỷ kia lên trên 5% nếu có làm thì thuộ
 - **Estimated Complexity**: Medium.
 - **Blocking Conditions**: không có — đây là nợ ĐƯỢC CHỌN mang, không phải nợ bị kẹt.
 - **Review Trigger**: **lần đầu tiên có một phase thật sự cần đổi `CITY_GRID_SIZE`.**
-- **Owner**: chưa giao · **Status**: MỞ — camera untouched in round 47 (2026-09-08)
+- **Owner**: round 48 · **Status**: MỞ — the coupling is now USED on purpose (`cameraPullback`, ADR-088)
 
 
 > **Round 47 (ADR-087):** the camera was unlocked but not moved. Every art change was judged at the
 > DEFAULT camera on purpose (Đàm's bevel gate: *«tắt/bật, CÙNG camera mặc định»*); moving the eye at the
 > same time would have made every before/after photo compare two things at once.
+
+> **Closed in round 48 — exactly by the recipe above.** `engine/city3d/landGrowth.js`: milestones
+> 0 · 25 · 50 · 90 · 140 sessions → stages 0…4; `outskirts.js` extends its ring 8 → 11 cells at NEW lattice
+> indices only (the stage-0 ring is byte-identical to Phase 8D's); `hinterland.js` APPENDS one hamlet per
+> stage to the tail; `orbit.js` pulls the camera back 6 % per stage. `landGrowth.test.js` sweeps 15 eras
+> × 5 stages and demands every old item keep its coordinates. A sealed era renders with the session count
+> stored at its seal (`CityView` already passed it), so the museum does not grow. #71's three leaks were
+> avoided by construction: no budget from free cells, no post-sort collision filter, no length-modulo pick.
+
+> **Round 48 (ADR-088):** `cityOrbitOptions(gridSize, era, sessionCount)` multiplies the distance by
+> `cameraPullback(landStage)` (+6 % per land stage), so the frame grows WITH the land instead of against
+> it. The grid stays 12; the two-jobs-one-field problem this entry describes is unchanged, but the field
+> now has a third, deliberate input. Debt stays open for the day the grid itself is allowed to grow.
 ---
 
 ## #75 — Ziggurat kỷ 3 đã có hình ĐÚNG nhưng vẫn đọc ra là «một khối cao đội cái mũ giật cấp» — đây là bài toán KHỐI TÍCH, không phải bài toán MÁI

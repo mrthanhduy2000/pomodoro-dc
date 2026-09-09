@@ -510,3 +510,30 @@ stated twice drifts.
   lower them is muting the alarm.
   ⚠️ Never put a `/* … */` comment straight after the `{` of an object literal — it makes the JSX
   comment stripper in `components/journeyWiring.test.js` eat real code in a different file.
+
+## Rotated out of `START_HERE.md` on 2026-09-09 (round 48 arrived; keep the 3 most recent)
+
+- **Loop — ROUND 45 (2026-09-08): A BONUS THAT CANNOT BE SEEN IS NOT A BONUS (ADR-085).**
+  The audit that decided it: of 36 skills, **27 are a silent `+X% XP/EP`** shown on no screen ever, 6
+  are genuinely felt, 3 are prestige-only. One skill is worth 3–7 XP on a 48-minute session, so round
+  44's twelve taps bought twelve numbers nobody could see.
+  ⚠️ **`engine/sessionCredits.js` is a PASSENGER, never a driver.** It collects one line per bonus as
+  `gameMath.js` adds it (25 sites) and reads the formula's locals without ever feeding one back — so a
+  bug there can make the ENDING CARD wrong and never the PAYOUT. Keep it that way. At
+  `XP_FACTOR_HARD_CAP` the credits are rescaled, or the chips would sum to more than the headline.
+  `challengeEngine`/`wonderEffects` must return `sources` alongside their percentages: a test fails any
+  buff that moves `expBonus`/`epBonus` without merging its names.
+  ⚠️ **`engine/skillPreview.js` MEASURES, it does not look up.** It runs the real `calculateRewards`
+  twice, with and without the skill, at the player's median session length. Never replace it with a
+  table — that is 36 formulas copied. Dice skills (`VAN_MAY`) are REFUSED, not averaged.
+  ⚠️ **Two banners share the 96px slot.** `SkillMoment` (a direct answer to a tap) outranks
+  `DayMoment` (an ambient greeting) via App's `quiet` prop; both are mounted OUTSIDE `GlobalOverlays`,
+  which early-returns null on exactly the quiet screens they are for.
+  ⚠️ **The 1 SP/building rate did NOT change and must not.** Đàm's felt "5,6 sessions per point" is
+  the city tap alone; all three taps are ~139 SP over ~420 build-sessions ≈ **3 sessions per point**.
+  The fix was a sentence: `nextSkillPointETA` prints the nearer of the two taps countable in sessions,
+  because the header previously printed NOTHING whenever the next level was past
+  `STAGE_COUNTDOWN_MAX_SESSIONS` (~155 sessions on a real save). The week is excluded on purpose — a
+  chain closes on a calendar, so "~N phiên" would be invented.
+  ⚠️ **Hành trang keeps all three sub-tabs.** «Đã xây» is not a copy of the Thành Phố tab: it is the
+  only place that names what a built building's perk does.

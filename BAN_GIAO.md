@@ -1,4 +1,48 @@
-> Last update: **2026-09-08** — **ROUND 47: THE CITY IS REDRAWN ON THE SAME MAP (ADR-087).**
+> Last update: **2026-09-09** — **ROUND 48: THE CITY BECOMES A PLACE (ADR-088).**
+> Order: *"Chuyển động, motion, 3D chuẩn hơn. Bám sát lịch sử. Mở rộng diện tích thành phố … biến nó thành
+> MỘT NƠI CÓ THẬT."* Everything on `main`, on top of round 47. **No performance numbers this round** (Đàm).
+>
+> ### Measured before
+> only residents moved (`isAnimated: residents.length > 0`) · parts 1 axis, joints 2 · terraces 1–3 with
+> relief up to 0,90 inside the grid · outskirts ring fixed at 8 cells for every session count · the
+> round-47 "two code paths" of the preview tool (a wrong diagnosis).
+>
+> ### Done
+> 1. **Việc 0 — lesson 104.** Reproduced: `--eras 11,12,13` vs `--era 12` = 0 pixels differ. Root cause:
+>    a stale file in the shared `.city-preview/` folder + a swallowed per-era log + overlapping runs
+>    sharing one bundle. `city-preview.mjs`: lock (exit 3), pre-delete of every target, `last-run.json`
+>    + `sourceStamp` in every `.geom.json`, `--nomotion`; 3 source tests.
+> 2. **Second axis** — `parts.js` `rx`/`rz` (keys only when non-zero; GOLDEN untouched) · `geometryFactory`
+>    `Ry·Rz·Rx` about the base centre · `specSpan/specFootprint` count the lean · palm fronds hinged at
+>    the crown (#29 closed) · `humanPose` joints `c` + `HEAD_LOOK_RAD`, `sceneGraph` `jointYaw`.
+> 3. **Motion** — `engine/city3d/motion.js` (ERA_MOTION 15 rows, PARTICLE_STYLE, phaseAt, motionTime) ·
+>    `render3d/motion.js` (GLSL sway/bob/flap, water waves, `createParticles`) · factory `aMotion` ·
+>    `surfaceDetail` injects through its one hook · `sceneGraph` `update(t)`, smoke sources from
+>    `tag: 'stack'` + hearth fallback, `isAnimated` true whenever the era moves · `CityScene3D`
+>    calls `city.update`. Era 12: 3,66 % px change between frames 1,5 s apart (0,11 % with `--nomotion`).
+> 4. **Terrain** — `ERA_TERRAIN` flattened (13 × 1, eras 5/8 × 2 at 0,14/0,12) · `HORIZON_STYLES`
+>    `near` +0,12…0,17 and `rise` up for eras 1 · 5 · 10 · 13. Terrain, horizon and waterView tests green
+>    without touching a list — no old gate moved.
+> 5. **Land growth** — `landGrowth.js` (milestones, reach, hamlet bonus, camera pullback) · `outskirts.js`
+>    stage-0 lattice byte-identical, outer ring at new indices · `hinterland.js` hamlets appended ·
+>    `cityParts.js` passes `layout.sessionCount` · `orbit.js` pullback · call sites in `CityScene3D`
+>    and `city-preview`. `landGrowth.test.js`: 15 eras × 5 stages only-add sweep.
+> 6. **Tests re-based on purpose:** GOLDEN (chimney `tag`), sceneStats InstancedMesh names (particles),
+>    outskirts/hinterland purity laws (sessionCount may ADD).
+>
+> ### Measured after
+> moving kinds 1 → 9 · axes 1/2 → 3/3 · terraces max 3 → 2 · ring 8 → 11 cells at 140 sessions ·
+> ADR-007 15 × 120: 0 moved · sealed eras: same size (frozen count) · `npm run test:quiet`
+> **1 703 pass · 0 fail · skipped 1** (+16 tests vs round 47) · lint 0 · build ✓.
+>
+> ### Not done · why
+> boats · cranes · flags on masts (no such props/parts yet — the `cloth` role and flap shader wait for
+> them) · gait stop/turn/sit · 390 px detail pass · celebration inside the picture · #40 tiles on the slope
+> (under 12 px) · #88 plots per block. Each is a ❌ with its reason in the round-48 report.
+>
+> ---
+>
+> Previous update: **2026-09-08** — **ROUND 47: THE CITY IS REDRAWN ON THE SAME MAP (ADR-087).**
 > Order: *"ĐỘT PHÁ MỸ THUẬT. Vẽ lại thành phố từ đầu, trên đúng tấm bản đồ cũ. Tôi mở khoá thành phố 3D
 > — hộp đen không còn."* Everything on `main`, on top of round 46.
 >

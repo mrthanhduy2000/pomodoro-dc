@@ -16,7 +16,7 @@ grep -n 'CÔNG CỤ ĐO NÓI DỐI' docs/LESSONS_3D.md   # 28 lần công cụ t
 grep -n 'GÁNH HAI VIỆC' docs/LESSONS_3D.md        # 7 lần một trường gánh hai việc
 ```
 
-## Mục lục (104 bài học cấp 1)
+## Mục lục (105 bài học cấp 1)
 
 1. QUÉT XONG PHẢI CHẤM BẰNG SỐ
 2. CÔNG CỤ ĐO NÓI DỐI LẦN THỨ 20 VÀ 21
@@ -122,6 +122,7 @@ grep -n 'GÁNH HAI VIỆC' docs/LESSONS_3D.md        # 7 lần một trường g
 102. A GROUND IS A WINDOW PER ERA, NOT ONE ANCHOR FOR FIFTEEN (round 47)
 103. `--all` AND `--era N` DREW THE SAME ERA DIFFERENTLY IN THE SAME MINUTE (round 47)
 104. THE 29TH LIE WAS A STALE FILE IN A SHARED FOLDER, NOT TWO CODE PATHS (round 48, root cause of 103)
+105. MOTION IS A FUNCTION OF TIME, AND ITS GATE IS A PIXEL SHARE, NOT A FEELING (round 48)
 
 ---
 
@@ -333,6 +334,8 @@ grep -n 'GÁNH HAI VIỆC' docs/LESSONS_3D.md        # 7 lần một trường g
 - ⚠️ **103. `--all` AND `--era N` DREW THE SAME ERA DIFFERENTLY IN THE SAME MINUTE** (round 47). `city-preview.mjs --all` rendered era 12's dwellings with flat, parapeted roofs while `--era 12` — same code, one minute later — drew the snow gables the code declares. Not root-caused this round (out of budget); the 15 final photos were taken with `--era N` one at a time, and every before/after pair in the report comes from the same path. Rule: two photos are comparable only if they came out of the SAME tool path — the measuring tool lied for the 29th time.
   - ⚠️ **KÈM THEO (round 48) — the diagnosis above was WRONG, see lesson 104.** `--eras 11,12,13` and `--era 12` render byte-for-byte the same frame (0 of 980 000 pixels differ). The "other" era 12 was a file from an earlier run that the `--all` pass never replaced.
 - ⚠️ **104. THE 29TH LIE WAS A STALE FILE IN A SHARED FOLDER, NOT TWO CODE PATHS** (round 48, 2026-09-09, root cause of lesson 103). Reproduced first: `city-preview.mjs --eras 11,12,13` and `--era 12`, same code, same flags, one after the other — **0 pixels differ**. Then the md5 of the "flat-roofed" era 12 from round 47 matched a frame rendered HOURS earlier (the 0,12-pitch gable that looks like a lid), from a different code state. Three things had lined up: (1) every run writes into ONE folder with FIXED names and never removes what was there, so `cp .city-preview/city-era*.png` after a run copies whatever happens to be on disk; (2) the run's own `✓ kỷ N` lines were filtered out with `grep`, so nobody saw which eras had actually rendered; (3) another invocation (a leftover pipeline, or `test:quiet`) can overlap — two runs share ONE `.build/entry.js` and ONE `dist/preview.js`, the second overwrites the first's bundle mid-flight, and CPU contention tears frames (the torn eras 10–13). Fixed at the root in `city-preview.mjs`: a **lock** (an overlapping run exits with code 3 and says who holds it), every target PNG and `.geom.json` is **deleted before its render** (a failed render leaves no file — a missing file is honest, a stale file lies), and **`last-run.json`** lists exactly the files this run produced together with a **`sourceStamp`** (sha1 of the 3D sources bundled, also written into every `.geom.json`). Rule: copy from `last-run.json`, never from `ls`; two frames are comparable only if their `sourceStamp` is what you think it is. `scripts/cityPreviewSource.test.js` fails if any of the three guards is removed.
+- ⚠️ **105. MOTION IS A FUNCTION OF TIME, AND ITS GATE IS A PIXEL SHARE, NOT A FEELING** (round 48, 2026-09-09, ADR-088). Three things kept the first moving city honest. (1) Every motion is `f(position, uTime)` — no `Math.random`, no second clock, phase from `phaseAt(x, z)` — so `--t 17.5` renders the same frame every time and a before/after pair still compares two THINGS, not two moments; the preview's `--nomotion` freezes scenery while residents keep walking, which is the only fair A/B. (2) The gate is measurable: two frames 1,5 s apart differ in **3,66 %** of pixels with motion on and **0,11 %** off (era 12; the 0,11 % is the residents) — a number the eye then confirms, not replaces. (3) A particle mesh with `frustumCulled = false` was caught by an OLD control test ("camera facing away must draw 0 triangles"); the fix was a fixed bounding sphere over the volume the particles can occupy, never loosening the control.
+  - ⚠️ **KÈM THEO — a tool must not perturb what it measures.** Rendering the 15 eras while `test:quiet` ran in parallel tore 4 frames (a duplicated quadrant); the lock of lesson 104 stops two renders from overlapping, but nothing stops a render from overlapping a test run — do not run them together.
 
 ---
 

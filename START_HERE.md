@@ -32,7 +32,22 @@ Production branch `main` carries **both** work streams (merged 2026-08-28 on Đ�
 ⚠️ Phase 21 therefore shipped **before** Đàm reviewed its screenshots — the "waiting on Đàm's eyes"
 item below is still live, it just now reviews something already running.
 
-- **Loop — ROUND 47 (2026-09-08, LATEST): THE CITY IS REDRAWN ON THE SAME MAP (ADR-087).**
+- **Loop — ROUND 48 (2026-09-09, LATEST): THE CITY BECOMES A PLACE (ADR-088).**
+  Order: make the city *"MỘT NƠI CÓ THẬT"* — a place, not a photograph; ten seconds untouched must show
+  motion. **No performance measuring** (Đàm: measure again only when he reports lag).
+  ⚠️ **Lesson 104 — copy frames from `.city-preview/last-run.json`, never from `ls`.** The tool now
+  locks its folder (a second overlapping run exits 3), deletes every target before rendering, and stamps
+  `sourceStamp` into every `.geom.json`. `--nomotion` freezes scenery for A/B strips (residents stay).
+  ⚠️ **Motion is a function of time only** (`engine/city3d/motion.js` = per-era vocabulary; the renderer's
+  `update(t)` feeds ONE `uTime` to foliage/cloth vertices, water and particles). Never add `Math.random`
+  or a second clock; every object's phase comes from `phaseAt(x, z)`. `still` scenes do not move.
+  ⚠️ **Parts tilt** (`rx`/`rz`, keys only when non-zero) and **joints yaw** (`c`). Untilted specs must keep
+  serialising byte for byte — the GOLDEN digests are the alarm.
+  ⚠️ **The core is flat** (`ERA_TERRAIN` 13 × 1, eras 5/8 × 2); a century's land is `HORIZON_STYLES`.
+  ⚠️ **The land grows only by ADDING** (`landGrowth.js` milestones 0·25·50·90·140): outskirts ring 8 → 11,
+  hamlets appended, camera +5 %/stage. `landGrowth.test.js` sweeps it; a sealed era renders with its
+  frozen session count. ADR-007's 15 × 120 tests stay the stop condition.
+- **Loop — ROUND 47 (2026-09-08): THE CITY IS REDRAWN ON THE SAME MAP (ADR-087).**
   Order: *"ĐỘT PHÁ MỸ THUẬT … hộp đen không còn."* The 3D city's ART is open again (shapes · colours ·
   materials · lights · ground · sky · camera); **ADR-007 still locks every building's position** — run its two
   tests (`cityPlan.test.js` «15 kỷ × 120 mốc», `block.test.js` «QUA THỜI GIAN») before every 3D commit.
@@ -74,31 +89,9 @@ item below is still live, it just now reviews something already running.
   camera bug. `--click "Kỷ 3★"` (tile text). `--hour` moves the day-arc stamps — seed `dc-day-arc-v1`.
   Decided NOT to build a museum gallery: the tile strip is the overview (stars and gaps in one glance).
 
-- **Loop — ROUND 45 (2026-09-08): A BONUS THAT CANNOT BE SEEN IS NOT A BONUS (ADR-085).**
-  The audit that decided it: of 36 skills, **27 are a silent `+X% XP/EP`** shown on no screen ever, 6
-  are genuinely felt, 3 are prestige-only. One skill is worth 3–7 XP on a 48-minute session, so round
-  44's twelve taps bought twelve numbers nobody could see.
-  ⚠️ **`engine/sessionCredits.js` is a PASSENGER, never a driver.** It collects one line per bonus as
-  `gameMath.js` adds it (25 sites) and reads the formula's locals without ever feeding one back — so a
-  bug there can make the ENDING CARD wrong and never the PAYOUT. Keep it that way. At
-  `XP_FACTOR_HARD_CAP` the credits are rescaled, or the chips would sum to more than the headline.
-  `challengeEngine`/`wonderEffects` must return `sources` alongside their percentages: a test fails any
-  buff that moves `expBonus`/`epBonus` without merging its names.
-  ⚠️ **`engine/skillPreview.js` MEASURES, it does not look up.** It runs the real `calculateRewards`
-  twice, with and without the skill, at the player's median session length. Never replace it with a
-  table — that is 36 formulas copied. Dice skills (`VAN_MAY`) are REFUSED, not averaged.
-  ⚠️ **Two banners share the 96px slot.** `SkillMoment` (a direct answer to a tap) outranks
-  `DayMoment` (an ambient greeting) via App's `quiet` prop; both are mounted OUTSIDE `GlobalOverlays`,
-  which early-returns null on exactly the quiet screens they are for.
-  ⚠️ **The 1 SP/building rate did NOT change and must not.** Đàm's felt "5,6 sessions per point" is
-  the city tap alone; all three taps are ~139 SP over ~420 build-sessions ≈ **3 sessions per point**.
-  The fix was a sentence: `nextSkillPointETA` prints the nearer of the two taps countable in sessions,
-  because the header previously printed NOTHING whenever the next level was past
-  `STAGE_COUNTDOWN_MAX_SESSIONS` (~155 sessions on a real save). The week is excluded on purpose — a
-  chain closes on a calendar, so "~N phiên" would be invented.
-  ⚠️ **Hành trang keeps all three sub-tabs.** «Đã xây» is not a copy of the Thành Phố tab: it is the
-  only place that names what a built building's perk does.
-
+- **Loop — ROUND 45 (2026-09-08): A BONUS THAT CANNOT BE SEEN IS NOT A BONUS (ADR-085).** Moved verbatim to
+  `docs/archive/START_HERE_LOG_2026-09-06.md` on 2026-09-09 (round 48 arrived; keep the 3 most recent) —
+  `grep -n 'ROUND 45'` there. Still-live rules: `docs/UI_INVARIANTS.md` (ADR-085 bullets).
 - **Loop — ROUND 44 (2026-09-08): THE CITY FUNDS THE SKILL TREE (ADR-084).** Moved verbatim to
   `docs/archive/START_HERE_LOG_2026-09-06.md` on 2026-09-08 (round 47 arrived; keep the 3 most recent) —
   `grep -n 'ROUND 44'` there. Still-live rules: 1 building = 1 SP owned by `engine/skillPointEconomy.js`;
@@ -145,14 +138,15 @@ stated twice drifts.
 
 ## Next up
 ### A. Đàm must choose — do not decide these alone
-- **The 3D city after round 47 — does the before/after pair say "wow"?** Round 47 spent the artistic
-  levers (deeper contact AO ✓ · rim light ✓ · hard shadow edges tried and rejected by eye). What is left
-  is taste: `#88` (plots per block, reshapes every dwelling) and `#73` (move the camera) — both need
-  Đàm's eye on photos before any code.
+- **The living city after round 48 — does it move enough in 10 seconds on the iPhone?** The sandbox
+  cannot show it (SwiftShader, 3 s watchdog); Đàm's eye decides the wind amplitude (`ERA_MOTION`), the
+  smoke density and whether the +6 %/stage camera pull-back feels like growth. `#88` (plots per block)
+  still needs his eye on top-down photos before any code.
 
 ### B. Ready to build
-1. **`TECH_DEBT_3D #90(b)`** — era 6 loses rooftop detail on split blocks (`ROOFTOP_MIN_SPAN`); (a) was
-   closed in round 47, (b) is the same absolute-vs-relative shape and is now unblocked.
+1. **Props that move but do not exist yet** — boats (eras 2 · 8 · 14 · 15), cranes on scaffolds, flags
+   on landmark masts: the `cloth` role, the flap shader and the `bob` mode are ready (round 48), no part
+   uses them. Also `#40` (tiles on the slope — the tilt axis exists) and `#90(b)` (era 6 rooftop detail).
 2. **`TECH_DEBT #88`** — the one-cell ceiling (`BLOCK_MAX_CELLS = 1`) pins the plot count at 4 across
    all 15 eras, making the `units`/`cols`/`rows` columns of the district table a dead axis. Three
    options already measured.
@@ -160,6 +154,7 @@ stated twice drifts.
    explicitly twice, has barely moved. Do not read the aggregate number as "solved".
 
 ### C. Waiting on Đàm's eyes
+🔴 **Round 48 motion** — the app on the phone, 10 s untouched: smoke, snow/sand, swaying crowns, water.
 🔴 **Phase 21 screenshots** — the 15-era sweep + 12 top-down views (eras 1 · 3 · 7 · 10 · 11 · 14, each
 at 20 and 120 sessions). Accepted by EYE: eras 1–9 must show no rows/alignment; eras 11–15 must.
 ⚠️ This is already running in production.

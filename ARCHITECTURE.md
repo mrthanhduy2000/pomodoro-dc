@@ -819,6 +819,26 @@ cứng ở ba nơi với ba giá trị (app 1024 · xem thử một-kỷ 1024 ·
 công cụ duyệt mỹ thuật chính thức đang đánh giá một thế giới khác với thứ Đàm nhìn thấy. Có test
 đọc-mã-nguồn chặn cả hai nơi gọi tự khai lại (`sceneGraphWiring.test.js`).
 
+### 7.12 Motion and land growth (round 48, ADR-088)
+
+Until round 48 the merged city geometry was static and only residents moved. Two pure engine modules
+now feed the renderer:
+- **`engine/city3d/motion.js`** — per-era vocabulary (wind amplitude/speed, smoke kind, particle set)
+  and the two laws: DETERMINISM (every motion is a function of position and one clock, no
+  `Math.random`) and NO SYNCHRONY (`phaseAt(x, z)` gives every object its own phase).
+  `render3d/geometryFactory.js` writes a per-vertex `aMotion` attribute (kind · amplitude · phase ·
+  weight) from part ROLES (`leaf`/`leaf2` sway, `cloth` flaps); `render3d/motion.js` injects the
+  displacement into the vertex stage through `surfaceDetail`'s single `onBeforeCompile` hook, makes
+  the water mesh ride two waves with a recomputed normal, and runs a few `InstancedMesh` particle
+  systems (smoke from `tag: 'stack'` chimneys and hearths, snow, sand, dust, birds) with a fixed
+  bounding sphere so frustum culling stays on. `sceneGraph.update(t)` feeds ONE `uTime`; `still`
+  scenes and the preview's `--nomotion` freeze the scenery while residents keep walking.
+- **`engine/city3d/landGrowth.js`** — session milestones 0 · 25 · 50 · 90 · 140 → stages 0…4. The
+  outskirts ring extends 8 → 11 cells at NEW lattice indices only, the hinterland appends one hamlet
+  per stage, the default camera pulls back 6 % per stage. Only add, never move: `landGrowth.test.js`
+  sweeps 15 eras × 5 stages; ADR-007's 1…120 × 15 position tests are untouched. A sealed era is
+  rendered with the session count stored at its seal, so the museum never grows.
+
 ### 7.12 Geometry vocabulary and roof grammar
 
 **Ngôn ngữ hình khối 3 trục — vì sao mô tả hình học lại là ENGINE THUẦN (2026-08-12)**: hình dáng

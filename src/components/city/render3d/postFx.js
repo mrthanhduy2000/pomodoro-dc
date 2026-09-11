@@ -17,7 +17,7 @@
  * vignette and grain are the lens and the film, so they are last. Put bloom before AO and the AO
  * eats the glow; put god rays after bloom and the shafts bloom twice.
  *
- *   RenderPass → GTAO → god rays → bloom → lens (DOF · vignette · grain) → OutputPass
+ *   RenderPass → god rays → bloom → lens (AO · DOF · vignette · grain) → OutputPass
  *
  * ⚠️ TONE MAPPING MOVES TO `OutputPass`, AND THAT IS WHY THE PAINTED LOOK SURVIVES. With a composer,
  * `RenderPass` writes LINEAR colour into a float buffer; if the renderer also tone-mapped there, the
@@ -33,7 +33,6 @@ import { EffectComposer } from 'three/examples/jsm/postprocessing/EffectComposer
 import { RenderPass } from 'three/examples/jsm/postprocessing/RenderPass.js';
 import { ShaderPass } from 'three/examples/jsm/postprocessing/ShaderPass.js';
 import { UnrealBloomPass } from 'three/examples/jsm/postprocessing/UnrealBloomPass.js';
-import { GTAOPass } from 'three/examples/jsm/postprocessing/GTAOPass.js';
 import { OutputPass } from 'three/examples/jsm/postprocessing/OutputPass.js';
 
 /**
@@ -163,6 +162,8 @@ const LensShader = {
     uVignetteTint: { value: new Color(0x2a1c0f) },
     uGrain:     { value: 0.02 },
     uFrame:     { value: 0 },
+    uAo:        { value: 0.0 },
+    uAoRadius:  { value: 0.28 },
   },
   vertexShader: /* glsl */`
     varying vec2 vUv;
@@ -182,6 +183,8 @@ const LensShader = {
     uniform vec3 uVignetteTint;
     uniform float uGrain;
     uniform float uFrame;
+    uniform float uAo;
+    uniform float uAoRadius;
     varying vec2 vUv;
 
     float viewDistance(vec2 uv) {
@@ -190,8 +193,71 @@ const LensShader = {
       return -vz;
     }
 
+    /*
+      ════════════════════════════════════════════════════════════════════════════════════════
+      CHE KHUẤT MÔI TRƯỜNG (AO) — ROUND 53 (ADR-093), Việc 5. ĐÓNG "TECH_DEBT #52".
+      ════════════════════════════════════════════════════════════════════════════════════════
+      Vòng 52 dùng "GTAOPass" của three và phải TẮT nó ở chế độ đi bộ: nó trả về đệm che khuất
+      ĐEN ĐẶC cho mọi thứ gần camera ở tầm mắt (một đường ngang thẳng tắp ở hàng 612/700, lệch
+      16,5/255, không nhúc nhích dù vặn mọi tham số). Đề xuất ghi trong chính mục nợ ấy là: viết
+      phép che khuất THẲNG VÀO ĐÂY, lấy mẫu trên đệm độ sâu ĐÃ CÓ SẴN cho xoá phông. Vòng 53 làm.
+
+      ⚠️ KHÔNG DỰNG LẠI TOẠ ĐỘ KHÔNG GIAN NHÌN, VÀ ĐÓ LÀ CẢ LÝ DO NÓ KHÔNG DÍNH LỖI CŨ. GTAO dựng
+      lại vị trí 3D từ độ sâu bằng ma trận chiếu nghịch đảo — chính chỗ ấy hỏng ở tầm mắt. Ở đây ta
+      chỉ SO SÁNH KHOẢNG CÁCH: điểm nào quanh ta ở GẦN HƠN thì nó che ta. Không ma trận, không
+      nghịch đảo, không chỗ nào để một phép chiếu sai làm hỏng cả vùng ảnh.
+
+      ⚠️ BA CÁI KẸP, MỖI CÁI CHẶN MỘT LỖI CÓ THẬT CỦA HỌ THUẬT TOÁN NÀY:
+        1. "bias" — bỏ qua chênh lệch quá nhỏ. Không có nó thì một mặt phẳng nghiêng tự che chính
+           nó và cả mặt đường tối đi (đúng triệu chứng "dải tối" của GTAO, chỉ khác nguyên nhân).
+        2. "range" — bỏ qua chênh lệch quá lớn. Một mái nhà cách xa 5 đơn vị KHÔNG che chân tường
+           trước mặt; nó là một vật khác, và tính nó vào là vẽ một viền đen quanh mọi bóng dáng.
+        3. Bán kính lấy mẫu tỉ lệ **NGHỊCH** với khoảng cách: một góc tường rộng 10cm phải cho ra
+           cùng một vệt tối dù ta đứng cách 1 mét hay 10 mét. Bán kính cố định theo điểm ảnh thì
+           vật ở xa bị bôi đen còn vật ở gần chẳng có gì — một cái thước đo bằng đơn vị sai.
+
+      ⚠️ TẤT ĐỊNH TUYỆT ĐỐI: 12 hướng lấy mẫu KHAI CỨNG, không xoay ngẫu nhiên theo điểm ảnh. Xoay
+      ngẫu nhiên cho ảnh mịn hơn nhưng phá luật "ảnh tĩnh phải ra cùng một byte" ("still"), mà luật
+      ấy là thứ đã chữa vệt rách của vòng 52. Đổi mịn lấy tất định là một đánh đổi đã trả tiền rồi.
+    */
+    const vec2 AO_DIR[12] = vec2[12](
+      vec2( 1.000,  0.000), vec2( 0.866,  0.500), vec2( 0.500,  0.866), vec2( 0.000,  1.000),
+      vec2(-0.500,  0.866), vec2(-0.866,  0.500), vec2(-1.000,  0.000), vec2(-0.866, -0.500),
+      vec2(-0.500, -0.866), vec2( 0.000, -1.000), vec2( 0.500, -0.866), vec2( 0.866, -0.500)
+    );
+
+    float ambientOcclusion(vec2 uv, float dist) {
+      // Bán kính theo điểm ảnh, suy từ bán kính THẾ GIỚI chia cho khoảng cách — xem kẹp số 3.
+      float r = clamp(uAoRadius / max(dist, 0.35), 0.004, 0.075);
+      float bias = 0.012 + dist * 0.006;
+      float range = 0.22 + dist * 0.16;
+      float occ = 0.0;
+      for (int i = 0; i < 12; i += 1) {
+        // Hai vành: vành trong bắt nếp gấp hẹp (má cửa sổ), vành ngoài bắt góc rộng (chân tường).
+        for (int k = 1; k <= 2; k += 1) {
+          vec2 off = AO_DIR[i] * r * (k == 1 ? 0.45 : 1.0);
+          float dz = dist - viewDistance(uv + off);
+          occ += (dz > bias && dz < range) ? smoothstep(bias, bias + range * 0.45, dz) : 0.0;
+        }
+      }
+      return occ / 24.0;
+    }
+
     void main() {
       vec3 col = texture2D(tDiffuse, vUv).rgb;
+
+      // ── che khuất môi trường ──────────────────────────────────────────────
+      // ⚠️ NHÂN VÀO MÀU, KHÔNG TRỪ ĐI. Trừ một hằng số làm vùng tối bị NGHIỀN xuống 0 và mất hết
+      // sắc — đúng bệnh "vùng tối là ĐEN chứ không phải LAM" mà "sceneGraph.js" đã đo và chữa một
+      // lần bằng tỉ lệ đèn trời. Nhân thì giữ nguyên sắc, chỉ hạ giá trị.
+      if (uAo > 0.001) {
+        float dist = viewDistance(vUv);
+        // Trời không có độ sâu (độ sâu = xa vô cùng) ⇒ không bao giờ bị che. Thiếu vế này thì
+        // đường chân trời viền một vệt đen, và nó trông y hệt một khuyết tật của bầu trời.
+        if (dist < uFar * 0.96) {
+          col *= 1.0 - ambientOcclusion(vUv, dist) * uAo;
+        }
+      }
 
       // ── depth of field ────────────────────────────────────────────────────
       if (uDofAmount > 0.001) {
@@ -305,27 +371,18 @@ export function createPostFx({
   // Radius in WORLD units: one grid cell is 1, a doorway is ~0,3, the gap between two houses ~0,2.
   // 0,35 therefore reaches across a crease and stops before it starts shading whole walls.
   /*
-    ⚠️ TẮT Ở CHẾ ĐỘ ĐI BỘ, VÀ ĐÂY LÀ MỘT KHUYẾT TẬT CỦA `GTAOPass` ĐÃ ĐO ĐƯỢC, KHÔNG PHẢI
-    MỘT LỰA CHỌN THẨM MỸ — xem `TECH_DEBT.md` #52 để biết đã loại trừ những gì.
-    Ở tầm mắt (camera cách mặt đất ~1,6 đơn vị), đệm AO trả về **ĐEN ĐẶC** — tức "che khuất
-    hoàn toàn" — cho toàn bộ phần ảnh dưới một đường ngang thẳng tắp. Đo được ở kỷ 10, 12 giờ,
-    1400×700: **hàng 612/700 (87,4%), bước nhảy độ sáng 16,5/255** trên ảnh thành phẩm.
-    ⚠️ KHUNG NHÌN THÀNH PHỐ (quỹ đạo) THÌ SẠCH — đo ở kỷ 7, 18 giờ: bước lớn nhất **1,4/255**,
-    tức không có gì. Đó là khung Đàm mở ra nhìn phần lớn thời gian, và ở đó phép che khuất chạy
-    đúng như Việc 2 đặt hàng: góc tường, chân cột, khe giữa hai nhà, dưới diềm mái.
-    ⇒ Giữ AO ở chỗ nó đúng, tắt ở chỗ nó sai. **Không hạ `blendIntensity` cho vệt mờ đi** — làm
-    thế là giấu một khuyết tật xuống dưới ngưỡng mắt, đúng cái "cửa phễu" mà `CLAUDE.md` cấm.
+    ⚠️ `GTAOPass` CỦA THREE ĐÃ BỊ GỠ KHỎI ỐNG NÀY — ROUND 53 (ADR-093), Việc 5, ĐÓNG `TECH_DEBT #52`.
+    Vòng 52 phải tắt nó ở chế độ đi bộ: nó trả về đệm che khuất ĐEN ĐẶC cho mọi thứ gần camera ở
+    tầm mắt (đường ngang ở hàng 612/700, lệch 16,5/255, không nhúc nhích dù vặn mọi tham số —
+    bán kính 0,12/0,35/0,70, bán kính theo điểm ảnh, độ dày 0,6→3,5, ba bề rộng ảnh).
+    Nay phép che khuất nằm THẲNG TRONG `LensShader`, lấy mẫu trên đệm độ sâu vốn đã dựng cho xoá
+    phông — xem khối cảnh báo lớn trong đó. Ba cái được cùng lúc:
+      · nó CHẠY ở tầm mắt, tức đúng chỗ Đàm chấm và đúng chỗ những cái hốc của Phần A hiện ra;
+      · nó không dựng lại toạ độ không gian nhìn, tức không có chỗ cho lỗi cũ tái diễn;
+      · **một hệ thay vì hai** — giữ GTAO cho khung thành phố và tự viết một cái cho tầm mắt là
+        đúng thứ *Composition over Duplication* cấm, và là hai bộ tham số sẽ trôi khỏi nhau.
+    ⇒ Đừng thêm `GTAOPass` trở lại "cho khung xa nét hơn" mà chưa đọc mục nợ #52.
   */
-  let gtao = null;
-  if (want('ao') && !walk) {
-    gtao = new GTAOPass(scene, camera, w, h);
-    gtao.output = GTAOPass.OUTPUT.Default;
-    // Bán kính theo ĐƠN VỊ THẾ GIỚI: một ô lưới là 1, một ô cửa ~0,3, khe giữa hai nhà ~0,2.
-    // 0,35 đủ với qua một nếp gấp và dừng lại trước khi bắt đầu đánh bóng cả mảng tường.
-    gtao.updateGtaoMaterial({ radius: 0.35, distanceExponent: 1.4, thickness: 0.6, scale: 1.0, samples: 16 });
-    gtao.blendIntensity = profile.ao;
-    composer.addPass(gtao);
-  }
 
   // ── god rays ───────────────────────────────────────────────────────────────
   const rays = new ShaderPass(GodRaysShader);
@@ -345,6 +402,10 @@ export function createPostFx({
   lens.uniforms.uVignette.value = profile.vignette;
   lens.uniforms.uGrain.value = profile.grain;
   lens.uniforms.uDofAmount.value = walk ? 1 : 0;
+  // ⚠️ `want('ao')` VẪN QUYẾT ĐỊNH PHÉP CHE KHUẤT, dù nó không còn là một lượt riêng — `--post ao`
+  // của công cụ xem thử phải tiếp tục bật/tắt được nó, vì đó là đúng cái cần gạt đã tìm ra khuyết
+  // tật của vòng 52 (`--post` bisect). Một cần gạt mất đi là một phép bisect không làm được nữa.
+  lens.uniforms.uAo.value = want('ao') ? profile.ao : 0;
   if (want('lens')) composer.addPass(lens);
 
   // ── tone mapping + colour space, ONCE, at the end ──────────────────────────
@@ -383,14 +444,20 @@ export function createPostFx({
 
   return {
     composer,
-    passes: { renderPass, gtao, rays, bloom, lens },
+    passes: { renderPass, rays, bloom, lens },
 
     /** Draw one frame through the chain. */
     render() {
       if (!stillFrame) frame = (frame + 1) % 4096;
       lens.uniforms.uFrame.value = frame;
-      // The depth prepass only when something actually reads depth — see the block above.
-      if (lens.uniforms.uDofAmount.value > 0.001) {
+      /*
+        ⚠️ ĐỆM ĐỘ SÂU NAY CÓ **HAI** NGƯỜI ĐỌC, KHÔNG CÒN MỘT — round 53 (ADR-093).
+        Trước: chỉ xoá phông đọc nó, nên nó chỉ được dựng ở chế độ đi bộ. Nay phép che khuất cũng
+        đọc nó, và phép che khuất chạy Ở MỌI KHUNG NHÌN. Để nguyên điều kiện cũ thì AO lấy mẫu
+        trên một đệm chưa ai ghi vào — và kết quả KHÔNG phải "không có AO", nó là một đệm rác:
+        đúng hình dạng của cái khung đen đầu tiên ở vòng 52, chỉ khác chỗ.
+      */
+      if (lens.uniforms.uDofAmount.value > 0.001 || lens.uniforms.uAo.value > 0.001) {
         const prevTarget = renderer.getRenderTarget();
         scene.overrideMaterial = depthMaterial;
         renderer.setRenderTarget(depthTarget);
@@ -407,7 +474,6 @@ export function createPostFx({
       const sh = Math.max(2, Math.round(nh));
       composer.setSize(sw, sh);
       depthTarget.setSize(sw, sh);
-      gtao?.setSize(sw, sh);
       bloom.setSize(sw, sh);
       lens.uniforms.uTexel.value.set(1 / sw, 1 / sh);
     },
@@ -418,7 +484,7 @@ export function createPostFx({
      */
     update({ sunDirection = null, air = 0.4, profile: next = null, walk: walking = null, focus = null } = {}) {
       if (next) {
-        if (gtao) gtao.blendIntensity = next.ao;
+        lens.uniforms.uAo.value = next.ao;
         bloom.strength = next.bloom;
         bloom.radius = next.radius;
         bloom.threshold = next.threshold;
@@ -449,7 +515,6 @@ export function createPostFx({
       depthTarget.dispose();
       depthTarget.depthTexture.dispose();
       depthMaterial.dispose();
-      gtao?.dispose?.();
       bloom.dispose?.();
       lens.dispose?.();
       renderPass.dispose?.();

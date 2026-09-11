@@ -67,7 +67,7 @@
 > `docs/archive/TECH_DEBT_CLOSED_2026-09-06.md` § "Threshold history" on 2026-09-06 (ADR-075).
 > They are a log of past counts, re-read on every `head` of this file for no operational
 > benefit. Nothing was deleted.
-- **#52** — `GTAOPass` trả đệm AO đen đặc ở tầm mắt; đã tắt AO cho chế độ đi bộ (round 52)
+- **#52** — ĐÃ ĐÓNG (2026-09-11, round 53) · `GTAOPass` trả đệm AO đen đặc ở tầm mắt — nay AO viết thẳng trong `LensShader`
 - **#103** — Reference archive so large that one `cat` blew the context window, with no guard
 - **#86** — 137 nút tự vẽ trên 28 file KHÔNG đọc token skin, và `ActionButton` không nhận nổi chúng — ADR-078: GATED (`eslint.config.js`, palette classes or hex/rgb literals on any button = error, 0 violations); 11 action buttons through the door, the rest read tokens
 - **#18** — ĐÃ ĐÓNG (2026-08-13) · Kỷ 12–14 không hề có bề mặt nào mang màu kỷ
@@ -194,7 +194,31 @@ Look one up: `grep -n '^## #<n>' docs/TECH_DEBT_3D.md`.
 
 ---
 
-## #52 — `GTAOPass` trả về đệm che khuất ĐEN ĐẶC ở tầm mắt (chế độ đi bộ)
+## #52 — ✅ **ĐÓNG 2026-09-11** (round 53, ADR-093) — `GTAOPass` trả về đệm che khuất ĐEN ĐẶC ở tầm mắt
+
+**Mức**: Medium · **Mở**: 2026-09-11 (round 52, ADR-092) · **Đóng cùng ngày** (round 53, ADR-093)
+
+### Cách đóng
+**Không phải bằng cách chữa `GTAOPass`, mà bằng cách không dùng nó nữa.** Phép che khuất nay viết
+thẳng trong `LensShader` (`render3d/postFx.js`), lấy mẫu trên **đệm độ sâu vốn đã dựng sẵn cho xoá
+phông** — tức gần như không tốn thêm gì. Đây đúng là hướng số 1 ghi ở mục "Hướng chữa gốc" bên dưới,
+và nó thắng hai hướng kia vì một lý do NGOÀI hiệu năng: **nó không dựng lại toạ độ không gian nhìn.**
+GTAO dựng lại vị trí 3D từ độ sâu bằng ma trận chiếu nghịch đảo, và chính chỗ ấy hỏng ở tầm mắt.
+Bản mới chỉ SO SÁNH KHOẢNG CÁCH — không ma trận, không nghịch đảo, không chỗ cho lỗi tái diễn.
+
+Ba thứ được cùng lúc: AO **chạy ở tầm mắt** (đúng chỗ Đàm chấm, và đúng chỗ những cái hốc cửa sổ của
+vòng 53 hiện ra) · **một hệ thay vì hai** (giữ GTAO cho khung xa và tự viết một cái cho tầm mắt là
+đúng thứ *Composition over Duplication* cấm, và là hai bộ tham số sẽ trôi khỏi nhau) · và ba cái kẹp
+của bản mới (`bias` · `range` · bán kính tỉ lệ nghịch khoảng cách) mỗi cái chặn một lỗi có thật của
+họ thuật toán này — xem khối cảnh báo trong `postFx.js`.
+
+### Cổng giữ chiều ngược lại
+`postFx.test.js` — bài *"GTAOPass KHÔNG được quay lại ống hậu kỳ"*. Nó hỏi cái `import`, KHÔNG hỏi
+chữ "GTAO", vì chữ ấy còn nằm trong hai khối chú thích kể lại chuyện cũ, và một bài test đỏ vì người
+ta GHI LẠI một bài học là một bài test dạy sai.
+
+<details>
+<summary>Toàn văn mục nợ lúc còn mở — giữ nguyên, vì phép đo trong đó là thứ đắt nhất của cả hai vòng</summary>
 
 **Mức**: Medium · **Mở**: 2026-09-11 (round 52, ADR-092) · **Đang được vá tạm bằng**: tắt AO khi `walk`
 
@@ -250,6 +274,8 @@ toạ độ không gian nhìn của GTAO. Ba đường đáng thử, theo thứ 
 `postFx.test.js` — bài *"AO tắt ở chế độ đi bộ, bật ở khung nhìn thành phố"* đỏ nếu ai gỡ luật mà
 chưa chữa gốc. ⚠️ **Đừng hạ `blendIntensity` cho vệt mờ đi**: đó là giấu một khuyết tật xuống dưới
 ngưỡng mắt, đúng cái "cửa phễu" mà `CLAUDE.md` cấm.
+
+</details>
 
 ---
 ## #1 — God Function: `completeFocusSession`

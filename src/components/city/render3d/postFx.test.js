@@ -79,20 +79,26 @@ test('TẮT LÀ KHÔNG DỰNG GÌ — không có renderer thì trả về null, 
 });
 
 /**
- * ⚠️ ROUND 52 (ADR-092): PHÉP CHE KHUẤT TẮT Ở CHẾ ĐỘ ĐI BỘ, VÀ ĐÓ LÀ MỘT LUẬT, KHÔNG PHẢI MỘT
- * TUỲ CHỌN. `GTAOPass` của three trả về đệm AO ĐEN ĐẶC cho mọi thứ gần camera ở tầm mắt — đo được
- * ở kỷ 10, 12 giờ, 1400×700: một đường ngang thẳng tắp tại hàng 612/700, bước nhảy 16,5/255.
- * Khung nhìn thành phố (quỹ đạo) thì sạch: bước lớn nhất 1,4/255. Đầy đủ ở `TECH_DEBT.md` #52.
- * Bài này đỏ nếu ai đó bật lại AO cho chế độ đi bộ mà chưa chữa gốc.
+ * ⚠️ ROUND 53 (ADR-093) — LUẬT "AO TẮT KHI ĐI BỘ" ĐÃ BỊ XOÁ, VÀ BÀI TEST NÀY THAY CHỖ NÓ.
+ *
+ * Vòng 52 phải tắt phép che khuất ở chế độ đi bộ vì `GTAOPass` của three trả về đệm ĐEN ĐẶC gần
+ * camera (hàng 612/700, lệch 16,5/255). Bài cũ ở đây khoá cái luật ấy và nói thẳng: *"nếu gốc đã
+ * được chữa thì phải xoá CẢ bài test này và mục #52, đừng chỉ xoá một vế"*. Vòng 53 chữa gốc —
+ * phép che khuất nay nằm trong `LensShader`, không dùng `GTAOPass` nữa — nên cả ba vế đi cùng lúc:
+ * luật, bài test, và mục nợ. Bài mới canh đúng chiều ngược lại: **`GTAOPass` không được quay lại.**
  */
-test('AO tắt ở chế độ đi bộ, bật ở khung nhìn thành phố', () => {
-  // Không có renderer thật ở đây, nên hỏi chính hàm dựng: nó trả `null` khi thiếu renderer.
-  // Thứ kiểm được mà không cần GPU là VĂN BẢN của luật — chỗ duy nhất nó được viết ra.
+test('GTAOPass KHÔNG được quay lại ống hậu kỳ — và AO phải chạy ở MỌI khung nhìn', () => {
   const src = readFileSync(new URL('./postFx.js', import.meta.url), 'utf8');
-  assert.match(src, /if \(want\('ao'\) && !walk\)/,
-    'luật "AO tắt khi đi bộ" đã biến mất khỏi `postFx.js` — nếu gốc đã được chữa thì phải xoá cả'
-    + ' bài test này và mục #52 của `TECH_DEBT.md`, đừng chỉ xoá một vế');
-  assert.match(src, /TECH_DEBT\.md` #52/,
-    'luật còn đó nhưng con trỏ tới chỗ ghi phép đo thì mất — một luật không có lý do là một luật'
-    + ' sẽ bị gỡ bởi người tiếp theo');
+  // ⚠️ Hỏi cái IMPORT, không hỏi chữ "GTAO" — chữ ấy còn nằm trong hai khối chú thích kể lại
+  // chuyện cũ, và một bài test đỏ vì người ta GHI LẠI một bài học là một bài test dạy sai.
+  assert.doesNotMatch(src, /^import .*GTAOPass/m,
+    '`GTAOPass` đã quay lại `postFx.js`. Nó có một khuyết tật ĐO ĐƯỢC ở tầm mắt (đệm AO đen đặc,'
+    + ' hàng 612/700) — đọc `docs/archive/` hoặc lịch sử `TECH_DEBT.md` #52 trước khi thêm lại.');
+  assert.match(src, /uAo\.value = want\('ao'\) \? profile\.ao : 0/,
+    'phép che khuất phải bật theo hồ sơ chặng ngày và theo `--post ao`, không theo chế độ camera:'
+    + ' tầm mắt CHÍNH LÀ chỗ những cái hốc của vòng 53 hiện ra');
+  // Và đệm độ sâu phải được dựng khi AO bật, không chỉ khi xoá phông bật — nếu không thì AO lấy
+  // mẫu trên một đệm chưa ai ghi vào, và kết quả là rác chứ không phải "không có AO".
+  assert.match(src, /uDofAmount\.value > 0\.001 \|\| lens\.uniforms\.uAo\.value > 0\.001/,
+    'đệm độ sâu nay có HAI người đọc (xoá phông và che khuất) — điều kiện dựng nó phải hỏi cả hai');
 });

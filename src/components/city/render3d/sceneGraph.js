@@ -1938,9 +1938,22 @@ export function createCityScene({
     for (const building of lit) {
       const { x, z } = cellToWorld(building.x, building.y, gridSize);
       const lamp = new PointLight(lampColor, 5.2 * lampEnergy, gridSize * 0.62, 2);
-      // Đặt THẤP (0,45) chứ không đặt trên nóc: ánh sáng phải liếm xuống mặt đường và chân tường
-      // hàng xóm thì mới thành vũng sáng; treo cao thì nó chỉ rọi lên mái chính công trình đó.
-      lamp.position.set(x, 0.45, z);
+      /*
+        ⚠️ ROUND 53 (ADR-093), VIỆC 7 — ĐÈN RỜI KHỎI TÂM CÔNG TRÌNH, RA ĐỨNG Ở MẶT TIỀN.
+        Đặt THẤP (0,45) là đúng và giữ nguyên: ánh sáng phải liếm xuống mặt đường thì mới thành vũng
+        sáng, treo cao thì nó chỉ rọi lên mái chính công trình đó.
+        Nhưng đặt ở TÂM thì một nửa quầng sáng nằm BÊN TRONG khối nhà và không ai thấy — thứ hắt ra
+        ngoài chỉ là phần rìa, nên nó tròn đều quanh chân nhà và đọc ra như một cái đèn ngủ dưới sàn,
+        không đọc ra "có ánh sáng trong nhà hắt qua cửa sổ".
+        Nay đèn đứng ở MÉP công trình, phía quay ra tâm thành phố — tức phía có đường. Vũng sáng
+        rơi trọn lên vỉa hè và lên chân tường đối diện, đúng hình Đàm đặt hàng.
+        ⚠️ Hướng suy từ chính toạ độ ô (`x`, `z` so với gốc), không khai thêm một trường "mặt trước"
+        nào: thành phố toả ra từ tâm nên mặt quay vào tâm LÀ mặt có đường, ở cả 15 kỷ. Khai thêm một
+        trường là dựng một luật thứ hai cho một sự thật đã có sẵn trong bố cục.
+      */
+      const away = Math.hypot(x, z) || 1;
+      const edge = 0.32;
+      lamp.position.set(x - (x / away) * edge, 0.45, z - (z / away) * edge);
       scene.add(lamp);
       lampCount += 1;
     }

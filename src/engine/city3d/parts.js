@@ -100,7 +100,13 @@ export const BUILDING_SCALE = 1.3;
 export const MIN_SIDES = 3;
 // ⚠️ ROUND 47 (ADR-087): 12 → 16. Đàm unlocked the black box with «bớt góc cạnh · bo tròn nhiều
 // hơn»; a 16-gon is where a column stops reading as a polygon at the sizes the city is drawn at.
-export const MAX_SIDES = 16;
+// ⚠️ ROUND 54 (ADR-094): 16 → 24. Đàm chốt phong cách Pixar và gỡ trần số cạnh. Với pháp tuyến
+// mềm (`render3d/smoothNormals.js`) thì 12 cạnh đã hết gãy về TÔ SÁNG, nhưng ĐƯỜNG VIỀN NGOÀI vẫn
+// gãy đúng 12 nhịp — và viền ngoài mới là thứ mắt dùng để đọc hình dạng. Hai việc khác nhau.
+// ⚠️ Thêm cạnh làm khối NHỎ ĐI, không to ra: quy ước "bề rộng ngang mặt phẳng = 1,0" cho bán kính
+// ngoại tiếp `0,5 / cos(π/n)` — 16 cạnh là 0,50980, 24 cạnh là 0,50431. Hình bao chỉ co lại, nên
+// luật số một của vòng 54 (cẩn thận `specSpan`) được thoả theo CẤU TRÚC, không nhờ một cái kẹp.
+export const MAX_SIDES = 24;
 
 function finite(value, fallback) {
   return Number.isFinite(value) ? value : fallback;
@@ -270,7 +276,13 @@ export const BEVEL_RATIO = 0.22;
  * khác hẳn. Mép vát của kiến trúc thật rơi vào khoảng 2–5% bề mặt; 0,035 trên thân nhà rộng 1 đơn
  * vị là 3,5%, nằm giữa dải đó.
  */
-export const BEVEL_MAX = 0.06;
+// ⚠️ ROUND 54 (ADR-094), Việc 3: 0,06 → 0,14. Trong hoạt hình 3D **không tồn tại một cạnh sắc lý
+// tưởng nào** — mọi cạnh đều bo nhẹ để bắt một vệt sáng chạy dọc, và chính vệt sáng ở mép đó là
+// thứ làm khối trông "đắt". 0,06 là mức chỉ nhìn thấy ở cận cảnh; 0,14 là mức đọc được ở tầm mắt.
+// ⚠️ VÁT LÀ CẮT VÀO GÓC, tức khối chỉ NHỎ ĐI — lại một lần nữa hình bao an toàn theo cấu trúc.
+// ⚠️ ĐỪNG NÂNG QUÁ 0,2: `BEVEL_RATIO` nhân với cạnh NGẮN NHẤT của khối, nên một khối dẹt (bệ cửa
+// sổ, gờ phào của vòng 53) sẽ bị vát hết chiều dày và biến thành một cái nêm.
+export const BEVEL_MAX = 0.14;
 /**
  * Hẹp hơn mức này thì dưới một điểm ảnh ở khoảng cách nhìn thường ⇒ không vát, khỏi tốn.
  * ⚠️ ROUND 47: 0,006 → 0,014. With `BEVEL_RATIO` 0,22 the old floor let window reliefs (0,035 thick)

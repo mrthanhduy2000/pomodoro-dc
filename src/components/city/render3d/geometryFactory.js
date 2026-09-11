@@ -31,6 +31,7 @@
  */
 
 import { BufferAttribute, BufferGeometry, Color } from 'three';
+import { smoothRange } from './smoothNormals';
 import { MOTION_KIND, motionKindForRole, phaseAt, swayWeight } from '../../../engine/city3d/motion';
 
 import { getEraStyle } from '../../../engine/city3d/eraStyle';
@@ -486,8 +487,23 @@ export function buildMergedGeometry(
       // trên số đã nhân 1,3 thì những khối nằm sát ngưỡng sẽ được vát ở đây mà không được đếm ở
       // kia, và cái lệch đó im lặng: nó chỉ hiện ra dưới dạng bảng ngân sách báo sai.
       target.motion = glowing ? null : motionFor(item, part, scaled, transform);
+      /*
+        ⚠️ ROUND 54 (ADR-094): LÀM MỀM PHÁP TUYẾN, VÀ LÀM TRÊN ĐÚNG KHOẢNG CỦA MỘT KHỐI.
+        `humanShape.js` dựng cơ thể bằng khối tiện tròn 12 cạnh nhiều vòng từ ADR-057 — hình học
+        cong thật. Nhưng `pushTriangle` ghi pháp tuyến THẲNG THEO TỪNG MẶT, nên một hình trụ 12
+        cạnh hiện lên thành 12 TẤM PHẲNG. Sửa ở đây không thêm một tam giác nào mà đổi mọi vật cong
+        của cả 15 kỷ.
+        ⚠️ `từĐây` PHẢI LẤY TRƯỚC KHI PHÁT, và phải làm mềm NGAY SAU KHI PHÁT — không gom lại làm
+        một lượt ở cuối. Cảnh này gộp mọi công trình cùng họ vật liệu vào MỘT lưới; hàn đỉnh trên
+        bộ đệm đã gộp thì hai bức tường của hai căn nhà vô tình chạm nhau sẽ được làm mềm VÀO NHAU,
+        và một góc phố bỗng cong như kẹo.
+        ⚠️ Không cần hỏi "khối này có đáng tròn không": góc gãy tự trả lời. Hộp 4 cạnh lệch 90° nên
+        tự giữ sắc; trụ 12 cạnh lệch 30° nên tự mềm. Xem `smoothNormals.js`.
+      */
+      const từĐây = target.pos.length;
       if (part.shape === 'gable') emitGable(target, scaled, transform, rgb, shadeBase, occ, bevelWidth(part) * scale);
       else emitPrism(target, scaled, transform, rgb, shadeBase, bevelWidth(part) * scale, occ, cornerRadius(part) * scale);
+      smoothRange(target, từĐây);
       target.motion = null;
     }
   }

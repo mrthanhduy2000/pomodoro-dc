@@ -121,10 +121,19 @@ test('BÓNG TIẾP XÚC ĐƯỢC NƯỚNG THẬT VÀO MÀU ĐỈNH — chân t�
   // ⚠️ Bài này canh đúng cái mà `materials.test.js` KHÔNG canh được: `contactShade` có thể hoàn hảo
   // mà vẫn không ai gọi nó. Cách đo: một cột cao dùng MỘT vai màu duy nhất, nên mọi chênh lệch màu
   // giữa đỉnh trên và đỉnh dưới chỉ có thể đến từ bóng tiếp xúc.
+  //
+  // ⚠️ `ao: false` LÀ PHẦN CỦA PHÉP ĐO, KHÔNG PHẢI MỘT CÁCH NỚI TAY. Câu trên hứa "mọi chênh lệch
+  // chỉ có thể đến từ bóng tiếp xúc" — nhưng màu đỉnh là TÍCH của hai tầng: `contactShade` (cao bao
+  // nhiêu so với nền) nhân `occlusionShade` (quanh điểm này có bao nhiêu vật chắn). Vòng 54 nới
+  // `BEVEL_MAX` 0,06 → 0,14, dải vát đỉnh thụt vào sâu hơn trong chính khối cột, nên đỉnh cao nhất
+  // bắt đầu ăn 2,5% AO của chính nó — và tỉ lệ đo được trượt từ 0,44000 lên 0,45128. Không một
+  // dòng nào của `contactShade` sai; CÂU HỎI của bài test mới sai. Tắt AO thì câu hỏi trở lại đúng
+  // như đã viết, và ngưỡng 1e-5 từ chỗ là một lời nói dối nhỏ thành một đẳng thức thật.
+  // (Bài học "nghi cái THƯỚC trước khi nghi cái MÃ" — lần thứ 29.)
   const merged = buildMergedGeometry(
     placement([prism({ w: 0.6, h: 4, sides: 4, role: 'wall' })]),
     PALETTE,
-    { era: 9 },
+    { era: 9, ao: false },
   );
 
   const pos = merged.geometry.getAttribute('position');

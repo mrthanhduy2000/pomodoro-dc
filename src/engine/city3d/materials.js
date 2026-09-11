@@ -55,12 +55,12 @@ export const MATERIAL_FAMILIES = {
   stone:    { roughness: 0.74, metalness: 0.00, sheen: 0.00 }, // đá tảng, đá vôi, sa thạch
   plaster:  { roughness: 0.68, metalness: 0.00, sheen: 0.00 }, // vữa trát, tường quét vôi
   tile:     { roughness: 0.52, metalness: 0.00, sheen: 0.00 }, // ngói nung — nhẵn hơn tường rõ rệt
-  glazed:   { roughness: 0.22, metalness: 0.04, sheen: 0.00 }, // ngói men, lưu ly — BÓNG như sứ
-  slate:    { roughness: 0.40, metalness: 0.08, sheen: 0.00 }, // đá phiến chẻ, ướt thì loáng
+  glazed:   { roughness: 0.30, metalness: 0.04, sheen: 0.00 }, // ngói men, lưu ly — BÓNG như sứ
+  slate:    { roughness: 0.46, metalness: 0.08, sheen: 0.00 }, // đá phiến chẻ, ướt thì loáng
   concrete: { roughness: 0.90, metalness: 0.00, sheen: 0.00 }, // bê tông đúc, bê tông quân sự
-  metal:    { roughness: 0.32, metalness: 0.70, sheen: 0.00 }, // kẽm, đồng, thép mạ
-  gold:     { roughness: 0.20, metalness: 0.92, sheen: 0.00 }, // vàng, đồng thau đánh bóng
-  glass:    { roughness: 0.06, metalness: 0.20, sheen: 0.00 }, // kính phản quang
+  metal:    { roughness: 0.40, metalness: 0.70, sheen: 0.00 }, // kẽm, đồng, thép mạ
+  gold:     { roughness: 0.27, metalness: 0.92, sheen: 0.00 }, // vàng, đồng thau đánh bóng
+  glass:    { roughness: 0.12, metalness: 0.20, sheen: 0.00 }, // kính phản quang
   water:    { roughness: 0.04, metalness: 0.02, sheen: 0.00 }, // mặt nước lặng
   foliage:  { roughness: 0.88, metalness: 0.00, sheen: 0.28 }, // tán lá — hắt sáng ở rìa
 };
@@ -73,6 +73,18 @@ export const MATERIAL_FAMILIES = {
  * Hai bên tự sắp xếp riêng thì mái sẽ mang vật liệu của mặt nước — một lỗi mà mắt thấy ngay nhưng
  * đọc code thì không, vì cả hai bên đều "đúng" theo cách hiểu của riêng nó.
  */
+/*
+  ⚠️ ROUND 54 (ADR-094), VIỆC 10 — NĂM HỌ BÓNG NHẤT ĐƯỢC NHÁM THÊM MỘT BẬC, VÀ NƯỚC THÌ KHÔNG.
+  Đàm: *"vật liệu mềm hơn: giảm tương phản specular, hơi ẩm/mềm."* Trong PBR, `roughness` quyết
+  chính xác điều đó: đốm sáng gương hẹp và gắt (nhám thấp) hay loang rộng và dịu (nhám cao). Cùng
+  một lượng ánh sáng, chỉ khác nó dồn vào mấy điểm ảnh.
+      glazed 0,22 → 0,30 · slate 0,40 → 0,46 · metal 0,32 → 0,40 · gold 0,20 → 0,27 · glass 0,06 → 0,12
+  ⚠️ **`water` GIỮ NGUYÊN 0,04, VÀ ĐÓ LÀ QUYẾT ĐỊNH CHỨ KHÔNG PHẢI SÓT.** Mặt nước phẳng lặng thì
+  ĐÚNG là một cái gương — vòng 49 và 53 đã mua ảnh phản chiếu trên mặt nước ướt bằng đúng con số
+  này. "Làm mềm cho nhất quán" ở đây là đổi một sự thật vật lý lấy một sự nhất quán trên giấy.
+  ⚠️ VÀ ĐỪNG NÂNG TIẾP: quá 0,5 thì `metal` và `gold` thôi đọc ra là kim loại (kim loại nhám là
+  kim loại XỈN), tức mất đúng thứ bảng này sinh ra để phân biệt. Mềm, không phải xỉn.
+*/
 export const MATERIAL_ORDER = Object.keys(MATERIAL_FAMILIES);
 
 /** Họ dùng khi gặp tên lạ (dữ liệu hỏng) — thà ra một mặt tường trát còn hơn nổ. */

@@ -94,6 +94,12 @@ export const TILE_UNIT = 1;
  * chỗ dựng vật liệu công trình.
  */
 const ENV_DIFFUSE = 0.12;
+/**
+ * Bóng đổ cắt đi bao nhiêu phần nắng. `1` = bóng ĐEN TUYỆT ĐỐI (mặc định của three).
+ * Round 54 (ADR-094), Việc 8 — xem khối chú thích ở chỗ gán, nó giải thích vì sao đây là cần gạt
+ * ĐÚNG thay vì vặn `SKY_FILL_RATIO`.
+ */
+const SHADOW_INTENSITY = 0.82;
 
 /**
  * ĐĨA MẶT TRỜI nướng vào bản đồ môi trường (Phase 9C). Ba con số, mỗi con một việc.
@@ -1884,6 +1890,40 @@ export function createCityScene({
   sun.shadow.camera.far = gridSize * 3;
   sun.shadow.bias = -0.0014;            // chống sọc vằn tự-đổ-bóng trên mặt nền phẳng
   sun.shadow.normalBias = 0.02;         // chống hở chân bóng ở mặt nghiêng (mái dốc)
+  /*
+    ⚠️ BÓNG KHÔNG BAO GIỜ ĐEN TUYỆT ĐỐI — ROUND 54 (ADR-094), VIỆC 8.
+    Đàm: *"bóng không được đen kịt; trong hoạt hình 3D bóng luôn CÓ MÀU"*. Trước vòng này, một mặt
+    nằm trong bóng mất **100%** nắng và chỉ còn đèn bán cầu — đo ra sàn 0,133 ở kỷ 11 và 3,9% khung
+    hình bị nghiền dưới ngưỡng đọc được.
+
+    ⚠️ VÌ SAO `shadow.intensity` CHỨ KHÔNG PHẢI NÂNG ĐÈN NỀN — VÀ ĐÂY LÀ CẢ LÝ DO DÒNG NÀY TỒN TẠI.
+    Cách ngây thơ là vặn `SKY_FILL_RATIO` lên. Nó nâng sàn thật, nhưng nó nâng **mọi mặt**, kể cả
+    mặt đang hứng nắng ⇒ trần cũng lên, độ tươi tụt, và ảnh nhạt như sữa. Dự án đã trả giá đúng
+    thất bại ấy ở Phase 7A và ghi thành luật ngay trong khối chú thích của `SKY_FILL_RATIO`.
+    `shadow.intensity` thì chỉ chạm vào ĐÚNG những điểm ảnh đang nằm trong bóng: nó nói *"bóng chỉ
+    được cắt đi 82% nắng, không phải 100%"*. Mặt hứng nắng không đổi một chữ số ⇒ TRẦN đứng yên,
+    chỉ SÀN đi lên. Đó là sự khác nhau giữa "nâng sàn" và "hạ trần theo", và Phase 7A chết vì vế sau.
+
+    ⚠️ 0,82 CHỌN TỪ BẢNG ĐO (`scripts/archive/shadow-score.mjs`, kỷ 11@15h · 7@15h · 13@12h), không
+    phải từ cảm giác. Chỉ tiêu nghiệm thu giữ nguyên của Phase 9B: **sàn LÊN, bị nghiền XUỐNG, độ
+    tươi KHÔNG tụt** — cả ba đều đạt:
+        kỷ 11  sàn 0,133 → 0,138 · nghiền 3,9% → 3,6% · tươi 0,116 → 0,118 · khoảng cách 0,322 → 0,323
+        kỷ 7   sàn 0,171 → 0,177 · nghiền 0,1% → 0,0% · tươi 0,199 → 0,201 · khoảng cách 0,445 → 0,444
+        kỷ 13  sàn 0,161 → 0,170 · nghiền 1,4% → 0,9% · tươi 0,078 → 0,077 · khoảng cách 0,415 → 0,415
+    **Khoảng cách sáng-tối đứng yên tới chữ số thứ ba** ⇒ đây KHÔNG phải cái bẫy sữa của Phase 7A,
+    và đó chính là điều mà một cần gạt chỉ chạm vào điểm ảnh TRONG BÓNG bắt buộc phải cho ra.
+
+    ⚠️ VÀ MỘT PHÉP ĐO THỨ HAI ĐÃ CHẶN TAY TÔI LẠI, GHI RA ĐÂY ĐỂ PHIÊN SAU ĐỪNG THỬ LẠI: hạ tiếp
+    xuống **0,74** chỉ đổi được sàn 0,138 → 0,139 và nghiền 3,6% → 3,5% ở kỷ 11 — tức nằm trong
+    nhiễu. Lý do nó bão hoà nhanh như vậy KHÔNG nằm ở ánh sáng: phép thử ngược của Phase 9B đã cho
+    thấy **9,6 trong 11,1 điểm phần trăm mảng đen của kỷ 11 là MẶT ĐƯỜNG** (nhựa đường `#3a3b3e`,
+    tối sẵn dưới nắng), không phải bóng đổ. Đó là `TECH_DEBT #30`, một khuyết tật của BẢNG MÀU, và
+    không cần gạt ánh sáng nào chữa được nó. Nhớ bài học: *"trước khi tin một tỉ lệ, hỏi xem mẫu số
+    có chứa thứ nằm ngoài câu hỏi không"*.
+    ⚠️ ĐỪNG HẠ XUỐNG DƯỚI 0,7: lúc ấy bóng đổ nhạt tới mức không còn neo được vật xuống mặt đất, và
+    ta mất đúng thứ `contactShade` + AO của vòng 53 vừa mua. Bóng phải MỀM, không được BIẾN MẤT.
+  */
+  sun.shadow.intensity = SHADOW_INTENSITY;
   scene.add(sun);
   scene.add(sun.target);
 
@@ -1899,7 +1939,15 @@ export function createCityScene({
     Cost: one directional light with no shadow map = one more dot product per fragment. Measured in
     `renderLoop` stats on the round's photos; see ADR-087.
   */
-  const RIM_RATIO = 0.22;
+  // ⚠️ ROUND 54 (ADR-094), VIỆC 9: 0,22 → 0,30. Đèn viền là thứ duy nhất trong cảnh chạm vào ĐÚNG
+  // cái đường bao của một hình khối, và vòng 54 vừa làm mọi đường bao ấy TRÒN (pháp tuyến mềm +
+  // 20 cạnh). Trên một cái hộp, đèn viền chỉ sáng được một dải phẳng ở một mặt; trên một thân người
+  // tròn, nó chạy thành một vệt sáng cong ôm lấy hình bóng — tức cùng một đèn nay mua được nhiều
+  // hơn hẳn, và đó là lý do nâng nó Ở VÒNG NÀY chứ không phải một vòng nào khác.
+  // ⚠️ NÓ VẪN KHÔNG ĐƯỢC LÀ ĐÈN NỀN THỨ TƯ (luật vòng 47, giữ nguyên): nó đến từ PHÍA ĐỐI DIỆN mặt
+  // trời và thấp, mang màu TRỜI. Nâng quá 0,35 thì nó bắt đầu rọi cả vào mặt chính diện và trở
+  // thành một cái fill — đúng thứ trả lại vẻ "nhạt như sữa" của Phase 7A.
+  const RIM_RATIO = 0.30;
   const rim = new DirectionalLight(palette.lights?.skyDome ?? palette.sky, SUN_BASE * RIM_RATIO * sunEnergy);
   rim.position.set(-sunDir.x, 0.35, -sunDir.z).normalize().multiplyScalar(gridSize * 1.4);
   rim.castShadow = false;

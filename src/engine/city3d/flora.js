@@ -20,7 +20,19 @@
  *   4. **Chỗ nối thân–tán là một giao tuyến sắc lẻm**, không có cành nào bắc cầu giữa hai khối.
  *
  * ⇒ Cách chữa KHÔNG phải là tăng `sides` cho tán mượt hơn (mượt hơn thì càng giống hình học), mà
- * là **thay một khối lồi bằng NHIỀU THUỲ chồng lấn, lệch tâm, khác cỡ, khác cao độ**. Ba thuỳ đè
+ * là **thay một khối lồi bằng NHIỀU THUỲ chồng lấn, lệch tâm, khác cỡ, khác cao độ**.
+ *
+ * ⚠️ CÂU NGAY TRÊN VẪN ĐÚNG NHƯNG KHÔNG CÒN ĐỦ — ĐỌC TIẾP TRƯỚC KHI SỬA `sides` (round 54, ADR-094).
+ * Nó được viết khi pháp tuyến còn PHẲNG THEO TỪNG MẶT. Lúc ấy thêm cạnh chỉ đổi một đa diện 6 mặt
+ * lấy một đa diện 12 mặt — vẫn là đa diện, nên câu "mượt hơn thì càng giống hình học" đúng từng chữ.
+ * Vòng 54 đổi tiền đề ấy: `creaseNormals.js` gộp pháp tuyến của những mặt lệch nhau **dưới 40°**.
+ *     6 cạnh → hai mặt kề lệch 60° ⇒ TRÊN ngưỡng ⇒ vẫn là sáu tấm phẳng
+ *     10 cạnh → lệch 36° ⇒ DƯỚI ngưỡng ⇒ thuỳ tô sáng như một mặt CONG thật
+ * Nên từ vòng 54, thêm cạnh không mua "một đa diện mượt hơn" mà mua "thôi là đa diện". Bốn khuyết
+ * tật kể trên KHÔNG cái nào được chữa bằng cách ấy — chúng vẫn phải chữa bằng NHIỀU THUỲ, và nhiều
+ * thuỳ vẫn giữ nguyên. Hai cơ chế cộng vào nhau, không thay nhau: **thuỳ lo HÌNH BÓNG, số cạnh lo
+ * BỀ MẶT.** Đừng bỏ thuỳ đi rồi nâng `sides` của một khối lồi duy nhất — làm thế là quay đúng về
+ * cái tán "đồ hoạ mẫu" mà cả khối chú thích này sinh ra để tránh. Ba thuỳ đè
  * lên nhau tự sinh ra cả bốn thứ còn thiếu ở trên: viền lồi lõm, mặt này đổ bóng lên mặt kia, xoay
  * một góc là ra hình bóng khác, và chỗ nối bị chính các thuỳ che đi. Giá phải trả rất rẻ: một tán
  * ba thuỳ tốn 132 tam giác thay vì 44 — vẫn kém xa một hình cầu thật (hàng trăm), mà đọc ra tự
@@ -58,6 +70,24 @@ import { getFloraStyle, pickFloraSpecies } from './floraStyle';
 const SUN = 'leaf';
 const SHADE = 'leaf2';
 
+/**
+ * SỐ CẠNH CỦA MỘT THUỲ TÁN — round 54 (ADR-094), Việc 11: *"cây tròn: cụm khối cầu mềm"*.
+ *
+ * ⚠️ 10 LÀ MỘT NGƯỠNG, KHÔNG PHẢI MỘT SỞ THÍCH. Ngưỡng gãy của `creaseNormals.js` là 40°; hai mặt
+ * kề của khối `n` cạnh lệch nhau `360/n` độ. 9 cạnh → 40° (đúng biên, không chắc), **10 cạnh → 36°
+ * ⇒ chắc chắn dưới ngưỡng**. Dưới 10 thì mọi thứ vòng này làm cho cái cây đều không có tác dụng,
+ * và nó im lặng: khối vẫn hiện ra, chỉ là vẫn phẳng.
+ *
+ * ⚠️ VẪN GIỮ BIÊN ĐỘ THEO HẠT GIỐNG (`spread`), và đây là chỗ file này đã trả giá BA LẦN: viết cứng
+ * `sides` thì 40 hạt chỉ ra 2–4 dáng cây, vì kích thước đổi mà HÌNH BÓNG thì không. Một hằng số 10
+ * ở đây sẽ dựng lại đúng cái lỗi ấy lần thứ tư.
+ *
+ * ⚠️ VÀ NÓ KHÔNG LÀM TÁN TO RA: bán kính ngoại tiếp là `0,5 / cos(π/n)`, giảm khi `n` tăng
+ * (6 cạnh → 0,57735 · 10 cạnh → 0,52573 · 13 cạnh → 0,51494). Thêm cạnh chỉ làm khối NHỎ đi.
+ */
+const LOBE_SIDES_MIN = 10;
+const lobeSides = (key, spread = 4) => LOBE_SIDES_MIN + pickIndex(key, spread);
+
 /** Cây tán rộng: sồi, bàng, cây đầu làng. Loài phổ thông nhất, tán tròn lồi lõm. */
 function broadleaf(seed, size, lobeBudget) {
   const parts = [];
@@ -79,7 +109,7 @@ function broadleaf(seed, size, lobeBudget) {
       y: trunkH * 0.90 + t * crown * 0.52 + signed(`${seed}|dy${i}`) * 0.035 * size,
       w: crown * (0.60 + unit(`${seed}|w${i}`) * 0.44) * (1 - t * 0.20),
       h: (0.17 + unit(`${seed}|h${i}`) * 0.12) * size,
-      sides: 6,
+      sides: lobeSides(`${seed}|sd${i}`),
       taper: 0.46 + unit(`${seed}|tp${i}`) * 0.38,
       ry: ang,
       role: t < 0.5 ? SHADE : SUN,
@@ -111,7 +141,7 @@ function conifer(seed, size, lobeBudget) {
       // Xem ghi chú ở `cypress`: `sides` viết cứng thì cả một kỷ chỉ có vài dáng cây. Kỷ 12 (taiga
       // Nga) là kỷ ĐỘC CANH — chỉ khai `conifer` — nên nó không có loài thứ hai nào để bù, và số
       // dáng của cả kỷ đúng bằng số dáng của riêng loài này.
-      sides: 5 + pickIndex(`${seed}|sd${i}`, 3),
+      sides: lobeSides(`${seed}|sd${i}`),
       // Chỉ tầng NGỌN thóp về một điểm. Các tầng dưới giữ một mặt trên bẹt → mép tầng dưới thò ra
       // khỏi tầng trên, và chính cái mép ấy bắt sáng thành đường viền chia tầng.
       taper: top ? 0 : 0.26 + unit(`${seed}|t${i}`) * 0.34,
@@ -172,7 +202,7 @@ function palm(seed, size, lobeBudget) {
   // Búp ngọn — chỗ mọi tàu lá chụm lại. Thiếu nó thì giữa vòng lá hở ra một lỗ.
   parts.push(prism({
     x: shift, z: shift * 0.42, y: y - 0.03 * size,
-    w: 0.11 * size, h: 0.10 * size, sides: 5, taper: 0.34, role: SUN,
+    w: 0.11 * size, h: 0.10 * size, sides: lobeSides(`${seed}|bup`), taper: 0.34, role: SUN,
   }));
   return parts;
 }
@@ -202,7 +232,7 @@ function cypress(seed, size, lobeBudget) {
       // `streetTree` + `cypress`, cả hai đều khai cứng hai giá trị này) ra **4 cấu trúc trên 40
       // hạt** — tức bốn cái khuôn cho cả một thành phố. Kích thước có đổi, nhưng kích thước không
       // đổi được HÌNH BÓNG; góc thóp thì có (0,62 ra cây hình búp măng, 0,92 ra cây hình cột).
-      sides: 5 + pickIndex(`${seed}|sd${i}`, 2),
+      sides: lobeSides(`${seed}|sd${i}`, 3),
       taper: top ? 0.12 + unit(`${seed}|tt`) * 0.22 : 0.62 + unit(`${seed}|tb${i}`) * 0.30,
       ry: unit(`${seed}|r${i}`) * 1.2,
       role: i % 2 === 0 ? SUN : SHADE,
@@ -235,7 +265,7 @@ function banyan(seed, size, lobeBudget) {
       // đổi được kích thước, mà kích thước không đổi được HÌNH BÓNG. `cypress` và `streetTree` đã
       // được vá; `banyan` thì tôi bỏ sót, và phép đo bắt ngay: **40 hạt ra đúng 2 dáng**. Bài học
       // "đổi một luật thì grep chính cái luật ấy trên toàn cây, đừng sửa chỗ đầu tiên nghĩ ra".
-      sides: 5 + pickIndex(`${seed}|sd${i}`, 2),
+      sides: lobeSides(`${seed}|sd${i}`, 3),
       taper: 0.44 + unit(`${seed}|tp${i}`) * 0.34,
       ry: ang,
       role: i % 2 === 0 ? SHADE : SUN,
@@ -245,7 +275,7 @@ function banyan(seed, size, lobeBudget) {
   parts.push(prism({
     y: trunkH + 0.09 * size,
     w: (0.29 + unit(`${seed}|cw`) * 0.07) * size, h: 0.16 * size,
-    sides: 5 + pickIndex(`${seed}|cs`, 3),
+    sides: lobeSides(`${seed}|cs`),
     taper: 0.34 + unit(`${seed}|ct`) * 0.30,
     ry: spin * 0.5, role: SUN,
   }));
@@ -281,7 +311,7 @@ function streetTree(seed, size, lobeBudget) {
       z: signed(`${seed}|z${i}`) * 0.032 * size,
       y,
       w: crown * (1 - i * 0.18), h,
-      sides: 5 + pickIndex(`${seed}|sd${i}`, 2),
+      sides: lobeSides(`${seed}|sd${i}`, 3),
       // Xem ghi chú ở `cypress`: hai giá trị này từng viết cứng và kỷ 9 chỉ ra 4 dáng cây.
       taper: i === lobes - 1
         ? 0.24 + unit(`${seed}|tt${i}`) * 0.26
@@ -312,7 +342,7 @@ function bush(seed, size, lobeBudget) {
       // Lần thứ TƯ của cùng một lỗi trong file này (xem `cypress`, `streetTree`, `banyan`): viết
       // cứng `sides`/`taper` thì 40 hạt ra đúng 2 dáng. Bụi là loại cảnh vật ĐÔNG NHẤT ở những kỷ
       // có tầng cây bụi dày, nên hai dáng bụi lặp lại chính là "pattern lặp lại dễ thấy".
-      sides: 4 + pickIndex(`${seed}|sd${i}`, 3),
+      sides: lobeSides(`${seed}|sd${i}`),
       taper: 0.34 + unit(`${seed}|tp${i}`) * 0.36,
       ry: ang,
       role: i % 2 === 0 ? SUN : SHADE,

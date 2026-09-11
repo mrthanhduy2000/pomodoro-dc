@@ -159,6 +159,23 @@ test('mức chi tiết THẤP phải rẻ hơn mức CAO ở mọi loài — n�
 test('NGÂN SÁCH TAM GIÁC: một cái cây không được đắt hơn một căn nhà', () => {
   // Trần này là thứ giữ cho "nhiều thuỳ hơn" không lặng lẽ trượt thành "nhiều thuỳ vô hạn". Con số
   // 340 đo từ loài đắt nhất (`palm`: thân nhiều đốt + 7 tàu lá + búp ngọn) rồi chừa ~25% biên.
+  /*
+    ⚠️ ROUND 54 (ADR-094), VIỆC 11: 340 → 900, VÀ TÊN BÀI TEST VẪN ĐÚNG TỪNG CHỮ.
+    Thuỳ tán nay có ≥ 10 cạnh để rơi xuống dưới ngưỡng gãy 40° của `creaseNormals.js` — đó là toàn
+    bộ cách một cái tán thôi là đa diện và thành một cụm khối mềm (xem `lobeSides` ở `flora.js`).
+    Đo lại, 30 hạt mỗi loài, `size: 1.2`:
+        broadleaf 388/212 · conifer 346/174 · palm 292/244 · **banyan 616/416** · cypress 368/192
+        streetTree 304/136 · bush 268/100        (cao = high · thấp = low)
+    Loài đắt nhất nay là `banyan` 616, không còn là `palm`.
+    ⚠️ VÀ CÂU HỎI CỦA BÀI TEST — *"cây có đắt hơn NHÀ không"* — VẪN TRẢ LỜI ĐƯỢC, RÕ HƠN TRƯỚC:
+    một công trình của thành phố này tốn hàng NGHÌN tam giác (`triangleBudget.test.js`: 105.790 tam
+    giác cho cả kỷ 1), nên 616 vẫn rẻ hơn một căn nhà cả chục lần. Cái trần cũ 340 không phải là
+    "bằng một căn nhà" — nó là một con số chừa biên quanh phép đo của ngày hôm ấy.
+    ⚠️ 900 ≈ 1,46× mức thật, tức vẫn bắt được ĐÚNG thứ nó sinh ra để bắt: một vòng lặp thuỳ chạy
+    không có điểm dừng (thứ ấy nhân lên theo BỘI, không nhích lên 40%). Và số thật được IN RA mỗi
+    lần chạy — cái trần chỉ là cái lưới, dòng `console.log` mới là phép đo.
+  */
+  let nang = { species: null, detail: null, tri: 0 };
   for (const species of FLORA_SPECIES) {
     for (const detail of ['high', 'low']) {
       let worst = 0;
@@ -166,10 +183,12 @@ test('NGÂN SÁCH TAM GIÁC: một cái cây không được đắt hơn một c
         const parts = growTree({ species, seed: `ns-${i}`, size: 1.2, detail });
         worst = Math.max(worst, countSpecTriangles(parts));
       }
-      assert.ok(worst <= 340,
+      if (worst > nang.tri) nang = { species, detail, tri: worst };
+      assert.ok(worst <= 900,
         `"${species}" (${detail}) tốn tới ${worst} tam giác cho MỘT cái cây`);
     }
   }
+  console.log(`[cây] loài nặng nhất: ${nang.species} (${nang.detail}) ${nang.tri} tam giác/cây`);
 });
 
 test('cây theo kỷ: 15 kỷ không được ra cùng một rừng', () => {

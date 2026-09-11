@@ -126,22 +126,36 @@ const CO_BE = new Set(['building', 'scaffold', 'dwelling']);
   chóp ấy đang đi một nhánh khác và `footBevel` chưa với tới — đúng cái lỗ hổng mà `emitGlassBand`
   sinh ra để vá ở vòng 53.
 */
+/*
+  ⚠️ ROUND 54 (ADR-094), VIỆC 11 — THÁI LẠI CẢ 15/15, VÀ LẦN NÀY KHÔNG KỶ NÀO ĐỨNG YÊN.
+  Thuỳ tán cây nay có ≥ 10 cạnh (`lobeSides` ở `flora.js`) để rơi xuống dưới ngưỡng gãy 40° và được
+  làm mềm — cây thôi là một cụm đa diện và thành một cụm khối mềm. Cây có ở MỌI kỷ, nên mọi kỷ đổi;
+  một kỷ đứng yên ở đây sẽ là dấu hiệu kỷ ấy không có cây, tức một khuyết tật khác.
+  ⇒ Mức tăng đọc thẳng ra "kỷ này nhiều cây tới đâu" — và đây là con số đắt nhất cả vòng 54:
+      kỷ 1  +42,7% (105.790 → 151.010) — Göbekli Tepe: ít công trình, nhiều cây nhất bộ
+      kỷ 4  +26,4% · kỷ 7 +20,1% · kỷ 12 +18,4% · kỷ 13 +19,5% · kỷ 14 +20,6%
+      kỷ 8  +13,4% — Lisbon: phố dày, cây ít nhất
+  ⚠️ ĐÂY LÀ MỘT KHOẢN CHI CÓ Ý THỨC, KHÔNG PHẢI MỘT KHOẢN TRÔI. Đàm gỡ trần tam giác bằng lời ở ba
+  vòng liên tiếp (*"KHÔNG đo hiệu năng. KHÔNG trần tam giác. KHÔNG trần số cạnh"*) và đặt hàng thẳng
+  *"cây tròn"*. Bảng này vì thế không còn là một cái phanh — nó là một cuốn SỔ: nó bắt bất kỳ thay
+  đổi nào KHÔNG ai chủ ý, và in ra cái giá của mọi thay đổi có chủ ý.
+*/
 const MOC_TAM_GIAC = {
-  1: 105790,
-  2: 130566,
-  3: 138396,
-  4: 229138,
-  5: 175024,
-  6: 273196,
-  7: 225760,
-  8: 192842,
-  9: 212900,
-  10: 187294,
-  11: 205946,
-  12: 154096,
-  13: 228244,
-  14: 201748,
-  15: 152022,
+  1: 151010,
+  2: 145534,
+  3: 154204,
+  4: 289514,
+  5: 209540,
+  6: 321508,
+  7: 271152,
+  8: 218602,
+  9: 245932,
+  10: 209350,
+  11: 236482,
+  12: 182424,
+  13: 272652,
+  14: 243300,
+  15: 166926,
 };
 
 /** Số BỆ KÈ của từng kỷ — tách riêng vì nó là hàm của ĐỊA HÌNH, không của kiến trúc. */

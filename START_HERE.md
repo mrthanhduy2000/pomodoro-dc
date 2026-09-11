@@ -32,46 +32,44 @@ Production branch `main` carries **both** work streams (merged 2026-08-28 on Đ�
 ⚠️ Phase 21 therefore shipped **before** Đàm reviewed its screenshots — the "waiting on Đàm's eyes"
 item below is still live, it just now reviews something already running.
 
-- **Loop — ROUND 52 (2026-09-11, LATEST): THE PICTURE GOT EXPENSIVE (ADR-092).**
-  A **post pass** (`render3d/postFx.js`): AO → god rays → bloom → lens, one profile per daylight phase,
-  switch in Settings. **Generated textures** for all 16 material families (`render3d/surfaceTexture.js`)
-  — no files, no network, sampled TRIPLANAR because the merged geometry has no UVs. **Residents wear
-  their century** and **cast shadows** (map re-dirtied every 2nd animated frame, else they walk and the
-  shadows stay put). Five laws worth the tokens:
-  ⚠️ Tone mapping lives in `OutputPass`, **not on the renderer** — both means it applies twice.
+- **Loop — ROUND 53 (2026-09-11, LATEST): A WALL THAT CAN SHADOW ITSELF (ADR-093).**
+  Đàm's diagnosis, and it was right: `emitWindows` laid a pane ONTO the wall instead of cutting a
+  recess INTO it, and a smooth plane cannot shadow itself. Every window is now a hole; the wall got
+  pilasters; ambient occlusion runs at eye level. Five laws:
+  ⚠️ **The missing half of a window was the VERTICAL half.** Sill and lintel give the same thin line
+  on all four faces of a box. Two JAMBS are different in kind, because **the sun stands to one side**:
+  one catches light, one shadows the opening, and the pair changes with the wall's facing.
+  ⚠️ **`TOTAL_RELIEF_CAP` = the old `SILL_RELIEF`, to the digit.** Not performance — `block.js`
+  shrinks each unit by its ENVELOPE. The first draft grew era 6's envelope 10% and **11 houses lost
+  their roof detail**, three stages away, silently.
+  ⚠️ **`prism`'s `y` is the BOTTOM of a block** (`parts.js`, first line). Writing an emitter as if it
+  were the centre pushed era 15's wonder 29% taller and broke an ASPECT-RATIO test. When a test fails
+  in a subsystem you did not touch: `git stash` and measure both ways before reasoning about it.
+  ⚠️ **AO lives in `LensShader` now; `GTAOPass` is gone** (`TECH_DEBT #52` closed). It wins because it
+  never reconstructs view-space position — the inverse projection is exactly what failed up close.
+  ⚠️ **Triangle ceilings are runaway detectors, not limits** (10× real), with a relation as the real
+  guard: no building above 6× its own era's median. A ceiling did two jobs and only one was withdrawn.
+
+- **Loop — ROUND 52 (2026-09-11): THE PICTURE GOT EXPENSIVE (ADR-092).** The post pass
+  (`render3d/postFx.js`), generated textures for all 16 material families
+  (`render3d/surfaceTexture.js`), residents wearing their century and casting shadows. Laws still live:
+  ⚠️ tone mapping is in `OutputPass`, **not on the renderer** — both means it applies twice.
   ⚠️ **Threshold decides WHAT glows, strength only how much** — night has a 0,5 floor in
-  `postFx.test.js`: fire sits near 0,9 and a sunlit wall near 1,0, so lower selects both and every
-  window blows out white.
-  ⚠️ **AO is OFF in walk mode** — `GTAOPass` returns a BLACK occlusion buffer near the camera at eye
-  level (row 612/700, step 16,5/255; the city view measures 1,4). `TECH_DEBT.md` #52 lists every
-  parameter already ruled out. Do NOT lower `blendIntensity` to hide it.
+  `postFx.test.js`; fire sits near 0,9 and a sunlit wall near 1,0, so lower selects both.
   ⚠️ **Clothing is the limb, not a tube around it** (`human.js` `SLEEVE_LOOK`/`LEG_LOOK`) — the obvious
   build cost 8 parts per resident to hide parts it just made. Ask *"how many OBJECTS is this?"*
-  ⚠️ `city-preview.mjs` needed **`preserveDrawingBuffer`** (screenshots tore into four pieces) and
-  **`still: true`** so grain matches across capture strips.
+  ⚠️ `city-preview.mjs` needs **`preserveDrawingBuffer`** (screenshots tore into four pieces) and
+  **`still: true`** so grain matches across capture strips. Full detail: ADR-092.
 
-- **Loop — ROUND 51 (2026-09-09): THE EYE CAME DOWN TO THE STREET (ADR-091).**
-  Round 50's walk mode changed the priorities of the four rounds before it: everything from round 47 on
-  was built for a camera looking DOWN.
-  ⚠️ **The sky is a DECISION, not a backdrop** (`sky.js`, pure). Drawn on a DOME that TURNS — a flat
-  cloud plane puts half the clouds between the camera and the city.
-  ⚠️ **Geometry has FOUR columns now: `city · backdrop · sky · total`** — `sky` is not inside
-  `backdrop`, which exists for being CONSTANT across eras; clouds are the opposite.
-  ⚠️ **Street furniture lives in `layout.street`, NOT `layout.props`** — `props` keeps its
-  one-thing-per-cell law; a lamp post on a kerb occupies no cell.
-  ⚠️ **Role `iron` exists because `trim` borrows the century's colour** (a Manchester gas lamp came out
-  brick red). It rides the `wood` family, so no era gained a draw call; any new role must do the same.
-  ⚠️ **A wonder opens without relaxing the mirror** (`wonderEntrance.js`): centred at x = 0 or in equal
-  ±pairs. ⚠️ **`specSpan` takes `max(w/2, d/2)`, not the depth.**
-- **Loop — ROUND 50 (2026-09-09): MORE TO SEE, MORE TO DO (ADR-090).** Seasons, an hour slider, walk
-  mode, the postcard, interiors, facade vocabulary; `#77` · `#81` · `#90(b)` closed. Laws still live:
-  the **season is a second axis** (`seasonLook`; summer is the identity look — never "improve" it
-  without re-measuring the other three; `museumSeason` freezes a sealed era) · **one place derives the
-  hour and the season** (`CityScene3D`: `hourNow`/`seasonNow`; the controls hold no logic, a museum
-  piece has no handle) · **walk mode is a MODE of `orbit.js`**, never a second camera, and the walker
-  stands on the scene's own terrain (at y = 0 it photographs the underside of the world) · **nothing on
-  a facade may protrude** (a 0,022 ornament moved a PLINTH count) · **`ROOFTOP_MIN_SPAN` is a RELATION**
-  (0,083), while `ROOFTOP_LAND_SPAN` = 0,24 must not move (ADR-007). Full detail: ADR-090.
+- **Loop — ROUND 51 (ADR-091): THE EYE CAME DOWN TO THE STREET.** Archived verbatim 2026-09-11.
+  Still-live: sky is a DECISION on a turning DOME · geometry has FOUR columns · street furniture lives
+  in `layout.street` · role `iron` exists because `trim` borrows the century's colour · `specSpan`
+  takes `max(w/2, d/2)`, not the depth.
+
+- **Loop — ROUND 50 (ADR-090): MORE TO SEE, MORE TO DO.** Archived verbatim 2026-09-11. Still-live:
+  season is a second axis · ONE place derives hour and season (`CityScene3D`) · walk mode is a MODE of
+  `orbit.js` · nothing on a facade may protrude · `ROOFTOP_LAND_SPAN` = 0,24 must not move (ADR-007).
+
 - **Loops — ROUNDS 47 · 48 · 49 (2026-09-08…09).** Art reopened (ADR-087), the scenery started to move
   (ADR-088: one `uTime` clock; lesson 104 — copy frames from `.city-preview/last-run.json`, never `ls`),
   props, fire and weather arrived (ADR-089: `wet ≥ rain` by construction; lesson 106 — a shader injection
@@ -136,11 +134,10 @@ stated twice drifts.
   still needs his eye on top-down photos before any code.
 
 ### B. Ready to build
-0. **`TECH_DEBT #52` — root-cause the walk-mode AO band** (round 52 left it measured, not fixed).
-   `GTAOPass` returns a solid BLACK occlusion buffer near the camera at eye level; AO is switched off
-   for walk mode until someone fixes it. The debt entry lists everything already ruled out and three
-   ways in, cheapest first — read it before touching a single GTAO parameter, because every parameter
-   has already been tried.
+0. **Round 53's leftovers, in the brief's order** — Việc 6 (wet roughness: puddles glossy in gutters,
+   dry under eaves), Phần C (`BEVEL_MAX`, `MAX_SIDES`, debt #40), Phần D (value variation across ONE
+   face; moss/rust by age), Phần E (the 18-part ceiling + a resident ROLE system — the ceiling is only
+   worth lifting together with the system that would use it). A + B were done in full, as asked.
 1. **Round 51 and 52 leftovers, in the briefs' order** — greenery, more resident roles and animals,
    age traces by building age, walk-mode features (auto tour, street names, tap while walking, lamps
    pooling light), plus round 52's two: a **wet roughness map** (puddles glossy in the hollows, dry
@@ -156,6 +153,8 @@ stated twice drifts.
    explicitly twice, has barely moved. Do not read the aggregate number as "solved".
 
 ### C. Waiting on Đàm's eyes
+🔴 **Round 53 on the phone** — stand before a sunlit wall. Đàm's test: it must shadow ITSELF — in the
+recess, under the sill, under the eave, beside the pilaster. Still flat = the round failed.
 🔴 **Round 52 on the phone** — put two pictures of the SAME street side by side, before and after.
 Đàm's own test, in his words: the after must look like a real game, not a paper model — *"phải đọc
 bảng mới thấy khác thì vòng này chưa đạt."* Also check the Settings switch both ways, and say whether

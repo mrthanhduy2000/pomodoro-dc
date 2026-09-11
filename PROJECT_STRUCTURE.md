@@ -747,7 +747,15 @@
 │   │   │   ├── daylight.js        # 6 CHẶNG TRONG NGÀY: hướng/độ ấm/cường độ nắng, đèn nền, sắc
 │   │   │   │                      #   trời, đèn cửa sổ, đèn hắt ra sân. THUẦN — nhận GIỜ làm tham
 │   │   │   │                      #   số, không đụng `Date` (tầng ngoài lo lấy giờ Việt Nam)
-│   │   │   ├── humanStyle.js      # BẢNG CON NGƯỜI 15 KỶ (2026-08-22, ADR-053): tỉ lệ cơ thể ·
+│   │   │   ├── windowOpening.js   # ROUND 53 (ADR-093): MỘT Ô CỬA SỔ LÀ MỘT CÁI HỐC — hai MÁ CỬA đứng
+│   │   │                      #   (vế bị bỏ quên suốt 5 vòng), lanh tô, bệ có giọt nước, nan chia
+│   │   │                      #   ô, và tuỳ kỷ: song sắt · cánh chớp · mái hắt. Kỷ 14/15 đi
+│   │   │                      #   `emitGlassBand` (nan đứng) vì mặt kính treo khung thép không có hốc
+│   │   │                      #   ⚠️ `TOTAL_RELIEF_CAP` = `SILL_RELIEF` cũ, ĐÚNG BẰNG — hình bao không
+│   │   │                      #   được nhúc nhích, `block.js` bóp đơn vị theo đúng nó
+│   │   ├── windowOpening.test.js # Hai má đứng ở HAI BÊN · kính nằm sâu trong khung · thứ tự thị giác
+│   │   │                      #   (cửa ra vào > khung cửa sổ) · KHÔNG khối nào chìa ra ngoài mép nhà
+│   │   ├── humanStyle.js      # BẢNG CON NGƯỜI 15 KỶ (2026-08-22, ADR-053): tỉ lệ cơ thể ·
 │   │   │   │                      #   dáng đứng · trang phục · đội đầu · đồ mang theo · sải chân ·
 │   │   │   │                      #   tốc độ · biên độ vung tay · màu vải · VẬT LIỆU ĐỘI ĐẦU.
 │   │   │   │                      #   `country` KHOÁ vào eraStyle.js (test bắt). ĐỦ 15/15 kỷ từ

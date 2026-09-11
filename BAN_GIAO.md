@@ -1,3 +1,47 @@
+> Last update: **2026-09-11** — **ROUND 53: A WALL THAT CANNOT SHADOW ITSELF (ADR-093).**
+> Order: *"KHỐI PHẢI CÓ ĐỘ SÂU … Vòng 52 làm xong tầng shader. Ảnh có đẹp lên. Nhưng nhìn vẫn 'low',
+> và tôi đã biết vì sao."* Everything on `main`, on top of round 52.
+> Same three laws: ADR-007 · determinism · 105 era pairs × 4 seasons.
+>
+> ### Measured before
+> Every window a flat pane standing 0,035 PROUD of the wall · 0 vertical relief on any facade ·
+> ambient occlusion OFF at eye level (`TECH_DEBT #52`) · lit windows lighting nothing outside.
+>
+> ### Done — Phase A and Phase B, deep, as the brief asked
+> 1. **Every window is a recess** (`engine/city3d/windowOpening.js`): two vertical JAMBS — the half
+>    the old code never built — plus lintel, drip sill, glazing bars, and per era iron bars, shutters,
+>    a hood. Eras 14/15 hang glass on steel, so they get MULLION FINS instead, which do the same job.
+>    The jambs matter because **the sun stands to one side**: one catches light, one throws shadow
+>    into the opening, and that pair changes with the facing of the wall.
+> 2. **Pilasters** (Việc 3) — the wall had three horizontal lines since Phase 8A and no upright one.
+> 3. **AO written into `LensShader`** (Việc 5), sampling the depth buffer DOF already builds.
+>    `GTAOPass` removed entirely; **`TECH_DEBT #52` closed**. Measured: 31,4% of pixels darker by
+>    more than 2/255 on the same frame, concentrated in creases.
+> 4. **Lit windows spill onto the pavement** (Việc 7): the interior lamps moved from the centre of
+>    the building to its facade, on the side facing the city centre — which is the side with the road.
+>
+> ### Not done, and why — the brief said "làm sâu A + B, đừng rải mỏng năm phần"
+> - **Việc 6 (wet roughness, puddles reflecting)** — not built. Round 49's wet ground still runs.
+> - **Phase C** (BEVEL_MAX, MAX_SIDES, debt #40), **Phase D** (value variation across one face,
+>   moss/rust by age), **Phase E** (the 18-part ceiling, beards, a resident ROLE system) — not built.
+>   Phase E is the one with a note attached: the ceiling is only worth lifting together with the role
+>   system that would use it, and that is a build of its own, not a constant.
+>
+> ### Three bugs found by measurement, all mine
+> - Shutters reached past the corner of the house ⇒ era 6's envelope +10% ⇒ `block.js` shrank units ⇒
+>   **11 houses lost their roof detail**. Three stages, none of which said anything.
+> - `TOTAL_RELIEF_CAP` now equals the old `SILL_RELIEF` exactly, so the envelope cannot move at all.
+> - **`prism`'s `y` is the BOTTOM, not the centre** — and the symptom was era 15's wonder declaring
+>   itself 29% taller, failing an aspect-ratio test in a subsystem the round never touched.
+>
+> ### Gates
+> lint clean · build clean · **1 775 pass · 0 fail · skipped 1** (round 52 baseline: 1 768).
+> New: `windowOpening.test.js`. `MAX_TRIANGLES_PER_*` are now runaway detectors (10× real), with a
+> 6×-median relation as the real guard. GOLDEN digests and per-era triangle marks re-based with the
+> scope recorded — era 1 alone unchanged.
+
+---
+
 > Last update: **2026-09-11** — **ROUND 52: THE PICTURE GOT EXPENSIVE (ADR-092).**
 > Order: *"NÂNG CẤP ĐỒ HOẠ … Build lớn … high detail stylized game art — low-poly nhưng vật liệu và
 > ánh sáng ở mức AAA … TOÀN QUYỀN."* Everything on `main`, on top of round 51.

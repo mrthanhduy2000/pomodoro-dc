@@ -1293,6 +1293,37 @@ Round 48 built the motion machine — one clock, a per-vertex `aMotion`, particl
 
 ---
 
+## ADR-093 — Round 53: a wall that cannot shadow itself cannot be lit, however many effects you pour on it
+
+**Date**: 2026-09-11 · **Order**: *"KHỐI PHẢI CÓ ĐỘ SÂU … Vòng 52 làm xong tầng shader … Ảnh có đẹp lên. Nhưng nhìn vẫn 'low', và tôi đã biết vì sao."* Đàm's own diagnosis, and it was exactly right: `emitWindows` laid a flat `prism(role:'glass')` ONTO the wall instead of cutting a recess INTO it, so every wall in the city was a smooth plane — and a smooth plane cannot shadow itself. Bloom, texture, god rays and SSAO are all light; light needs edges, sills, reveals and overhangs to make shadows from. Same three laws as rounds 47–52: ADR-007, determinism, 105 era pairs across four seasons.
+
+### Context
+The project had already written this down, in `parts.js`'s docstring for `gable`: *"Mái thò ra khỏi tường (overhang) là chi tiết nhỏ nhưng chính nó tạo ra vệt bóng dưới diềm mái — thứ khiến khối trông có bề dày thay vì như dán giấy."* And `buildingSpec.js` had diagnosed the window case specifically, prescribing the right cure: *"cách đúng là dựng KHUNG quanh nó thò ra XA HƠN."* The prescription was filled halfway — a sill below, a lintel above, and never the two side jambs.
+
+### Decisions
+1. **⭐ A window is a HOLE, and the missing half was the vertical half** (`engine/city3d/windowOpening.js`). The two horizontal mouldings the code already built give an opening a thin dark line above and below — the same on every face of a box, so all four faces still read alike. Two vertical REVEALS are different in kind, for a reason of geometry rather than taste: **the sun stands to ONE SIDE.** One jamb catches the light, the other throws a shadow into the opening, and that light/dark pair CHANGES with the facing of the wall. That is what stops a box reading as a box, and it is why this one change touches every wall of all fifteen eras at once.
+2. **You cannot cut a hole, and you do not need to.** The body is a solid in a merged mesh; there is no boolean here. But the eye does not measure depth, it reads SHADOW — and a four-sided frame standing `reveal` proud of the wall, with the glass almost against it, produces exactly the shadows a recess `reveal` deep would. That is the principle of relief sculpture, not a trick.
+3. **The relief cap is the OLD sill relief, to the digit** (`TOTAL_RELIEF_CAP = SILL_RELIEF = 0.085`). Not a performance budget — Đàm removed those three rounds running — but a GEOMETRIC one, because the envelope has a consumer far from here: `block.js` shrinks each unit to fit its cell by exactly that envelope. The first draft used 0.16 and the consequence travelled three stages in silence: era 6's envelope grew 10% → units shrank → `min(rw,rd)` fell under `ROOFTOP_MIN_SPAN` → **eleven houses lost their roof detail entirely**. The visible recess is 0.073, twice the old protrusion; and what makes the shadow is the jambs EXISTING, not another two centimetres.
+4. **A decoration that will not fit is not built.** Shutters ask how much wall is left beside the opening (`room`) and are skipped when they would reach past the corner — the same answer `emitGroundFloor` gives a door that would come out 4cm wide. Clamping them to a hand-picked smaller size would have hidden the same bug at a smaller scale.
+5. **The wall gained its vertical axis** (pilasters, Việc 3). It had three horizontal lines since Phase 8A and not one upright. Pilasters spread by exactly `COURSE_SPREAD` so they meet the string courses flush and the envelope does not move.
+6. **⭐ Ambient occlusion moved into `LensShader`, and `GTAOPass` is gone** (Việc 5, closing `TECH_DEBT #52`). It samples the depth buffer depth-of-field already builds, so it is nearly free — but the reason it beats patching GTAO is not cost: **it never reconstructs view-space position.** GTAO rebuilds a 3D point from depth through an inverse projection, and that is precisely what fails up close. Comparing distances has no matrix and no inverse, so the old failure has nowhere to come back from. Measured on one frame, `--post lens` vs `--post ao,lens`: **31,4% of pixels darker by more than 2/255**, concentrated in creases rather than a flat dim.
+7. **The triangle ceilings became runaway detectors.** Đàm removed the triangle ceiling in writing in rounds 50, 52 and 53. But a ceiling does two jobs — *"this is more detail than the eye can use"* (a design decision, withdrawn) and *"someone nested a loop by mistake"* (a bug net, still needed). Deleting both throws the second away with the first. The numbers are now 10× real, and the guard that replaces them is a RELATION that never needs raising: no building may exceed **6× the median of its own era** (worst measured: 3,08×), and no building may emit zero triangles — the shape of the round-51 failure where `emitWonderEntrance` produced nothing in fifteen eras with every test green.
+
+### Consequences
+| | Before (round 52) | After |
+|---|---|---|
+| Window openings | a flat pane standing 0,035 PROUD | a recess 0,073 DEEP with two jambs, lintel, drip sill, glazing bars |
+| Per-era opening kits | 0 | **7 kinds + 8 era overrides** (bars, shutters, hoods, shoji grille) |
+| Vertical relief on a wall | 0 | **pilasters**, 2–6 per face |
+| AO at eye level | off (`TECH_DEBT #52`) | **on**, 31,4% of pixels affected |
+| Lit windows | a ring of light under the floor slab | a pool on the pavement at the facade |
+| Triangle ceiling | a gate at 12k/24k | a runaway detector at 10×, plus a 6×-median relation |
+
+### The lesson worth more than the round
+**`prism`'s `y` is the BOTTOM of a block, and `parts.js` says so in its first line — I wrote two emitters as though it were the centre.** It did not surface as "the windows sit half a window too high". `spec.height` is derived from the tallest part, so the upright pieces pushed the DECLARED height of era 15's wonder from 4,665 to 6,011 (+29%) and what went red was the aspect-ratio test — *"không công trình nào cao vống thành ống khói"*. A coordinate bug surfaced two layers away as a proportion bug, in a test about neither coordinates nor windows. Corollary: when a test fails in a subsystem you did not touch, the shortest path is not to reason about the subsystem — it is `git stash` and measure the same number both ways.
+
+---
+
 ## ADR-092 — Round 52: the post pass, surfaces that are not plastic, and the gate that said "how many OBJECTS is this?"
 
 **Date**: 2026-09-11 · **Order**: *"NÂNG CẤP ĐỒ HOẠ … Build lớn. Chuyển động, motion, 3D chuẩn hơn … Đây là phần phải gây hứng thú, tiêm thêm nhiều dopamine … TOÀN QUYỀN. Không đẩy quyết định nào về phía tôi."* Style: *"high detail stylized game art — low-poly nhưng vật liệu và ánh sáng ở mức AAA"*. Order of work A → B → C → D, and *"không đủ sức làm hết thì làm sâu A + B, đừng rải mỏng cả bốn."* Same three laws as rounds 47–51: ADR-007, determinism, and the 105 era pairs across four seasons.

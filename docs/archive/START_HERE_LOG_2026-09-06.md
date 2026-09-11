@@ -567,3 +567,35 @@ stated twice drifts.
   ⚠️ **City-tab photos need `--settle ≥ 1500`**: the first 3D frame is a zoomed transient that looks like a
   camera bug. `--click "Kỷ 3★"` (tile text). `--hour` moves the day-arc stamps — seed `dc-day-arc-v1`.
   Decided NOT to build a museum gallery: the tile strip is the overview (stars and gaps in one glance).
+
+---
+
+## Moved from `START_HERE.md` on 2026-09-11 (round 53) — verbatim, nothing deleted
+
+- **Loop — ROUND 50 (2026-09-09): MORE TO SEE, MORE TO DO (ADR-090).** Seasons, an hour slider, walk
+  mode, the postcard, interiors, facade vocabulary; `#77` · `#81` · `#90(b)` closed. Laws still live:
+  the **season is a second axis** (`seasonLook`; summer is the identity look — never "improve" it
+  without re-measuring the other three; `museumSeason` freezes a sealed era) · **one place derives the
+  hour and the season** (`CityScene3D`: `hourNow`/`seasonNow`; the controls hold no logic, a museum
+  piece has no handle) · **walk mode is a MODE of `orbit.js`**, never a second camera, and the walker
+  stands on the scene's own terrain (at y = 0 it photographs the underside of the world) · **nothing on
+  a facade may protrude** (a 0,022 ornament moved a PLINTH count) · **`ROOFTOP_MIN_SPAN` is a RELATION**
+  (0,083), while `ROOFTOP_LAND_SPAN` = 0,24 must not move (ADR-007). Full detail: ADR-090.
+
+---
+
+## Moved from `START_HERE.md` on 2026-09-11 (round 53) — round 51, verbatim
+
+- **Loop — ROUND 51 (2026-09-09): THE EYE CAME DOWN TO THE STREET (ADR-091).**
+  Round 50's walk mode changed the priorities of the four rounds before it: everything from round 47 on
+  was built for a camera looking DOWN.
+  ⚠️ **The sky is a DECISION, not a backdrop** (`sky.js`, pure). Drawn on a DOME that TURNS — a flat
+  cloud plane puts half the clouds between the camera and the city.
+  ⚠️ **Geometry has FOUR columns now: `city · backdrop · sky · total`** — `sky` is not inside
+  `backdrop`, which exists for being CONSTANT across eras; clouds are the opposite.
+  ⚠️ **Street furniture lives in `layout.street`, NOT `layout.props`** — `props` keeps its
+  one-thing-per-cell law; a lamp post on a kerb occupies no cell.
+  ⚠️ **Role `iron` exists because `trim` borrows the century's colour** (a Manchester gas lamp came out
+  brick red). It rides the `wood` family, so no era gained a draw call; any new role must do the same.
+  ⚠️ **A wonder opens without relaxing the mirror** (`wonderEntrance.js`): centred at x = 0 or in equal
+  ±pairs. ⚠️ **`specSpan` takes `max(w/2, d/2)`, not the depth.**

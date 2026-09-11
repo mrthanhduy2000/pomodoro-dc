@@ -10,6 +10,25 @@
 > **Muốn hiểu VÌ SAO một quyết định được chọn** → `ARCHITECTURE_DECISIONS.md`. **Muốn biết migration
 > cụ thể nào cần chạy** → `MIGRATION.md`.
 
+## 2026-09-11 — Round 53: a wall that can shadow itself (ADR-093)
+
+**Purpose**: give the city geometry for its light to catch. Round 52 finished the shader layer —
+bloom, god rays, textures, depth of field — and the picture still read flat, because every wall was
+a smooth plane and a smooth plane cannot shadow itself. **Scope**: building geometry and the post
+pass; no game logic, no data, no schema. **Compatibility**: fully backward-compatible; the post
+switch in Settings still turns the whole pass off.
+
+- **Windows became recesses**: two side reveals (the half that was never built), a lintel, a drip
+  sill, glazing bars, and per century iron bars, shutters or a hood. The eras with curtain walls get
+  mullion fins instead, which is what those buildings actually have.
+- **Pilasters** give every facade a vertical line to go with its three horizontal ones.
+- **Ambient occlusion now runs at eye level** — it was switched off there in round 52 because of a
+  defect in three's `GTAOPass`. It is written into the lens pass now and samples the depth buffer
+  that depth of field already builds; `GTAOPass` is gone and `TECH_DEBT #52` is closed.
+- **Light from a lit window lands on the pavement** instead of pooling inside the building.
+- Triangle ceilings became runaway detectors rather than design limits, with a new relative guard
+  (no building more than 6× its era's median) that never needs raising.
+
 ## 2026-09-11 — Round 52: the picture got expensive (ADR-092)
 
 **Purpose**: make everything already in the city look like it cost money — materials, lighting,

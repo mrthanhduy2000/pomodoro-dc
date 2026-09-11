@@ -37,7 +37,7 @@ import { MOTION_KIND, motionKindForRole, phaseAt, swayWeight } from '../../../en
 import { getEraStyle } from '../../../engine/city3d/eraStyle';
 import { MATERIAL_ORDER, contactShade, materialFamilyFor } from '../../../engine/city3d/materials';
 import { buildOcclusionGrid, occlusionShade } from '../../../engine/city3d/occlusion';
-import { CORNER_SEGMENTS, bevelWidth, cornerRadius } from '../../../engine/city3d/parts';
+import { CORNER_SEGMENTS, bevelWidth, cornerRadius, footBevel } from '../../../engine/city3d/parts';
 
 /** Bộ đệm tích luỹ trong lúc dựng. Mảng JS thường rồi mới đổ sang Float32Array một lần. */
 function createSink() {
@@ -183,7 +183,7 @@ function place(px, py, pz, transform) {
  * thì hộp vuông (n = 4) sẽ rộng hơn ý định 41%, và mọi công trình sẽ lấn sang ô bên cạnh.
  * Góc bắt đầu `π/n` là thứ làm mặt phẳng quay ra trước thay vì một góc nhọn chĩa vào người xem.
  */
-function emitPrism(sink, part, transform, rgb, shadeBase, bevel = 0, occ = null, corner = 0) {
+function emitPrism(sink, part, transform, rgb, shadeBase, bevel = 0, occ = null, corner = 0, foot = 0) {
   const n = part.sides;
   const half = Math.PI / n;
   const rx = (part.w / 2) / Math.cos(half);
@@ -242,9 +242,24 @@ function emitPrism(sink, part, transform, rgb, shadeBase, bevel = 0, occ = null,
   };
 
   if (taper <= 0) {
-    // Thóp về một điểm: mặt bên là tam giác, không có mặt trên. Không vát (xem `bevelWidth`).
-    const bottom = ring(1, part.y);
+    // Thóp về một điểm: mặt bên là tam giác, không có mặt trên. MŨI vẫn nhọn (xem `bevelWidth`),
+    // nhưng CHÂN thì nay có một dải vát — round 54 (ADR-094), Việc 3, `footBevel`.
+    // ⚠️ CHỖ SƯỜN GẶP ĐÁY LÀ MỘT CẠNH 90° và làm mềm góc gãy KHÔNG với tới được (40° < 90°), nên
+    // đây là chỗ duy nhất trong cả khối mà chỉ hình học mới gỡ được.
     const apex = place(0, top, 0, transform);
+    if (foot > 0) {
+      const bottom = ring(1, part.y, foot);      // vành đáy THỤT VÀO
+      const knee = ring(1, part.y + foot);        // vành gối, bề rộng đầy đủ
+      band(bottom, knee);
+      for (let i = 0; i < n; i += 1) {
+        pushTriangle(sink, knee[i], apex, knee[(i + 1) % n], rgb, shadeBase, occ);
+      }
+      for (let i = 1; i < n - 1; i += 1) {
+        pushTriangle(sink, bottom[0], bottom[i], bottom[i + 1], rgb, shadeBase, occ);
+      }
+      return;
+    }
+    const bottom = ring(1, part.y);
     for (let i = 0; i < n; i += 1) {
       pushTriangle(sink, bottom[i], apex, bottom[(i + 1) % n], rgb, shadeBase, occ);
     }
@@ -502,7 +517,8 @@ export function buildMergedGeometry(
       */
       const từĐây = target.pos.length;
       if (part.shape === 'gable') emitGable(target, scaled, transform, rgb, shadeBase, occ, bevelWidth(part) * scale);
-      else emitPrism(target, scaled, transform, rgb, shadeBase, bevelWidth(part) * scale, occ, cornerRadius(part) * scale);
+      else emitPrism(target, scaled, transform, rgb, shadeBase, bevelWidth(part) * scale, occ,
+        cornerRadius(part) * scale, footBevel(part) * scale);
       smoothCrease(target.pos, target.nor, từĐây);
       target.motion = null;
     }

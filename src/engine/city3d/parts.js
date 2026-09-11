@@ -364,6 +364,41 @@ export function bevelWidth(part) {
 }
 
 /**
+ * VÁT CHÂN CỦA MỘT KHỐI THÓP VỀ MỘT ĐIỂM — ROUND 54 (ADR-094), Việc 3.
+ *
+ * ⚠️ VÌ SAO ĐÂY LÀ MỘT HÀM RIÊNG CHỨ KHÔNG PHẢI MỘT NHÁNH TRONG `bevelWidth`. `bevelWidth` trả lời
+ * đúng MỘT câu: *"dải vát ở HAI ĐẦU một khối lăng trụ rộng bao nhiêu"*, và cả nhà máy hình học lẫn
+ * `countTriangles` đọc nó theo nghĩa ấy (ba vành mặt bên). Một cái chóp không có hai đầu — nó có
+ * một cái chân và một cái mũi. Nhét câu trả lời thứ hai vào cùng một hàm là đúng họ bài học
+ * *"một trường gánh hai việc"* đã trả giá tám lần trong dự án này.
+ *
+ * ⚠️ CHỈ VÁT CHÂN, KHÔNG VÁT MŨI — và câu này KHÔNG đổi so với vòng 47. Một cái chóp bị cắt cụt
+ * mũi thì thôi là cái chóp; hình bóng thắng. Thứ vòng 54 nhận ra là **cái chân thì khác hẳn cái
+ * mũi**: chỗ sườn chóp gặp mặt đáy là một cạnh 90° chạy vòng quanh, và nó nằm đúng ở chân trời
+ * của vật — chỗ mắt đọc "vật này đặt lên hay cắm vào". Làm mềm góc gãy (vòng 54, Việc 1) KHÔNG
+ * chạm được vào cạnh ấy, vì 90° nằm trên ngưỡng gãy 40°. Chỉ hình học mới gỡ được.
+ *
+ * ⚠️ VÀ NÓ KHÔNG LÀM KHỐI TO RA: vành đáy THỤT VÀO `b`, vành gối ở `y + b` giữ nguyên bề rộng đầy
+ * đủ. Chỗ rộng nhất vẫn đúng chỗ cũ, chiều cao vẫn đúng cũ ⇒ hình bao ADR-007 an toàn theo CẤU
+ * TRÚC, không nhờ may mắn. (Luật số một của vòng 54: *"kẹp mọi thứ nở ra trong hình bao cũ ngay
+ * từ đầu, đừng chờ test bắt"*.)
+ *
+ * ⚠️ THÊM TRẦN THEO CHIỀU CAO (`h * 0.25`) mà `bevelWidth` không cần: một cái chóp CAO thì vát chân
+ * là một dải hẹp, nhưng một cái chóp BẸT (mái vòm thấp, gờ nhọn) có thể bị vát ăn hết nửa thân và
+ * biến thành một cái đĩa. `bevelWidth` không gặp chuyện này vì nó đã đọc cạnh MỎNG NHẤT, trong đó
+ * có `h`; ở đây `h` phải được hỏi riêng vì dải vát chỉ nằm ở MỘT đầu.
+ */
+export function footBevel(part) {
+  if (!part) return 0;
+  if (part.shape === 'gable' || part.taper > 0) return 0;
+  const plan = Math.min(part.w ?? 0, part.d ?? 0);
+  const h = part.h ?? 0;
+  if (!(plan > 0) || !(h > 0)) return 0;
+  const width = Math.min(BEVEL_MAX, plan * BEVEL_RATIO, h * 0.25);
+  return width >= BEVEL_MIN_VISIBLE ? width : 0;
+}
+
+/**
  * Số tam giác của MỘT khối. Đây là con số dùng cho cả ngân sách hiệu năng lẫn bảng HUD, nên nó
  * phải khớp CHÍNH XÁC với số tam giác nhà máy hình học thật sự sinh ra — một ngân sách tự tính
  * riêng mà lệch với thực tế thì còn tệ hơn không có ngân sách.
@@ -388,7 +423,10 @@ export function countTriangles(part) {
   const n = part.sides ?? 4;
   if (part.taper === 0) {
     // thóp về một điểm: mặt bên thành tam giác, không còn mặt trên
-    return n + (n - 2);
+    // ⚠️ ROUND 54, Việc 3: có vát chân ⇒ thêm một vành mặt bên (2n) giữa vành đáy và vành gối.
+    // Đáy (n − 2) + vành vát (2n) + sườn lên mũi (n). Con số này PHẢI khớp nhà máy hình học —
+    // bài "NGÂN SÁCH KHÔNG NÓI DỐI" đếm thẳng từ bộ đệm đỉnh của cả 15 kỷ.
+    return footBevel(part) > 0 ? (n - 2) + 2 * n + n : n + (n - 2);
   }
   // Vát hai đầu ⇒ mặt bên chia làm BA vành (dải vát dưới · thân · dải vát trên) thay vì một.
   const bands = bevelWidth(part) > 0 ? 3 : 1;

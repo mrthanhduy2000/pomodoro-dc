@@ -112,22 +112,36 @@ const CO_BE = new Set(['building', 'scaffold', 'dwelling']);
 // (*"đừng tiết kiệm tam giác"*); đây là một **máy dò TRÔI** — số đổi thì có người vừa đổi kiến
 // trúc và phải nói ra lý do, chứ không phải "đã vượt mức cho phép". Thái lại là việc BÌNH THƯỜNG
 // ở một vòng mỹ thuật; thái lại MÀ KHÔNG GHI LÝ DO mới là việc sai.
+/*
+  ⚠️ ROUND 54 (ADR-094), VIỆC 3 — THÁI LẠI 14/15, VÀ KỶ 14 ĐỨNG YÊN CHÍNH LÀ BẰNG CHỨNG PHẠM VI.
+  `footBevel` cho mọi khối THÓP VỀ MỘT ĐIỂM (chóp, nón, kim tự tháp, gờ nhọn) một dải vát ở CHÂN:
+  vành đáy thụt vào, thêm một vành gối ở bề rộng đầy đủ. Giá: `(n − 2) + 2n + n` thay vì `2n − 2`,
+  tức đúng gấp đôi cho những khối ấy — và CHỈ cho những khối ấy.
+  ⇒ Mức tăng đọc thẳng ra "kỷ này có bao nhiêu cái chóp":
+      kỷ 1  +2.700 (+2,6%)  · kỷ 12 +2.668 (+1,8%) · kỷ 5  +2.098 (+1,2%) · kỷ 13 +1.040 (+0,5%)
+      kỷ 8  +394   · kỷ 11 +92 · kỷ 3 +120 · kỷ 2 +56 · kỷ 7 +50 · kỷ 4 · 6 · 9 · 10 +10 · kỷ 15 +8
+      **kỷ 14 +0** — kỷ duy nhất không có một khối `taper: 0` nào trong toàn bộ công trình.
+  ⚠️ ĐỌC BẢNG NÀY THEO CẢ HAI CHIỀU (bài học vòng 53): kỷ nào đổi, VÀ kỷ nào đáng lẽ phải đổi mà
+  không. Một kỷ +10 nghĩa là nó có ĐÚNG một cái chóp 6 cạnh; nếu một kỷ có chóp mà vẫn +0 thì cái
+  chóp ấy đang đi một nhánh khác và `footBevel` chưa với tới — đúng cái lỗ hổng mà `emitGlassBand`
+  sinh ra để vá ở vòng 53.
+*/
 const MOC_TAM_GIAC = {
-  1: 103090,
-  2: 130510,
-  3: 138276,
-  4: 229128,
-  5: 172926,
-  6: 273186,
-  7: 225710,
-  8: 192448,
-  9: 212890,
-  10: 187284,
-  11: 205854,
-  12: 151428,
-  13: 227204,
+  1: 105790,
+  2: 130566,
+  3: 138396,
+  4: 229138,
+  5: 175024,
+  6: 273196,
+  7: 225760,
+  8: 192842,
+  9: 212900,
+  10: 187294,
+  11: 205946,
+  12: 154096,
+  13: 228244,
   14: 201748,
-  15: 152014,
+  15: 152022,
 };
 
 /** Số BỆ KÈ của từng kỷ — tách riêng vì nó là hàm của ĐỊA HÌNH, không của kiến trúc. */

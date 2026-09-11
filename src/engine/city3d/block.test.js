@@ -482,22 +482,68 @@ test('CHI TIẾT MÁI KHÔNG ĐƯỢC CHẾT — và danh sách kỷ mất một
 // kỷ ấy CÓ cửa sổ, chỉ là chúng đi nhánh "dải kính liền" nên không chạy qua `emitOpening`. Đó là
 // một LỖ HỔNG, không phải một phạm vi được kiềm chế, và `emitGlassBand` sinh ra để vá nó. Đọc bảng
 // này theo CẢ HAI chiều: kỷ nào đổi, và kỷ nào ĐÁNG Lẽ phải đổi mà không.
+/*
+  ⚠️ ROUND 54 (ADR-094): 5/15 THÁI LẠI, VÀ LẦN NÀY LÝ DO KHÁC HẲN MƯỜI LẦN TRƯỚC — ĐỌC HẾT KHỐI NÀY
+  TRƯỚC KHI THÁI LẠI BẢNG NÀY LẦN SAU.
+  Mười lần trước, chữ ký đổi vì HÌNH đổi. Lần này **không một khối nào đổi**. Việc 3 thêm `footBevel`
+  — một dải vát ở CHÂN các khối thóp về một điểm — và đó là một thay đổi thuần tuý ở TẦNG VẼ. Cái
+  duy nhất đi vào chữ ký là trường `triangles` mà `buildBuildingSpec` đính kèm
+  (`countSpecTriangles(parts)`), tức một con số SUY RA từ cách nhà máy hình học vẽ, không phải một
+  toạ độ.
+  ⇒ Bằng chứng, đo trên hai cây mã (`git worktree` ở `8dde63d` và cây đang làm việc), không suy đoán:
+  **`JSON.stringify(spec.parts)` băm ra y hệt ở CẢ 15 KỶ**, trong khi `JSON.stringify(spec)` chỉ đổi
+  ở 5 kỷ — đúng 5 kỷ có khối `taper: 0`. Mười kỷ còn lại không có cái chóp nào nên không có gì để vát.
+
+  ⚠️ VÀ ĐÂY LÀ CHỖ BÀI TEST TỰ SỬA ĐƯỢC MỘT KHUYẾT TẬT CỦA CHÍNH NÓ. Một chữ ký "bảo tàng" mà chứa
+  một con số của tầng vẽ thì sẽ ĐỎ mỗi lần ai đó đổi cách vẽ, kể cả khi không một viên gạch nào
+  xê dịch — và mỗi lần như thế, người sửa lại phải chọn giữa "thái lại" và "hiểu". Chọn sai một lần
+  là mất luôn giá trị của bảng. Nên từ vòng này có **hai** bảng:
+    · `GOLDEN_KHOI` băm ĐÚNG `spec.parts` — hình và chỗ, thứ ADR-007 thật sự khoá. Nó KHÔNG được
+      phép đổi vì một thay đổi ở tầng vẽ, nên lần sau nếu nó đỏ thì đó là chuyện nghiêm trọng thật.
+    · `GOLDEN` băm cả spec — vẫn giữ, vì nó bắt được những trường NGOÀI `parts` (`height`, `span`,
+      `tag`…) mà bảng kia mù.
+  Hai bảng, hai câu hỏi khác nhau — đúng luật "một trường không gánh hai việc" của dự án này.
+*/
 const GOLDEN = {
-  1: '231d3db716d9c91bf8af8b10eca02471',
-  2: '1dd12ee2d0a1be81c67fbb67cb9437d8',
+  1: 'e37d0f2d69611808dad47eda64aa7d23',
+  2: '3e66f4ffe10c91a02b38cffd5f431be5',
   3: '8e2ab6e4cae586d3f6f150d7aa3b2029',
   4: '4b86731192d19516a9360b7dc71890ae',
-  5: '56b00f5cac76b87d268c47b78c28ba9b',
+  5: '1f3d376a1be05dd472a9b4cb491f6bce',
   6: 'a97061cf5842e397ce5243944eacd7ef',
   7: 'e695a3000a966d735d8d70377312089d',
-  8: '141987ae5f5763e20a56c3f0a00298f6',
+  8: 'abfa76b38434a163a7b1071dbc4714d1',
   9: '07c7478f57a3050bd9cefde565df92c5',
   10: '8de77726555fd9a04716af097940a403',
-  11: 'db37b03b1b798190f5420852f315fca0',
+  11: '8fde66bfed92defe9ee4f084828cd69f',
   12: '46367dc98da3a4d9b6cd3e60928b8347',
   13: 'c582a58f3f1fa83104b5a8ea1b9a6460',
   14: '8d095a81ba06f4dfefcc7d8767d61624',
   15: 'ff7c4324f3b7a6a932306c5e9fac738a',
+};
+
+/**
+ * CHỮ KÝ CỦA RIÊNG `spec.parts` — hình và chỗ, không dính một con số nào của tầng vẽ.
+ * Sinh cùng lượt với bảng trên, trên cùng hai cây mã: 15/15 trùng từng byte qua vòng 54.
+ * ⚠️ BẢNG NÀY ĐỎ = MỘT KHỐI ĐÃ XÊ DỊCH THẬT. Không được thái lại nó cùng lúc với bảng trên như một
+ * thao tác cho hết đỏ: phải chỉ ra khối nào, ở kỷ nào, và vì sao việc ấy là cố ý.
+ */
+const GOLDEN_KHOI = {
+  1: 'b0a434cb4c644e6295dc1c88c8f68834',
+  2: 'ff5ee056cdf864e3db7dfb012aa8beb4',
+  3: 'd5266982f0e9bc84ffb9eb95899b5a44',
+  4: 'aa7b629deeda5c4fcebd8675a39d895e',
+  5: 'cf6333c399f057f2992ad4a3a41d6913',
+  6: '7cf0de0a1fa5c112ae6c1a207f0e6a43',
+  7: '79984ce7a2d926896d6acd75901e372d',
+  8: '602987b9df464253d5b0aae6f443639e',
+  9: '190d75db6efff6dfb58050ba2eb00f5e',
+  10: '6f0738715110a2489602f829ff859e20',
+  11: 'e505731e15c326b64c4673c4bd1e00b0',
+  12: '49d80e00468e72c38f1d2718c4b2d5ab',
+  13: '3f2dfc96a6cba344bef8c92e3c136b37',
+  14: '8db75e65418efceb0fbd3e53ff28e7ce',
+  15: '6799e0cb2fa40ca866783b95ba3383ac',
 };
 
 test('GOLDEN — thêm tham số `plot` KHÔNG được đổi một chữ số nào của lối gọi cũ', () => {
@@ -524,6 +570,44 @@ test('GOLDEN — thêm tham số `plot` KHÔNG được đổi một chữ số 
     assert.equal(h.digest('hex'), GOLDEN[era],
       `kỷ ${era}: mô tả công trình đã ĐỔI so với mốc trước Phase 14 — mọi thành phố trong bảo tàng `
       + 'sẽ mở ra khác lần trước (ADR-007). Đây KHÔNG phải chỗ để cập nhật chữ ký cho hết đỏ.');
+  }
+});
+
+test('GOLDEN KHỐI — hình và chỗ của mọi công trình, KHÔNG dính con số nào của tầng vẽ', () => {
+  /*
+    ⚠️ CÙNG MỘT LƯỢT QUÉT VỚI BÀI TRÊN NHƯNG BĂM MỘT THỨ KHÁC: chỉ `spec.parts`. Xem khối chú thích
+    của `GOLDEN_KHOI` để biết vì sao phải tách. Tóm tắt: bài trên băm cả spec, trong đó có trường
+    `triangles` — một con số do NHÀ MÁY HÌNH HỌC quyết. Vòng 54 đổi cách vẽ chân một cái chóp và
+    lập tức 5 kỷ đỏ ở bài trên trong khi không một viên gạch nào xê dịch. Một chữ ký bảo tàng phải
+    trả lời được câu *"có viên gạch nào xê dịch không"* mà không bị nhiễu bởi câu *"vẽ nó tốn mấy
+    tam giác"*.
+    THỬ-CHO-ĐỎ (đã chạy): đổi `y` của một khối bất kỳ trong `buildBuildingSpec` thêm 0,0001 ⇒ đỏ.
+    ⚠️ Và bài này KHÔNG thay thế bài trên: `height`, `span`, `tag` nằm NGOÀI `parts` nên bảng này mù
+    với chúng. Hai bảng, hai câu hỏi.
+  */
+  const TYPES = ['house', 'shop', 'workshop'];
+  const RARITIES = ['common', 'rare', 'epic'];
+  for (const era of ERAS) {
+    const h = createHash('md5');
+    for (const bp of BLUEPRINT_CATALOG[era]) {
+      for (const level of [1, 2, 3]) {
+        h.update(JSON.stringify(buildBuildingSpec({
+          bpId: bp.id, era, type: bp.type, rarity: bp.rarity, level,
+        }).parts));
+      }
+    }
+    for (const type of TYPES) {
+      for (const rarity of RARITIES) {
+        for (let k = 0; k < 4; k += 1) {
+          h.update(JSON.stringify(buildBuildingSpec({
+            bpId: `dw-${era}-${k}-${type}`, era, type, rarity, level: 1,
+          }).parts));
+        }
+      }
+    }
+    assert.equal(h.digest('hex'), GOLDEN_KHOI[era],
+      `kỷ ${era}: một KHỐI của công trình đã xê dịch — đây là hình và chỗ, thứ ADR-007 khoá thật. `
+      + 'Một thay đổi ở tầng vẽ KHÔNG được làm bài này đỏ; nếu nó đỏ thì có khối đã đổi thật.');
   }
 });
 

@@ -265,6 +265,103 @@ function garmentPiece(kind, d) {
 }
 
 /**
+ * TAY ÁO VÀ ỐNG QUẦN — ROUND 52 (ADR-092), Việc 8: *"quần áo có KHỐI, không vẽ bằng cách tô màu lên chi"*.
+ *
+ * ⚠️ BẢN ĐẦU DỰNG THÊM KHỐI, VÀ CÁI CỔNG ĐÃ CHẶN LẠI ĐÚNG — ghi lại để phiên sau đừng dựng lại.
+ * Bản ấy đắp MỘT ỐNG VẢI TRÙM RA NGOÀI mỗi cánh tay và mỗi cái chân: 4 khối tay + 4 khối chân.
+ * Kỷ 12 lên **26 khối/người** (trần là 18) và **2.856 tam giác** (trước là 1.808) — tức trả 58% hình
+ * học để CHE đi những khối mình vừa dựng. Mắt không bao giờ nhìn thấy cái tay bên trong ống vải.
+ *
+ * ⇒ Hỏi lại đúng câu đã gỡ được cái mũ vành (khuôn `hat`): ***"ngoài đời đây là MẤY vật?"***
+ * Một cái tay áo không phải một vật nằm cạnh cánh tay — nó **LÀ cái mà mắt thấy ở chỗ cánh tay**.
+ * Nên không thêm khối: **đổi VAI MÀU, ĐỔI BỀ NGANG và ĐỔI KHUÔN của chính khối chi đó**.
+ * Kết quả: **0 khối thêm, 0 lệnh vẽ thêm** (`flare` và `limb` kỷ nào cũng đã dùng), mà hai cái que
+ * trắng ở tay — đúng lời Đàm tả — biến mất thật.
+ *
+ * ⚠️ VÌ SAO BỀ NGANG PHẢI ĐỔI CHỨ KHÔNG CHỈ ĐỔI MÀU: vải có BỀ DÀY. Một cánh tay mặc áo dày
+ * hơn một cánh tay trần, và đó là thứ duy nhất đường bao đọc được ở cỡ nhỏ. Chỉ đổi vai màu thì
+ * đúng là "tô màu lên chi" — cái Đàm cấm thẳng.
+ */
+const SLEEVE_LOOK = Object.freeze({
+  // trần: da, thon như củ — đây là vạch xuất phát, mọi dòng dưới đều so với nó
+  bare:  { upRole: 'skin',  upShape: 'limb', upW: 0.90, loRole: 'skin',  loShape: 'calf',  loW: 0.78 },
+  // tay ngắn: vải ôm bắp tay, cẳng tay để trần ⇒ có một ĐƯỜNG CẮT giữa vải và da ở khủyu
+  short: { upRole: 'cloth', upShape: 'limb', upW: 1.06, loRole: 'skin',  loShape: 'calf',  loW: 0.78 },
+  long:  { upRole: 'cloth', upShape: 'limb', upW: 1.06, loRole: 'cloth', loShape: 'calf',  loW: 0.90 },
+  // ⚠️ TAY THỤNG DÙNG KHUÔN `flare` CHO CẰNG TAY, VÀ CHIỀU CỦA KHUÔN ẤY ĐÚNG SẴN: `flare` rộng
+  // nhất ở ĐÁY (1,00) và hẹp ở ĐỈNH (0,55), mà cẳng tay thì treo vào khớp khuỷu ở ĐỈNH ⇒ hẹp ở
+  // khuỷu, xoè xuống cổ tay. Đó chính là cái tay áo giao l什nh Trường An, và bàn tay vẫn thò ra đáy.
+  wide:  { upRole: 'cloth', upShape: 'limb', upW: 1.18, loRole: 'cloth', loShape: 'flare', loW: 1.58 },
+});
+
+/**
+ * ỐNG QUẦN. Cùng lý lẽ với tay áo, và ở nửa dưới còn có một sự thật nữa đáng nói.
+ *
+ * ⚠️ `wrap` KHÔNG DỰNG THÊM CÁI VÁY NÀO — và đây là chỗ dễ làm sai nhất bảng. Khố Ai Cập,
+ * xà rông Lưỡng Hà, tấm da Göbekli Tepe — cả ba ĐÃ LÀ cái khối `garment` treo ở hông rồi
+ * (`pelt` / `wrap` / `robe`). Đắp thêm một cái váy nữa là dựng hai lần cùng một vật, và ở chỗ giao
+ * nhau thì hai mặt tranh nhau một điểm ảnh. `wrap` ở đây chỉ trả lời *"dưới cái ấy thì hai chân
+ * trông như thế nào"* — và câu trả lời là: **da trần, thon hơn**, chứ không phải vải sẫm.
+ *
+ * ⚠️ `boot` LẬT NGƯỢC MỘT QUAN HỆ GIẢI PHẪU, VÀ ĐÓ CHÍNH LÀ CÁCH MẮT ĐỌC RA "ỦNG". Chân người
+ * luôn thon dần xuống cổ chân — không có ngoại lệ. Cho cẳng chân đeo khuôn `limb` (đáy 0,70) thay
+ * vì `calf` (đáy 0,44) và rộng hơn cả đùi thì hình ấy không thể là một cái chân được nữa ⇒ mắt
+ * buộc phải đọc nó là một cái ống đi ngoài cái chân. **Một cái ủng, không tốn khối nào.**
+ */
+const LEG_LOOK = Object.freeze({
+  // áo chùng chấm đất đã nuốt hết: giữ nguyên vạch xuất phát, không ai nhìn thấy
+  none:    { upRole: 'cloth2', upShape: 'limb', upW: 1.00, loRole: 'cloth2', loShape: 'calf', loW: 0.86 },
+  wrap:    { upRole: 'skin',   upShape: 'limb', upW: 0.94, loRole: 'skin',   loShape: 'calf', loW: 0.80 },
+  trouser: { upRole: 'cloth2', upShape: 'limb', upW: 1.10, loRole: 'cloth2', loShape: 'calf', loW: 0.94 },
+  boot:    { upRole: 'cloth2', upShape: 'limb', upW: 1.10, loRole: 'cloth2', loShape: 'limb', loW: 1.16 },
+});
+
+/** Tra bảng, rơi về vạch xuất phát nếu tủ đồ khai một kiểu lạ — không bao giờ ném ở tầng thuần. */
+export function sleeveLook(kind) { return SLEEVE_LOOK[kind] ?? SLEEVE_LOOK.bare; }
+export function legLook(kind) { return LEG_LOOK[kind] ?? LEG_LOOK.none; }
+
+/**
+ * TÓC — ROUND 52 (ADR-092), Việc 9. MỘT khối, gắn vào khớp `head` nên nó quay theo đầu.
+ *
+ * ⚠️ CHỈ ĐƯỢC DỰNG KHI ĐỈNH ĐẦU CÒN TRỐNG — xem chỗ gọi trong `buildHumanBody`. Đây không phải
+ * một phép tiết kiệm tuỳ hứng: trần 18 khối/người đang bị 8/15 kỷ chạm đúng đỉnh, và 8 kỷ ấy
+ * đều đội mũ. Xem khối chú thích của `HAIR_KINDS`.
+ *
+ * ⚠️ KHUÔN `dome` CHO `crop` VÀ `loose` LÀ MỘT PHÉP TẮT CÓ LÝ DO, không phải sự lười: `dome` là
+ * khuôn của chính cái sọ, nên một cái mũ tóc ôm sọ ĐÚNG là cái sọ phóng to vài phần trăm.
+ * Và vì kỷ nào cũng đã vẽ `dome` (cái đầu), tóc tốn **0 lệnh vẽ**.
+ */
+function hairPiece(kind, d) {
+  switch (kind) {
+    case 'shaved':
+      return null;
+    // Ôm sọ, nhô lên một chút ở đỉnh và rộng hơn sọ 6% — đủ để cả chỏm đầu đổi màu mà đường
+    // bao gần như không đổi. Ở tầm mắt đây là hiệu quả lớn nhất trên mỗi đồng tam giác của cả vòng.
+    case 'crop':
+      return piece('hair', 'hair', 'dome', 'head',
+        [d.headW * 1.06, d.headH * 0.52, d.headW * 1.06], [0, d.headH * 0.74, 0]);
+    case 'bun':
+      return piece('hair', 'hair', 'prism', 'head',
+        [d.headW * 0.48, d.headH * 0.44, d.headW * 0.48],
+        [-d.headW * 0.12, d.headH * 1.06, 0]);
+    // Bím buông sau gáy: hẹp theo trục đi (x) mà DÀI xuống, đặt LỆCH VỀ SAU. ⚠️ Lệch theo −x vì
+    // `humanPose.js` để +x là hướng đi — đặt nhầm dấu thì cái bím mọc trước mặt, hình học vẫn
+    // hợp lệ nên không có gì đỏ lên.
+    case 'braid':
+      return piece('hair', 'hair', 'calf', 'head',
+        [d.headW * 0.34, d.headH * 1.15, d.headW * 0.34],
+        [-d.headW * 0.44, d.headH * 0.18, 0]);
+    // Xoã ngang vai: `flare` rộng ở ĐÁY ⇒ bó ở đỉnh đầu, loạc ra hai bên má rồi xuống gáy.
+    case 'loose':
+      return piece('hair', 'hair', 'flare', 'head',
+        [d.headW * 1.34, d.headH * 1.02, d.headW * 1.30],
+        [-d.headW * 0.04, d.headH * 0.56, 0]);
+    default:
+      return null;
+  }
+}
+
+/**
  * ĐỘI ĐẦU. Gắn vào khớp `head` nên nó nghiêng theo đầu. Trả về MỘT MẢNG, có thể rỗng.
  *
  * ⚠️ VAI MÀU CỦA NÓ KHÔNG SUY TỪ `kind` MÀ TỪ `material` — hai cái mũ CÙNG HÌNH có thể khác
@@ -308,11 +405,9 @@ function headgearPieces(kind, d, material) {
   switch (kind) {
     case 'none':
       return [];
-    // Búi tóc: một cái nút TRÒN, không phải một viên gạch nhỏ.
-    case 'bun':
-      return [piece('headgear', 'hair', 'prism', 'head',
-        [d.headW * 0.48, d.headH * 0.44, d.headW * 0.48],
-        [-d.headW * 0.12, d.headH * 1.06, 0])];
+    // ⚠️ `bun` KHÔNG CÒN Ở ĐÂY (ADR-092) — một cái búi tóc không phải một cái mũ. Nó sang
+    // `hairPiece` cùng bốn kiểu tóc khác. Dữ liệu cũ khai `headgear: 'bun'` rơi vào `default` ở đây
+    // (không dựng mũ) và được `getHumanStyle` dẫn sang `hair: 'bun'` — không ai mất tóc.
     // Khăn trùm (nemes Ai Cập · khăn lanh Đức · ghutra UAE): bó quanh trán rồi XOÈ xuống vai. Đó
     // đúng là `flare` — và nó là lý do khăn nemes không được là một cái hộp: hình bóng đặc trưng
     // của nó nằm ở chỗ nó loe ra hai bên má.
@@ -431,6 +526,11 @@ function carryPiece(kind, d) {
 export function buildHumanBody(era) {
   const style = getHumanStyle(era);
   const d = humanDims(style);
+  // Tủ đồ của thế kỷ — tra MỘT LẦN ở đây rồi dùng cho cả tám khối chi. Tra lại ở từng chỗ dùng là
+  // mở đường cho hai khối cùng một chi tra ra hai dòng khác nhau, và hình học vẫn hợp lệ nên không
+  // có gì đỏ lên — đúng hình dạng "một luật hai công thức" mà `humanDims` được tách ra để tránh.
+  const sv = sleeveLook(style.sleeve);
+  const lg = legLook(style.leg);
 
   // ⚠️ CHÂN TRƯỚC, và không phải để cho gọn: chân là khối DUY NHẤT bắt buộc phải có ở mọi kỷ để
   // phép đo "hình bóng đổi theo pha bước" còn ý nghĩa. Đặt cụm chân ở đầu danh sách thì một bài
@@ -481,23 +581,31 @@ export function buildHumanBody(era) {
     // vị trí khớp gối KHÔNG khai ở đây mà do `humanPose.js` giải ra từ chỗ đặt bàn chân.
     // ⚠️ CẲNG CHÂN MẢNH HƠN ĐÙI (0,86) — nếu để bằng nhau thì hai khối nối nhau thành một cái ống
     // dài và cái khớp gối vừa thêm vào sẽ không đọc ra được, tức tiêu hai khối cho một hình cũ.
-    piece('thighL', 'cloth2', 'limb', 'hipL',
-      [d.limbW, d.thighLen, d.limbW], [0, -d.thighLen * 0.5, 0]),
-    piece('thighR', 'cloth2', 'limb', 'hipR',
-      [d.limbW, d.thighLen, d.limbW], [0, -d.thighLen * 0.5, 0]),
-    piece('shinL', 'cloth2', 'calf', 'kneeL',
-      [d.limbW * 0.86, d.shinLen, d.limbW * 0.86], [0, -d.shinLen * 0.5, 0]),
-    piece('shinR', 'cloth2', 'calf', 'kneeR',
-      [d.limbW * 0.86, d.shinLen, d.limbW * 0.86], [0, -d.shinLen * 0.5, 0]),
+    // ⚠️ VAI MÀU / KHUÔN / BỀ NGANG CỦA BỐN KHỐI NÀY DO TỦ ĐỒ CỦA KỶ QUYẾT (`LEG_LOOK`), không
+    // phải hằng số — xem khối chú thích của `LEG_LOOK` để biết vì sao đây là cách đúng thay vì đắp
+    // thêm một ống quần trùm ra ngoài. `lg.upW` = 1,00 chính là vạch xuất phát trước vòng 52.
+    piece('thighL', lg.upRole, lg.upShape, 'hipL',
+      [d.limbW * lg.upW, d.thighLen, d.limbW * lg.upW], [0, -d.thighLen * 0.5, 0]),
+    piece('thighR', lg.upRole, lg.upShape, 'hipR',
+      [d.limbW * lg.upW, d.thighLen, d.limbW * lg.upW], [0, -d.thighLen * 0.5, 0]),
+    piece('shinL', lg.loRole, lg.loShape, 'kneeL',
+      [d.limbW * lg.loW, d.shinLen, d.limbW * lg.loW], [0, -d.shinLen * 0.5, 0]),
+    piece('shinR', lg.loRole, lg.loShape, 'kneeR',
+      [d.limbW * lg.loW, d.shinLen, d.limbW * lg.loW], [0, -d.shinLen * 0.5, 0]),
     // ⚠️ BÀN CHÂN NAY TREO VÀO KHỚP GỐI, KHÔNG TREO VÀO HÔNG. Treo vào hông thì lúc gối gập, bàn
     // chân đứng nguyên chỗ cũ trong khi cẳng chân đã đi chỗ khác — một bàn chân bay lơ lửng, và
     // hình học vẫn hợp lệ nên KHÔNG có gì đỏ lên.
-    piece('footL', 'cloth2', 'box', 'kneeL',
-      [d.limbW * 1.7, d.limbW * 0.62, d.limbW * 1.0],
-      [d.limbW * 0.42, -d.shinLen + d.limbW * 0.31, 0]),
-    piece('footR', 'cloth2', 'box', 'kneeR',
-      [d.limbW * 1.7, d.limbW * 0.62, d.limbW * 1.0],
-      [d.limbW * 0.42, -d.shinLen + d.limbW * 0.31, 0]),
+    // ⚠️ BÀN CHÂN MANG VAI MÀU CỦA CẰNG CHÂN, KHÔNG CỨNG `cloth2`: kỷ đi chân đất (`wrap`) thì bàn
+    // chân là DA, kỷ đi ủng thì bàn chân là cùng màu ủng. Để cứng một vai màu là chọn sẵn rằng ai
+    // cũng đi giày — sai ở 3 trong 15 kỷ, và sai ngay ở chóp múi người nhìn nhiều nhất lúc đứng gần.
+    // Round 52 (ADR-092), Việc 7 *"bàn tay và bàn chân có khối"*: dày 0,62 → 0,76 và bề ngang 1,0 → 1,08.
+    // Một bàn chân dẹt là một cái bóng dẹt — ở tầm mắt nó đọc ra là cái chân bàn, không phải cái giày.
+    piece('footL', lg.loRole, 'box', 'kneeL',
+      [d.limbW * 1.7, d.limbW * 0.76, d.limbW * 1.08],
+      [d.limbW * 0.42, -d.shinLen + d.limbW * 0.38, 0]),
+    piece('footR', lg.loRole, 'box', 'kneeR',
+      [d.limbW * 1.7, d.limbW * 0.76, d.limbW * 1.08],
+      [d.limbW * 0.42, -d.shinLen + d.limbW * 0.38, 0]),
 
     // ── THÂN: XƯƠNG CHẬU → LỒNG NGỰC → ĐẦU ────────────────────────────────────────────────
     // ⚠️ XƯƠNG CHẬU LÀ KHỐI MỚI, VÀ NÓ SỬA MỘT KHUYẾT TẬT CÓ TỪ ĐẦU: hai cái chân trước nay mọc
@@ -516,18 +624,26 @@ export function buildHumanBody(era) {
     // số khuôn một kỷ dùng CHÍNH LÀ số lệnh vẽ cư dân tiêu (xem `humanShapesUsed`). `dome` thì kỷ
     // nào cũng đã có sẵn (cái đầu), nên hai bàn tay tốn **0 lệnh vẽ**. Một nắm tay cũng đúng là
     // một cái vòm hơi bẹt, nên đây không phải một phép tiết kiệm làm hỏng hình.
-    piece('upperArmL', 'skin', 'limb', 'shoulderL',
-      [d.limbW * 0.9, d.upperArmLen, d.limbW * 0.9], [0, -d.upperArmLen * 0.5, 0]),
-    piece('upperArmR', 'skin', 'limb', 'shoulderR',
-      [d.limbW * 0.9, d.upperArmLen, d.limbW * 0.9], [0, -d.upperArmLen * 0.5, 0]),
-    piece('forearmL', 'skin', 'calf', 'elbowL',
-      [d.limbW * 0.78, d.forearmLen, d.limbW * 0.78], [0, -d.forearmLen * 0.5, 0]),
-    piece('forearmR', 'skin', 'calf', 'elbowR',
-      [d.limbW * 0.78, d.forearmLen, d.limbW * 0.78], [0, -d.forearmLen * 0.5, 0]),
+    // ⚠️ ĐÂY LÀ CHỖ ĐỔI NHIỀU NHẤT Ở TẦM MẮT (round 52, ADR-092, Việc 8). Trước vòng này cả hai
+    // cánh tay luôn mang vai `skin` — vai SÁNG NHẤT bảng — ở cả 15 kỷ, kể cả kỷ mặc áo măng tô kín
+    // tới cổ tay. Đứng ở tầm mắt thì đó là hai cái que trắng vung hai bên một khối vải.
+    // Vai màu, khuôn và bề ngang nay do `SLEEVE_LOOK` của kỷ quyết — không thêm một khối nào.
+    piece('upperArmL', sv.upRole, sv.upShape, 'shoulderL',
+      [d.limbW * sv.upW, d.upperArmLen, d.limbW * sv.upW], [0, -d.upperArmLen * 0.5, 0]),
+    piece('upperArmR', sv.upRole, sv.upShape, 'shoulderR',
+      [d.limbW * sv.upW, d.upperArmLen, d.limbW * sv.upW], [0, -d.upperArmLen * 0.5, 0]),
+    piece('forearmL', sv.loRole, sv.loShape, 'elbowL',
+      [d.limbW * sv.loW, d.forearmLen, d.limbW * sv.loW], [0, -d.forearmLen * 0.5, 0]),
+    piece('forearmR', sv.loRole, sv.loShape, 'elbowR',
+      [d.limbW * sv.loW, d.forearmLen, d.limbW * sv.loW], [0, -d.forearmLen * 0.5, 0]),
+    // ⚠️ BÀN TAY LUÔN LÀ DA, KỂ CẢ DƯỚI TAY ÁO THỤNG — và đó là thứ khiến cái tay thụng ĐỌC RA là
+    // tay thụng chứ không phải một cái chuông: có một chấm da thò ra ở đáy cái xoè.
+    // Việc 7 *"bàn tay có khối"*: 0,94 → 1,02 ngang và 0,74 → 0,86 dày — một nắm tay thật gần bằng
+    // bề ngang cổ tay nhân đôi, chứ không mỏng hơn cổ tay như bản cũ.
     piece('handL', 'skin', 'dome', 'elbowL',
-      [d.limbW * 0.94, d.handLen, d.limbW * 0.74], [0, -d.forearmLen - d.handLen * 0.5, 0]),
+      [d.limbW * 1.02, d.handLen, d.limbW * 0.86], [0, -d.forearmLen - d.handLen * 0.5, 0]),
     piece('handR', 'skin', 'dome', 'elbowR',
-      [d.limbW * 0.94, d.handLen, d.limbW * 0.74], [0, -d.forearmLen - d.handLen * 0.5, 0]),
+      [d.limbW * 1.02, d.handLen, d.limbW * 0.86], [0, -d.forearmLen - d.handLen * 0.5, 0]),
   ];
 
   const garment = garmentPiece(style.garment, d);
@@ -536,7 +652,16 @@ export function buildHumanBody(era) {
   // (nón lá, mũ trụ) mà cũng có thể là nhiều vật chồng lên nhau. Trả về mảng ngay từ đầu thì
   // ngày nào cần hai lớp sẽ không phải sửa chữ ký hàm — và quan trọng hơn, nó buộc chỗ gọi phải
   // viết vòng lặp, tức không âm thầm chỉ lấy khối đầu tiên.
-  for (const hg of headgearPieces(style.headgear, d, style.headMaterial)) parts.push(hg);
+  const headgear = headgearPieces(style.headgear, d, style.headMaterial);
+  for (const hg of headgear) parts.push(hg);
+  // ⚠️ ĐỈNH ĐẦU CHỈ CÓ MỘT CHỖ, VÀ CÁI MŨ THẮNG — round 52 (ADR-092), Việc 9.
+  // Không phải vì tóc dưới mũ là sai, mà vì trần 18 khối/người đang bị 8/15 kỷ chạm đỉnh và
+  // cả 8 đều đội mũ: mua thêm một khối ở đó là mua một dải tóc bị chính cái mũ che gần hết.
+  // ⇒ Bốn kỷ đầu trần (1 · 3 · 13 · 14) thôi trọc, mà không kỷ nào đắt thêm một khối.
+  if (headgear.length === 0) {
+    const hair = hairPiece(style.hair, d);
+    if (hair) parts.push(hair);
+  }
   const carry = carryPiece(style.carry, d);
   if (carry) parts.push(carry);
 

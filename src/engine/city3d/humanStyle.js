@@ -64,15 +64,69 @@ export const GARMENT_KINDS = [
   'suit',      // âu phục may đo — bó sát, đường bao hẹp nhất bộ
 ];
 
+/**
+ * TAY ÁO — ROUND 52 (ADR-092), Việc 8.
+ *
+ * ⚠️ VÌ SAO ĐÂY LÀ MỘT TRỤC RIÊNG, KHÔNG SUY RA TỪ `garment`. Trước vòng 52 mọi khối quần áo chỉ
+ * đắp lên THÂN, còn hai cánh tay để trần mang vai `skin` — vai SÁNG NHẤT bảng. Đứng ở tầm mắt thì
+ * đó chính là thứ làm cư dân đọc ra như hình que: hai cái gậy trắng vung hai bên một khối vải. Mà
+ * tay áo KHÔNG suy được từ áo: cùng một cái `robe`, Trường An là tay thụng rộng còn Dubai là tay
+ * dài ôm; cùng một cái `tunic`, thợ Manchester xắn tay còn quý tộc Paris thì không.
+ *
+ * Mỗi giá trị trả lời đúng một câu: *vải phủ tới đâu trên cánh tay, và nó phình ra bao nhiêu*.
+ */
+export const SLEEVE_KINDS = [
+  'bare',   // trần — vai và cánh tay là da
+  'short',  // tay ngắn tới khuỷu
+  'long',   // tay dài tới cổ tay, ôm
+  'wide',   // tay thụng — phình rộng hẳn ra, đường bao đổi hẳn (Trường An, áo the Bắc Bộ)
+];
+
+/**
+ * ỐNG QUẦN / CHÂN VÁY — ROUND 52 (ADR-092), Việc 8. Cùng lý lẽ với tay áo, ở nửa dưới.
+ * `robe` đã che chân bằng khối áo của nó, nên kỷ mặc áo chùng khai `none` chứ không khai chồng.
+ */
+export const LEG_KINDS = [
+  'none',     // áo dài đã che, hoặc trần
+  'wrap',     // khố / xà rông quấn — phình ở hông rồi hết
+  'trouser',  // quần ống — phủ hết đùi và cẳng chân
+  'boot',     // quần đóng thùng trong ủng — cẳng chân dày hẳn lên
+];
+
 /** ĐỘI ĐẦU. `none` là một lựa chọn thật, không phải thiếu dữ liệu. */
 export const HEADGEAR_KINDS = [
   'none',
-  'bun',       // tóc búi cao — một khối nhỏ trên đỉnh đầu
+  // ⚠️ `bun` TẪM Ở ĐÂY CHO TỚI VÒNG 52, VÀ ĐÓ LÀ MỘT TRƯỜNG GÁNH HAI VIỆC. Một cái búi tóc
+  // không phải một cái mũ: nó là TÓC. Để chung một trục thì câu hỏi *"người này để tóc kiểu gì"*
+  // không hỏi được cho 14 kỷ còn lại — họ thành **trọc đầu dưới mũ**, mà kỷ nào không đội mũ
+  // thì trọc thật. ADR-092 tách ra `HAIR_KINDS` ngay dưới. Giữ tên này trong danh sách là để
+  // dữ liệu cũ (cả trên cloud) khai `headgear: 'bun'` không rơi về `none` một cách im lặng.
+  'bun',       // ĐÃ LỖI THỜI — dùng `hair: 'bun'`
   'headcloth', // khăn trùm phủ gáy — đầu to ra và vuông xuống
   'brim',      // mũ vành cứng — một tấm dẹt rộng hơn đầu
   'helm',      // mũ trụ / nón kim loại — khối cao thóp
   'cap',       // mũ lưỡi trai / mũ vải mềm ôm đầu
   'conical',   // nón lá / nón chóp — khối nón rộng
+];
+
+/**
+ * TÓC — ROUND 52 (ADR-092), Việc 9: *"tóc thành khối thật — búi, bím, xoã, cạo"*.
+ *
+ * ⚠️ TRỤC RIÊNG KHỎcI `headgear`, VÀ LÝ DO LÀ MỘT PHÉP ĐẾM: trước vòng 52 chỉ có `bun` đứng
+ * trong bảng mũ, nên **bốn kỷ không đội mũ (3 · 13 · 14) đi ngoài đường VỚI MỘT CÁI SỌC TRƠN**,
+ * và ở tầm mắt thì không gì nói "đây là một hình nộm" to bằng một cái đầu không tóc.
+ *
+ * ⚠️ VẪN CHỈ MỘT KHỐI Ở ĐỈNH ĐẦU, VÀ ĐÓ LÀ MỘT GIỚI HẠN CÓ CHỦ Ý, không phải một thiếu sót
+ * chưa kịp làm. Trần 18 khối/người đang bị 8 trong 15 kỷ chạm đúng đỉnh. Thêm tóc DƯỚI mũ thì
+ * tám kỷ ấy phải lên 19 — để mua một dải tóc bị chính cái mũ che gần hết. Nên luật ở đây là:
+ * **đội mũ thì mũ chiếm chỗ, không đội mũ thì tóc chiếm chỗ** — một khối, không bao giờ hai.
+ */
+export const HAIR_KINDS = [
+  'shaved',  // cạo / để rất ngắn — không dựng khối nào
+  'crop',    // cắt ngắn ôm sọ — một cái mũ tóc mỏng, đổi đường bao rất ít mà đổi MÀU đỉnh đầu rất nhiều
+  'bun',     // búi cao — một cái nút tròn nhô hẳn lên khỏi đường bao
+  'braid',   // bím / đuôi sam buông sau gáy — một vệt dọc lệch về sau
+  'loose',   // xoã ngang vai — khối xoè, làm đầu rộng hẳn ra hai bên
 ];
 
 /** ĐỒ MANG THEO. Khối THÒ RA NGOÀI đường bao, nên đây là trục đọc ra rõ nhất ở cỡ nhỏ. */
@@ -114,6 +168,66 @@ const HEAD_MATERIAL_SET = new Set(HEAD_MATERIALS);
 const GARMENT_SET = new Set(GARMENT_KINDS);
 const HEADGEAR_SET = new Set(HEADGEAR_KINDS);
 const CARRY_SET = new Set(CARRY_KINDS);
+const HAIR_SET = new Set(HAIR_KINDS);
+const SLEEVE_SET = new Set(SLEEVE_KINDS);
+const LEG_SET = new Set(LEG_KINDS);
+
+/**
+ * TỦ ĐỒ CỦA TỪNG THẾ KỶ — tay áo và ống quần.
+ *
+ * ⚠️ MỖI DÒNG LÀ MỘT SỰ THẬT VỀ TRANG PHỤC, KHÔNG PHẢI MỘT LỰA CHỌN HOÀ SẮC, và Đàm đã liệt kê
+ * chính danh sách này trong đề bài vòng 52: *"áo choàng lanh Ai Cập · áo giao lĩnh Trường An · áo
+ * chẽn và mũ chóp Đức trung cổ · áo dài tứ thân và nón Bắc Bộ · áo chùng Phục Hưng · áo khoác đuôi
+ * tôm Paris · áo công nhân và mũ vải Manchester · áo măng tô và mũ phớt New York · áo bông và mũ
+ * lông Stalingrad · com lê Tokyo · kandura trắng Dubai."*
+ *
+ * ⚠️ BẢNG RIÊNG CHỨ KHÔNG NHÉT VÀO `HUMAN_STYLES`: 15 dòng ấy đã dài và đã được chú thích dày đặc
+ * theo một trục khác (tầm vóc, dáng đi, nhịp bước). Thêm hai trường vào mỗi dòng là làm loãng chúng;
+ * một bảng phụ tra bằng số kỷ giữ cho mỗi bảng nói đúng một chuyện.
+ */
+/**
+ * KIỂU TÓC CỦA TẮNG THẶ KỶ. Cùng họ với `WARDROBE`, tra bằng số kỷ.
+ *
+ * ⚠️ 11 TRONG 15 DÒNG NÀY KHÔNG BAO GIỜ ĐƯỢC DỰNG THÀNH KHỐI, VÀ CHÚNG VẪN PHẢI ĐÚNG. Kỷ nào
+ * đội mũ thì cái mũ chiếm chỗ ở đỉnh đầu (xem `HAIR_KINDS`), nên dòng tóc của kỷ ấy chỉ là một sự
+ * thật đang nằm chờ. Khai bừa cho đủ 15 dòng thì ngày nào trần khối được nới, 11 kỷ sẽ đồng loạt
+ * hiện ra với một kiểu tóc chưa ai nghĩ — và không có gì đỏ lên.
+ */
+const HAIRDO = Object.freeze({
+  1:  'bun',    // Göbekli Tepe: búi tóc buộc cao — kỷ duy nhất đã có khối này trước vòng 52
+  2:  'crop',   // Ai Cập: cắt sát dưới khăn nemes (ngoài đời còn cạo hẳn cho mát)
+  3:  'braid',  // Lưỡng Hà: tóc và râu tết bím — dấu hiệu đặc trưng nhất của phiên bản Assyria
+  4:  'bun',    // Trường An: búi tóc đội mũ futou
+  5:  'loose',  // Đức trung cổ: tóc xoã ngang vai
+  6:  'bun',    // Bắc Bộ: tóc vấn đuôi gà cuốn khăn
+  7:  'loose',  // Phục Hưng: tóc dài ngang vai
+  8:  'loose',  // Bồ Đào Nha: thuỷ thủ tóc dài buộc hờ
+  9:  'loose',  // Paris: tóc dài đội mũ
+  10: 'crop',   // Manchester: thợ cắt ngắn — tóc dài và máy dệt là một tai nạn
+  11: 'crop',   // New York
+  12: 'crop',   // Stalingrad: quân đội cắt sát
+  13: 'crop',   // Tokyo
+  14: 'crop',   // Singapore
+  15: 'crop',   // Dubai: dưới ghutra
+});
+
+const WARDROBE = Object.freeze({
+  1:  { sleeve: 'bare',  leg: 'wrap' },     // Göbekli Tepe: da thú khoác lệch, chân trần
+  2:  { sleeve: 'bare',  leg: 'wrap' },     // Ai Cập: shendyt lanh quấn hông, thân trần
+  3:  { sleeve: 'short', leg: 'wrap' },     // Lưỡng Hà: váy kaunakes tua, tay ngắn
+  4:  { sleeve: 'wide',  leg: 'none' },     // Trường An: giao lĩnh tay thụng — trục đọc rõ nhất bộ
+  5:  { sleeve: 'long',  leg: 'trouser' },  // Đức trung cổ: áo chẽn tay dài, quần ống bó
+  6:  { sleeve: 'wide',  leg: 'trouser' },  // Bắc Bộ: áo tứ thân tay rộng, quần ống rộng
+  7:  { sleeve: 'long',  leg: 'trouser' },  // Phục Hưng: áo chùng tay dài, quần ống chẽn
+  8:  { sleeve: 'short', leg: 'trouser' },  // Bồ Đào Nha: thuỷ thủ tay xắn, quần ống rộng
+  9:  { sleeve: 'long',  leg: 'trouser' },  // Paris: áo đuôi tôm tay dài
+  10: { sleeve: 'short', leg: 'trouser' },  // Manchester: thợ xắn tay áo, quần vải thô
+  11: { sleeve: 'long',  leg: 'trouser' },  // New York: măng tô tay dài
+  12: { sleeve: 'long',  leg: 'boot' },     // Stalingrad: áo bông, quần đóng thùng trong ủng
+  13: { sleeve: 'long',  leg: 'trouser' },  // Tokyo: com lê
+  14: { sleeve: 'short', leg: 'trouser' },  // Singapore: sơ mi ngắn tay, xích đạo
+  15: { sleeve: 'long',  leg: 'none' },     // Dubai: kandura trắng dài kín, tay dài
+});
 
 /**
  * ⚠️ PRESET PHẢI CÓ TÊN, VÀ 14 KỶ CHƯA LÀM PHẢI TRỎ TỚI NÓ MỘT CÁCH TƯỜNG MINH.
@@ -222,7 +336,7 @@ export const HUMAN_STYLES = {
     garment: 'pelt',
     // Tóc búi: chưa có nghề làm nỉ, chưa có vải dệt khổ lớn để trùm. Búi tóc là thứ giữ tóc khỏi
     // vướng khi săn, và nó có mặt trong tượng người thời Đá mới vùng Anatolia.
-    headgear: 'bun',
+    headgear: 'none',   // ADR-092: cái búi tóc chuyển sang trục `hair` — nó là tóc, không phải mũ
     // Trơ (búi tóc lấy vai `hair`). Khai `natural` cho đúng sự thật: Çatalhöyük chưa có nghề nhuộm.
     headMaterial: 'natural',
     // Ngọn giáo dựng cao quá đầu — vệt dọc mảnh, trục dễ đọc nhất ở cỡ nhỏ vì nó THÒ HẲN ra ngoài
@@ -714,6 +828,19 @@ export function getHumanStyle(era) {
     headMaterial: HEAD_MATERIAL_SET.has(merged.headMaterial) ? merged.headMaterial : 'dyed',
     carry: CARRY_SET.has(merged.carry) ? merged.carry : 'none',
     gait: isValidGait(merged.gait) ? merged.gait : 'saunter',
+    // Round 52 (ADR-092): the century's own sleeves and trouser legs. A row may still override them
+    // directly; the wardrobe is the default, not a law.
+    sleeve: SLEEVE_SET.has(merged.sleeve) ? merged.sleeve
+      : (WARDROBE[era]?.sleeve ?? 'long'),
+    leg: LEG_SET.has(merged.leg) ? merged.leg : (WARDROBE[era]?.leg ?? 'trouser'),
+    /**
+     * ⚠️ `headgear: 'bun'` CỦA DỮ LIỆU CŨ ĐƯỢC DẪN SANG ĐÂY, KHÔNG Bỏ RƠI. Trước ADR-092 cái búi
+     * tóc đứng nhầm chỗ trong bảng mũ; một bản lưu cũ (localStorage hoặc Supabase) vẫn có thể khai
+     * như vậy. Bỏ trống thì người ấy mất tóc mà không có gì báo — đúng kiểu hỏng âm thầm mà
+     * `normalizePersistedGameState` sinh ra để chặn.
+     */
+    hair: HAIR_SET.has(merged.hair) ? merged.hair
+      : (merged.headgear === 'bun' ? 'bun' : (HAIRDO[era] ?? 'crop')),
   };
 }
 

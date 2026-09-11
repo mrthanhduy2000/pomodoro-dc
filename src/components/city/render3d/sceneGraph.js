@@ -1587,8 +1587,24 @@ export function createCityScene({
       // người, và `TECH_DEBT #22` đã trả giá ba phase cho việc ĐOÁN chuyện đó bằng màu.
       // ⚠️ SỐ NHIỀU. `sceneStats.test.js` khoá cứng đúng chuỗi này; đổi sang số ít là đỏ ngay.
       mesh.name = 'residents';
-      // Người quá nhỏ để đổ bóng ra hồn, nhưng NHẬN bóng thì có: đi vào bóng nhà là tối đi.
-      mesh.castShadow = false;
+      /*
+        ⚠️ ROUND 52 (ADR-092), VIỆC 10 + 12 — CƯ DÂN NAY ĐỔ BÓNG. Dòng này trước đây là `false`, kèm
+        lý lẽ *"người quá nhỏ để đổ bóng ra hồn"*, và LÝ LẼ ẤY ĐÃ HẾT HẠN — ghi ra để phiên sau
+        không lật lại bằng chính câu cũ:
+          • Lúc viết, bản đồ bóng là 2048 và cư dân cao ~9 điểm ảnh. Nay bản đồ 4096
+            (`SHADOW_MAP_DESKTOP`), vòng 48 nhân đôi cỡ người, và vòng 50 cho Đàm ĐI BỘ tới đứng
+            cạnh họ. Trong khung bóng bó sát lưới, một cư dân nay chiếm ~40 điểm ảnh bản đồ bóng —
+            thừa sức cho một cái bóng có hình.
+          • Và cái bóng ấy không phải đồ trang trí: **một hình người không có bóng thì đọc ra là
+            một hình DÁN LÊN mặt đất, không phải một người ĐỨNG TRÊN nó.** Đó đúng là thứ Đàm tả
+            ở Việc 10 (*"vật nhỏ cũng phải đổ bóng"*) và Việc 12 (*"bóng dài của người đi qua"*).
+
+        ⚠️ VÀ NÓ KÉO THEO MỘT NGHĨA VỤ Ở CHỖ KHÁC, ĐỪNG BỎ: bản đồ bóng của cảnh này KHÔNG tự cập
+        nhật (`sun.shadow.autoUpdate = false`, xem khối cảnh báo ở đầu file). Để nguyên như vậy thì
+        cư dân đi một đằng, cái bóng đứng một nẻo — một lỗi TRÔNG THẤY NGAY mà không test nào đỏ.
+        `CityScene3D.jsx` phải làm bẩn bản đồ bóng theo nhịp cư dân; xem `SHADOW_EVERY_N` ở đó.
+      */
+      mesh.castShadow = true;
       mesh.receiveShadow = true;
       // ⚠️ Ma trận đổi mỗi khung hình — báo cho three biết để nó khỏi cố tối ưu bộ đệm tĩnh.
       mesh.instanceMatrix.setUsage(DynamicDrawUsage);

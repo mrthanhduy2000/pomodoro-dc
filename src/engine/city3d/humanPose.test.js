@@ -269,6 +269,13 @@ test('HÌNH BÓNG ĐỔI THEO PHA BƯỚC — và mô hình 2 hộp cũ ra ĐÚN
     // hoặc test đỏ oan, hoặc — tệ hơn — có người "sửa" bằng cách lọc riêng `id.startsWith('leg')`,
     // lúc ấy vế bất biến ngay dưới sẽ đỏ THẬT vì bàn chân thò ra trước làm đường bao ngoài đổi
     // NHIỀU HƠN phần cẳng chân, và người ta sẽ đi chữa một cơ chế hoàn toàn lành.
+    //
+    // ⚠️ VẪN LÀ SÁU SAU VÒNG 52 (ADR-092), VÀ ĐÓ LÀ MỘT KẾT QUẢ, KHÔNG PHẢI MỘT SỰ TÌNH CỜ. Vòng 52
+    // đưa ống quần và ủng vào 15 kỷ. Bản đầu dựng chúng bằng KHỐI TRÙM RA NGOÀI ⇒ cụm chân
+    // phồng lên 8–10 và bài này ĐỎ — đúng việc. Cách vá đúng không phải nới con số này mà là hỏi
+    // *"ngoài đời đây là MẤY vật?"*: cái quần **LÀ** thứ mắt thấy ở chỗ cái chân, nên nó là vai màu
+    // và bề ngang của chính khối ấy (`LEG_LOOK` trong `human.js`), không phải một khối thứ hai.
+    // ⇒ Nếu bài này đỏ vì một phase sau thêm đồ mặc: **đừng nới 6**, hãy hỏi lại câu trên.
     assert.equal(chan.length, 6, `kỷ ${era}: phải có đúng 6 khối cụm chân, thấy ${chan.length}`);
     const chenhChan = (spanCua(body, chan, cycle * RỘNG) - spanCua(body, chan, cycle * HẸP)) / H;
     const chenhNguoi = (silhouetteSpanX(body, cycle * RỘNG) - silhouetteSpanX(body, cycle * HẸP)) / H;

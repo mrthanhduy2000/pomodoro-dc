@@ -438,11 +438,34 @@ export default function CityScene3D({
       }
 
       let shadowsDirty = true;
+      /*
+        ⚠️ ROUND 52 (ADR-092): NHỊP VẼ LẠI BẢN ĐỒ BÓNG KHI CƯ DÂN ĐANG ĐI.
+        Từ vòng này cư dân ĐỔ BÓNG (`sceneGraph.js`, chỗ đặt `castShadow` của lưới `residents`).
+        Nhưng bản đồ bóng của cảnh cố ý KHÔNG tự cập nhật — nếu để nguyên thì người đi một đằng,
+        bóng đứng một nẻo, và không có test nào đỏ vì hình học vẫn hợp lệ.
+
+        ⚠️ VÌ SAO 2 CHỨ KHÔNG PHẢI 1, VÀ CŨNG KHÔNG PHẢI 4. Vẽ lại bản đồ bóng là vẽ lại TOÀN BỘ
+        cảnh vào một tấm 4096×4096 — đắt ngang một khung hình nữa. Ở trần 30 khung/giây thì:
+          • mỗi khung (1) ⇒ trả gần gấp đôi công, để đổi lấy một cái bóng nhúc nhích ở 30 Hz mà
+            mắt không phân biệt được với 15 Hz;
+          • mỗi 4 khung ⇒ bóng giật thành từng nấc 7,5 Hz — thấy rõ khi một người đi ngang qua
+            một vũng nắng.
+        2 cho bóng chạy ở 15 Hz: liền mạch với mắt, mà chỉ tốn thêm một nửa.
+        ⚠️ ĐÂY LÀ MỘT CON SỐ ĐO BẰNG MẮT TRÊN ẢNH DỰNG, KHÔNG PHẢI ĐO BẰNG MILI-GIÂY — hộp cát dựng
+        bằng SwiftShader nên mọi con số mili-giây ở đó chỉ so được với nhau. Máy Đàm là chỗ đo thật.
+      */
+      const SHADOW_EVERY_N = 2;
+      let shadowTick = 0;
       function renderFrame() {
         const now = performance.now();
         stepFlight(now);
         if (city.isAnimated) city.update((now - startedAt) / 1000);
         applyCamera();
+        // Cảnh vừa đổi (dựng xong, đổi giờ, đổi mùa) thì vẽ lại ngay, không chờ nhịp.
+        if (city.isAnimated) {
+          shadowTick = (shadowTick + 1) % SHADOW_EVERY_N;
+          if (shadowTick === 0) shadowsDirty = true;
+        }
         if (shadowsDirty) {
           // Chỉ vẽ lại bóng đúng khung hình cần. Bật `autoUpdate` lên một nhịp rồi tắt ngay là
           // cách chính thức của three để "cập nhật một lần".

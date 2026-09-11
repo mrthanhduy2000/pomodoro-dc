@@ -172,7 +172,7 @@ infra, `docs/GOVERNANCE.md` for process) — then, **only if it changes a RULE**
 here. Never let this file grow back: it is the only thing billed in **every** session.
 
 ## 🎨 3D city art lessons → **`docs/LESSONS_3D.md`**
-89 top-level lessons + 96 sub-entries (152k tokens), verbatim — the most expensive knowledge here;
+124 top-level lessons + 96 sub-entries (170k tokens), verbatim — the most expensive knowledge here;
 each cost a whole phase. ⚠️ **Touching the 3D city means `grep`-ing that file FIRST** (it opens with
 its own index). **Unlocked 2026-09-08 (ADR-087)**: its art may change — **ADR-007 still locks POSITION.**
 

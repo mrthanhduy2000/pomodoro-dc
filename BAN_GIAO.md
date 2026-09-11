@@ -1,3 +1,61 @@
+> Last update: **2026-09-11** — **ROUND 54: FROM BLOCKS TO ROUND (ADR-094).**
+> Order: *"TỪ KHỐI SANG TRÒN … Pixar-style 3D animation — hình tròn mềm, tô sáng mượt, nhân vật dễ
+> thương, ánh sáng dịu."* Acceptance, his words: *"tôi nhìn một cư dân ở tầm mắt — và người đó phải
+> tròn, mềm, dễ thương như một nhân vật hoạt hình 3D, không phải một chồng hộp gỗ."*
+> Everything on `main`, on top of round 53. Same four laws: ADR-007 · determinism · 105 era pairs ×
+> 4 seasons · a photograph for everything.
+>
+> ### Measured before
+> Every curved block in the city rendered as flat plates: `geometryFactory.js` and `humanShape.js`
+> both wrote one normal per FACE, so a 12-sided body showed 12 plates · residents 12-sided, 18 parts,
+> 1.808 triangles, 7,5 heads tall, no neck, no eyes, no joints · loose cloth a perfect surface of
+> revolution · a shadow cut 100% of the sun.
+>
+> ### Done
+> 1. **⭐ Crease-angle smooth normals** (`engine/city3d/creaseNormals.js`, 40°). Adds **zero
+>    triangles** and changes every curved object in all 15 eras. The angle needs no role table: a
+>    4-gon's faces are 90° apart (sharp), a 12-gon's 30° (smooth), a side meets a cap at 90° (sharp).
+>    So round 53's window recesses, pilasters and mouldings keep every edge that makes their shadows.
+> 2. **⚠️ It lives in `engine/`, not `render3d/`, and the first draft got that wrong.** Residents do
+>    NOT go through `geometryFactory` — they go `humanShape.js` → `humanGeometry.js` → `InstancedMesh`.
+>    The first version rounded the whole city and left the people as twenty flat plates, which is
+>    exactly what the round is judged on.
+> 3. **Residents became cartoon characters**: 20 sides, head 0,16 → 0,22 (**4,55 heads**, a deliberate
+>    reversal of ADR-090 on Đàm's explicit order), a real neck, six ball joints, two oversized eyes on
+>    the existing `hair` role so the face costs **0 draw calls**. 18 → 27 parts, 1.808 → 5.124 tri.
+> 4. **Cloth reads as cloth**: four folds and a scalloped hem on `flare`, the hip wrap moved
+>    `prism` → `flare`. Envelope unchanged **to the digit** — see the lesson below.
+> 5. **`MAX_SIDES` 16 → 24 · `BEVEL_MAX` 0,06 → 0,14 · `footBevel` for cones and pyramids** (foot
+>    chamfered, tip still sharp — decision 7 of ADR-094).
+> 6. **Shadows never black**: `sun.shadow.intensity = 0.82`. Floor up, crushed down, **contrast holds
+>    to three digits** in all three measured eras. Rim light 0,22 → 0,30. Five glossiest material
+>    families one step rougher; `water` deliberately untouched at 0,04.
+> 7. **Tree canopies stop being polyhedra**: lobes keep the outline, `lobeSides` (min 10) crosses the
+>    40° threshold so the surface goes round.
+>
+> ### Not done, and why
+> - **Distance-softening shadows (Việc 8b)** — NOT built. A penumbra that widens with distance from
+>   the occluder is PCSS, a rewrite of three.js's shadow sampling; the cheap substitute (VSM +
+>   `shadow.radius`) blurs uniformly and light-bleeds through exactly the thin window reveals round 53
+>   built. Việc 12 forbids that trade. Logged rather than faked.
+> - **Việc 13 (free choice)** — spent on decisions 2 and 5 of ADR-094 (the layering fix and the joint
+>   colour fix), both found by photographs rather than by the brief.
+>
+> ### Two bugs found by a PHOTOGRAPH, not by a test
+> - Six ball joints hard-coded to `skin` rendered as **six bright rivets** on era 12's dark uniform —
+>   the round-52 "two white sticks" defect returning one level down. A joint now wears the colour of
+>   the limb it joins, the rule the foot already used.
+> - The neck at 0,46 of head width read as a pale **collar ring** from the 34° camera. Now 0,38, lower.
+>
+> ### Gates
+> lint clean · build clean · **1 778 pass · 0 fail · skipped 1** (round 53 baseline: 1 775).
+> New: `GOLDEN_KHOI` in `block.test.js`, `MOC_TRUOC_VAI_XOE` in `drawCallBudget.test.js`, a
+> smoothing-actually-runs test in `humanShape.test.js`. Per-era triangle marks re-based twice with the
+> scope recorded (era 14 alone unmoved by `footBevel`; all 15 moved by the trees). Part/triangle
+> ceilings for residents and trees converted to runaway detectors that print the real number each run.
+
+---
+
 > Last update: **2026-09-11** — **ROUND 53: A WALL THAT CANNOT SHADOW ITSELF (ADR-093).**
 > Order: *"KHỐI PHẢI CÓ ĐỘ SÂU … Vòng 52 làm xong tầng shader. Ảnh có đẹp lên. Nhưng nhìn vẫn 'low',
 > và tôi đã biết vì sao."* Everything on `main`, on top of round 52.

@@ -143,6 +143,9 @@
 │   │   │       │                   #   ⚠️ Thứ tự nhóm PHẢI theo `MATERIAL_ORDER`, không theo thứ tự
 │   │   │       │                   #   khối được dựng — thứ tự ấy đổi khi Đàm xây thêm một công trình
 │   │   │       │                   #   Cũng là nơi NƯỚNG SẴN bóng tiếp xúc vào màu đỉnh (0đ lúc chạy)
+│   │   │       │                   #   ⚠️ ROUND 54: gọi `engine/city3d/creaseNormals.js` trên ĐÚNG
+│   │   │       │                   #   khoảng tam giác của mỗi khối vừa phát ra (không phải trên cả
+│   │   │       │                   #   bộ đệm — xem chú thích của file ấy)
 │   │   │       ├── themeBridge.js  # Đọc CSS var từ đúng div [data-theme] (KHÔNG documentElement)
 │   │   │       └── capability.js   # Dò WebGL2 bằng cách TẠO THỬ context rồi huỷ ngay
 │   │   ├── Coach*.jsx         # 3 lối vào AI Coach: CoachChat (hỏi-đáp), CoachOffline (phân tích
@@ -783,10 +786,22 @@
 │   │   │   │                      #   ⚠️ gaitOf() nhận CẢ một hồ sơ đầy đủ, không chỉ một tên —
 │   │   │   │                      #   đó là lối bơm mà bài "dây nối" cần. Đổi lại, test ĐÒI bảng
 │   │   │   │                      #   kỷ khai `gait` là một CHUỖI ở cả 15 kỷ
+│   │   │   ├── creaseNormals.js   # ROUND 54 (ADR-094) — LÀM MỀM PHÁP TUYẾN THEO GÓC GÃY (40°).
+│   │   │   │                      #   Hàn đỉnh theo vị trí, rồi mỗi đỉnh chỉ gộp những mặt kề lệch
+│   │   │   │                      #   DƯỚI 40°. Không thêm một tam giác nào; đổi mọi vật cong của
+│   │   │   │                      #   cả 15 kỷ. THUẦN (chỉ hai mảng số) — và đó là lý do nó nằm ở
+│   │   │   │                      #   `engine/` chứ không ở `render3d/`: cư dân KHÔNG đi qua
+│   │   │   │                      #   `geometryFactory` mà đi `humanShape` → `humanGeometry` →
+│   │   │   │                      #   `InstancedMesh`. Hai đường ống, MỘT luật góc gãy.
+│   │   │   │                      #   ⚠️ Gọi trên TỪNG KHỐI, không trên bộ đệm đã gộp — hàn qua bộ
+│   │   │   │                      #   đệm gộp sẽ làm mềm hai căn nhà VÀO NHAU
 │   │   │   ├── humanShape.js      # BỘ 9 KHUÔN CƠ THỂ (2026-08-24, ADR-057): box · prism · limb ·
 │   │   │   │                      #   calf · chest · flare · cone · dome · hat. Mỗi khuôn là một
 │   │   │   │                      #   MẶT TRÒN XOAY khai bằng {sides, rings} — THUẦN, không
-│   │   │   │                      #   import three. 12 mặt, 3–6 vành (trừ `box`: 4 mặt, 2 vành)
+│   │   │   │                      #   import three. **20 mặt** (round 54; trước là 12), 3–6 vành
+│   │   │   │                      #   (trừ `box`: 4 mặt, 2 vành) + `folds` cho `flare` (nếp vải)
+│   │   │   │                      #   ⚠️ ROUND 54: gọi `smoothCrease` trước khi trả về ⇒ khối tròn
+│   │   │   │                      #   thôi hiện ra thành 20 tấm phẳng, `box` không đổi một byte
 │   │   │   │                      #   ⚠️ SỐ VÀNH quyết định "phẳng hay không", KHÔNG phải số mặt:
 │   │   │   │                      #   khuôn 2 vành cho ĐÚNG MỘT dải sáng dọc dù sides bằng bao
 │   │   │   │                      #   nhiêu. Mọi khuôn cong nay có ≥1 ĐIỂM UỐN (thắt gối, eo,

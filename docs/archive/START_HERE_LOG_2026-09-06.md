@@ -599,3 +599,20 @@ stated twice drifts.
   brick red). It rides the `wood` family, so no era gained a draw call; any new role must do the same.
   ⚠️ **A wonder opens without relaxing the mirror** (`wonderEntrance.js`): centred at x = 0 or in equal
   ±pairs. ⚠️ **`specSpan` takes `max(w/2, d/2)`, not the depth.**
+
+
+---
+
+## ROUND 52 — moved verbatim from `START_HERE.md` on 2026-09-11 (round 54)
+Nothing deleted; the still-live rules stay summarised in `START_HERE.md`. Full record: ADR-092.
+
+- **Loop — ROUND 52 (2026-09-11): THE PICTURE GOT EXPENSIVE (ADR-092).** The post pass
+  (`render3d/postFx.js`), generated textures for all 16 material families
+  (`render3d/surfaceTexture.js`), residents wearing their century and casting shadows. Laws still live:
+  ⚠️ tone mapping is in `OutputPass`, **not on the renderer** — both means it applies twice.
+  ⚠️ **Threshold decides WHAT glows, strength only how much** — night has a 0,5 floor in
+  `postFx.test.js`; fire sits near 0,9 and a sunlit wall near 1,0, so lower selects both.
+  ⚠️ **Clothing is the limb, not a tube around it** (`human.js` `SLEEVE_LOOK`/`LEG_LOOK`) — the obvious
+  build cost 8 parts per resident to hide parts it just made. Ask *"how many OBJECTS is this?"*
+  ⚠️ `city-preview.mjs` needs **`preserveDrawingBuffer`** (screenshots tore into four pieces) and
+  **`still: true`** so grain matches across capture strips. Full detail: ADR-092.

@@ -10,6 +10,33 @@
 > **Muốn hiểu VÌ SAO một quyết định được chọn** → `ARCHITECTURE_DECISIONS.md`. **Muốn biết migration
 > cụ thể nào cần chạy** → `MIGRATION.md`.
 
+## 2026-09-11 — Round 54: from blocks to round (ADR-094)
+
+**Purpose**: make the city read as soft 3D animation rather than assembled woodblocks. The geometry
+had been curved since ADR-057; nothing had told the SHADING, so every curved block still rendered as
+a ring of flat plates. **Scope**: vertex normals, resident bodies, cloth, cone feet, shadow and
+material softness, tree canopies; no game logic, no data, no schema. **Compatibility**: fully
+backward-compatible; ADR-007 holds — not one placed building moved, proved by digesting building
+parts across two worktrees.
+
+- **Smooth shading by crease angle** — the round's whole lever, and it adds no triangles. Faces
+  meeting under 40 degrees now share a normal, faces meeting above it do not. A box keeps its
+  corners, a column turns round, and nobody has to declare which is which. Every window recess,
+  pilaster and moulding round 53 built keeps the sharp edges that make its shadows.
+- **Residents became cartoon characters**: twenty-sided bodies, a bigger head (4,55 heads tall
+  instead of 7,5 — a deliberate reversal of round 50, for charm over accuracy), a real neck, ball
+  joints at shoulder, elbow and knee, and two large eyes. The eyes and joints cost no extra draw
+  call because they reuse roles and shapes every era already draws.
+- **Cloth reads as cloth**: loose garments and wide sleeves gained four soft folds and a hem that
+  is no longer a flat circle; a hip wrap now flares like a skirt instead of bulging like a barrel.
+- **Cones and pyramids gained a chamfered foot** while keeping a sharp tip.
+- **Shadows are never pure black** — a shadow may now cut at most 82% of the sun. Measured on three
+  eras: the dark floor rises, crushed pixels fall, and light-dark contrast holds to three digits, so
+  the picture does not go milky. The rim light around silhouettes is stronger, and the five
+  glossiest materials are a step softer (still water deliberately stays a mirror).
+- **Tree canopies stop being polyhedra** — the overlapping lobes stay, but each lobe now has enough
+  sides to be shaded as a curved surface.
+
 ## 2026-09-11 — Round 53: a wall that can shadow itself (ADR-093)
 
 **Purpose**: give the city geometry for its light to catch. Round 52 finished the shader layer —

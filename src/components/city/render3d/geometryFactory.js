@@ -31,7 +31,7 @@
  */
 
 import { BufferAttribute, BufferGeometry, Color } from 'three';
-import { smoothRange } from './smoothNormals';
+import { smoothCrease } from '../../../engine/city3d/creaseNormals';
 import { MOTION_KIND, motionKindForRole, phaseAt, swayWeight } from '../../../engine/city3d/motion';
 
 import { getEraStyle } from '../../../engine/city3d/eraStyle';
@@ -498,12 +498,12 @@ export function buildMergedGeometry(
         bộ đệm đã gộp thì hai bức tường của hai căn nhà vô tình chạm nhau sẽ được làm mềm VÀO NHAU,
         và một góc phố bỗng cong như kẹo.
         ⚠️ Không cần hỏi "khối này có đáng tròn không": góc gãy tự trả lời. Hộp 4 cạnh lệch 90° nên
-        tự giữ sắc; trụ 12 cạnh lệch 30° nên tự mềm. Xem `smoothNormals.js`.
+        tự giữ sắc; trụ 12 cạnh lệch 30° nên tự mềm. Xem `creaseNormals.js`.
       */
       const từĐây = target.pos.length;
       if (part.shape === 'gable') emitGable(target, scaled, transform, rgb, shadeBase, occ, bevelWidth(part) * scale);
       else emitPrism(target, scaled, transform, rgb, shadeBase, bevelWidth(part) * scale, occ, cornerRadius(part) * scale);
-      smoothRange(target, từĐây);
+      smoothCrease(target.pos, target.nor, từĐây);
       target.motion = null;
     }
   }

@@ -119,7 +119,29 @@ export function humanDims(style) {
   // the brim goes from 1,36× the shoulders to ≈ 1,09×, against 0,67× in life.
   // Why the enlargement existed at all: at 14 px a true-scale head is 1,8 px. That reason weakened
   // twice — round 47 doubled the resident's on-screen size, and round 50 lets Đàm WALK UP to them.
-  const headH = H * 0.16;
+  /*
+    ══════════════════════════════════════════════════════════════════════════════════════════
+    ⚠️ ROUND 54 (ADR-094), VIỆC 4 — ĐẢO NGƯỢC QUYẾT ĐỊNH CỦA VÒNG 50, CÓ CHỦ Ý VÀ CÓ LỆNH
+    ══════════════════════════════════════════════════════════════════════════════════════════
+    Vòng 50 hạ cái đầu 0,20 → 0,16 để **đúng như đời thật** (~0,13), và lý lẽ ấy đúng với mục tiêu
+    LÚC ĐÓ. Vòng 54 đổi mục tiêu: Đàm chốt phong cách **Pixar**, nguyên văn:
+
+      *"nhân vật hoạt hình không đi theo đời thật — chúng đi theo SỨC HẤP DẪN: đầu to hơn tỉ lệ
+      thật, thân ngắn lại, tay chân mập và thuôn, bàn tay bàn chân to. Tôi muốn Pixar ⇒ chọn hấp
+      dẫn, bỏ chính xác. Khoảng 4–6 đầu chiều cao thay vì 7,5. Ghi rõ vào ADR rằng đây là đảo
+      quyết định vòng 50 CÓ LÝ DO, không phải quên."*
+
+    ⇒ 0,16 → **0,22**, tức **4,5 đầu chiều cao** thay vì 6,25. Nằm giữa dải Đàm đặt (4–6), nghiêng
+    về phía người lớn hoạt hình chứ không phải trẻ con (3 đầu).
+
+    ⚠️ VÀ ĐÂY KHÔNG PHẢI "QUAY VỀ SỐ CŨ": 0,22 chưa từng tồn tại. Vòng 50 hạ từ 0,20; nay lên 0,22,
+    tức CAO HƠN cả mốc trước vòng 50 — vì mục tiêu lần này không phải khả đọc ở 14 điểm ảnh mà là
+    một tỉ lệ hoạt hình ở tầm mắt. Hai lần chỉnh, hai lý do khác nhau, và cả hai đều được ghi lại.
+    ⚠️ Hệ quả dây chuyền đã trả tiền rồi chứ không phải chờ vỡ: mọi thứ đội lên đầu khai theo
+    `headW` (ADR-090 sửa gốc `#81` đúng để chuyện này thành tự động), nên nón lá, mũ trụ, mũ vành
+    tự lớn theo mà không phải đụng tới một dòng nào trong `headgearPieces`.
+  */
+  const headH = H * 0.22;
   const torsoH = H - legLen - headH;
   const b = style.build;
   const armLen = (H - legLen - headH) + legLen * 0.22;
@@ -140,7 +162,9 @@ export function humanDims(style) {
      */
     torsoW: H * 0.25 * b,
     torsoD: H * 0.155 * b,
-    headW: H * 0.16,   // round 50 (#81): the head is the root — see the note at `headH`
+    // ⚠️ BỀ NGANG ĐẦU ĐI THEO CHIỀU CAO ĐẦU, LUÔN LUÔN — đây là gốc mà ADR-090 sửa cho `#81`,
+    // và nó là lý do vòng 54 nâng được cái đầu mà không phải đụng một cái mũ nào.
+    headW: H * 0.22,
     limbW: H * 0.085 * b,
     /**
      * Khoảng cách từ trục giữa ra tâm mỗi hông / mỗi vai.
@@ -228,9 +252,18 @@ function garmentPiece(kind, d) {
       return piece('garment', 'cloth', 'prism', 'torso',
         [d.torsoD * 1.16, d.torsoH * 0.86, d.torsoW * 0.72],
         [d.torsoD * 0.06, d.torsoH * 0.52, d.torsoW * 0.30]);
-    // Vải quấn ngang hông: phình ở GIỮA thân, vai để trần. Quấn ⇒ `prism`.
+    /*
+      Vải quấn ngang hông: khố Ai Cập, xà rông Lưỡng Hà, váy quấn Ấn.
+      ⚠️ ROUND 54 (ADR-094), VIỆC 6: `prism` → `flare`. Chú thích cũ viết *"quấn ⇒ `prism`"*, và
+      câu ấy đúng về CÁCH MẶC mà sai về HÌNH. Một tấm vải quấn quanh hông rồi buông xuống thì
+      **rộng ở gấu hơn ở thắt lưng** — không có ngoại lệ, đó là hình học của một tấm vải phẳng
+      quấn quanh một cái nón cụt. `prism` (phình nhẹ ở giữa, thu lại ở hai đầu) đọc ra là một cái
+      thùng đai, không phải một cái váy. `flare` vừa đúng chiều ấy, vừa mang theo nếp gấp và gấu
+      cong của Việc 6 — và nó **không thêm một khuôn nào**: kỷ nào mặc `wrap` cũng đã vẽ `flare`
+      cho tóc xoã hoặc cho tay áo. Không tốn thêm một lệnh vẽ.
+    */
     case 'wrap':
-      return piece('garment', 'cloth', 'prism', 'torso',
+      return piece('garment', 'cloth', 'flare', 'torso',
         [d.torsoD * 1.18, d.torsoH * 0.46, d.torsoW * 1.14],
         [0, d.torsoH * 0.24, 0]);
     // Áo chùng thẳng: gấu buông xuống quá hông và XOÈ ra — `flare`. Trước đây là một khối hộp
@@ -460,8 +493,22 @@ function headgearPieces(kind, d, material) {
     //     cái mũ nuốt trọn người, chiếm 65% chiều cao khung, chỉ còn hai chân thò ra. Nay 50%.
     // Chiều cao giữ ĐÚNG tỉ số 0,42 với đường kính ⇒ 0,72 `headH`; thu nhỏ mà không làm nó bẹt.
     case 'conical':
+      /*
+        ⚠️ ROUND 54 (ADR-094): 1,71 → 1,24 `headW`, VÀ ĐÂY LÀ MỘT PHÉP CHIA, KHÔNG PHẢI MỘT LẦN
+        CHỈNH CHO ĐẸP. Việc 4 nâng cái đầu 0,16 → 0,22 (×1,375). Mọi thứ khai theo `headW` lớn theo
+        — đó là cả điểm của ADR-090 và nó đúng với mũ vành, mũ trụ, mũ vải. Nhưng nón lá thì KHÔNG:
+        1,71 × 1,375 = 2,35 `headW` mới, tức quay đúng về con số 2,2 mà vòng 49 đã phải bỏ vì
+        *"cái nấm trắng nuốt trọn người"*.
+        ⚠️ VÀ NÓ ĐÃ ĐỎ THẬT, Ở ĐÚNG CHỖ ĐƯỢC BÁO TRƯỚC: bài *"hình bóng đổi theo pha bước"* ở
+        `humanPose.test.js` bắt kỷ 6 vào lại danh sách ngoại lệ, và khối chú thích của chính bài ấy
+        đã ghi sẵn cơ chế từ 2026-08-23 — *"nón lá kỷ 6 rộng hơn cả sải chân, cái đĩa ấy quyết cả
+        min lẫn max ở CẢ HAI pha"*. Một dự đoán viết trong chú thích, ba vòng sau thành sự thật.
+        ⇒ 1,71 / 1,375 = 1,24: **giữ nguyên bề rộng TUYỆT ĐỐI của cái nón**. Được phép làm thế vì
+        chính chú thích ấy đã ghi: bề rộng một cái nón KHÔNG bị cái đầu ràng buộc theo tỉ lệ, nó chỉ
+        bị chặn DƯỚI (phải rộng hơn cái sọ) — và 1,24 vẫn rộng hơn 1,0.
+      */
       return [piece('headgear', vai, 'cone', 'head',
-        [d.headW * 1.71, d.headH * 0.72, d.headW * 1.71],
+        [d.headW * 1.24, d.headH * 0.72, d.headW * 1.24],
         [0, d.headH * 1.06, 0])];
     default:
       return [];
@@ -617,7 +664,33 @@ export function buildHumanBody(era) {
     piece('pelvis', 'cloth2', 'chest', 'pelvis',
       [d.torsoD * 0.96, d.torsoH * 0.32, d.torsoW * 0.88], [0, d.torsoH * 0.06, 0]),
     piece('torso', 'cloth', 'chest', 'torso', [d.torsoD, d.torsoH, d.torsoW], [0, d.torsoH * 0.5, 0]),
+    /*
+      ⚠️ CỔ — ROUND 54 (ADR-094), VIỆC 5. Trước vòng này cái đầu ngồi TRỰC TIẾP lên thân, và đó là
+      một trong hai thứ làm cư dân đọc ra "chồng hộp" chứ không đọc ra "cơ thể" (thứ kia là khớp).
+      Một cái cổ dựng thành đúng một khối `limb` mảnh, thuôn lên trên, và nó làm đúng hai việc:
+      bịt cái khe giữa cầu vai và hàm dưới, và cho cái đầu một CHỖ ĐỂ XOAY quanh.
+      ⚠️ Treo vào khớp `head` chứ không vào `torso`: đầu nhìn quanh thì cổ phải đi theo, nếu không
+      thì đầu quay còn cổ đứng yên và ta được một cái lỗ.
+    */
+    piece('neck', 'skin', 'limb', 'head',
+      [d.headW * 0.46, d.headH * 0.34, d.headW * 0.46], [0, -d.headH * 0.13, 0]),
     piece('head', 'skin', 'dome', 'head', [d.headW, d.headH, d.headW], [0, d.headH * 0.5, 0]),
+    /*
+      ⚠️ HAI CON MẮT — VIỆC 7, VÀ ĐÂY LÀ TOÀN BỘ "KHUÔN MẶT". Đàm nói thẳng: *"kiểu hoạt hình không
+      cần mặt chi tiết, nó cần MẮT. Hai chấm tròn lớn đặt đúng chỗ là đủ để một nhân vật có hồn."*
+      Và vế sau cũng là một lệnh: *"đừng làm mặt tả thực — ở cỡ này nó sẽ thành đáng sợ."*
+      ⚠️ TO QUÁ MỨC GIẢI PHẪU CÓ CHỦ Ý (0,30 bề ngang đầu, đời thật ~0,17) — cùng một lý lẽ với cái
+      đầu 4,5 nhịp: chọn sức hấp dẫn, bỏ chính xác. Đặt hơi thấp và hơi ra trước để bắt ánh sáng.
+      ⚠️ VAI `hair` CHỨ KHÔNG PHẢI MỘT VAI MỚI: vai này đã là màu tối nhất bảng và đã có ở mọi kỷ,
+      nên hai con mắt tốn **0 lệnh vẽ**. Thêm một vai `eye` là thêm một họ vật liệu cho cả 15 kỷ để
+      vẽ hai chấm — đúng thứ `iron` ở vòng 51 sinh ra để tránh, nhìn từ chiều ngược lại.
+    */
+    piece('eyeL', 'hair', 'dome', 'head',
+      [d.headW * 0.30, d.headH * 0.26, d.headW * 0.22],
+      [d.headW * 0.42, d.headH * 0.54, -d.headW * 0.26]),
+    piece('eyeR', 'hair', 'dome', 'head',
+      [d.headW * 0.30, d.headH * 0.26, d.headW * 0.22],
+      [d.headW * 0.42, d.headH * 0.54, d.headW * 0.26]),
 
     // ── TAY: CÁNH TAY TRÊN → KHUỶU → CẲNG TAY → BÀN TAY ───────────────────────────────────
     // ⚠️ BÀN TAY DÙNG KHUÔN `dome` CHỨ KHÔNG THÊM KHUÔN MỚI, và đó là một quyết định về LỆNH VẼ:
@@ -645,6 +718,27 @@ export function buildHumanBody(era) {
     piece('handR', 'skin', 'dome', 'elbowR',
       [d.limbW * 1.02, d.handLen, d.limbW * 0.86], [0, -d.forearmLen - d.handLen * 0.5, 0]),
   ];
+
+  /*
+    ⚠️ SÁU KHỚP CẦU — ROUND 54 (ADR-094), VIỆC 5: *"khuỷu và gối là khớp cầu chứ không phải hai ống
+    chạm nhau"*. Trước vòng này, chỗ hai đoạn chi gặp nhau là hai mặt cắt phẳng kề nhau: lúc đứng
+    yên trông còn được, lúc gập thì hở ra một khe hình nêm và cái chi đọc ra như hai que nối bằng
+    băng dính. Một quả cầu nhỏ đúng ở tâm khớp bịt khe ấy ở MỌI góc gập — đó là cả lý do khớp cầu
+    tồn tại trong mọi bộ máy hoạt hình, không phải để đẹp.
+    ⚠️ ĐƯỜNG KÍNH LẤY THEO BỀ NGANG ĐOẠN CHI DÀY HƠN trong hai đoạn nó nối, nhân 1,04. Nhỏ hơn thì
+    khe vẫn hở ở góc gập lớn; to hơn thì khớp phình ra thành một cái bướu. Đây là một QUAN HỆ với
+    cái chi, không phải một con số — chi đổi bề ngang theo tủ đồ của kỷ (vòng 52), nên một hằng số
+    ở đây sẽ đúng ở kỷ này và sai ở kỷ kia.
+    ⚠️ `dome` CHỨ KHÔNG PHẢI MỘT KHUÔN CẦU MỚI: `dome` kỷ nào cũng đã vẽ (cái đầu), nên sáu khớp
+    tốn **0 lệnh vẽ**. Cùng lý lẽ với hai bàn tay ở ADR-057.
+  */
+  const ball = (id, joint, w, atY) => piece(id, 'skin', 'dome', joint,
+    [w * 1.04, w * 1.04, w * 1.04], [0, atY, 0]);
+  for (const side of ['L', 'R']) {
+    parts.push(ball(`shoulderBall${side}`, `shoulder${side}`, d.limbW * sv.upW, 0));
+    parts.push(ball(`elbowBall${side}`, `elbow${side}`, d.limbW * Math.max(sv.loW, sv.upW * 0.8), 0));
+    parts.push(ball(`kneeBall${side}`, `knee${side}`, d.limbW * Math.max(lg.loW, lg.upW * 0.8), 0));
+  }
 
   const garment = garmentPiece(style.garment, d);
   if (garment) parts.push(garment);

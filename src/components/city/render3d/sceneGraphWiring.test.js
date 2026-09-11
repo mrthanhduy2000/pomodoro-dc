@@ -802,7 +802,23 @@ test('⚠️ NGÂN SÁCH TAM GIÁC CƯ DÂN — chấm TỪNG KỶ trên cảnh 
   // Con số 18 là số đo hôm nay (kỷ 1 · 2 · 5 · 6 · 8 · 9 · 10 · 12 dựng đúng 18 khối), KHÔNG phải
   // một con số tròn chọn cho dễ nhìn — thêm một khối nữa thì bài này đỏ và người thêm phải nói ra
   // cái khối ấy là VẬT gì ngoài đời (đúng câu hỏi đã cứu cái mũ vành khỏi bị dựng bằng hai khối).
-  const MAX_PARTS = 18;
+  /*
+    ⚠️ ROUND 54 (ADR-094): 18 → 32, VÀ NÓ THÔI LÀ MỘT CỔNG THIẾT KẾ.
+    Lịch sử con số này: 11 (Đàm chốt cho một nhân vật cao 18 điểm ảnh) → 18 → nay 32. Ba lần, và
+    hai lần gần nhất đều vì cùng một lý do, nên lần này phải nói rõ nó còn làm việc gì.
+    Đàm gỡ trần khối/người bằng lời ở CẢ vòng 53 và vòng 54 (*"KHÔNG trần khối/người"*), và vòng
+    54 còn đặt hàng đúng những thứ cần thêm khối: cổ, hai con mắt, sáu khớp cầu. Vòng 52 đã phải
+    bỏ râu vì đúng cái trần này; giữ nó thêm một vòng nữa là để một con số chặn đúng thứ Đàm đang đòi.
+
+    ⚠️ NHƯNG KHÔNG XOÁ PHÉP ĐO — cùng lý lẽ với ngân sách tam giác ở vòng 53 (`budget.js`): một cái
+    trần làm HAI việc, *"chi tiết quá mức mắt dùng được"* (đã bị bác) và *"có ai đó vừa dựng khối
+    trong một vòng lặp"* (vẫn cần). 32 là mức chỉ bắt được việc thứ hai: cư dân dày nhất hôm nay là
+    **27 khối**, nên còn 5 khối biên cho một bản vá nhỏ, và xa dưới mức một vòng lặp lồng nhầm
+    (≥ 2× vì nó nhân theo số chi hoặc số tầng).
+    ⇒ Nếu bài này đỏ: đếm xem khối thừa đến từ ĐÂU trước khi nâng số. Ba lần nâng liên tiếp là dấu
+    hiệu của một phép đo sai chỗ, không phải của một cơ thể phức tạp dần.
+  */
+  const MAX_PARTS = 32;
   // ⚠️ TRẦN TỈ LỆ 6% → 11% (2026-08-24 sáng) → **30%** (2026-08-24 tối). ĐỌC TRƯỚC KHI TIN NÓ.
   //
   // Con số 6% chưa bao giờ được buộc vào một phép đo THỜI GIAN nào — nó là một trần tự đặt, và một
@@ -831,7 +847,23 @@ test('⚠️ NGÂN SÁCH TAM GIÁC CƯ DÂN — chấm TỪNG KỶ trên cảnh 
   // (bộ tô hình chạy trên CPU), mà luật của dự án là *"một con số đo trong hộp cát chỉ được dùng để
   // so các trường hợp TRONG hộp cát ấy"*. Bốn căn cứ trên đều là suy từ phép đo CŨ trên máy thật,
   // không phải phép đo MỚI. Muốn xác nhận: `bash scripts/bench-macbook.sh` trên máy Đàm.
-  const TRAN_TY_LE = 0.30;
+  /*
+    ⚠️ ROUND 54 (ADR-094): 0,30 → 3,0, VÀ NÓ THÔI LÀ MỘT CỔNG THIẾT KẾ — cùng đường đi với ngân
+    sách tam giác ở vòng 53 (`budget.js`) và với trần khối/người ở ngay trên.
+    Vòng 54 cho cư dân: 20 cạnh thay vì 12 (viền ngoài tròn thật), một cái cổ, hai con mắt, sáu
+    khớp cầu. Kết quả: **1.808 → 5.124 tam giác/người** ở kỷ 1, tức 28 cư dân nay chiếm **74%** số
+    tam giác của cảnh thay vì 26%. Đàm gỡ trần tam giác bằng lời ở ba vòng liên tiếp và vòng 54 nói
+    thêm *"KHÔNG trần số cạnh"*, nên con số 0,30 đang chặn đúng thứ anh đặt hàng.
+
+    ⚠️ NHƯNG CON SỐ 74% LÀ MỘT SỰ THẬT PHẢI NÓI RA, KHÔNG PHẢI MỘT SỰ THẬT ĐỂ GIẤU: từ vòng này,
+    **cư dân tốn nhiều hình học hơn cả thành phố họ đang đứng trong đó.** Dòng `console.log` dưới
+    in ra tỉ lệ thật của mọi kỷ mỗi lần chạy, nên nếu một vòng sau nó lên 200% thì có người nhìn
+    thấy. Trần 3,0 chỉ còn bắt một chuyện: dựng cư dân trong một vòng lặp lồng nhầm.
+    ⚠️ VÀ ĐÂY LÀ GIỚI HẠN CỦA PHÉP ĐO NÀY, GIỮ NGUYÊN TỪ BẢN CŨ: cư dân đi qua `InstancedMesh` —
+    MỘT lệnh vẽ cho cả trăm người — nên tỉ lệ TAM GIÁC ở đây không dịch thẳng ra thời gian. Muốn
+    biết máy có nóng không thì đo trên máy Đàm, không đo ở đây (hộp cát là SwiftShader).
+  */
+  const TRAN_TY_LE = 3.0;
   let tệNhất = null;
   for (let era = 1; era <= 15; era += 1) {
     const n = buildHumanBody(era).parts.length;
@@ -855,16 +887,23 @@ test('⚠️ NGÂN SÁCH TAM GIÁC CƯ DÂN — chấm TỪNG KỶ trên cảnh 
   // bằng đúng thứ vừa mua. Cách đúng là hỏi lại *"ngoài đời cái mũ là MẤY vật?"*: một. Gộp lại
   // thành khuôn `hat` (một mặt tròn xoay) thì kỷ 8 về 11 khối, hình học ĐÚNG HƠN, và RẺ HƠN 12
   // tam giác. ⇒ **Khi một cái cổng chặn lại, hãy để nó chỉ ra một thiết kế đúng hơn.**
-  assert.ok(MAX_PARTS <= 18,
-    `trần ${MAX_PARTS} khối/người đã bị nâng quá 18 — mỗi lần nâng phải là một lệnh tường minh của`
+  assert.ok(MAX_PARTS <= 32,
+    `trần ${MAX_PARTS} khối/người đã bị nâng quá 32 — mỗi lần nâng phải là một lệnh tường minh của`
     + ' Đàm kèm lý do, không được nâng cho vừa một bản vá');
 
-  // ⚠️ VÀ MỘT TRẦN TUYỆT ĐỐI CHO SỐ TAM GIÁC, ĐỘC LẬP VỚI CẢNH. Không có nó thì mỗi phase sau làm
-  // thành phố nặng thêm sẽ TỰ ĐỘNG cấp thêm quota cho cư dân, và "≤6%" — một QUAN HỆ — trôi mà vẫn
-  // xanh. 2.100 là số đo hôm nay (1.928 — kỷ 8 · 10 · 12) cộng đúng một khuôn `limb` dự phòng
-  // (116 tam giác) làm biên, KHÔNG phải một con số tròn chọn cho dễ nhìn.
-  assert.ok(tệNhất.tri <= 2100,
-    `kỷ ${tệNhất.era} dựng ${tệNhất.tri} tam giác/người — vượt trần tuyệt đối 2.100`);
+  /*
+    ⚠️ TRẦN TUYỆT ĐỐI CHO SỐ TAM GIÁC MỖI NGƯỜI: 2.100 → 12.000 (round 54, ADR-094).
+    Lý do nó tồn tại vẫn ĐÚNG và giữ nguyên: không có một con số tuyệt đối thì mỗi phase làm thành
+    phố nặng thêm sẽ TỰ ĐỘNG cấp thêm quota cho cư dân, và một tỉ lệ trôi mà vẫn xanh.
+    Thứ đổi là MỨC. Vòng 54 cho cư dân 20 cạnh thay vì 12, một cái cổ, hai con mắt và sáu khớp cầu:
+    **1.928 → 5.124 tam giác/người**. Đàm gỡ trần tam giác ba vòng liên tiếp và vòng 54 thêm
+    *"KHÔNG trần số cạnh"*, nên 2.100 đang chặn đúng thứ anh đặt hàng.
+    12.000 ≈ 2,3× mức thật: đủ cho một vòng sau thêm râu, tóc xoã, ngón tay mà không phải mở lại
+    bảng này, và vẫn đỏ ngay nếu ai đó dựng một cư dân trong một vòng lặp lồng nhầm.
+    ⚠️ Con số 5.124 được IN RA ở dòng dưới mỗi lần chạy — nó là phép đo, cái trần chỉ là cái lưới.
+  */
+  assert.ok(tệNhất.tri <= 12000,
+    `kỷ ${tệNhất.era} dựng ${tệNhất.tri} tam giác/người — vượt trần tuyệt đối 12.000`);
 
   console.log(`[cư dân] 15 kỷ · ca xấu nhất kỷ ${tệNhất.era}: ${tệNhất.tri} tam giác/người`
     + ` × ${MAX_RESIDENTS} = ${(tệNhất.tyLe * 100).toFixed(2)}% cảnh (trần`

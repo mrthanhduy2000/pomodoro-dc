@@ -116,8 +116,21 @@ function tamCoDinh(era) {
  * nhích. Đó chính là ràng buộc Đàm ra, và nó được kiểm bằng một PHÉP TRỪ ở bài test cuối file chứ
  * không bằng cách đọc hai bảng bằng mắt.
  */
+/*
+  ⚠️ ROUND 54 (ADR-094), VIỆC 6 — KỶ 2 ĐI XUỐNG MỘT ĐƠN VỊ: 17 → 16. ĐÂY LÀ MỘT KHOẢN TIẾT KIỆM,
+  KHÔNG PHẢI MỘT KHOẢN CHI, và đó là lý do nó được ghi vào bảng chứ không được làm ngơ.
+  Việc 6 đổi cái khố/xà rông (`wrap`) từ khuôn `prism` sang khuôn `flare` — một tấm vải quấn hông
+  rồi buông xuống thì rộng ở gấu hơn ở thắt lưng, `prism` đọc ra một cái thùng đai. Kỷ 2 là kỷ
+  DUY NHẤT trong 15 kỷ dùng `prism` chỉ vì cái khố ấy, nên nó rơi từ **7 khuôn xuống 6**, tức bớt
+  đúng một `InstancedMesh` ⇒ bớt đúng một lệnh vẽ. Mười bốn kỷ còn lại không nhúc nhích
+  (`humanShapesUsed` in ra đủ 15 dòng — đã đối chiếu từng dòng trước và sau).
+  ⚠️ BA CÁI NEO CHROMIUM (kỷ 1 · 8 · 13) KHÔNG ĐỔI MỘT ĐƠN VỊ NÀO, nên bảng này vẫn còn được
+  neo vào một phép đo thật chứ không trôi thành một công thức tự soi gương — đúng điều khối chú
+  thích ngay trên cảnh báo. Bài test ở cuối file vẫn kiểm hiệu số `− MOC_TRUOC_HINH_KHOI` từng kỷ,
+  nên nếu con số 16 này bịa ra thì kỷ 2 đỏ ngay: 16 − 11 = 5 = số khuôn (6) − 1.
+*/
 const MOC_LENH_VE = {
-  1: 13, 2: 17, 3: 17, 4: 16, 5: 17,
+  1: 13, 2: 16, 3: 17, 4: 16, 5: 17,
   6: 18, 7: 18, 8: 19, 9: 15, 10: 18,
   11: 15, 12: 15, 13: 14, 14: 14, 15: 15,
 };
@@ -137,6 +150,25 @@ const MOC_TRUOC_KHOP_NGUOC = {
   1: 12, 2: 16, 3: 16, 4: 15, 5: 16,
   6: 17, 7: 17, 8: 18, 9: 14, 10: 17,
   11: 14, 12: 14, 13: 13, 14: 13, 15: 14,
+};
+
+/**
+ * MỐC NGAY TRƯỚC KHI VẢI BIẾT XOÈ — round 54 (ADR-094), Việc 6. Đây là `MOC_LENH_VE` nguyên văn
+ * của vòng 53, giữ lại làm ĐỐI CHỨNG.
+ *
+ * ⚠️ VÌ SAO PHẢI THÊM MỘT BẢNG NỮA THAY VÌ SỬA PHÉP TRỪ CỦA ĐẦU GỐI. Luật riêng của file này là
+ * *mỗi phase một mốc, mỗi mốc một phép trừ riêng*, và vòng 54 là lần đầu luật ấy bị thử thật:
+ * phép trừ đầu gối (`MOC_LENH_VE − MOC_TRUOC_KHOP_NGUOC = +1 ở cả 15 kỷ`) chạy xanh suốt ba vòng
+ * chỉ vì KHÔNG AI đụng vào bộ khuôn cư dân kể từ ADR-057. Việc 6 đụng vào, và lập tức hiệu số của
+ * kỷ 2 trộn HAI thay đổi khác nhau (đầu gối +1, vải xoè −1) rồi ra 0 — đúng con số mà thông điệp
+ * lỗi gọi là *"kỷ ấy chưa nhận bản vá"*, tức một lời nói dối rất thuyết phục.
+ * ⇒ Phép trừ đầu gối nay đọc cột "sau" của CHÍNH NÓ (bảng này), nên nó vẫn canh đúng lịch sử nó
+ * sinh ra để canh, vĩnh viễn, dù vòng 60 có đổi bộ khuôn thêm mười lần nữa.
+ */
+const MOC_TRUOC_VAI_XOE = {
+  1: 13, 2: 17, 3: 17, 4: 16, 5: 17,
+  6: 18, 7: 18, 8: 19, 9: 15, 10: 18,
+  11: 15, 12: 15, 13: 14, 14: 14, 15: 15,
 };
 
 /**
@@ -499,13 +531,16 @@ test('ADR-057: CẲNG CHÂN TÁCH RA KHỎI ĐÙI TỐN ĐÚNG **MỘT** LỆNH 
   //
   // THỬ-CHO-ĐỎ (nêu TRƯỚC): đổi khuôn cẳng chân từ `calf` sang `limb` (dùng lại khuôn đùi) ⇒ số
   // khuôn không nhích, hiệu số về 0, và cả 15 kỷ đỏ.
+  // ⚠️ CỘT "SAU" LÀ `MOC_TRUOC_VAI_XOE`, KHÔNG PHẢI `MOC_LENH_VE` (sửa ở round 54 — xem khối chú
+  // thích của bảng ấy). Đọc `MOC_LENH_VE` thì hiệu số này trộn đầu gối với mọi thay đổi bộ khuôn
+  // về sau, và ở kỷ 2 nó vừa ra 0 kèm một thông điệp lỗi đổ tội cho đúng thứ không có lỗi.
   const lech = [];
   for (const era of ERAS) {
     const truoc = MOC_TRUOC_KHOP_NGUOC[era];
     assert.ok(Number.isFinite(truoc), `kỷ ${era} thiếu mốc trước-khớp-ngược`);
-    const hieu = MOC_LENH_VE[era] - truoc;
+    const hieu = MOC_TRUOC_VAI_XOE[era] - truoc;
     assert.equal(hieu, 1,
-      `kỷ ${era}: mốc đi từ ${truoc} lên ${MOC_LENH_VE[era]} (lệch ${hieu}). Đầu gối thật chỉ được`
+      `kỷ ${era}: mốc đi từ ${truoc} lên ${MOC_TRUOC_VAI_XOE[era]} (lệch ${hieu}). Đầu gối thật chỉ được`
       + ' tốn ĐÚNG một lệnh vẽ — lệch hơn nghĩa là có thứ khác đang đi ké dòng này, lệch 0 nghĩa là'
       + ' kỷ ấy chưa nhận bản vá.');
     lech.push(hieu);
@@ -517,4 +552,27 @@ test('ADR-057: CẲNG CHÂN TÁCH RA KHỎI ĐÙI TỐN ĐÚNG **MỘT** LỆNH 
       `kỷ ${era}: bộ khuôn không có \`limb\``);
   }
   assert.equal(new Set(lech).size, 1, 'phải là +1 ĐỒNG ĐỀU ở 15 kỷ, không phải trung bình +1');
+});
+
+test('ROUND 54 · VIỆC 6: VẢI XOÈ BỚT ĐÚNG MỘT LỆNH VẼ, VÀ CHỈ Ở KỶ 2', () => {
+  /*
+    ⚠️ PHÉP TRỪ RIÊNG CỦA VÒNG 54 — và nó canh một khoản TIẾT KIỆM, thứ dễ bị bỏ qua nhất.
+    Việc 6 đổi cái khố/xà rông từ `prism` sang `flare`. Kỷ 2 là kỷ duy nhất dùng `prism` CHỈ vì
+    cái khố ấy, nên nó bớt đúng một `InstancedMesh`. Mười bốn kỷ còn lại không được nhúc nhích:
+    nếu một kỷ khác cũng đổi thì hoặc `flare` đã lén thay một khuôn khác, hoặc một khuôn mới vừa
+    vào mà không ai khai.
+    ⚠️ VÀ VẾ THỨ HAI MỚI LÀ VẾ KHÓ: `prism` phải BIẾN MẤT khỏi kỷ 2 chứ không chỉ là con số nhỏ đi.
+    Không có vế ấy thì một bản vá làm số lệnh vẽ nhỏ đi vì lý do hoàn toàn khác vẫn xanh trơn tru.
+    THỬ-CHO-ĐỎ (đã chạy): trả `wrap` về khuôn `prism` ⇒ cả hai vế đỏ.
+  */
+  for (const era of ERAS) {
+    const hieu = MOC_LENH_VE[era] - MOC_TRUOC_VAI_XOE[era];
+    assert.equal(hieu, era === 2 ? -1 : 0,
+      `kỷ ${era}: mốc đi từ ${MOC_TRUOC_VAI_XOE[era]} xuống ${MOC_LENH_VE[era]} (lệch ${hieu}) — `
+      + 'Việc 6 chỉ được bớt một lệnh vẽ ở ĐÚNG kỷ 2, và không được thêm ở kỷ nào.');
+  }
+  assert.ok(!humanShapesUsed(2).includes('prism'),
+    'kỷ 2 vẫn còn khuôn `prism` — cái khố chưa đổi sang `flare`, nên con số 16 ở trên là bịa');
+  assert.ok(humanShapesUsed(2).includes('flare'),
+    'kỷ 2 không có khuôn `flare` — cái khố đã mất khuôn cũ mà chưa nhận khuôn mới');
 });

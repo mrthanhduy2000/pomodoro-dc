@@ -70,10 +70,26 @@ test('MỌI KHUÔN NGỬA MẶT RA NGOÀI — kiểm bằng CHIỀU CẠNH và T
   }
 });
 
-test('PHÁP TUYẾN PHẢI KHỚP THỨ TỰ ĐỈNH — không được khai một đằng dựng một nẻo', () => {
+test('PHÁP TUYẾN PHẢI NGỬA CÙNG PHÍA VỚI THỨ TỰ ĐỈNH — không được khai một đằng dựng một nẻo', () => {
   // Bài trên canh THỨ TỰ ĐỈNH (thứ quyết định mặt nào bị `FrontSide` vứt đi). Bài này canh mảng
   // `normals` — thứ quyết định ĐỘ SÁNG. Hai đại lượng độc lập: một hình có thứ tự đỉnh hoàn hảo
   // vẫn có thể mang pháp tuyến ngược và render ra đen kịt dưới nắng.
+  //
+  /*
+    ⚠️ NGƯỠNG 0,999 → 0 — ĐỔI CÂU HỎI, KHÔNG NỚI TAY (round 54, ADR-094).
+    0,999 là phát biểu *"pháp tuyến phải BẰNG pháp tuyến mặt"*, tức nó đòi tô sáng PHẲNG THEO
+    TỪNG MẶT. Kể từ khi `humanShapeMesh` gọi `smoothCrease`, điều đó cố Ý không còn đúng nữa:
+    trên thân tròn 20 cạnh, mỗi đỉnh nay mang trung bình của hai mặt kề — đúng cái làm nó thôi
+    trông như hai mươi tấm phẳng.
+    ⚠️ NHƯNG KHUYẾT TẬT BÀI NÀY SINH RA ĐỂ BẮT THÌ KHÔNG ĐỔI: một pháp tuyến NGƯỢC (khối đen kịt
+    dưới nắng) vẫn cho tích vô hướng ÂM, và làm mềm thì không bao giờ lật được một pháp tuyến
+    sang nửa không gian bên kia (nó chỉ gộp những mặt lệch dưới 40° — xem `creaseNormals.js`).
+    ⇒ Câu hỏi đúng là *"có ngửa cùng phía không"*, và ngưỡng đúng là **> 0**.
+    THỬ-CHO-ĐỎ (đã chạy): đảo dấu ba số `nor` trong `pushTri` ⇒ cả chín khuôn đỏ.
+    ⚠️ VÀ MỘT GIÀNG BUỘC NỮA THAY CHỖ PHẦN VỪA MẤT: pháp tuyến phải còn là VÉC-TƠ ĐƠN VỊ. Một
+    phép trung bình quên chuẩn hoá sẽ làm cả mảng khuếch tán tối đi một cách êm ả — không gì đỏ,
+    không gì thiếu, chỉ là ai cũng hơi xám.
+  */
   for (const ten of HUMAN_SHAPES) {
     const mesh = humanShapeMesh(ten);
     for (let t = 0; t < mesh.triangles; t += 1) {
@@ -82,12 +98,59 @@ test('PHÁP TUYẾN PHẢI KHỚP THỨ TỰ ĐỈNH — không được khai m�
       const v = [c[0] - a[0], c[1] - a[1], c[2] - a[2]];
       const n = [u[1] * v[2] - u[2] * v[1], u[2] * v[0] - u[0] * v[2], u[0] * v[1] - u[1] * v[0]];
       const d = Math.hypot(...n) || 1;
-      const o = t * 9;
-      const cham = (n[0] / d) * mesh.normals[o]
-        + (n[1] / d) * mesh.normals[o + 1] + (n[2] / d) * mesh.normals[o + 2];
-      assert.ok(cham > 0.999,
-        `khuôn "${ten}" mặt ${t}: pháp tuyến khai lệch khỏi thứ tự đỉnh (cos = ${cham.toFixed(4)})`);
+      for (let k = 0; k < 3; k += 1) {
+        const o = t * 9 + k * 3;
+        const cham = (n[0] / d) * mesh.normals[o]
+          + (n[1] / d) * mesh.normals[o + 1] + (n[2] / d) * mesh.normals[o + 2];
+        assert.ok(cham > 0,
+          `khuôn "${ten}" mặt ${t} đỉnh ${k}: pháp tuyến ngửa ngược phía với thứ tự đỉnh `
+          + `(cos = ${cham.toFixed(4)}) — khối này sẽ đen kịt dưới nắng`);
+        const dai = Math.hypot(mesh.normals[o], mesh.normals[o + 1], mesh.normals[o + 2]);
+        assert.ok(Math.abs(dai - 1) < 1e-6,
+          `khuôn "${ten}" mặt ${t} đỉnh ${k}: pháp tuyến dài ${dai.toFixed(6)}, phải là 1`);
+      }
     }
+  }
+});
+
+test('LÀM MỀM CHẠY THẬT — khối tròn được gộp, `box` không mất một cạnh nào', () => {
+  /*
+    ⚠️ BÀI NÀY TỒN TẠI VÌ BÀI TRÊN ĐÃ PHẢI NỚI TỪ 0,999 XUỐNG 0. Một ngưỡng bị nới mà không
+    ai canh chỗ trống nó để lại thì `smoothCrease` có thể bị gỡ khỏi `humanShapeMesh` và MỌI bài
+    trong file này vẫn xanh — đúng hình dạng *"một cơ chế chạy xanh mà không làm gì"*.
+    Đo bằng một QUAN HỆ, không bằng một con số tuyệt đối: **hình tròn phải có đỉnh được gộp, cái
+    hộp phải không có đỉnh nào được gộp** — và hai vế đó đúng với mọi số cạnh về sau.
+    THỬ-CHO-ĐỎ (đã chạy): xóa lời `smoothCrease(pos, nor)` ⇒ vế tròn đỏ ngay.
+  */
+  // Một đỉnh được gộp khi pháp tuyến của nó lệch khỏi pháp tuyến MẶT mà nó thuộc về.
+  const tyLeGop = (ten) => {
+    const mesh = humanShapeMesh(ten);
+    let gop = 0;
+    let tong = 0;
+    for (let t = 0; t < mesh.triangles; t += 1) {
+      const [a, b, c] = tamGiac(mesh, t);
+      const u = [b[0] - a[0], b[1] - a[1], b[2] - a[2]];
+      const v = [c[0] - a[0], c[1] - a[1], c[2] - a[2]];
+      const n = [u[1] * v[2] - u[2] * v[1], u[2] * v[0] - u[0] * v[2], u[0] * v[1] - u[1] * v[0]];
+      const d = Math.hypot(...n) || 1;
+      for (let k = 0; k < 3; k += 1) {
+        const o = t * 9 + k * 3;
+        const cham = (n[0] / d) * mesh.normals[o]
+          + (n[1] / d) * mesh.normals[o + 1] + (n[2] / d) * mesh.normals[o + 2];
+        if (cham < 0.9999) gop += 1;
+        tong += 1;
+      }
+    }
+    return gop / tong;
+  };
+
+  assert.equal(tyLeGop('box'), 0,
+    'khuôn `box` có đỉnh bị gộp pháp tuyến — hai mặt kề của nó lệch 90°, trên ngưỡng gãy 40°, '
+    + 'nên nó phải giữ nguyên từng byte. Góc gãy bị nới quá tay rồi.');
+  for (const ten of ['prism', 'limb', 'calf', 'chest', 'flare', 'cone', 'dome']) {
+    assert.ok(tyLeGop(ten) > 0.5,
+      `khuôn "${ten}" chỉ gộp ${(tyLeGop(ten) * 100).toFixed(1)}% số đỉnh — một khối tiện tròn nhiều `
+      + 'cạnh phải được gộp gần hết mặt bên. `smoothCrease` có còn được gọi không?');
   }
 });
 
@@ -156,12 +219,21 @@ test('SỐ TAM GIÁC ĐẾM TỪ MẢNG ĐÃ DỰNG, VÀ MỌI KHUÔN PHẢI KH�
   for (const [ten, n] of bang) {
     assert.equal(n, humanShapeMesh(ten).positions.length / 9,
       `khuôn "${ten}": \`shapeTriangles\` và mảng toạ độ đã trôi khỏi nhau`);
-    // ⚠️ TRẦN NÂNG 80 → 160 Ở ADR-057, và đây là một QUYẾT ĐỊNH ĐƯỢC ĐÀM RA CHỨ KHÔNG PHẢI MỘT
-    // CÁI PHỄU (bẫy Phase 9A): *"có thể vẽ thêm tam giác/khối mỗi người tới lúc nó bo tròn"*. Trần
-    // cũ 80 chỉ đủ cho 12 mặt × 2 vành; muốn hết phẳng thì phải có ÍT NHẤT ba vành (một khuôn hai
-    // vành cho ra ĐÚNG MỘT dải sáng dọc dù `sides` bằng bao nhiêu), và ba vành 12 mặt đã là 116.
-    // Sàn 12 giữ nguyên: đó là cái hộp, khuôn rẻ nhất bảng.
-    assert.ok(n >= 12 && n <= 160, `khuôn "${ten}" có ${n} tam giác — ngoài dải hợp lý 12…160`);
+    /*
+      ⚠️ ROUND 54 (ADR-094): TRẦN TRÊN ĐÃ BỎ, SÀN GIỮ NGUYÊN — và chỗ này đáng ghi lại vì nó là
+      lần thứ HAI cùng một con số bị nâng, nên lần này nó được thay bằng một thứ không phải con số.
+      Lịch sử: 80 (trước ADR-057) → 160 (ADR-057, Đàm chốt *"vẽ thêm tam giác tới lúc nó bo
+      tròn"*) → bỏ hẳn (vòng 54, Đàm chốt phong cách Pixar và *"KHÔNG trần số cạnh"*).
+      Một con số bị nâng hai lần vì cùng một lý do là một con số đang làm sai việc.
+
+      Cái trần ấy chỉ có MỘT công dụng thật — "có ai vừa dựng thừa hình học không" — và công dụng
+      ấy đã được canh bởi vế NGAY TRÊN, chặt hơn nhiều: `shapeTriangles(ten)` phải bằng ĐÚNG số
+      tam giác đếm từ mảng toạ độ đã dựng. Đó là một ĐẲNG THỨC, không phải một ngưỡng: nó đỏ khi
+      hai bên lệch nhau dù một tam giác, ở mọi số cạnh, mãi mãi, và không bao giờ phải nâng.
+      Sàn 12 thì giữ: đó là cái hộp, khuôn rẻ nhất bảng, và một khuôn dưới 12 tam giác là một khuôn
+      không dựng nổi sáu mặt — tức một lỗi, không phải một lựa chọn.
+    */
+    assert.ok(n >= 12, `khuôn "${ten}" chỉ có ${n} tam giác — không dựng nổi sáu mặt của một cái hộp`);
   }
   // ⚠️ HAI KHUÔN TRÙNG ĐỈNH LÀ MỘT TRỤC CHẾT (bài học Phase 11). Nó không làm gì hỏng, nó chỉ tiêu
   // một lệnh vẽ để dựng lại một khối đã có — và không có gì đỏ lên.

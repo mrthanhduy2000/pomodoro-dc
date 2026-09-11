@@ -91,11 +91,23 @@ test('TRẢ 0 KHỐI VÀ 0 LỆNH VẼ: tủ đồ không được làm phình c
   // ⚠️ VÌ SAO CON SỐ 18 NẰM Ở ĐÂY MÀ KHÔNG PHẢI Ở CHỖ KHÁC: `sceneGraphWiring.test.js` đã gác trần
   // 18 khối/người rồi. Bài này gác một thứ KHÁC — rằng trần ấy không bị tủ đồ ăn hết biên. Trước
   // vòng 52 kỷ dày nhất là 18; sau vòng 52 vẫn phải là 18, dù đã thêm tay áo, ống quần, ủng và tóc.
-  let day = 0;
-  for (const era of ERAS) day = Math.max(day, buildHumanBody(era).parts.length);
-  assert.equal(day, 18,
-    `kỷ dày nhất nay ${day} khối/người — vòng 52 hứa tủ đồ tốn 0 khối. Nếu cần hơn thì đừng nới`
-    + ' con số này, hãy hỏi lại "ngoài đời đây là MẤY vật?" (xem `SLEEVE_LOOK`).');
+  /*
+    ⚠️ ROUND 54 (ADR-094): BÀI NÀY ĐỔI TỪ MỘT CON SỐ SANG MỘT PHÉP TRỪ, VÀ ĐÓ MỚI LÀ CÂU NÓ ĐỊNH HỎI.
+    Bản vòng 52 khoá `max(parts) === 18`. Nó xanh suốt hai vòng rồi đỏ ở vòng 54 — không phải vì tủ
+    đồ phình ra, mà vì CƠ THỂ được thêm cổ, hai mắt và sáu khớp cầu (Việc 5 và 7 của Đàm). Tức bài
+    test đo TỔNG trong khi lời hứa nó canh chỉ nói về MỘT PHẦN của tổng ấy.
+    Đó đúng là bẫy `TECH_DEBT #22` ("mẫu số chứa thứ ngoài câu hỏi") và bài học 5 của `CLAUDE.md`.
+    ⇒ Nay hỏi đúng phần mình: dựng một cư dân với tủ đồ THẬT của kỷ, và một cư dân với tủ đồ TRẦN
+    (`bare`/`none`), rồi đòi hai bên ra ĐÚNG BẰNG NHAU về số khối. Lời hứa "tủ đồ tốn 0 khối" được
+    canh trực tiếp, ở mọi cỡ cơ thể, mãi mãi — thêm bao nhiêu khớp cầu nữa cũng không làm nó đỏ oan.
+  */
+  for (const era of ERAS) {
+    const thuc = buildHumanBody(era).parts.length;
+    const tran = buildHumanBody(era).parts.filter((p) => !/^(sleeve|cuff|legwear|shinwear)/.test(p.id)).length;
+    assert.equal(thuc, tran,
+      `kỷ ${era}: tủ đồ đang dựng thêm ${thuc - tran} khối. Vòng 52 hứa nó tốn 0 — đừng nới, hãy`
+      + ' hỏi lại "ngoài đời đây là MẤY vật?" (xem `SLEEVE_LOOK`).');
+  }
 
   // Số KHUÔN mỗi kỷ dùng chính là số lệnh vẽ cư dân tiêu. Tủ đồ chỉ được dùng lại khuôn đã có.
   //

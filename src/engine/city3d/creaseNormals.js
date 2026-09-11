@@ -1,5 +1,5 @@
 /**
- * smoothNormals.js — LÀM MỀM PHÁP TUYẾN THEO GÓC GÃY (round 54, ADR-094).
+ * creaseNormals.js — LÀM MỀM PHÁP TUYẾN THEO GÓC GÃY (round 54, ADR-094).
  *
  * ══════════════════════════════════════════════════════════════════════════════════════════════
  * ⚠️ PHÁT HIỆN MỞ ĐƯỜNG CỦA VÒNG 54, VÀ NÓ KHÔNG PHẢI VỀ HÌNH HỌC
@@ -37,6 +37,18 @@
  * trình của một họ vật liệu vào MỘT lưới. Hàn đỉnh trên bộ đệm đã gộp thì hai bức tường của hai
  * căn nhà khác nhau vô tình chạm nhau sẽ được làm mềm VÀO NHAU — một cái góc phố bỗng cong như
  * kẹo. Nên `geometryFactory` gọi hàm này trên đúng khoảng tam giác của MỘT khối vừa phát ra.
+ *
+ * ════════════════════════════════════════════════════════════════════════════════════════════
+ * ⚠️ VÌ SAO FILE NÀY NẰM Ở TẦNG THUẦN (`engine/`) CHỨ KHÔNG Ở `render3d/`
+ * ════════════════════════════════════════════════════════════════════════════════════════════
+ * Bản đầu của vòng 54 đặt nó ở `render3d/`, và bản ấy **bỏ sót đúng thứ Đàm quan tâm nhất**: cư
+ * dân KHÔNG đi qua `geometryFactory`. Họ đi qua `humanShape.js` → `humanGeometry.js` → `InstancedMesh`,
+ * một đường ống hoàn toàn khác. Nên cả thành phố tròn lại còn **người thì vẫn là hai mươi tấm
+ * phẳng** — và tiêu chuẩn nghiệm thu của vòng này là *"tôi nhìn một cư dân ở tầm mắt"*.
+ * ⇒ Luật phải nằm ở tầng mà **cả hai đường ống đều đọc được**, và tầng đó là `engine/city3d/`.
+ * Đây chính là **Composition over Duplication**: một góc gãy, một công thức, hai người gọi.
+ * ⚠️ HÀM NÀY THUẦN VÀ TẤT ĐỊNH — chỉ đọc/ghi hai mảng số, không biết three.js là gì. Đó là điều kiện
+ * để `humanShape.test.js` (tầng thuần, không cần Chromium) chấm đúng cái pháp tuyến trên màn hình.
  */
 
 /**
@@ -56,16 +68,15 @@ export const CREASE_DEGREES = 40;
 const WELD = 1e-4;
 
 /**
- * Làm mềm pháp tuyến cho MỘT khoảng tam giác vừa được ghi vào bể.
+ * Làm mềm pháp tuyến cho MỘT khoảng tam giác — từ `from` đến hết mảng.
  *
- * @param {object} sink  bể tam giác (`sink.pos`, `sink.nor` — mảng phẳng, tam giác rời, 9 số mỗi tam giác)
- * @param {number} from  chỉ số bắt đầu trong `sink.pos` (bội của 9)
+ * @param {number[]|Float32Array} pos  toạ độ đỉnh, tam giác rời, 9 số mỗi tam giác
+ * @param {number[]|Float32Array} nor  pháp tuyến, cùng chiều dài với `pos` — **bị ghi đè tại chỗ**
+ * @param {number} from  chỉ số bắt đầu trong `pos` (bội của 9)
  * @param {number} creaseDeg  góc gãy, độ
  * @returns {number} số đỉnh đã được gộp pháp tuyến (0 = khối này không có gì để làm mềm)
  */
-export function smoothRange(sink, from, creaseDeg = CREASE_DEGREES) {
-  const pos = sink.pos;
-  const nor = sink.nor;
+export function smoothCrease(pos, nor, from = 0, creaseDeg = CREASE_DEGREES) {
   const end = pos.length;
   const count = (end - from) / 3;            // số ĐỈNH trong khoảng
   if (count < 6) return 0;                   // dưới hai tam giác thì không có cạnh chung nào

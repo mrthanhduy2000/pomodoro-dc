@@ -276,7 +276,15 @@ test('HÌNH BÓNG ĐỔI THEO PHA BƯỚC — và mô hình 2 hộp cũ ra ĐÚN
     // *"ngoài đời đây là MẤY vật?"*: cái quần **LÀ** thứ mắt thấy ở chỗ cái chân, nên nó là vai màu
     // và bề ngang của chính khối ấy (`LEG_LOOK` trong `human.js`), không phải một khối thứ hai.
     // ⇒ Nếu bài này đỏ vì một phase sau thêm đồ mặc: **đừng nới 6**, hãy hỏi lại câu trên.
-    assert.equal(chan.length, 6, `kỷ ${era}: phải có đúng 6 khối cụm chân, thấy ${chan.length}`);
+    // ⚠️ TÁM TỪ VÒNG 54 (ADR-094): 6 khối xương + **2 KHỚP CẦU GỐI**, mỗi bên một quả. Khớp cầu
+    // treo vào chính `knee*` nên nó đi theo cẳng chân, tức nó THUỘC cụm chân theo đúng nghĩa phép
+    // đo này dùng — không phải một khối lạc vào.
+    // ⚠️ Và nó PHẢI được tính vào: bỏ nó ra khỏi bộ lọc thì vế bất biến ngay dưới (*"đường bao
+    // ngoài không bao giờ đổi nhiều hơn hai chân"*) sẽ so một đường bao CÓ khớp cầu với một cụm
+    // chân KHÔNG có, tức hai vế đo hai vật khác nhau — đúng cái bẫy "mẫu số chứa thứ ngoài câu
+    // hỏi" mà `CLAUDE.md` đặt thành luật thứ năm.
+    assert.equal(chan.length, 8, `kỷ ${era}: phải có đúng 8 khối cụm chân (6 xương + 2 khớp cầu),`
+      + ` thấy ${chan.length}`);
     const chenhChan = (spanCua(body, chan, cycle * RỘNG) - spanCua(body, chan, cycle * HẸP)) / H;
     const chenhNguoi = (silhouetteSpanX(body, cycle * RỘNG) - silhouetteSpanX(body, cycle * HẸP)) / H;
     banA.push({ era, chenhChan, chenhNguoi });

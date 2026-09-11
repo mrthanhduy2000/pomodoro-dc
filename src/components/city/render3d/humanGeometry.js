@@ -25,11 +25,13 @@ import { humanShapeMesh } from '../../../engine/city3d/humanShape';
 /**
  * Hình học của một khuôn cơ thể, sẵn sàng cho `InstancedMesh`.
  *
- * ⚠️ KHÔNG ĐÁNH CHỈ MỤC — cùng đúng lý do đã ghi ở `geometryFactory.js` và ở chính `humanShape.js`:
- * mỗi mặt giữ bộ đỉnh riêng nên pháp tuyến PHẲNG theo từng mặt. Đây chính là chỗ "giống 3D hơn"
- * đến từ: một khối tám cạnh với pháp tuyến phẳng cho ra tám mức sáng khác nhau dưới cùng một mặt
- * trời, trong khi một cái hộp chỉ cho ba. Bình quân hoá pháp tuyến (dùng chung đỉnh) sẽ làm khối
- * tròn nhũn và mất sạch cạnh bắt sáng — tức mất đúng thứ vừa mua.
+ * ⚠️ KHÔNG ĐÁNH CHỈ MỤC — cùng đúng lý do đã ghi ở `geometryFactory.js` và ở chính `humanShape.js`,
+ * và từ vòng 54 (ADR-094) lý do ấy đã ĐỔI: không phải để giữ pháp tuyến phẳng nữa, mà để
+ * `smoothCrease` có thể cho hai mặt kề hai pháp tuyến KHÁC NHAU tại cùng một điểm — thân trụ tròn
+ * lại trong khi cái nắp vẫn sắc cạnh. Một lưới đánh chỉ mục không làm được việc đó.
+ * ⚠️ VÀ MẢNG `normal` ĐỔ XUỐNG ĐÂY ĐÃ ĐƯỢC LÀM MỀM TỪ TẦNG THUẦN. File này không được tự tính
+ * lại pháp tuyến (`computeVertexNormals()` chẳng hạn): làm thế là ghi đè một luật có góc gãy bằng
+ * một phép bình quân vô điều kiện, và mọi bài test thuần sẽ chấm một cơ thể khác cơ thể trên màn hình.
  *
  * Người gọi chịu trách nhiệm `dispose()`; `sceneGraph.js` đưa nó vào `track()` như mọi hình học khác.
  */

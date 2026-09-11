@@ -57,6 +57,8 @@
  *    khối phình ra ngoài hộp và mọi phép đo hình bóng nói dối theo hướng TRẤN AN.
  */
 
+import { smoothCrease } from './creaseNormals';
+
 /**
  * Tám khuôn. Thứ tự không quan trọng, nhưng danh sách thì phải đủ — `human.js` kiểm theo nó.
  *
@@ -68,6 +70,26 @@
  * *"một trường gánh hai việc"*, chỉ khác là thứ gánh hai việc lần này là một HỒ SƠ HÌNH HỌC.
  * Giá phải trả: đúng **một lệnh vẽ mỗi kỷ** (số lệnh vẽ cư dân = số khuôn kỷ ấy dùng).
  */
+/**
+ * SỐ CẠNH CỦA MỌI KHUÔN TIỆN TRÒN — ROUND 54 (ADR-094), Việc 2.
+ *
+ * ⚠️ 12 → 20, VÀ ĐÂY LÀ NỬA THỨ HAI CỦA CÙNG MỘT CƠ CHẾ VỚI PHÁP TUYẾN MỀM, KHÔNG PHẢI MỘT MÓN
+ * RIÊNG. Pháp tuyến mềm (`smoothNormals.js`) chữa cách TÔ SÁNG: thân trụ thôi hiện ra thành 12 tấm
+ * phẳng. Nhưng nó KHÔNG chạm được vào **ĐƯỜNG VIỀN NGOÀI** — hình bóng của một khối 12 cạnh vẫn
+ * gãy đúng 12 nhịp, và đường viền mới là thứ mắt dùng để đọc ra hình dạng. Hai việc, hai chỗ chữa.
+ *
+ * ⚠️ VÀ NÓ AN TOÀN VỚI HÌNH BAO THEO ĐÚNG HƯỚNG NGƯỢC VỚI TRỰC GIÁC — điều phải nói ra, vì luật số
+ * một của vòng 54 là *"cẩn thận `specSpan`, đây là lần thứ tư cùng một hình dạng"*. Quy ước của
+ * file này là **bề rộng đo NGANG MẶT PHẲNG = 1,0**, nên bán kính ngoại tiếp là `0,5 / cos(π/n)`:
+ *     12 cạnh → 0,51764     20 cạnh → 0,50623     24 cạnh → 0,50431
+ * Thêm cạnh làm khối **NHỎ ĐI** một chút, không to ra. Hình bao chỉ có thể co lại.
+ *
+ * ⚠️ 20 CHỨ KHÔNG PHẢI 24: ở 20 cạnh, hai mặt kề lệch 18° — đã dưới ngưỡng gãy 40° nên mềm hoàn
+ * toàn, và viền ngoài của một cái đầu ở cỡ 40 điểm ảnh thì 20 nhịp đã dưới một điểm ảnh mỗi nhịp.
+ * 24 chỉ thêm tam giác mà không thêm gì mắt đọc được.
+ */
+const ROUND_SIDES = 20;
+
 export const HUMAN_SHAPES = ['box', 'prism', 'limb', 'calf', 'chest', 'flare', 'cone', 'dome', 'hat'];
 
 /**
@@ -87,9 +109,15 @@ export const HUMAN_SHAPES = ['box', 'prism', 'limb', 'calf', 'chest', 'flare', '
  * một điểm đổi chiều, và là lý do bản trước (mỗi khuôn hai vành) vẫn bị đọc ra là "ảnh phẳng" dù
  * đã bỏ hộp.
  *
- * ⚠️ VÀ KHÔNG ĐƯỢC LÀM MƯỢT ĐI. Cám dỗ tiếp theo luôn là "thêm mười vành cho nó tròn hẳn". Làm thế
- * là mất hết cạnh bắt sáng và khối trở nên tròn nhũn, đúng thất bại đã ghi ở `geometryFactory.js`:
- * "giống 3D hơn" ở đây đến từ SỐ MẶT BẮT SÁNG KHÁC NHAU, không đến từ độ mượt.
+ * ⚠️ VÀ KHÔNG ĐƯỢC LÀM MƯỢT ĐI **BẰNG CÁCH THÊM VÀNH**. Cám dỗ tiếp theo luôn là "thêm mười vành
+ * cho nó tròn hẳn" — tức trả tam giác để mua độ cong, và đổi lại là những chỗ đổi chiều bị san
+ * phẳng: khối tròn nhũn, mất đúng thứ vừa mua.
+ * ⚠️ NHƯNG TỪ VÒNG 54, CÂU TRÊN KHÔNG CÒN NÓI VỀ PHÁP TUYẾN NỮA — đọc kỹ chỗ này trước khi
+ * sửa gì. `humanShapeMesh` nay gọi `smoothCrease`: pháp tuyến được gộp **theo góc gãy 40°**, không
+ * đổi một toạ độ nào và không thêm một vành nào. Hai chuyện khác hẳn nhau: thêm vành là trả
+ * TAM GIÁC, làm mềm là sửa CÁCH TÔ SÁNG của đúng số tam giác đang có. Các chỗ đổi chiều bên dưới
+ * vì thế **quan trọng hơn trước**, không phải ít hơn: chúng vẫn là thứ sinh ra các dải sáng, chỉ là
+ * ranh giới giữa hai dải nay chuyển mềm thay vì gãy thành một cạnh.
  */
 const PROFILES = {
   /**
@@ -105,7 +133,7 @@ const PROFILES = {
    * dải sáng dọc dù có bao nhiêu cạnh đi nữa (xem chú thích "số vành" ở trên); ba vành với một chỗ
    * phình cho ba dải. Cái phình 6% ấy không đọc ra là "cái thùng", nó chỉ làm mất vẻ ống nhựa.
    */
-  prism: { sides: 12, rings: [[-0.5, 0.94], [0, 1.00], [0.5, 0.94]] },
+  prism: { sides: ROUND_SIDES, rings: [[-0.5, 0.94], [0, 1.00], [0.5, 0.94]] },
 
   /**
    * ĐOẠN CHI TRÊN — **ĐÙI** hoặc **CÁNH TAY TRÊN**. Đầu to ở khớp gốc (hông / vai), thon xuống
@@ -122,7 +150,7 @@ const PROFILES = {
    * hình củ cải.
    */
   limb: {
-    sides: 12,
+    sides: ROUND_SIDES,
     rings: [[-0.5, 0.70], [-0.18, 0.62], [0.12, 0.92], [0.34, 1.00], [0.50, 0.88]],
   },
 
@@ -138,7 +166,7 @@ const PROFILES = {
    * một phần tư cơ thể. Đó là chỗ mà "trông 3D" thật sự được mua.
    */
   calf: {
-    sides: 12,
+    sides: ROUND_SIDES,
     rings: [[-0.5, 0.44], [-0.22, 0.63], [0.02, 1.00], [0.28, 0.74], [0.50, 0.90]],
   },
 
@@ -152,7 +180,7 @@ const PROFILES = {
    * đúng thứ "ô vuông" đập vào mắt trước tiên, và nó không biến mất chỉ vì thành phẳng bên đã tròn.
    */
   chest: {
-    sides: 12,
+    sides: ROUND_SIDES,
     rings: [[-0.5, 0.80], [-0.20, 0.72], [0.10, 0.96], [0.32, 1.00], [0.50, 0.78]],
   },
 
@@ -163,8 +191,9 @@ const PROFILES = {
    * thứ đã có, một trục chết mang dáng một cải tiến.
    */
   flare: {
-    sides: 12,
+    sides: ROUND_SIDES,
     rings: [[-0.5, 1.00], [-0.24, 0.88], [0.02, 0.74], [0.28, 0.64], [0.50, 0.55]],
+    folds: true,
   },
 
   /**
@@ -176,7 +205,7 @@ const PROFILES = {
    * cái phễu.
    */
   cone: {
-    sides: 12,
+    sides: ROUND_SIDES,
     rings: [[-0.5, 1.00], [-0.20, 0.68], [0.06, 0.44], [0.30, 0.24], [0.50, 0]],
   },
 
@@ -190,7 +219,7 @@ const PROFILES = {
    * điểm ảnh của cả cơ thể.
    */
   dome: {
-    sides: 12,
+    sides: ROUND_SIDES,
     rings: [[-0.5, 0.60], [-0.28, 0.84], [-0.02, 1.00], [0.20, 0.92], [0.38, 0.74], [0.50, 0.40]],
   },
 
@@ -210,10 +239,49 @@ const PROFILES = {
    * ⚠️ CHỎM PHẢI RỘNG HƠN CÁI ĐẦU (0,62 × bề rộng vành = 1,18 × `headW` với vành 1,9 `headW`).
    */
   hat: {
-    sides: 12,
+    sides: ROUND_SIDES,
     rings: [[-0.5, 1.00], [-0.40, 1.00], [-0.36, 0.62], [0.04, 0.60], [0.28, 0.54], [0.50, 0.44]],
   },
 };
+
+/*
+  ══════════════════════════════════════════════════════════════════════════════════════════════
+  NẾP GẤP VÀ GẤU CONG — ROUND 54 (ADR-094), VIỆC 6: *"vải phải ra VẢI: xoè, có nếp mềm, gấu cong"*.
+  ══════════════════════════════════════════════════════════════════════════════════════════════
+  Trước vòng này mọi tấm vải buông — áo chùng, áo choàng, tay áo thụng — đều là một mặt tròn xoay
+  HOÀN HẢO. Một hình nón cụt tròn tuyệt đối thì không phải vải; nó là kim loại dập. Vải thật có
+  hai dấu hiệu mắt đọc được ở cỡ này, và chỉ hai: **nếp chạy dọc** và **gấu không phẳng**.
+
+  ⚠️ VÌ SAO KHÔNG DÙNG `cos(k·θ)` — CÁI CỔNG ĐÃ CHỈ RA MỘT THIẾT KẾ ĐÚNG HƠN, LẦN THỨ BA.
+  Cách hiển nhiên là nhân bán kính với `1 + biên·cos(k·θ)`. Nó **phá bất biến hộp đơn vị**:
+  bài *"MỌI KHUÔN NẰM GỌN TRONG HỘP ĐƠN VỊ … và chạm ĐÚNG mép"* đòi trải đúng [−0,5, 0,5] trên cả
+  ba trục, vì `humanPose.partCornersAt` và `silhouetteSpanX` đều tính từ TÁM ĐỈNH CỦA HỘP. Ở 20
+  cạnh, đỉnh xa nhất theo x và z rơi đúng vào `j mod 5 ∈ {0, 4}` — một cái cô-sin liên tục không
+  thể bằng đúng 1 ở cả tám đỉnh ấy, nên nó sẽ làm khối HẸP ĐI vài phần nghìn và mọi phép đo hình
+  bóng bắt đầu nói dối — êm ả, không triệu chứng.
+  ⇒ Nếp vì thế khai bằng MỘT BẢNG THEO `j`, với **sống nếp đặt đúng vào tám đỉnh mép** (hệ số 1,00
+  ở `j mod 5 ∈ {0, 4}`) và rãnh nếp nằm giữa. Hình bao **không đổi một chữ số nào**, và ta được
+  bốn nếp dọc miễn phí. Đây đúng bài học đã cứu cái mũ vành và tay áo vòng 52: **khi một cái cổng
+  chặn lại, hãy để nó chỉ ra một thiết kế đúng hơn** thay vì đi vòng qua nó.
+
+  ⚠️ GẤU CONG CŨNG PHẢI CHẠM ĐÚNG −0,5. Bảng `HEM_DROP` đo từ đáy lên, nên chỗ thấp nhất của gấu
+  (hệ số 0) vẫn nằm đúng trên mặt đáy hộp, còn chỗ cao nhất thì vén lên — đúng chiều của một tấm
+  vải đang buông. Gấu vén cao nhất ở SỐNG nếp (chỗ vải bị kéo căng) và xõa xuống ở RÃNH.
+
+  ⚠️ VÀ NẾP CHỈ RÕ Ở GẤU, TAN DẦN LÊN TRÊN (`w` dưới đây). Vải được thắt ở trên (thắt lưng, khuỷu
+  tay) và tự do ở dưới; nếp đều từ trên xuống dưới là một cái ống xếp ly, không phải một tấm vải.
+
+  ⚠️ `flare` CÒN ĐƯỢC DÙNG CHO CÁI VÒ MANG TRÊN ĐẦU, VÀ ĐÓ LÀ CỐ Ý ĐỂ NGUYÊN: một cái vò gốm có
+  bốn múi mềm là hình đúng của đồ gốm nặn tay, và Việc 11 của chính vòng này cũng đặt hàng
+  *"cái vò tròn"*. Không tách thêm một khuôn nữa chỉ để cái vò khỏi có nếp — thêm khuôn là thêm
+  đúng một lệnh vẽ cho mọi kỷ dùng cả hai (xem `humanShapesUsed`).
+*/
+/** Hệ số bán kính theo `j mod 5`. 1,00 = sống nếp (phải rơi đúng tám đỉnh mép), 0,93 = đáy rãnh. */
+const FOLD_RADIUS = [1.00, 0.965, 0.93, 0.965, 1.00];
+/** Gấu vén lên bao nhiêu phần chiều cao, theo `j mod 5`. 0 = chỗ thấp nhất, chạm đúng đáy hộp. */
+const HEM_DROP = [0.055, 0.030, 0, 0.030, 0.055];
+/** Chu kỳ của hai bảng trên. `ROUND_SIDES` phải chia hết cho nó, không thì nếp bị lệch mối. */
+const FOLD_PERIOD = FOLD_RADIUS.length;
 
 /** Bán kính ngoại tiếp cho quy ước "bề rộng đo ngang mặt phẳng = 1,0". Xem QUY ƯỚC mục 1. */
 function circumradius(sides) {
@@ -243,11 +311,12 @@ const CACHE = new Map();
 /**
  * Toạ độ của một khuôn: `{ positions, normals, triangles }`, KHÔNG đánh chỉ mục.
  *
- * ⚠️ KHÔNG ĐÁNH CHỈ MỤC LÀ CỐ Ý, cùng đúng lý do đã ghi ở `geometryFactory.js`: mỗi mặt có bộ đỉnh
- * riêng nên pháp tuyến PHẲNG theo từng mặt. Dùng chung đỉnh sẽ bình quân hoá pháp tuyến, khối trở
- * nên tròn nhũn và mất hết cạnh bắt sáng — mà chính những cạnh bắt sáng ấy mới là thứ làm một khối
- * tám cạnh đọc ra là KHỐI chứ không phải một vệt màu. "Giống 3D hơn" ở đây đến từ số lượng mặt bắt
- * sáng khác nhau, không đến từ độ mượt.
+ * ⚠️ KHÔNG ĐÁNH CHỈ MỤC LÀ CỐ Ý, và từ vòng 54 lý do đã ĐỔI — đừng đọc câu cũ ở đây nữa.
+ * Lý do cũ: giữ pháp tuyến phẳng theo từng mặt. Lý do NAY: **`smoothCrease` cần mỗi mặt có bộ đỉnh
+ * riêng để có thể cho hai mặt kề hai pháp tuyến KHÁC NHAU tại cùng một điểm** — đúng điều một
+ * lưới đánh chỉ mục KHÔNG làm được. Đó là cách một cái nắp vẫn sắc cạnh trong khi thân trụ ngay
+ * bên dưới đã tròn. Dùng chung đỉnh thì mọi cạnh đều bị bình quân hoá vô điều kiện, và cả hộp
+ * lẫn nắp đều tròn nhũn.
  *
  * ⚠️ SỐ TAM GIÁC ĐẾM TỪ CHÍNH MẢNG VỪA DỰNG (`positions.length / 9`), tuyệt đối KHÔNG từ một công
  * thức song song. Dự án đã trả giá đúng chỗ này ở `countTriangles` (`parts.js`): một chú thích tự
@@ -261,17 +330,31 @@ export function humanShapeMesh(name) {
   const profile = PROFILES[name];
   if (!profile) throw new Error(`humanShapeMesh: khuôn lạ "${name}"`);
 
-  const { sides, rings } = profile;
+  const { sides, rings, folds = false } = profile;
   const R = circumradius(sides);
   const pos = [];
   const nor = [];
+
+  // ⚠️ NẾP TẤT ĐỊNH TẮP LỰ: cả hai bảng đều tra theo `j`, không có một `Math.random` nào. Cùng một
+  // khuôn luôn ra cùng một bộ số, vĩnh viễn (bất biến bảo tàng — một kỷ đã niêm phong phải hiện
+  // lại y nguyên sau năm năm).
+  if (folds && sides % FOLD_PERIOD !== 0) {
+    throw new Error(`humanShapeMesh: ${sides} cạnh không chia hết cho chu kỳ nếp ${FOLD_PERIOD}`);
+  }
+  const cao = rings[rings.length - 1][0] - rings[0][0];
 
   /** Đỉnh thứ `j` của vành thứ `i`. `r = 0` ⇒ mũi nhọn trên trục. */
   const vert = (i, j) => {
     const [y, r] = rings[i];
     if (r === 0) return [0, y, 0];
     const ang = ((j % sides) + 0.5) * ((Math.PI * 2) / sides);
-    return [R * r * Math.cos(ang), y, R * r * Math.sin(ang)];
+    if (!folds) return [R * r * Math.cos(ang), y, R * r * Math.sin(ang)];
+    // `w` = 1 ở gấu, 0 ở mép trên: nếp rõ dần theo chiều vải buông xuống.
+    const w = cao > 0 ? (rings[rings.length - 1][0] - y) / cao : 0;
+    const k = (j % sides) % FOLD_PERIOD;
+    const rr = r * (1 - w * (1 - FOLD_RADIUS[k]));
+    const yy = i === 0 ? y + cao * HEM_DROP[k] : y;
+    return [R * rr * Math.cos(ang), yy, R * rr * Math.sin(ang)];
   };
 
   // ── Mặt bên ────────────────────────────────────────────────────────────────
@@ -304,6 +387,23 @@ export function humanShapeMesh(name) {
       pushTri(pos, nor, vert(top, 0), vert(top, j + 1), vert(top, j));
     }
   }
+
+  /*
+    ⚠️ LÀM MỀM PHÁP TUYẾN THEO GÓC GÃY — ROUND 54 (ADR-094), VIỆC 1, VÀ ĐÂY LÀ DÒNG QUAN
+    TRỌNG NHẤT MÀ VÒNG NÀY THÊM VÀO CƠ THỂ NGƯỜI.
+    Khối đã cong từ ADR-057 — mọi hồ sơ trên đều là một đường sinh nhiều vành. Thứ làm chúng
+    hiện lên thành gỗ ghép là `pushTri`: nó ghi MỘT pháp tuyến phẳng cho cả tam giác, nên một
+    thân người 20 cạnh hiện ra đúng 20 tấm phẳng dù đỉnh của nó nằm trên một đường tròn.
+    ⇒ Không thêm một tam giác nào mà đổi toàn bộ cơ thể của cả 15 kỷ.
+
+    ⚠️ CHÚ THÍCH CŨ Ở ĐẦU FILE NÓI NGƯỢC LẠI — *"KHÔNG ĐƯỢC LÀM MƯỢT ĐI … sẽ mất hết cạnh
+    bắt sáng"* — và câu ấy ĐÚ NG Ở thời của nó, với một lý do phải giữ lại: nó nói về việc
+    **thêm vành cho mượt đường sinh**, tức trả tam giác để mua độ cong — và lúc ấy làm mềm là
+    đánh đổi thật. Phép này khác hẳn: nó không đổi một toạ độ nào, không thêm một vành nào, và
+    chỉ gộp những mặt **dưới 40°** — cạnh thật (mặt bên gặp nắp: 90°; hai mặt của `box`: 90°;
+    vành mũ gặp chỏm) vẫn sắc nguyên. `box` vì thế **không đổi một byte nào**.
+  */
+  smoothCrease(pos, nor);
 
   const out = { positions: pos, normals: nor, triangles: pos.length / 9 };
   CACHE.set(name, out);

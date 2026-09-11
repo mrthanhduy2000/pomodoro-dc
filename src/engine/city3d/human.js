@@ -672,8 +672,12 @@ export function buildHumanBody(era) {
       ⚠️ Treo vào khớp `head` chứ không vào `torso`: đầu nhìn quanh thì cổ phải đi theo, nếu không
       thì đầu quay còn cổ đứng yên và ta được một cái lỗ.
     */
+    // ⚠️ 0,46 → 0,38 BỀ NGANG (sửa theo ảnh, cùng lượt với vai màu khớp cầu): ở 0,46 cái cổ rộng
+    // gần bằng nửa cái đầu, và từ camera chếch 34° nó hiện ra thành một VÀNH SÁNG chạy quanh chân
+    // đầu — đọc ra là cái cổ áo trắng, không đọc ra cái cổ. Một cái cổ thật rộng khoảng một phần ba
+    // đầu. Hạ thêm xuống (−0,17 thay vì −0,13) để phần dưới khuất vào trong thân.
     piece('neck', 'skin', 'limb', 'head',
-      [d.headW * 0.46, d.headH * 0.34, d.headW * 0.46], [0, -d.headH * 0.13, 0]),
+      [d.headW * 0.38, d.headH * 0.34, d.headW * 0.38], [0, -d.headH * 0.17, 0]),
     piece('head', 'skin', 'dome', 'head', [d.headW, d.headH, d.headW], [0, d.headH * 0.5, 0]),
     /*
       ⚠️ HAI CON MẮT — VIỆC 7, VÀ ĐÂY LÀ TOÀN BỘ "KHUÔN MẶT". Đàm nói thẳng: *"kiểu hoạt hình không
@@ -732,12 +736,26 @@ export function buildHumanBody(era) {
     ⚠️ `dome` CHỨ KHÔNG PHẢI MỘT KHUÔN CẦU MỚI: `dome` kỷ nào cũng đã vẽ (cái đầu), nên sáu khớp
     tốn **0 lệnh vẽ**. Cùng lý lẽ với hai bàn tay ở ADR-057.
   */
-  const ball = (id, joint, w, atY) => piece(id, 'skin', 'dome', joint,
-    [w * 1.04, w * 1.04, w * 1.04], [0, atY, 0]);
+  /*
+    ⚠️ KHỚP MANG VAI MÀU CỦA ĐOẠN CHI NÓ NỐI, KHÔNG CỨNG `skin` — VÀ ĐÂY LÀ MỘT LỖI ĐÃ BỊ ẢNH BẮT.
+    Bản đầu của vòng 54 cho cả sáu quả cầu vai `skin`. Ảnh cận cảnh kỷ 12 (quân phục xanh sẫm, tay
+    áo dài) cho ra **sáu chấm sáng trắng nằm trên tay áo** — mắt đọc ra sáu cái đinh tán, không đọc
+    ra cái khớp. Đúng khuyết tật *"hai cái que trắng vung hai bên một khối vải"* mà `SLEEVE_LOOK`
+    sinh ra ở vòng 52 để chữa, chỉ là lần này nó quay lại ở chỗ cái khớp.
+    ⇒ Luật đã có sẵn trong chính file này, ở ngay bàn chân: **một khối phụ mang vai màu của khối
+    chính mà nó dính vào.** Vai (`shoulder`) lấy màu cánh tay TRÊN, khuỷu lấy màu CẲNG TAY, gối lấy
+    màu CẲNG CHÂN. Ở kỷ tay áo ngắn, khuỷu chính là đường cắt giữa vải và da — lấy màu cẳng tay là
+    lấy đúng phía DA, tức cái khớp nằm đúng bên dưới mép tay áo, y như ngoài đời.
+    ⚠️ VÀ NÓ KHÔNG TỐN THÊM GÌ: mọi vai màu dùng ở đây đều đã có mặt trên chính cái chi ấy.
+  */
+  const ball = (id, role, joint, w) => piece(id, role, 'dome', joint,
+    [w * 1.04, w * 1.04, w * 1.04], [0, 0, 0]);
   for (const side of ['L', 'R']) {
-    parts.push(ball(`shoulderBall${side}`, `shoulder${side}`, d.limbW * sv.upW, 0));
-    parts.push(ball(`elbowBall${side}`, `elbow${side}`, d.limbW * Math.max(sv.loW, sv.upW * 0.8), 0));
-    parts.push(ball(`kneeBall${side}`, `knee${side}`, d.limbW * Math.max(lg.loW, lg.upW * 0.8), 0));
+    parts.push(ball(`shoulderBall${side}`, sv.upRole, `shoulder${side}`, d.limbW * sv.upW));
+    parts.push(ball(`elbowBall${side}`, sv.loRole, `elbow${side}`,
+      d.limbW * Math.max(sv.loW, sv.upW * 0.8)));
+    parts.push(ball(`kneeBall${side}`, lg.loRole, `knee${side}`,
+      d.limbW * Math.max(lg.loW, lg.upW * 0.8)));
   }
 
   const garment = garmentPiece(style.garment, d);

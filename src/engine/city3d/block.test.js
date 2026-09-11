@@ -470,22 +470,34 @@ test('CHI TIẾT MÁI KHÔNG ĐƯỢC CHẾT — và danh sách kỷ mất một
 // have no street numbering, no window boxes and no shopfronts, so their vocabulary gained nothing —
 // and their digests are byte-identical to round 50's. A re-base that moved all fifteen would have
 // meant the change leaked somewhere it was not meant to go.
+// ⚠️ ROUND 53 (ADR-093): THÁI LẠI 13/15, VÀ HAI KỶ ĐỨNG YÊN CHÍNH LÀ BẰNG CHỨNG.
+// Mọi ô cửa sổ của thành phố thành MỘT CÁI HỐC có hai má cửa đứng, lanh tô, bệ có giọt nước, nan
+// chia ô, và (tùy kỷ) song sắt, cánh chớp, mái hắt — xem `windowOpening.js`. Kỷ 1 (Göbekli Tepe) và
+// kỷ 2 (Ai Cập) khai `windows: 'none'`, nên chữ ký của chúng PHẢI byte-y-hệt — và chúng đúng như vậy.
+// ⚠️ CẬP NHẬT CUỐI VÒNG: 14/15 đổi, và CHỈ KỶ 1 đứng yên. Ngoài bộ hốc cửa sổ, vòng 53 còn thêm
+// **TRỤ ÁP TƯỞNG** (Việc 3) — một trục ĐỨNG trên mặt tường, đối xứng với ba đường NGANG đã có
+// từ Phase 8A. Trụ không phụ thuộc cửa sổ, nên kỷ 2 (Ai Cập, `windows: 'none'`) cũng đổi — đúng như
+// mong đợi. Kỷ 1 đứng yên vì mọi khối của nó hoặc là `mass.low` hoặc thấp hơn ngưỡng một tầng.
+// ⚠️ VÀ MỘT CHỮ KÝ KHÔNG ĐỔI CŨNG LÀ DỮ LIỆU. Lần chạy đầu, kỷ 14 và 15 cũng đứng yên — nhưng hai
+// kỷ ấy CÓ cửa sổ, chỉ là chúng đi nhánh "dải kính liền" nên không chạy qua `emitOpening`. Đó là
+// một LỖ HỔNG, không phải một phạm vi được kiềm chế, và `emitGlassBand` sinh ra để vá nó. Đọc bảng
+// này theo CẢ HAI chiều: kỷ nào đổi, và kỷ nào ĐÁNG Lẽ phải đổi mà không.
 const GOLDEN = {
   1: '231d3db716d9c91bf8af8b10eca02471',
-  2: '7ca5b1bf68e3dc9328de2d679bda211f',
-  3: '90e3b135478b2ea0ccce32c33ba8c553',
-  4: '8883f94cb2a28a83e386435e8f2924e6',
-  5: '908fbe83311bc86fffedd86d31787886',
-  6: '2fe3bab7b95adad55eb09d13478aa7bb',
-  7: 'bbd4c147ad13dbc68e4db6a91ffd1e8b',
-  8: '49ff31ebf2ca81d708415847aee43968',
-  9: 'bc15405fbe2babe468bebd49a97c0122',
-  10: 'f365aee2fe5b29d25d4f24f5e5884143',
-  11: 'fdf9e5fc9c6637f24c30ded9f96fafae',
-  12: '255599c271123fe89290be04f88cd6c2',
-  13: '7bfdf254723a6e6976388710d7edc791',
-  14: 'c52c60cd0dc9bd0ebf4165ef08629122',
-  15: '193b73b98894640a23256f1e003d8442',
+  2: '1dd12ee2d0a1be81c67fbb67cb9437d8',
+  3: '8e2ab6e4cae586d3f6f150d7aa3b2029',
+  4: '4b86731192d19516a9360b7dc71890ae',
+  5: '56b00f5cac76b87d268c47b78c28ba9b',
+  6: 'a97061cf5842e397ce5243944eacd7ef',
+  7: 'e695a3000a966d735d8d70377312089d',
+  8: '141987ae5f5763e20a56c3f0a00298f6',
+  9: '07c7478f57a3050bd9cefde565df92c5',
+  10: '8de77726555fd9a04716af097940a403',
+  11: 'db37b03b1b798190f5420852f315fca0',
+  12: '46367dc98da3a4d9b6cd3e60928b8347',
+  13: 'c582a58f3f1fa83104b5a8ea1b9a6460',
+  14: '8d095a81ba06f4dfefcc7d8767d61624',
+  15: 'ff7c4324f3b7a6a932306c5e9fac738a',
 };
 
 test('GOLDEN — thêm tham số `plot` KHÔNG được đổi một chữ số nào của lối gọi cũ', () => {

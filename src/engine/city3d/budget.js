@@ -20,17 +20,34 @@ import { countSpecTriangles } from './parts';
  * Trần tam giác cho MỘT công trình. Kỳ quan cấp 3 là ca nặng nhất.
  * Vượt ngưỡng = chi tiết đã vượt khỏi mức mắt phân biệt được ở cỡ hiển thị thật.
  */
-// ⚠️ ROUND 47 (ADR-087): 8000 → 12000. Rounded corners and wider bevels (parts.js) lift the heaviest
-// wonder (Palazzo, era 7) from 6.912 to ~8.500. Geometry is nearly free on the real hardware
-// (`PERFORMANCE.md`: 43 % more triangles cost 2,4 % more time); Đàm's order for the round was
-// "đừng tiết kiệm tam giác — tiết kiệm sai chỗ là lý do thành phố đang vuông".
-export const MAX_TRIANGLES_PER_BUILDING = 12000;
+/*
+  ══════════════════════════════════════════════════════════════════════════════════════════════
+  ⚠️ ROUND 53 (ADR-093) — BA CON SỐ DƯỚI ĐÂY THÔI LÀM CỔNG, CHÚNG THÀNH MÁY DÒ CHẠY LOẠN
+  ══════════════════════════════════════════════════════════════════════════════════════════════
+  Đàm gỡ trần tam giác bằng lời, ba vòng liên tiếp, và vòng 53 nói rõ nhất:
+
+    *"HÌNH HỌC GẦN NHƯ MIỄN PHÍ — đã đo từ vòng 47 và chưa ai bác: 43% chênh lệch tam giác giữa
+    hai kỷ chỉ đổi 2,4% thời gian. Đừng tiếc tam giác. Thành phố trông 'low' vì có người tiết kiệm
+    nhầm chỗ, không phải vì máy yếu."*
+    *"KHÔNG đo hiệu năng. KHÔNG trần tam giác. KHÔNG trần khối/người. KHÔNG trần lệnh vẽ."*
+
+  ⚠️ NHƯNG KHÔNG XOÁ PHÉP ĐO, VÀ ĐÂY LÀ CHỖ DỄ LÀM SAI NHẤT. Một cái trần làm HAI việc khác nhau:
+    (a) *"chi tiết đã vượt mức mắt phân biệt được"* — một quyết định THIẾT KẾ, và Đàm đã bác nó;
+    (b) *"có ai đó vừa lồng nhầm một vòng lặp"* — một cái lưới bắt LỖI, và nó vẫn cần thiết.
+  Xoá cả hai là vứt (b) đi cùng với (a). Nên các con số nay đặt ở mức **mười lần** mức thật: chúng
+  không còn chặn một bản vá làm đẹp, mà vẫn đỏ ngay nếu một khối được dựng gấp trăm lần cần thiết.
+
+  ⚠️ VÀ CÁI LƯỚI THẬT KHÔNG PHẢI CON SỐ NÀY. Nó là bài *"không công trình nào là ca đặc biệt"* ở
+  `buildingSpec.test.js`: một QUAN HỆ (công trình nặng nhất so với trung vị của chính kỷ ấy), nên
+  nó không bao giờ phải nâng, và nó bắt được chạy loạn kể cả khi cả thành phố cùng nặng lên.
+*/
+export const MAX_TRIANGLES_PER_BUILDING = 120000;
 
 /**
  * Trần tam giác cho toàn bộ công trình của MỘT thành phố (5 bản vẽ, tất cả cấp 3).
  * Đây là con số quyết định máy có nóng không, vì nó còn bị vẽ LẦN THỨ HAI khi dựng bản đồ bóng đổ.
  */
-export const MAX_TRIANGLES_PER_CITY = 24000;
+export const MAX_TRIANGLES_PER_CITY = 240000;
 
 /**
  * Trần cho toàn cảnh: công trình + nền + đường + cảnh vật + cư dân.
@@ -38,7 +55,7 @@ export const MAX_TRIANGLES_PER_CITY = 24000;
  * gợi ý — một lệnh vẽ cho cả trăm thực thể. Ngưỡng này vẫn tính đủ chúng để phòng trường hợp
  * sau này có ai đó bỏ instancing đi.
  */
-export const MAX_TRIANGLES_PER_SCENE = 60000;
+export const MAX_TRIANGLES_PER_SCENE = 600000;
 
 /** Tổng tam giác của một danh sách mô tả (mỗi phần tử có `.parts` hoặc chính là mảng khối). */
 export function specTriangles(spec) {

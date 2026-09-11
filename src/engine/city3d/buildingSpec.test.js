@@ -327,6 +327,59 @@ test('NGÂN SÁCH: không công trình nào vượt trần tam giác', () => {
   console.log(`   [ngân sách] công trình nặng nhất: ${worst.id} — ${describeBudget(worst.tris, MAX_TRIANGLES_PER_BUILDING)}`);
 });
 
+/**
+ * ⚠️ ROUND 53 (ADR-093) — CÁI LƯỚI THẬT SAU KHI TRẦN TAM GIÁC BỊ GỠ.
+ *
+ * Hai bài "vượt trần" ở trên nay đặt ngưỡng gấp mười lần mức thật (xem khối chú thích của
+ * `budget.js`): chúng chỉ còn bắt được một lần lồng nhầm vòng lặp, không còn chặn một bản vá làm
+ * đẹp — đúng lệnh của Đàm, ba vòng liên tiếp.
+ *
+ * Nhưng một ngưỡng TUYỆT ĐỐI gấp mười thì cũng gần như không bao giờ đỏ, kể cả khi có lỗi thật:
+ * một emitter dựng thừa gấp ba vẫn lọt. Bài này hỏi một câu KHÁC HẲN, và là câu không bao giờ
+ * phải nâng vì nó là một QUAN HỆ:
+ *
+ *     *"trong cùng một kỷ, công trình nặng nhất có phải một CA ĐẶC BIỆT không?"*
+ *
+ * Cả thành phố cùng nặng lên (đúng thứ vòng 53 làm) thì trung vị cũng lên theo và tỉ lệ đứng yên.
+ * Một emitter chạy loạn ở đúng một nguyên mẫu thì tỉ lệ ấy vọt lên — và đó chính là hình dạng của
+ * lỗi mà một cái trần tuyệt đối bắt được, chỉ khác là bài này bắt được ở MỌI mức tổng thể.
+ *
+ * ⚠️ VÀ VẾ THỨ HAI MỚI LÀ VẾ HAY BỊ QUÊN: một công trình dựng ra **0 tam giác** cũng là lỗi, và nó
+ * lọt qua mọi cái trần trên đời. Vòng 51 đã trả giá đúng chuyện này — `emitWonderEntrance` chạy 15
+ * kỷ ra 0 cổng với toàn bộ bộ test xanh (bài học 112). Sàn ở đây là cái vé vào cửa.
+ */
+test('KHÔNG CÔNG TRÌNH NÀO LÀ CA ĐẶC BIỆT — và không công trình nào rỗng', () => {
+  // 6× trung vị: đo được hôm nay là 2,4× ở ca tệ nhất, nên 6 chừa biên rộng cho một nguyên mẫu
+  // vốn đã phức tạp hơn hẳn (kỳ quan so với nhà dân), mà vẫn xa dưới mức một vòng lặp lồng nhầm
+  // (≥ 10×, vì lồng nhầm thì nhân theo SỐ TẦNG hoặc SỐ MẶT, tức ít nhất 4).
+  const TRAN_TY_LE = 6;
+  let worst = { ratio: 0, era: 0, id: '' };
+  for (const [eraKey, list] of Object.entries(BLUEPRINT_CATALOG)) {
+    const era = Number(eraKey);
+    const rows = list.map((bp) => ({
+      id: bp.id,
+      tris: specTriangles(buildBuildingSpec({
+        bpId: bp.id, era, type: BUILDING_EFFECTS[bp.id]?.type, rarity: bp.rarity, level: 3,
+      })),
+    }));
+    for (const r of rows) {
+      assert.ok(r.tris > 0,
+        `kỷ ${era} · ${r.id} dựng ra 0 tam giác — một công trình vô hình lọt qua MỌI cái trần`);
+    }
+    const sorted = rows.map((r) => r.tris).sort((a, b) => a - b);
+    const median = sorted[Math.floor(sorted.length / 2)] || 1;
+    for (const r of rows) {
+      const ratio = r.tris / median;
+      if (ratio > worst.ratio) worst = { ratio, era, id: r.id };
+      assert.ok(ratio <= TRAN_TY_LE,
+        `kỷ ${era} · ${r.id} = ${r.tris} tam giác, gấp ${ratio.toFixed(1)} lần trung vị ${median}`
+        + ` của chính kỷ ấy — vượt ${TRAN_TY_LE}×. Đây KHÔNG phải "chi tiết nhiều quá" (trần ấy đã`
+        + ' gỡ), đây là dấu hiệu MỘT emitter chạy loạn ở đúng nguyên mẫu này.');
+    }
+  }
+  console.log(`   [quan hệ] lệch nhất: kỷ ${worst.era} · ${worst.id} — ${worst.ratio.toFixed(2)}× trung vị`);
+});
+
 test('NGÂN SÁCH: không thành phố nào vượt trần tam giác', () => {
   let worst = { tris: 0, era: 0 };
   for (const [eraKey, list] of Object.entries(BLUEPRINT_CATALOG)) {

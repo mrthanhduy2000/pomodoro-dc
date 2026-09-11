@@ -25,6 +25,7 @@ import { gable, prism, countSpecTriangles, specHeight, specSpan } from './parts'
 import { getEraStyle, getVernacularStyle, eaveOverhang } from './eraStyle';
 import { getArchetype, getMassing, getMotifBudget, getRarityScale } from './archetypes';
 import { emitSignature } from './signature';
+import { REVEAL_RELIEF, emitGlassBand, emitOpening, openingKit } from './windowOpening';
 
 /** Bề dày mảng tường phụ / gờ / diềm. Đủ để bắt sáng, đủ mỏng để không ăn vào khối chính. */
 const TRIM_THICKNESS = 0.055;
@@ -463,7 +464,7 @@ export function emitMonolith(out, { x, z, y, base, rise }, style, ctx) {
  *
  * Vẽ đủ bốn mặt vì camera xoay được 360°: bỏ mặt sau sẽ lộ ra ngay lần đầu Đàm kéo xoay.
  */
-function emitWindows(out, { w, d, base, height, x, z }, style, matNa) {
+function emitWindows(out, { w, d, base, height, x, z }, style, matNa, era) {
   // ⚠️ ROUND 47 (ADR-087, TECH_DEBT_3D #25): the floor is RELATIVE to the era's storey, not the
   // absolute 0,3 that left the smallest houses of eras 3, 6 and 8 as blank boxes under a roof. A
   // wall that holds a third of a storey holds a window.
@@ -495,13 +496,16 @@ function emitWindows(out, { w, d, base, height, x, z }, style, matNa) {
       // lại đúng hình ảnh nhà kính hiện đại hơn.
       for (let s = 0; s < stories; s += 1) {
         const y = base + (s + 0.42) * (height / stories);
-        out.push(prism({
-          x: wallOffset.x, z: wallOffset.z, y,
-          w: face.sideways ? WINDOW_RELIEF : face.span * 0.9,
-          d: face.sideways ? face.span * 0.9 : WINDOW_RELIEF,
-          h: (height / stories) * (style.windows === 'neon' ? 0.16 : 0.42),
-          sides: 4, role: 'glass',
-        }));
+        /*
+          ⚠️ ROUND 53 (ADR-093): DẢI KÍNH NAY CŨNG CÓ CHIỀU SÂU — và hai kỷ này suýt bị bỏ quên.
+          Sau khi cửa sổ có hốc, chữ ký GOLDEN của 13 kỷ đổi mà kỷ 14 và 15 thì ĐỨNG YÊN: hai kỷ ấy
+          đi nhánh này nên chưa bao giờ chạy qua `emitOpening`. Một chữ ký KHÔNG đổi cũng là dữ
+          liệu — đọc cả hai chiều. Chi tiết ở `emitGlassBand`; nó dựng NAN ĐỨNG chứ không dựng hốc,
+          vì mặt kính treo trên khung thép thì không có hốc, nó có nan.
+        */
+        const bandH = (height / stories) * (style.windows === 'neon' ? 0.16 : 0.42);
+        emitGlassBand(out, face, { x: wallOffset.x, z: wallOffset.z, y: y - bandH / 2 },
+          { span: face.span * 0.9, bandH }, openingKit(style.windows, era));
 
         // ⚠️ DẢI CHE SÀN (spandrel) — vế hiện đại của cái bệ cửa sổ ở nhánh dưới, và nó là thứ
         // KHÁC hẳn chứ không phải bản rẻ tiền của cùng một chi tiết. Nhà kính không có bệ đá: cái
@@ -534,47 +538,38 @@ function emitWindows(out, { w, d, base, height, x, z }, style, matNa) {
         const px = face.sideways ? wallOffset.x : wallOffset.x + along;
         const pz = face.sideways ? wallOffset.z + along : wallOffset.z;
 
-        out.push(prism({
-          x: px, z: pz, y,
-          w: face.sideways ? WINDOW_RELIEF : ww,
-          d: face.sideways ? ww : WINDOW_RELIEF,
-          h: wh, sides: 4, role: 'glass',
-        }));
+        /*
+          ⚠️ ROUND 53 (ADR-093): CẢ Ô CỬA SỔ NAY DO `windowOpening.js` DỰNG, VÀ ĐÂY LÀ MÓN ĐỔI
+          NHIỀU NHẤT CỦA VÒNG — nó chạm vào mọi bức tường của cả 15 kỷ trong một lần.
+          Trước: một tấm `prism(role:'glass')` thò RA khỏi tường 0,035, cộng một bệ và một lanh tô.
+          Ba khối ngang, KHÔNG khối đứng nào ⇒ mặt trời đứng bên nào thì bốn mặt tường cũng nhận
+          đúng một bộ bóng như nhau, và bức tường đọc ra như giấy dán.
+          Nay là một cái HỐC: hai má cửa đứng thò ra `REVEAL_RELIEF`, ô kính nằm sát mặt tường,
+          nên má bên này ăn nắng còn má bên kia đổ bóng vào lòng hốc — và cặp sáng–tối ấy ĐỔI theo
+          hướng mặt tường. Cộng nan chia ô, song sắt, cánh chớp, mái hắt tuỳ kỷ.
+          ⚠️ `y` là tâm ô cửa theo lối cũ, còn `emitOpening` nhận ĐÁY ô cửa — đừng truyền thẳng.
+        */
+        emitOpening(out, face, { x: px, z: pz, y: y - wh / 2 }, { ww, wh },
+          openingKit(style.windows, era), {
+            arch: style.windows === 'arch',
+            // ⚠️ MẶT TƯỜNG CÒN BAO NHIÊU CHỖ BÊN CẠNH Ô CỬA NÀY — bắt buộc, xem khối cảnh báo ở
+            // nhánh cánh chớp của `windowOpening.js`: thiếu nó thì chi tiết trang trí đẩy hình bao
+            // công trình ra, và 11 căn của kỷ 6 mất sạch chi tiết mái mà không gì kêu lên.
+            room: face.span / 2 - Math.abs(along),
+          });
 
-        // ── BỆ CỬA SỔ + LANH TÔ ────────────────────────────────────────────
-        // ⚠️ CHỈ Ở KỶ XÂY BẰNG ĐÁ/GẠCH, và đó không phải để tiết kiệm tam giác — đó là sự thật về
-        // kết cấu. Tường đá muốn có lỗ thì BẮT BUỘC phải có một thanh đá bắc ngang bên trên (lanh
-        // tô) để đỡ phần tường phía trên cái lỗ ấy; nhà kính hiện đại treo cả mặt tiền lên khung
-        // thép nên không có lanh tô, và cho nó lanh tô là dựng sai cách nhà đó đứng được.
-        // Kỷ `grid`/`curtain`/`neon` đi đường khác ở nhánh trên (dải ngang liền mạch).
-        const sillW = ww + SILL_OVERHANG * 2;
-        out.push(prism({
-          x: px, z: pz, y: y - SILL_HEIGHT,
-          w: face.sideways ? SILL_RELIEF : sillW,
-          d: face.sideways ? sillW : SILL_RELIEF,
-          h: SILL_HEIGHT, sides: 4, role: 'trim',
-        }));
-        // Lanh tô chỉ dựng khi ô cửa đủ cao để mắt còn tách được hai thanh — ô khe hẹp (`slit`)
-        // của kỷ phòng thủ vốn là một rãnh chém xuyên tường, nó KHÔNG có lanh tô lộ ra ngoài.
-        // ⚠️ VÀ KHÔNG DỰNG Ở KỶ CỬA VÒM: **vòm CHÍNH LÀ lanh tô**. Cả lý do vòm được phát minh ra
-        // là để bắc qua một ô cửa rộng hơn thứ mà một thanh đá thẳng chịu nổi. Chồng cả hai lên
-        // nhau vừa sai kết cấu vừa cắm hai khối vào đúng một chỗ (`y + wh`).
-        if (!isSlit && style.windows !== 'arch') {
-          out.push(prism({
-            x: px, z: pz, y: y + wh,
-            w: face.sideways ? SILL_RELIEF * 0.8 : sillW,
-            d: face.sideways ? sillW : SILL_RELIEF * 0.8,
-            h: SILL_HEIGHT * 0.8, sides: 4, role: 'trim',
-          }));
-        }
-
-        // Cửa vòm: thêm nửa vòm phía trên. Chỉ ở kỷ có `arch` — đây là dấu hiệu nhận dạng
-        // mạnh nhất của kiến trúc Phục Hưng / Tân cổ điển.
+        // Cửa vòm: nửa vòm phía trên, và ở kỷ này **vòm CHÍNH LÀ lanh tô** nên `emitOpening`
+        // đã được bảo là đừng dựng thanh ngang (`{ arch: true }`).
+        // ⚠️ ROUND 53: nửa vòm nay thò ra ĐÚNG BẰNG hai má cửa, không phải `WINDOW_RELIEF` cũ —
+        // nếu không thì cái vòm thụt vào sau hai cái má nó đang bắc qua, tức ngược hẳn kết cấu.
         if (style.windows === 'arch') {
+          const archOut = REVEAL_RELIEF * openingKit(style.windows, era).reveal;
           out.push(prism({
-            x: px, z: pz, y: y + wh,
-            w: face.sideways ? WINDOW_RELIEF : ww,
-            d: face.sideways ? ww : WINDOW_RELIEF,
+            x: face.sideways ? px + face.nx * (archOut / 2) : px,
+            z: face.sideways ? pz : pz + face.nz * (archOut / 2),
+            y: y + wh / 2,
+            w: face.sideways ? archOut : ww,
+            d: face.sideways ? ww : archOut,
             h: ww * 0.85, sides: 6, taper: 0.2, role: 'glass',
           }));
         }
@@ -1023,7 +1018,7 @@ export function buildBuildingSpec({
       const gf = getGroundFloor(era);
       const hasGroundFloor = Boolean(gf);
 
-      if (!mass.tower) emitWindows(parts, { w, d, base, height, x, z }, style, plot?.faces);
+      if (!mass.tower) emitWindows(parts, { w, d, base, height, x, z }, style, plot?.faces, era);
 
       // Round 50 (ADR-090, Việc 6): the front of a building is not a blank wall — string courses,
       // shutters, brackets, balconies, signs, downpipes, each era from its own vocabulary. Nothing
@@ -1092,6 +1087,47 @@ export function buildBuildingSpec({
           h: Math.max(0.012, height * COURSE_HEIGHT),
           sides: style.bodySides, ry: jitterR, role: 'trim',
         }));
+      }
+
+      /*
+        ── (4) TRỤ ÁP TƯỜNG (pilaster) — ROUND 53 (ADR-093), Việc 3 ─────────────────────────────
+        ⚠️ VÌ SAO ĐÂY LÀ MÓN CÒN THIẾU CHỨ KHÔNG PHẢI MỘT MÓN TRANG TRÍ NỮA. Mặt tường đã có BA
+        đường ngang (chân tường · gờ tầng · gờ mái) từ Phase 8A, và ba đường ấy đều nằm NGANG. Mặt
+        trời trong cảnh này đứng cao và xiên, nên một gờ ngang cho ra một vệt bóng mỏng CÙNG một
+        độ đậm trên cả bốn mặt của khối hộp — bốn mặt vẫn đọc y hệt nhau. Một trụ ĐỨNG thì khác
+        hẳn: mặt hứng nắng thấy nó sáng, mặt khuất thấy nó tối, và mặt bên thấy nó đổ một vệt bóng
+        DÀI ngang qua tường. Cùng một khối, ba cách đọc — đó là thứ cả vòng 53 đi tìm.
+
+        ⚠️ SỐ TRỤ THEO BỀ NGANG THẬT, KHÔNG PHẢI MỘT CON SỐ CỨNG — cùng lý lẽ với `MAX_COURSES` ở
+        ngay trên: một mặt tiền rộng gấp đôi phải có gấp đôi số trụ, nếu không nhịp của nó thưa gấp
+        đôi và hai công trình cạnh nhau đọc ra hai cỡ khác nhau (bẫy "số tuyệt đối không nhìn thấy
+        cái thân", Phase 7D).
+
+        ⚠️ THÒ RA ĐÚNG BẰNG `COURSE_SPREAD`, KHÔNG HƠN. Trụ áp tường thò xa hơn gờ tầng thì nó cắt
+        ngang qua gờ tầng và mặt tiền thành một cái lưới — mà quan trọng hơn: hình bao rộng ra, và
+        hình bao là thứ `block.js` dùng để bóp mỗi đơn vị cho vừa ô của nó (xem vết "11 mái kỷ 6"
+        ở `windowOpening.js`). Bằng nhau thì hai chi tiết giao nhau phẳng, và hình bao đứng yên.
+      */
+      if (!mass.low && height > style.storyHeight * 0.8) {
+        const cols = Math.max(2, Math.min(6, Math.round(Math.max(w, d) / 0.22)));
+        const pw = Math.max(0.018, Math.min(w, d) * 0.055);
+        for (let i = 0; i < cols; i += 1) {
+          const t = ((i + 0.5) / cols) - 0.5;
+          for (const [ax, az] of [[1, 0], [-1, 0], [0, 1], [0, -1]]) {
+            const along = t * (az !== 0 ? w : d);
+            parts.push(prism({
+              x: x + (az !== 0 ? along : ax * (w / 2) * (1 + COURSE_SPREAD)),
+              z: z + (az !== 0 ? az * (d / 2) * (1 + COURSE_SPREAD) : along),
+              // ⚠️ `y` là ĐÁY khối (`parts.js`) — trụ cao 0,92 thân thì đáy nó ở 0,04 thân, không
+              // phải ở giữa. Viết `height * 0.5` ở đây đẩy trụ lên quá nóc và làm `spec.height`
+              // của cả công trình vống lên 29% (đã đo trên kỳ quan kỷ 15: 4,665 → 6,011).
+              y: base + height * 0.04,
+              w: az !== 0 ? pw : Math.max(0.012, w * COURSE_SPREAD),
+              d: az !== 0 ? Math.max(0.012, d * COURSE_SPREAD) : pw,
+              h: height * 0.92, sides: 4, ry: jitterR, role: 'trim',
+            }));
+          }
+        }
       }
 
       const anchors = emitRoof(parts, { w, d, top, x, z }, style, ctx);

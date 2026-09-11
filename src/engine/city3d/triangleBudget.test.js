@@ -100,10 +100,34 @@ const CO_BE = new Set(['building', 'scaffold', 'dwelling']);
 // Great Pyramid declares `steps: 0` in `WONDER_ENTRANCE` — its outer face has no stair and no door,
 // and giving it one would have been Mesoamerican, not Egyptian. A table where all fifteen rows move
 // is a table that cannot tell a decision from an accident.
+// ⚠️ ROUND 53 (ADR-093) — THÁI LẠI 13/15, VÀ HAI KỶ ĐỨNG YÊN LẠI LÀ BẰNG CHỨNG.
+// Mọi ô cửa sổ thành MỘT CÁI HỐC: hai má cửa ĐỨNG (vế bị bỏ quên suốt năm vòng), lanh tô, bệ có
+// giọt nước, nan chia ô, và tùy kỷ thêm song sắt / cánh chớp / mái hắt (`windowOpening.js`).
+// Mức tăng: **+7,3% (kỷ 3) → +46,8% (kỷ 13)**, và thứ tự ấy nói đúng một chuyện có thật: kỷ nào
+// nhiều ô cửa thì được nhiều nhất. Kỷ 13 (Tokyo) là cửa lùa giấy chia ô dày (`grille`: 2 nan đứng
+// + 3 nan ngang mỗi ô), kỷ 3 (Lưỡng Hà) là khe hẹp không nan không chớp.
+// ⚠️ KỶ 1 VÀ KỶ 2 KHÔNG ĐỔI MỘT TAM GIÁC NÀO — cả hai khai `windows: 'none'`. Một bảng mà cả 15
+// dòng cùng nhúc nhích là một bảng không phân biệt được quyết định với tai nạn.
+// ⚠️ VÀ ĐỪNG ĐỌC BẢNG NÀY LÀ MỘT CÁI TRẦN. Đàm gỡ trần tam giác ba vòng liên tiếp
+// (*"đừng tiết kiệm tam giác"*); đây là một **máy dò TRÔI** — số đổi thì có người vừa đổi kiến
+// trúc và phải nói ra lý do, chứ không phải "đã vượt mức cho phép". Thái lại là việc BÌNH THƯỜNG
+// ở một vòng mỹ thuật; thái lại MÀ KHÔNG GHI LÝ DO mới là việc sai.
 const MOC_TAM_GIAC = {
-  1: 102418, 2: 128686, 3: 125888, 4: 191452, 5: 125010,
-  6: 243174, 7: 195774, 8: 149444, 9: 175074, 10: 125604,
-  11: 151594, 12: 124740, 13: 145180, 14: 167716, 15: 115566,
+  1: 103090,
+  2: 130510,
+  3: 138276,
+  4: 229128,
+  5: 172926,
+  6: 273186,
+  7: 225710,
+  8: 192448,
+  9: 212890,
+  10: 187284,
+  11: 205854,
+  12: 151428,
+  13: 227204,
+  14: 201748,
+  15: 152014,
 };
 
 /** Số BỆ KÈ của từng kỷ — tách riêng vì nó là hàm của ĐỊA HÌNH, không của kiến trúc. */

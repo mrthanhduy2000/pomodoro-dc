@@ -197,7 +197,9 @@ export default function Settings() {
     cityRenderMode,
     setCityRenderMode,
     cityPerfHud,
+    cityPostFx,
     setCityPerfHud,
+    setCityPostFx,
     cityHomeBackdrop,
     setCityHomeBackdrop,
     soundPack,
@@ -815,6 +817,15 @@ export default function Settings() {
                   description="Tấm bưu thiếp thành phố thật ở đầu màn Tập trung: đứng yên trong phiên, sống lại khi rảnh, camera nhìn vào viên gạch của phiên này."
                   value={cityHomeBackdrop}
                   onChange={setCityHomeBackdrop}
+                />
+              </div>
+              <div className="mt-3">
+                <ToggleRow
+                  lightTheme={lightTheme}
+                  label="Hiệu ứng hình ảnh nâng cao"
+                  description="Loé sáng quanh lửa và đèn, bóng tối trong góc tường, tia nắng xuyên khói, xoá phông khi đi bộ. Đẹp hơn nhiều nhưng vẽ lại cả khung hình — thấy giật thì tắt ở đây và báo lại."
+                  value={cityPostFx}
+                  onChange={setCityPostFx}
                 />
               </div>
               <div className="mt-3">

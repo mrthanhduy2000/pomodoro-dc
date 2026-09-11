@@ -63,8 +63,12 @@ test('applySurfaceDetail cắm đúng ba chỗ trong shader và không cắm nh�
     'Đang nhân vào đường khuếch tán — đó là cách làm nhạt cả thành phố (thất bại Phase 7A).');
 
   // Không khai khoá riêng thì three gộp chương trình của vật liệu đã vá với vật liệu chưa vá.
+  // ⚠️ ROUND 52: `v1` → `v2`, VÀ BÀI TEST ĐỎ LÊN ĐÚNG LÚC NÓ PHẢI ĐỎ. Vòng 52 thêm một `#define`
+  // (`CITY_SURFACE_MAPS`) vào bản vá, tức vật liệu CÓ bản đồ bề mặt và vật liệu KHÔNG có nay biên
+  // dịch ra hai chương trình khác nhau — đúng hình dạng bài học 106. Nâng số hiệu là cách khai rằng
+  // mã shader đã đổi; sửa con số ở đây mà không hiểu vì sao chính là cách bài học 106 quay lại.
   assert.equal(typeof material.customProgramCacheKey, 'function');
-  assert.equal(material.customProgramCacheKey(), 'city-surface-detail-v1');
+  assert.equal(material.customProgramCacheKey(), 'city-surface-detail-v2');
 });
 
 test('ROUND 49 (lesson 106): vật liệu CÓ mã chuyển động phải có khoá chương trình KHÁC vật liệu không có', () => {

@@ -109,6 +109,16 @@ const useSettingsStore = create(
       // byte nào vào khối JSONB đang chịu cơ chế CAS "First Action Wins".
       cityRenderMode: 'auto',   // 'auto' | '3d' | '2d' — xem engine/city3d/renderMode.js
       cityPerfHud: false,       // bảng số liệu hiệu năng, để đo cổng Phase 3A
+      /**
+       * ROUND 52 (ADR-092): lượt vẽ hậu kỳ — che khuất · tia nắng · loé sáng · ống kính.
+       *
+       * ⚠️ MẶC ĐỊNH BẬT, VÀ CÔNG TẮC NÀY LÀ ĐIỀU KIỆN ĐÀM ĐẶT RA KHI GỠ LỆNH CẤM. Dự án từ chối
+       * hậu kỳ suốt từ Phase 8 vì một lý do ĐO ĐƯỢC (80% chi phí mỗi khung hình đã là chi phí theo
+       * điểm ảnh). Đàm gỡ nó ở vòng 52 — *"Máy tôi rất mạnh. Lag thì tôi nói."* — kèm đúng một yêu
+       * cầu: *"Cho tôi một công tắc bật/tắt hậu kỳ trong Cài đặt."* Tắt là KHÔNG DỰNG GÌ CẢ (xem
+       * `createPostFx`), tức đúng đường vẽ của vòng 51, không phải "bật với hiệu ứng bằng 0".
+       */
+      cityPostFx: true,
       // Thành phố làm lớp nền ở trang chủ. Mặc định BẬT (Đàm chọn "bật hết hiệu ứng"); vẫn tự tắt
       // ở máy không chạy được 3D và khi bật "giảm chuyển động" của hệ điều hành.
       cityHomeBackdrop: true,
@@ -241,6 +251,7 @@ const useSettingsStore = create(
       setDisableBreak:       (v) => set({ disableBreak: v }),
       setCityRenderMode: (mode) => set({ cityRenderMode: normalizeRenderMode(mode) }),
       setCityPerfHud:    (v) => set({ cityPerfHud: v === true }),
+      setCityPostFx:     (v) => set({ cityPostFx: v === true }),
       setCityHomeBackdrop: (v) => set({ cityHomeBackdrop: v === true }),
 
       // ── Hydration sync ─────────────────────────────────────────────────

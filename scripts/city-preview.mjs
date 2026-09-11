@@ -300,6 +300,8 @@ function parseArgs(argv) {
     else if (key === '--dry') args.dry = true;
     else if (key === '--season') { args.season = String(value); i += 1; }
     else if (key === '--day') { args.day = Number(value); i += 1; }   // round 51: which day, for the moon phase
+    else if (key === '--nopost') { args.noPost = true; }   // round 52: render WITHOUT the post pass — the BEFORE side of every pair
+    else if (key === '--post') { args.post = String(value); i += 1; }   // round 52: build only these passes, e.g. --post ao,bloom
     else if (key === '--gpu') args.gpu = true;
     // Chỉ KIỂM xem có Chromium không rồi thoát — không gói bundle, không mở trình duyệt.
     // ⚠️ Tồn tại để `bench-macbook.sh` hỏi được câu "máy này có Chromium chưa" mà KHÔNG phải chép
@@ -325,7 +327,7 @@ function run(cmd, cmdArgs, options = {}) {
 function entrySource({
   era, level, theme, zoom = 1, focus = 0, hour = null, pending = 0, sessions = 40, dpr = null, bench = 0,
   mask = null, noShadow = false, noAo = false, t = 17.5, lowDetail = false, topdown = false, noMotion = false, dry = false, season = 'summer',
-  walk = 0, walkTurn = 0, walkLook = 0, day = 0,
+  walk = 0, walkTurn = 0, walkLook = 0, day = 0, noPost = false, post = null,
 }) {
   return `
 import { computeCityLayout, roadCellCount } from '${ROOT}/src/engine/cityLayout.js';
@@ -335,6 +337,7 @@ import { weatherAt } from '${ROOT}/src/engine/city3d/weather.js';
 import { isSeason } from '${ROOT}/src/engine/city3d/season.js';
 import { WALK_FOV, WALK_NEAR, WALK_PITCH_MAX, WALK_PITCH_MIN, createWalker } from '${ROOT}/src/engine/city3d/walk.js';
 import { applyPaintedLook, createCityScene, MAX_PIXEL_RATIO } from '${ROOT}/src/components/city/render3d/sceneGraph.js';
+import { createPostFx, postProfileFor } from '${ROOT}/src/components/city/render3d/postFx.js';
 import { CITY_CAMERA_FOV, cityOrbitOptions, createOrbit } from '${ROOT}/src/engine/city3d/orbit.js';
 import { planCityFocus } from '${ROOT}/src/engine/city3d/cityFocus.js';
 import { BLUEPRINT_CATALOG, ERA_METADATA } from '${ROOT}/src/engine/constants.js';
@@ -351,6 +354,8 @@ const NO_AO = ${noAo ? 'true' : 'false'};
 const DRY = ${dry ? 'true' : 'false'};
 const SEASON = ${JSON.stringify(season)};
 const DAY_INDEX = ${Number(day) || 0};
+const NO_POST = ${noPost ? 'true' : 'false'};
+const POST_ONLY = ${post ? JSON.stringify(String(post).split(',').map((x) => x.trim()).filter(Boolean)) : 'null'};
 const WALK = ${Number(walk) || 0};
 const WALK_TURN = ${Number(walkTurn) || 0};
 const WALK_LOOK = ${Number(walkLook) || 0};
@@ -600,7 +605,33 @@ if (MASK) {
     + ' | khung nhìn: ' + window.innerWidth + 'x' + window.innerHeight
     + ' | tỉ lệ camera: ' + camera.aspect.toFixed(4));
 }
-renderer.render(city.scene, camera);
+/**
+ * ROUND 52 (ADR-092): the preview renders through the SAME post pass the app does, or through none
+ * at all with --nopost. That flag is not a convenience — it is the BEFORE side of every before/after
+ * pair in this round, taken with the same command, era, hour, season and camera.
+ * ⚠️ And it prints on the FIRST frame, because Đàm named this trap by name: a composer can hand a
+ * headless capture a blank white frame, and finding that out at the end of a round costs the round.
+ */
+const postFx = NO_POST ? null : createPostFx({
+  renderer, scene: city.scene, camera,
+  width: VIEW_W * DPR, height: VIEW_H * DPR,
+  profile: postProfileFor(daylight.phase),
+  walk: WALK > 0,
+  only: POST_ONLY,
+});
+if (postFx) {
+  postFx.update({
+    sunDirection: city.sun && city.sun.position ? city.sun.position.clone().normalize() : null,
+    air: Math.min(1, 0.20 + ((weather && weather.fog) || 0) * 0.9 + ((city.stats.sky && city.stats.sky.amount) || 0) * 0.35),
+    focus: WALK > 0 ? 2.4 : 18,
+  });
+}
+function drawFrame() {
+  if (postFx) postFx.render();
+  else renderer.render(city.scene, camera);
+}
+drawFrame();
+console.log('[post] ' + (postFx ? 'DANG CHAY: ' + (POST_ONLY ? POST_ONLY.join('+') : 'ao+rays+bloom+lens') : 'TAT (--nopost)'));
 
 if (BENCH > 0) {
   // ⚠️ PHẢI ÉP ỐNG DẪN HOÀN TẤT TRƯỚC KHI BẤM GIỜ DỪNG. WebGL xếp lệnh không đồng bộ, nên đo trần
@@ -620,7 +651,7 @@ if (BENCH > 0) {
   console.log('[bench] máy đồ hoạ=' + gpu);
 
   // Khung khởi động mang theo chi phí biên dịch shader — vứt, không tính.
-  for (let i = 0; i < 12; i += 1) { renderer.render(city.scene, camera); settle(); }
+  for (let i = 0; i < 12; i += 1) { drawFrame(); settle(); }
 
   // ⚠️ QUY ƯỚC: P95 là ĐUÔI CHẬM (95% số khung NHANH HƠN mức này). Nói cách khác P95 là trường hợp
   // XẤU, không phải trường hợp tốt — rất dễ đọc ngược khi nó đứng cạnh chữ "FPS".
@@ -635,7 +666,7 @@ if (BENCH > 0) {
       // ra hiệu số ÂM 0,5 ms, tức "dựng lại bóng còn nhanh hơn không dựng".
       if (dựngLạiBóng) { city.invalidateShadows(); renderer.shadowMap.needsUpdate = true; }
       const t0 = performance.now();
-      renderer.render(city.scene, camera);
+      drawFrame();
       settle();
       ts.push(performance.now() - t0);
     }

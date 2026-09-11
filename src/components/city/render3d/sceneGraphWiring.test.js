@@ -514,7 +514,12 @@ test('⚠️ BẢN VÁ BỀ MẶT CHỈ ĐƯỢC NHÂN PHẢN CHIẾU, KHÔNG Đ
     assert.ok(!call.test(CODE),
       `\`GRAIN.${surface}\` lại được bóc phanh phản chiếu — đo rồi: mất độ tươi, không thêm đỉnh sáng.`);
   }
-  assert.match(CODE, /\.\.\.GRAIN\.building, specularGain: specularGainFor\(envIntensity\)/,
+  // ⚠️ ROUND 52: BIỂU THỨC NÀY ĐƯỢC NỚI CHO XUỐNG DÒNG, KHÔNG PHẢI CHO YẾU ĐI. Bản cũ đòi hai vế
+  // nằm trên CÙNG MỘT DÒNG; vòng 52 thêm `maps:` vào lời gọi ấy nên nó phải tách dòng, và bài test
+  // đỏ vì ĐỊNH DẠNG chứ không vì luật. Điều được canh vẫn nguyên văn: khối `building` — và chỉ nó —
+  // phải đi kèm `specularGainFor(envIntensity)`. Giới hạn 200 ký tự giữ cho nó không vô tình với
+  // sang một lời gọi khác.
+  assert.match(CODE, /\.\.\.GRAIN\.building,[\s\S]{0,200}?specularGain: specularGainFor\(envIntensity\)/,
     'Công trình không còn được bóc phanh phản chiếu — đây là bề mặt DUY NHẤT bản vá này có tác dụng.');
 
   // Bốn bề mặt đều phải thật sự được vá, nếu không "có hạt vân" chỉ đúng với một phần cảnh.

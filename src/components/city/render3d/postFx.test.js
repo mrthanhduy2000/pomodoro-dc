@@ -1,0 +1,78 @@
+/**
+ * postFx.test.js — ROUND 52 (ADR-092): the post pass, checked where it can be checked without a GPU.
+ *
+ * ⚠️ WHAT A TEST CAN AND CANNOT SAY HERE, stated up front so nobody mistakes green for proof. This
+ * file checks the DECISION TABLE and the wiring contract — the parts that are pure. It cannot check
+ * that bloom looks right; that is what the before/after photographs are for, and round 51 already
+ * proved the point the hard way (a feature that emitted nothing in all fifteen eras with every test
+ * green). So the numeric claims here are the ones that were LEARNED FROM A RENDERED FRAME, and each
+ * carries the frame's verdict in its message.
+ */
+import test from 'node:test';
+import assert from 'node:assert/strict';
+
+import { POST_PROFILE, postProfileFor } from './postFx.js';
+
+const ROWS = ['day', 'golden', 'night'];
+
+test('BA CHẶNG, BA HÀNG — và mọi hàng đủ bảy con số', () => {
+  for (const name of ROWS) {
+    const row = POST_PROFILE[name];
+    assert.ok(row, `thiếu hàng "${name}"`);
+    for (const k of ['bloom', 'threshold', 'radius', 'ao', 'rays', 'grain', 'vignette']) {
+      assert.ok(Number.isFinite(row[k]), `${name}.${k} không phải số`);
+      assert.ok(row[k] >= 0, `${name}.${k} âm`);
+    }
+  }
+});
+
+test('GIỜ NÀO RƠI VÀO HÀNG NÀO — và bình minh/hoàng hôn đi chung một hàng', () => {
+  assert.equal(postProfileFor('night'), POST_PROFILE.night);
+  assert.equal(postProfileFor('dawn'), POST_PROFILE.golden);
+  assert.equal(postProfileFor('dusk'), POST_PROFILE.golden);
+  for (const phase of ['morning', 'noon', 'afternoon']) {
+    assert.equal(postProfileFor(phase), POST_PROFILE.day, `chặng "${phase}" phải là ban ngày`);
+  }
+  // một chặng lạ vẫn phải trả về một hàng dùng được, không phải `undefined`
+  assert.equal(postProfileFor('không-có-chặng-này'), POST_PROFILE.day);
+});
+
+test('NGƯỠNG LOÉ SÁNG BAN ĐÊM PHẢI CAO HƠN 0,5 — bài học từ một khung hình cháy trắng', () => {
+  /**
+   * ⚠️ ĐÂY LÀ MỘT CON SỐ HỌC ĐƯỢC TỪ ẢNH, KHÔNG PHẢI MỘT SỞ THÍCH. Bản dựng đầu dùng đúng bộ số mà
+   * mọi ví dụ bloom dùng cho ban đêm — cường độ 1,05, ngưỡng 0,26 — và con phố chụp ra có MỌI ô cửa
+   * sổ sáng nở thành một mảng trắng ăn hết mặt tiền quanh nó. Lý do riêng của cảnh này: khung đệm là
+   * HDR TUYẾN TÍNH, mà bồn chứa phát sáng của vòng 49 vẽ lửa và cửa sổ ở quãng 0,9 trong khi một bức
+   * tường nắng cũng quãng 1,0 — nên ngưỡng dưới ~0,5 không tách được "một ngọn đèn" khỏi "một bức
+   * tường sáng", nó chọn CẢ HAI.
+   *
+   * Bài test khoá đúng mệnh đề ấy, và nó nói về QUAN HỆ chứ không về một con số đẹp: ngưỡng phải
+   * nằm trên vùng mà vật liệu thường của cảnh sinh sống.
+   */
+  assert.ok(POST_PROFILE.night.threshold > 0.5,
+    `ngưỡng ban đêm ${POST_PROFILE.night.threshold} ≤ 0,5 — ở mức đó tường sáng cũng loé như đèn`);
+  for (const name of ROWS) {
+    assert.ok(POST_PROFILE[name].threshold > 0.5, `ngưỡng "${name}" quá thấp`);
+    assert.ok(POST_PROFILE[name].bloom <= 0.8, `cường độ loé sáng "${name}" quá mạnh — xem ảnh cháy trắng`);
+  }
+});
+
+test('BAN ĐÊM LOÉ NHIỀU HƠN BAN NGÀY, và tia nắng thì ngược lại', () => {
+  // Hai QUAN HỆ, không phải hai con số: đêm là lúc duy nhất đèn là thứ sáng nhất khung hình, còn
+  // tia nắng thì cần một mặt trời trên trời — nửa đêm phải gần như không có.
+  assert.ok(POST_PROFILE.night.bloom > POST_PROFILE.day.bloom, 'ban đêm phải loé sáng hơn ban ngày');
+  assert.ok(POST_PROFILE.night.threshold < POST_PROFILE.day.threshold,
+    'ban đêm phải hạ ngưỡng so với ban ngày — đó mới là thứ quyết định CÁI GÌ loé');
+  assert.ok(POST_PROFILE.golden.rays > POST_PROFILE.day.rays, 'giờ vàng phải nhiều tia nắng nhất');
+  assert.ok(POST_PROFILE.night.rays < POST_PROFILE.day.rays * 0.5, 'nửa đêm gần như không có tia nắng');
+  assert.ok(POST_PROFILE.night.vignette > POST_PROFILE.day.vignette, 'đêm dìm góc nhiều hơn ngày');
+});
+
+test('TẮT LÀ KHÔNG DỰNG GÌ — không có renderer thì trả về null, không nổ', async () => {
+  const { createPostFx } = await import('./postFx.js');
+  // Đây chính là hợp đồng của công tắc: `postFx` bằng `null` ⇒ bên gọi giữ `renderer.render(...)`,
+  // tức đúng đường vẽ của vòng 51. Không có khung đệm nào được cấp phát.
+  assert.equal(createPostFx({}), null);
+  assert.equal(createPostFx({ renderer: {}, scene: null, camera: {} }), null);
+  assert.equal(createPostFx(), null);
+});

@@ -145,11 +145,17 @@ export function materialProfile(family) {
  * ─────────────────────────────────────────────────────────────────────────────
  * BÓNG TIẾP XÚC (contact ambient occlusion) nướng thẳng vào màu đỉnh.
  *
- * ⚠️ VÌ SAO KHÔNG DÙNG SSAO: SSAO là một lượt hậu kỳ toàn màn hình, đắt trên điện thoại, và nó
- * PHÁ VỠ render-on-demand (thêm hẳn một pass mỗi khung hình). Ở đây cảnh là tĩnh giữa hai lần
- * dựng, nên bóng tiếp xúc có thể tính MỘT LẦN lúc gộp hình học rồi nướng vào màu đỉnh: giá bằng 0
- * ở lúc chạy, và nó bắt được đúng thứ đáng giá nhất — chân tường tối lại, khiến công trình NGỒI
- * trên mặt đất thay vì nổi lều bều.
+ * ⚠️ VÌ SAO VẪN NƯỚNG SẴN, DÙ TỪ VÒNG 52 ĐÃ CÓ SSAO THẬT — CÂU NÀY ĐÃ ĐƯỢC VIẾT LẠI 2026-09-11.
+ * Bản cũ ở đây nói *"KHÔNG dùng SSAO"* vì nó là một lượt hậu kỳ toàn màn hình, đắt trên điện thoại,
+ * và phá render-on-demand. Lý do ấy đo được và đúng ở thời điểm nó được viết; **Đàm gỡ nó ở vòng 52**
+ * (*"Máy tôi rất mạnh. Lag thì tôi nói."*) và nay `postFx.js` chạy một lượt GTAO thật mỗi khung hình,
+ * có công tắc tắt trong Cài đặt.
+ *
+ * ⇒ Nhưng phép nướng sẵn này KHÔNG bị thay thế, nó thành NỀN cho lượt kia, và đó là một quyết định
+ * chứ không phải quán tính: (1) nó là thứ DUY NHẤT còn sống khi Đàm tắt hậu kỳ — không có nó, tắt
+ * công tắc là mọi công trình lại nổi lều bều trên mặt đất; (2) nó tối ở chỗ SSAO màn hình yếu nhất
+ * — chân tường bị chính công trình che khuất khỏi camera; (3) giá bằng 0 lúc chạy, nên giữ lại
+ * không tốn gì. Hai lớp che khuất chồng nhau là đúng ý đồ, không phải trùng lặp.
  *
  * ⚠️ VÌ SAO CHỈ THEO CHIỀU CAO, KHÔNG PHẢI AO THẬT: AO thật cần biết mỗi đỉnh bị bao nhiêu mặt
  * khác che — tức phải dò tia, tức không còn thuần và không còn rẻ. Phép xấp xỉ "càng gần đất càng

@@ -44,6 +44,7 @@ import {
 
 import { materialProfile } from '../../../engine/city3d/materials';
 import { applySurfaceDetail, specularGainFor } from './surfaceDetail';
+import { buildSurfaceTextures } from './surfaceTexture';
 import { getEraStyle } from '../../../engine/city3d/eraStyle';
 import { collectCitySpecs, KIND_NGOAI_LUOI, NHOM_CUA_KIND } from '../../../engine/city3d/cityParts';
 import { BUILDING_SCALE, buildingSpanCells, plinthParts } from '../../../engine/city3d/parts';
@@ -739,6 +740,20 @@ export function createCityScene({
     renderer, skyLook, new Color(palette.outskirts ?? palette.groundAlt ?? palette.ground),
   );
   if (environment) track(environment);
+
+  /**
+   * ROUND 52 (ADR-092): THE GENERATED SURFACE MAPS, BUILT ONCE PER SCENE.
+   *
+   * ⚠️ SAME LIFETIME AND SAME PLACE AS THE ENVIRONMENT MAP, and for the same reason written directly
+   * above it: every material that wants one must be able to ask while it is being CONSTRUCTED. Build
+   * them later and the materials made before that moment silently get `null` — which compiles a
+   * different program (see the cache key in `surfaceDetail.js`) and loses its mortar joints with
+   * nothing to show for it in any log.
+   *
+   * 16 families × two 128² maps ≈ 2 MB, pure arithmetic, no file and no request (`surfaceTexture.js`).
+   */
+  const surfaces = buildSurfaceTextures();
+  track(surfaces);
   /**
    * Bản đồ môi trường gắn vào TỪNG vật liệu, KHÔNG gắn vào `scene.environment`.
    *
@@ -770,7 +785,10 @@ export function createCityScene({
     envMapIntensity: ENV_DIFFUSE,
     transparent: dimmed,
     opacity: dimmed ? 0.62 : 1,
-  }), { ...GRAIN.ground, ...wetGain(wetTile) }));
+    // ⚠️ ROUND 52 (ADR-092): the ground takes `dirt` — LOOSE EARTH — and not the era's paving. The
+    // road is a separate mesh with its own material two blocks below; this one is the land BETWEEN
+    // the roads, and giving it cobbles would pave the fields.
+  }), { ...GRAIN.ground, ...wetGain(wetTile), maps: surfaces.get('dirt') }));
 
   // Dùng lại vài đối tượng tạm cho mọi thực thể — tạo mới trong vòng lặp là rác cho bộ dọn.
   const matrix = new Matrix4();
@@ -809,7 +827,9 @@ export function createCityScene({
     envMapIntensity: ENV_DIFFUSE,
     transparent: dimmed,
     opacity: dimmed ? 0.62 : 1,
-  }), { ...GRAIN.road, ...wetGain(wetRoad) }));
+    // round 52: the era's own paving — `roadMaterial` is already the family name, so the cobbles of
+    // era 5 and the asphalt of era 11 each get the surface their century actually walked on.
+  }), { ...GRAIN.road, ...wetGain(wetRoad), maps: surfaces.get(getEraStyle(layout.era)?.roadMaterial) }));
 
   // ── ĐỊA HÌNH ──────────────────────────────────────────────────────────────
   // ⚠️ MỌI THỨ ĐỨNG TRÊN ĐẤT ĐỀU PHẢI HỎI Ở ĐÂY, KHÔNG ĐƯỢC AI TỰ GIẢ ĐỊNH y = 0.
@@ -907,7 +927,7 @@ export function createCityScene({
     color: new Color(wetOutskirts.darken, wetOutskirts.darken, wetOutskirts.darken),   // round 49
     envMap,
     envMapIntensity: ENV_DIFFUSE,
-  }), { ...GRAIN.outskirts, ...wetGain(wetOutskirts) }));
+  }), { ...GRAIN.outskirts, ...wetGain(wetOutskirts), maps: surfaces.get('dirt') }));
   if (horizonSurface) {
     track(horizonSurface.geometry);
     const outskirts = new Mesh(horizonSurface.geometry, outskirtsMaterial);
@@ -1402,7 +1422,13 @@ export function createCityScene({
           envMapIntensity: envIntensity,
           transparent: dimmed,
           opacity: dimmed ? 0.62 : 1,
-        }), { ...GRAIN.building, specularGain: specularGainFor(envIntensity), motion: eraMotion ? motionUniforms : null }));
+        }), {
+          ...GRAIN.building,
+          specularGain: specularGainFor(envIntensity),
+          motion: eraMotion ? motionUniforms : null,
+          // round 52: this family's own mortar joints, grain, rust or tile edges
+          maps: surfaces.get(family),
+        }));
       });
       const mesh = new Mesh(merged.geometry, buildingMaterial);
       mesh.name = tenNhom;   // để `city-preview.mjs --mask buildings` hỏi được, xem chú thích trên

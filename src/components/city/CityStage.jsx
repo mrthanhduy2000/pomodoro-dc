@@ -104,6 +104,9 @@ export default function CityStage({
   const wide = useMinWidth(768);
   const preference = useSettingsStore((s) => s.cityRenderMode);
   const showHud = useSettingsStore((s) => s.cityPerfHud);
+  // Round 52 (ADR-092): Đàm's switch for the post pass. Read as a bare boolean, like `showHud` —
+  // a selector returning an object would rebuild the WebGL scene on every parent render.
+  const postFxOn = useSettingsStore((s) => s.cityPostFx !== false);
 
   const [hasWebGL2, setHasWebGL2] = useState(null);   // null = chưa dò xong
   const [hints, setHints] = useState(null);
@@ -246,6 +249,7 @@ export default function CityStage({
               walk={walking}
               walkApiRef={walkApi}
               cameraApiRef={cameraApi}
+              postFx={postFxOn}
             />
           </Suspense>
 

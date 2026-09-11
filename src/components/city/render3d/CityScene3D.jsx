@@ -27,6 +27,7 @@ import { CITY_CAMERA_FOV, MIN_PITCH, cityOrbitOptions, createOrbit } from '../..
 import { STEP, WALK_FOV, WALK_NEAR, WALK_PITCH_MAX, WALK_PITCH_MIN, createWalker } from '../../../engine/city3d/walk';
 import { planCityFocus } from '../../../engine/city3d/cityFocus';
 import { createRenderLoop } from '../../../engine/city3d/renderLoop';
+import { createPostFx, postProfileFor } from './postFx';
 import { pickNearest } from '../../../engine/city3d/pick';
 import { ERA_METADATA } from '../../../engine/constants';
 import { getVietnamDayIndex, getVietnamHour, getVietnamMonthIndex } from '../../../engine/time';
@@ -97,6 +98,12 @@ export default function CityScene3D({
   walk = false,     // round 50 (ADR-090): down on the street — the same orbit crane in walk mode (`walk.js`)
   walkApiRef = null, // round 50: the stage's buttons reach `{ step, turn }` through this ref
   cameraApiRef = null, // round 50: the postcard button reaches `{ capture }` through this ref
+  /**
+   * ROUND 52 (ADR-092): the post pass — ambient occlusion, god rays, bloom, lens. Đàm's switch, in
+   * Settings, because he lifted a ban that was measured rather than guessed and asked to be able to
+   * take it back himself. `false` builds NOTHING (see `createPostFx`), so off is genuinely free.
+   */
+  postFx: postFxOn = true,
 }) {
   const hostRef = useRef(null);
   const runtimeRef = useRef(null);
@@ -284,6 +291,34 @@ export default function CityScene3D({
       }
 
 
+      /**
+       * ROUND 52 (ADR-092): THE POST PASS, AND ITS SWITCH.
+       *
+       * ⚠️ CONSTRUCTED ONLY WHEN ON. `postFx` is `null` when Đàm turns it off in Settings, and every
+       * line below that touches it is guarded — so "off" is not "on with the effects at zero", it is
+       * the round-51 path with no extra render target allocated at all. That is the difference
+       * between a switch that costs nothing and a switch that only looks like it does.
+       */
+      const postFx = postFxOn
+        ? createPostFx({
+          renderer,
+          scene: city.scene,
+          camera,
+          width: Math.max(1, host.clientWidth),
+          height: Math.max(1, Math.round(host.clientWidth * 0.62)),
+          profile: postProfileFor(daylight.phase),
+          walk: false,
+        })
+        : null;
+      if (postFx) {
+        // Air is what a shaft of light scatters off. Round 49's fog and round 51's cloud both count;
+        // a clear desert noon has nothing in the air and gets no shafts.
+        postFx.update({
+          sunDirection: city.sun?.position ? city.sun.position.clone().normalize() : null,
+          air: Math.min(1, 0.20 + (weather?.fog ?? 0) * 0.9 + (city.stats?.sky?.amount ?? 0) * 0.35),
+        });
+      }
+
       function resize() {
         const width = Math.max(1, host.clientWidth);
         // `fill`: bám đúng chiều cao ô chứa (lớp nền trang chủ, cao thấp tuỳ màn hình).
@@ -294,6 +329,10 @@ export default function CityScene3D({
         renderer.setSize(width, height, false);
         camera.aspect = width / height;
         camera.updateProjectionMatrix();
+        // ⚠️ THE COMPOSER HAS ITS OWN BUFFERS AND THEY DO NOT FOLLOW `renderer.setSize`. Miss this
+        // and the scene renders at the new size into a target still the old size — the picture
+        // stretches, and nothing errors.
+        postFx?.setSize(width * renderer.getPixelRatio(), height * renderer.getPixelRatio());
       }
 
       // Mốc thời gian gốc của hoạt hoạ. Dùng đồng hồ TUYỆT ĐỐI chứ không cộng dồn từng khung:
@@ -410,7 +449,8 @@ export default function CityScene3D({
           renderer.shadowMap.needsUpdate = true;
           shadowsDirty = false;
         }
-        renderer.render(city.scene, camera);
+        if (postFx) postFx.render();
+        else renderer.render(city.scene, camera);
       }
 
       const loop = createRenderLoop({
@@ -685,6 +725,7 @@ export default function CityScene3D({
           if (walkApiRef) walkApiRef.current = null;
           if (cameraApiRef) cameraApiRef.current = null;
           document.removeEventListener('visibilitychange', onVisibility);
+          postFx?.dispose();
           city.dispose();
           renderer.dispose();
           // Trả context về cho trình duyệt ngay thay vì đợi bộ dọn rác. Safari giới hạn số
@@ -722,7 +763,7 @@ export default function CityScene3D({
     // đồng hồ tươi qua `getVietnamHour()`, là nguồn sự thật duy nhất); có mặt ở đây thuần tuý làm
     // TÍN HIỆU dựng lại. Bỏ nó ra = bầu trời đứng im khi mở lại app trên iPhone.
   }, [layout, dimmed, failed, giveUp, reduceMotion, sessionCount, streakLength,
-    still, fill, interactive, dayPhase, hour, season, walkApiRef, cameraApiRef]);
+    still, fill, interactive, dayPhase, hour, season, walkApiRef, cameraApiRef, postFxOn]);
 
   // Chạm vào công trình → bay tới. Effect RIÊNG, cố ý tách khỏi effect dựng cảnh: nó chỉ gọi một
   // hàm trên cảnh đang sống, không dựng lại gì cả. Gộp chung thì mỗi cú chạm sẽ tháo cả WebGL
@@ -754,14 +795,19 @@ export default function CityScene3D({
         aria-label={fill ? undefined : `Thành phố 3D có ${layout.buildings.length} công trình`}
       />
       {/*
-        VIỀN TỐI GÓC (vignette) — thứ rẻ nhất trong cả phase mà đổi được nhiều nhất về "chất tranh".
+        VIỀN TỐI GÓC (vignette) — LỚP DỰ PHÒNG, CHỈ HIỆN KHI HẬU KỲ TẮT (round 52, ADR-092).
 
-        ⚠️ VÌ SAO LÀ MỘT LỚP CSS CHỨ KHÔNG PHẢI POST-PROCESSING: cách "đúng bài" của đồ hoạ 3D là
-        dựng thêm một lượt vẽ hậu kỳ (EffectComposer). Nó đòi thêm thư viện, thêm một khung đệm
-        toàn màn hình, và **vẽ lại toàn bộ điểm ảnh mỗi khung hình** — trên iPhone đó là khoản đắt
-        nhất có thể thêm vào, đúng thứ luật pin cấm. Một lớp gradient CSS đứng yên cho ra hiệu quả
-        thị giác gần như y hệt với giá bằng KHÔNG: trình duyệt vẽ nó một lần rồi ghép ở tầng
-        compositor, không đụng tới GPU của cảnh 3D và không tốn thêm khung hình nào.
+        ⚠️ CÂU DƯỚI ĐÂY ĐÃ ĐƯỢC VIẾT LẠI 2026-09-11. Bản cũ nói *"VÌ SAO LÀ MỘT LỚP CSS CHỨ KHÔNG
+        PHẢI POST-PROCESSING"* và từ chối `EffectComposer` vì nó *"đòi thêm thư viện, thêm một khung
+        đệm toàn màn hình, và vẽ lại toàn bộ điểm ảnh mỗi khung hình"*. Lý do ấy đo được và đúng khi
+        nó được viết. **Đàm gỡ nó ở vòng 52**: *"Cả hai lần đều từ chối vì lo máy yếu. Tôi gỡ cái lo
+        đó: máy tôi rất mạnh. Lag thì tôi nói. Làm hậu kỳ."* Nay `postFx.js` dựng đúng lượt hậu kỳ
+        ấy — che khuất, tia nắng, loé sáng, ống kính — và viền tối là một phần của lượt ống kính.
+
+        ⇒ Lớp CSS này KHÔNG bị xoá, nó lùi về làm dự phòng: khi Đàm tắt công tắc hậu kỳ trong Cài
+        đặt, viền tối vẫn còn, vì nó là thứ rẻ nhất còn lại và cảnh không có nó thì phẳng ra ngay.
+        Bật hậu kỳ mà vẫn để lớp này thì viền tối bị cộng HAI LẦN và bốn góc đen đặc — đúng cái lỗi
+        "cùng một luật phát biểu ở hai chỗ" mà dự án đã trả giá nhiều lần.
 
         Vì sao nó làm cảnh trông như tranh: người vẽ sơn dầu luôn dìm bốn góc xuống để dồn mắt vào
         vùng sáng ở giữa — và lớp vecni ngả nâu của tranh cổ cũng đúng là đậm dần ra rìa. Ở đây
@@ -774,6 +820,7 @@ export default function CityScene3D({
         cảnh vốn đã tối sẵn, dìm thêm nữa là mất luôn. Viền tối là thứ tương đối với nền nó phủ
         lên, không phải một con số tuyệt đối.
       */}
+      {!postFxOn && (
       <div
         aria-hidden="true"
         className="pointer-events-none absolute inset-0"
@@ -785,6 +832,7 @@ export default function CityScene3D({
               + ' rgba(42,28,15,0) 42%, rgba(42,28,15,0.16) 74%, rgba(42,28,15,0.42) 100%)',
         }}
       />
+      )}
     </div>
   );
 }

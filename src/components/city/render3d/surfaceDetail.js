@@ -100,10 +100,38 @@ export function specularGainFor(envMapIntensity) {
  */
 const NOISE_GLSL = /* glsl */`
 varying vec3 vDetailPos;
+varying vec3 vDetailNrm;
 uniform float uDetailScale;
 uniform float uDetailStrength;
 uniform float uDetailRough;
 uniform float uSpecGain;
+#ifdef CITY_SURFACE_MAPS
+uniform sampler2D uSurfDetail;
+uniform sampler2D uSurfNormal;
+uniform float uSurfScale;
+uniform float uSurfBump;
+
+/**
+ * TRIPLANAR SAMPLING — the only way to put a texture on this geometry, because this geometry has no
+ * UVs (geometryFactory.js merges a thousand prisms; there is no unwrap and inventing one would mean
+ * rebuilding the merge). Sample the map three times — along xz, xy and zy — and blend by the surface
+ * normal. Two properties matter more here than the cost of two extra fetches: it needs no unwrap at
+ * all, and the grain runs CONTINUOUSLY across the merge, so two prisms forming one wall share one
+ * run of brickwork instead of each starting its own.
+ *
+ * NOTE — no backticks anywhere inside this string: it lives in a template literal, and a backtick in
+ * a comment ends the literal in the middle of a shader. The preview tool paid for this lesson once.
+ */
+vec4 triplanar(sampler2D tex, vec3 p, vec3 n) {
+  vec3 w = abs(n);
+  w = pow(w, vec3(4.0));
+  w /= max(w.x + w.y + w.z, 0.0001);
+  vec4 xz = texture2D(tex, p.xz);
+  vec4 xy = texture2D(tex, p.xy);
+  vec4 zy = texture2D(tex, p.zy);
+  return xz * w.y + xy * w.z + zy * w.x;
+}
+#endif
 
 float detailHash(vec3 p) {
   p = fract(p * 0.3183099 + vec3(0.71, 0.113, 0.419));
@@ -139,6 +167,12 @@ export function applySurfaceDetail(material, opts = {}) {
   // Round 48 (ADR-088): the merged city materials also carry the motion uniforms; `three` allows one
   // `onBeforeCompile` per material, so the injection happens INSIDE this hook, never as a second one.
   const motion = opts.motion ?? null;
+  /**
+   * Round 52 (ADR-092): the family's generated surface maps (`surfaceTexture.js`), or `null` for the
+   * families that do not want one. `null` compiles the SAME shader as round 51 — the `#ifdef` is not
+   * a runtime branch, it is a different program, so a material without maps pays nothing at all.
+   */
+  const maps = opts.maps ?? null;
   const scale = Number.isFinite(opts.scale) ? opts.scale : 6;
   const strength = Number.isFinite(opts.strength) ? opts.strength : 0.09;
   const roughness = Number.isFinite(opts.roughness) ? opts.roughness : 0.12;
@@ -150,20 +184,31 @@ export function applySurfaceDetail(material, opts = {}) {
     shader.uniforms.uDetailStrength = { value: strength };
     shader.uniforms.uDetailRough = { value: roughness };
     shader.uniforms.uSpecGain = { value: specularGain };
+    if (maps) {
+      shader.defines = { ...(shader.defines ?? {}), CITY_SURFACE_MAPS: '' };
+      shader.uniforms.uSurfDetail = { value: maps.detail };
+      shader.uniforms.uSurfNormal = { value: maps.normal };
+      shader.uniforms.uSurfScale = { value: maps.scale };
+      shader.uniforms.uSurfBump = { value: maps.bump };
+    }
 
     // ── ĐỈNH: mang toạ độ thế giới xuống mảnh ────────────────────────────────────────────────
     // ⚠️ TỰ TÍNH, KHÔNG MƯỢN BIẾN `worldPosition` CỦA THREE. Biến đó chỉ tồn tại bên trong một
     // `#if defined( USE_ENVMAP ) || defined( USE_SHADOWMAP ) || …` — hôm nay vật liệu của ta thoả
     // điều kiện đó, nhưng gỡ `envMap` khỏi một vật liệu nào đó trong tương lai sẽ làm shader
     // KHÔNG BIÊN DỊCH ĐƯỢC, và lỗi sẽ hiện ra dưới dạng một khối đen chứ không phải một dòng báo.
-    shader.vertexShader = `varying vec3 vDetailPos;\n${shader.vertexShader}`.replace(
+    shader.vertexShader = `varying vec3 vDetailPos;\nvarying vec3 vDetailNrm;\n${shader.vertexShader}`.replace(
       '#include <worldpos_vertex>',
       `#include <worldpos_vertex>
       vec4 detailWorld = vec4( transformed, 1.0 );
       #ifdef USE_INSTANCING
         detailWorld = instanceMatrix * detailWorld;
       #endif
-      vDetailPos = ( modelMatrix * detailWorld ).xyz;`,
+      vDetailPos = ( modelMatrix * detailWorld ).xyz;
+      // WARNING - THE WORLD NORMAL, CARRIED DOWN SEPARATELY. The triplanar blend needs to know which
+      // way the surface faces in WORLD space; vNormal is in VIEW space, so using it would make the
+      // brick courses swim as the camera turns - a bug that looks like a texture problem and is not.
+      vDetailNrm = normalize( mat3( modelMatrix ) * objectNormal );`,
     );
 
     // ── MẢNH: vân + độ nhám + phản chiếu ─────────────────────────────────────────────────────
@@ -177,7 +222,15 @@ export function applySurfaceDetail(material, opts = {}) {
         float nBig = detailNoise( detailP );
         float nFine = detailNoise( detailP * 3.7 + 11.3 );
         float detailMix = nBig * 0.62 + nFine * 0.38;
-        diffuseColor.rgb *= 1.0 + ( detailMix - 0.5 ) * 2.0 * uDetailStrength;`,
+        diffuseColor.rgb *= 1.0 + ( detailMix - 0.5 ) * 2.0 * uDetailStrength;
+        #ifdef CITY_SURFACE_MAPS
+        // ROUND 52 (ADR-092): the family own surface - mortar joints, wood grain, rust, tile edges.
+        // It MULTIPLIES the colour that is already there; it never replaces it, so every palette
+        // decision of rounds 47-51 survives intact and this only adds what light can catch on.
+        vec3 surfN = normalize( vDetailNrm );
+        vec4 surf = triplanar( uSurfDetail, vDetailPos * uSurfScale, surfN );
+        diffuseColor.rgb *= surf.rgb;
+        #endif`,
       )
       // Vặn độ nhám bằng TẦNG MỊN. Dùng tầng thô thì cả một mảng tường cùng bóng lên một lượt,
       // trông như vết ố; tầng mịn cho ra những mảng nhỏ rải rác — đúng cách một bề mặt thật lấp
@@ -185,7 +238,28 @@ export function applySurfaceDetail(material, opts = {}) {
       .replace(
         '#include <roughnessmap_fragment>',
         `#include <roughnessmap_fragment>
-        roughnessFactor = clamp( roughnessFactor + ( nFine - 0.5 ) * uDetailRough, 0.04, 1.0 );`,
+        roughnessFactor = clamp( roughnessFactor + ( nFine - 0.5 ) * uDetailRough, 0.04, 1.0 );
+        #ifdef CITY_SURFACE_MAPS
+        // the joint is rougher than the face, and it is the SAME height field that says so
+        roughnessFactor = clamp( roughnessFactor + ( surf.a - 0.5 ) * 1.4, 0.03, 1.0 );
+        #endif`,
+      )
+      // ⚠️ THE NORMAL IS PERTURBED BY HAND, NOT THROUGH `normalMap`. `MeshStandardMaterial`'s own
+      // normal map needs UVs and a tangent attribute, and this geometry has neither. Nudging the
+      // world normal after `normal_fragment_begin` is the same mathematics with no unwrap: the map
+      // is tangent-space, and on an axis-aligned box world axes ARE the tangent frame, which is what
+      // a city of prisms is made of.
+      .replace(
+        '#include <normal_fragment_begin>',
+        `#include <normal_fragment_begin>
+        #ifdef CITY_SURFACE_MAPS
+        {
+          vec3 wn = normalize( vDetailNrm );
+          vec3 bump = triplanar( uSurfNormal, vDetailPos * uSurfScale, wn ).xyz * 2.0 - 1.0;
+          vec3 perturbed = normalize( wn + vec3( bump.x, bump.y, 0.0 ) * uSurfBump * 0.55 );
+          normal = normalize( ( viewMatrix * vec4( perturbed, 0.0 ) ).xyz );
+        }
+        #endif`,
       )
       // ⚠️ CHỈ NHÂN `radiance` (phản chiếu), KHÔNG ĐỤNG `iblIrradiance` (khuếch tán). Đây chính là
       // phép tách đôi nói ở đầu file. Nhân nhầm biến kia = quay lại đúng thất bại "pastel như
@@ -206,6 +280,12 @@ export function applySurfaceDetail(material, opts = {}) {
   // key. With one key for both, whichever compiled first won: the merged city got the ground's
   // program and nothing moved — trees, flags, sails stood still for a whole round while the
   // photo measure was carried by smoke and residents, which have their own clock.
-  material.customProgramCacheKey = () => (motion ? 'city-surface-detail-v1+motion' : 'city-surface-detail-v1');
+  /**
+   * ⚠️ AND THE MAPS CHANGE THE PROGRAM TOO (round 52). `CITY_SURFACE_MAPS` is a `#define`, so a
+   * material with maps and one without compile to DIFFERENT code — exactly the shape of lesson 106,
+   * where one shared key let the ground's program serve the whole merged city and nothing moved for
+   * a full round with every test green. Any future flag that edits the shader goes in this key.
+   */
+  material.customProgramCacheKey = () => `city-surface-detail-v2${motion ? '+motion' : ''}${maps ? '+maps' : ''}`;
   return material;
 }

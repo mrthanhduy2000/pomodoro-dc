@@ -12,12 +12,12 @@
  * nhìn chiều cao thì **mù hoàn toàn với nó**, vì hai đỉnh ở hai bên khe có `y` y hệt như một đỉnh
  * đứng giữa đồng trống. Đúng hình dạng bài học "một phép đo trộn hai đại lượng / thiếu một chiều".
  *
- * ⚠️ VÀ NÓ VẪN KHÔNG PHẢI SSAO. Lý do từ chối SSAO ở `materials.js` còn nguyên giá trị: SSAO là một
- * lượt hậu kỳ TOÀN MÀN HÌNH, tính tiền theo TỪNG ĐIỂM ẢNH — mà `PERFORMANCE.md` đo được 80% chi phí
- * mỗi khung hình của cảnh này đã là chi phí theo điểm ảnh — và nó thêm một pass vào MỌI khung hình,
- * tức phá thẳng vào render-on-demand. Ở đây cảnh TĨNH giữa hai lần dựng, nên phép che khuất tính
- * MỘT LẦN lúc gộp hình học rồi nướng vào màu đỉnh: **0 đồng lúc chạy**, và không đụng một dòng nào
- * của vòng lặp vẽ.
+ * ⚠️ NÓ KHÔNG PHẢI SSAO, VÀ TỪ VÒNG 52 THÌ CẢ HAI CÙNG CHẠY — CÂU NÀY ĐÃ ĐƯỢC VIẾT LẠI 2026-09-11.
+ * Bản cũ ở đây chép lại lệnh cấm SSAO của `materials.js`. Lệnh cấm ấy **đã được Đàm gỡ ở vòng 52**;
+ * `postFx.js` nay chạy một lượt GTAO thật mỗi khung hình, có công tắc trong Cài đặt. Phép nướng sẵn
+ * này ở lại làm NỀN: nó là lớp che khuất duy nhất còn sống khi công tắc tắt, nó bắt được chỗ mà một
+ * phép đo theo màn hình bắt kém nhất (khe giữa hai căn, chân tường khuất camera), và giá của nó vẫn
+ * bằng 0 lúc chạy. Đừng xoá nó với lý do "đã có SSAO rồi".
  *
  * ⚠️ NÓ CHỈ LÀM TỐI, KHÔNG BAO GIỜ LÀM SÁNG — và đó là điều kiện Đàm ra: *"nếu ảnh ra SỮA NHẠT thì
  * BỎ NGAY"*. Hai lần dự án suýt chết vì ảnh bạc phếch (AgX tone mapping, rồi bản đồ môi trường rọi

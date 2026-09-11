@@ -67,6 +67,7 @@
 > `docs/archive/TECH_DEBT_CLOSED_2026-09-06.md` § "Threshold history" on 2026-09-06 (ADR-075).
 > They are a log of past counts, re-read on every `head` of this file for no operational
 > benefit. Nothing was deleted.
+- **#52** — `GTAOPass` trả đệm AO đen đặc ở tầm mắt; đã tắt AO cho chế độ đi bộ (round 52)
 - **#103** — Reference archive so large that one `cat` blew the context window, with no guard
 - **#86** — 137 nút tự vẽ trên 28 file KHÔNG đọc token skin, và `ActionButton` không nhận nổi chúng — ADR-078: GATED (`eslint.config.js`, palette classes or hex/rgb literals on any button = error, 0 violations); 11 action buttons through the door, the rest read tokens
 - **#18** — ĐÃ ĐÓNG (2026-08-13) · Kỷ 12–14 không hề có bề mặt nào mang màu kỷ
@@ -193,6 +194,64 @@ Look one up: `grep -n '^## #<n>' docs/TECH_DEBT_3D.md`.
 
 ---
 
+## #52 — `GTAOPass` trả về đệm che khuất ĐEN ĐẶC ở tầm mắt (chế độ đi bộ)
+
+**Mức**: Medium · **Mở**: 2026-09-11 (round 52, ADR-092) · **Đang được vá tạm bằng**: tắt AO khi `walk`
+
+### Triệu chứng, đo được
+Ở chế độ đi bộ (camera cách mặt đất ~1,6 đơn vị), toàn bộ phần ảnh **dưới một đường ngang thẳng
+tắp** có đệm AO bằng **đen đặc** — tức "che khuất hoàn toàn" — chứ không phải một giá trị AO tính
+sai. Trên ảnh thành phẩm nó hiện ra thành một dải tối vắt ngang cả bề rộng.
+
+| Khung nhìn | Ảnh đo | Bước nhảy độ sáng lớn nhất giữa hai hàng | Kết luận |
+|---|---|---|---|
+| **Đi bộ**, kỷ 10 · 12 giờ · 1400×700 | `--walk 2 --walk-look -0.55` | **16,5/255 tại hàng 612 (87,4%)** | HỎNG |
+| **Thành phố** (quỹ đạo), kỷ 7 · 18 giờ · 1400×700 | `--zoom 1.45` | **1,4/255 tại hàng 523** | SẠCH |
+| Đi bộ, cùng khung, `--nopost` | — | 6,8/255 tại hàng 335 (đường chân trời — chi tiết THẬT) | SẠCH |
+
+Ngưỡng mắt phân biệt được mà dự án dùng là ~12/255, nên 16,5 là **nhìn thấy được**, còn 1,4 và 6,8
+thì không.
+
+### Đã loại trừ (đừng thử lại mà không đọc mục này)
+Đường ấy **đứng nguyên hàng 612 ở mọi lần thử** dưới đây — một con số không nhúc nhích khi vặn mọi
+cần gạt thì nó không đến từ cần gạt nào:
+
+| Vặn thử | Kết quả |
+|---|---|
+| `radius` 0,12 · 0,35 · 0,70 (đơn vị thế giới) | hàng 612, lệch 16,7 · 17,0 · 17,2 |
+| `radius` 24 điểm ảnh + `screenSpaceRadius: true` | hàng 612, lệch 16,7 |
+| `thickness` 0,6 → 3,5 | hàng 612, lệch 17,2 |
+| Bề rộng ảnh 1000 · 1400 · 1800 (cao luôn 700) | hàng 612 cả ba — **không phải một tỉ lệ của bề rộng** |
+| Gọi lại `composer.setSize()` SAU khi đã thêm hết lượt | hàng 612 |
+| Chép lại `cameraProjectionMatrix` mỗi khung | vô nghĩa — `GTAOPass.render()` đã tự chép (GTAOPass.js:515) |
+| Vẽ lại khung trước TỪNG dải chụp + `preserveDrawingBuffer` | hàng 612 (hai thứ này chữa một vết rách KHÁC, xem dưới) |
+
+### Thứ tìm ra nó
+`gtao.output = GTAOPass.OUTPUT.Denoise` — nhìn thẳng vào đệm AO thay vì nhìn kết quả đã trộn. Lúc
+ấy mới thấy vùng dưới là ĐEN chứ không phải "tối hơn", và thấy biên của nó **cao hơn ở bên phải**,
+nơi có một bức tường gần camera — tức biên bám theo ĐỘ SÂU, không phải theo hàng điểm ảnh.
+⇒ **Bài học: khi vặn mọi tham số mà vệt không đổi, hãy đi xem BƯỚC TRUNG GIAN, đừng vặn tiếp.**
+
+### Hai vết rách KHÁC đã chữa hẳn trong cùng lần truy này (không thuộc nợ này)
+1. `city-preview.mjs` dựng renderer không có `preserveDrawingBuffer` ⇒ ảnh chụp rách thành bốn
+   mảnh. Gốc có từ đầu; ống hậu kỳ chỉ làm cửa sổ lệch rộng ra. **Đã vá.**
+2. Hạt phim gieo theo số khung ⇒ hai dải chụp của cùng một ảnh tĩnh không khớp nhau.
+   **Đã vá** bằng `still: true` trong `postFx.js`.
+
+### Hướng chữa gốc (chưa làm)
+Nghi vấn còn lại là quan hệ giữa `camera.near` (0,5) và độ sâu rất gần ở tầm mắt trong phép dựng lại
+toạ độ không gian nhìn của GTAO. Ba đường đáng thử, theo thứ tự rẻ dần:
+1. Viết AO thẳng vào `LensShader` — nó **đã có sẵn một lượt dựng độ sâu riêng** cho xoá phông
+   (`depthTarget`), nên một phép che khuất bán cầu lấy mẫu trên chính đệm ấy gần như không tốn thêm.
+2. Nâng `camera.near` chỉ trong chế độ đi bộ và đo lại.
+3. Đọc kỹ `GTAOPass` r185, dựng một cảnh tối giản tái hiện được, rồi báo ngược lên three.
+
+### Cổng đang giữ
+`postFx.test.js` — bài *"AO tắt ở chế độ đi bộ, bật ở khung nhìn thành phố"* đỏ nếu ai gỡ luật mà
+chưa chữa gốc. ⚠️ **Đừng hạ `blendIntensity` cho vệt mờ đi**: đó là giấu một khuyết tật xuống dưới
+ngưỡng mắt, đúng cái "cửa phễu" mà `CLAUDE.md` cấm.
+
+---
 ## #1 — God Function: `completeFocusSession`
 
 - **Module**: `src/store/gameStore.js`

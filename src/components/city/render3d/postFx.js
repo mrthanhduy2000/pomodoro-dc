@@ -256,6 +256,8 @@ export function createPostFx({
    * prove is doing something, and this round's whole evidence standard is "show it running".
    */
   only = null,
+  /** Still capture: pin the film grain so every draw is byte-identical — see the note at `still`. */
+  still = false,
 } = {}) {
   const want = (name) => !only || only.includes(name);
   if (!renderer || !scene || !camera) return null;
@@ -302,10 +304,24 @@ export function createPostFx({
   // ── ambient occlusion ──────────────────────────────────────────────────────
   // Radius in WORLD units: one grid cell is 1, a doorway is ~0,3, the gap between two houses ~0,2.
   // 0,35 therefore reaches across a crease and stops before it starts shading whole walls.
+  /*
+    ⚠️ TẮT Ở CHẾ ĐỘ ĐI BỘ, VÀ ĐÂY LÀ MỘT KHUYẾT TẬT CỦA `GTAOPass` ĐÃ ĐO ĐƯỢC, KHÔNG PHẢI
+    MỘT LỰA CHỌN THẨM MỸ — xem `TECH_DEBT.md` #52 để biết đã loại trừ những gì.
+    Ở tầm mắt (camera cách mặt đất ~1,6 đơn vị), đệm AO trả về **ĐEN ĐẶC** — tức "che khuất
+    hoàn toàn" — cho toàn bộ phần ảnh dưới một đường ngang thẳng tắp. Đo được ở kỷ 10, 12 giờ,
+    1400×700: **hàng 612/700 (87,4%), bước nhảy độ sáng 16,5/255** trên ảnh thành phẩm.
+    ⚠️ KHUNG NHÌN THÀNH PHỐ (quỹ đạo) THÌ SẠCH — đo ở kỷ 7, 18 giờ: bước lớn nhất **1,4/255**,
+    tức không có gì. Đó là khung Đàm mở ra nhìn phần lớn thời gian, và ở đó phép che khuất chạy
+    đúng như Việc 2 đặt hàng: góc tường, chân cột, khe giữa hai nhà, dưới diềm mái.
+    ⇒ Giữ AO ở chỗ nó đúng, tắt ở chỗ nó sai. **Không hạ `blendIntensity` cho vệt mờ đi** — làm
+    thế là giấu một khuyết tật xuống dưới ngưỡng mắt, đúng cái "cửa phễu" mà `CLAUDE.md` cấm.
+  */
   let gtao = null;
-  if (want('ao')) {
+  if (want('ao') && !walk) {
     gtao = new GTAOPass(scene, camera, w, h);
     gtao.output = GTAOPass.OUTPUT.Default;
+    // Bán kính theo ĐƠN VỊ THẾ GIỚI: một ô lưới là 1, một ô cửa ~0,3, khe giữa hai nhà ~0,2.
+    // 0,35 đủ với qua một nếp gấp và dừng lại trước khi bắt đầu đánh bóng cả mảng tường.
     gtao.updateGtaoMaterial({ radius: 0.35, distanceExponent: 1.4, thickness: 0.6, scale: 1.0, samples: 16 });
     gtao.blendIntensity = profile.ao;
     composer.addPass(gtao);
@@ -334,9 +350,36 @@ export function createPostFx({
   // ── tone mapping + colour space, ONCE, at the end ──────────────────────────
   composer.addPass(new OutputPass());
 
+  /*
+    ⚠️ GỌI LẠI `setSize` SAU KHI ĐÃ THÊM HẾT CÁC LƯỢT — VÀ ĐÂY LÀ BẢN VÁ CỦA MỘT VẾT THẤY ĐƯỢC.
+    `EffectComposer.setSize` chỉ đi qua những lượt ĐANG có trong danh sách lúc nó được gọi. Gọi nó
+    ngay sau khi dựng composer (như bản đầu) thì mọi lượt thêm sau đó — GTAO, bloom, hai ShaderPass
+    — không bao giờ nhận được cỡ ấy; chúng chỉ có cỡ mình tự dựng lấy, và lượt nào tự dựng thiếu
+    thì lặng lẽ chạy ở cỡ khác.
+    Triệu chứng đo được (kỷ 10, 12 giờ, 1400×700): một BƯỚC NHẢY ĐỘ SÁNG 16,5/255 vắt ngang TOÀN
+    BỘ bề rộng ở đúng **hàng 612/700**, lặp lại y hệt qua nhiều lượt chụp. Bisect bằng `--post`:
+    có ở `--post ao`, KHÔNG có ở `--nopost`, `--post bloom`, `--post rays`, `--post lens` (cả bốn
+    đều có bước lớn nhất ở hàng 335 — đường chân trời, một chi tiết THẬT của cảnh, chỉ 7/255).
+    ⇒ Một phép đo theo HÀNG tách được "vệt lỗi" khỏi "nội dung" mà mắt thì không: cả hai đều là
+    một đường ngang sẫm.
+  */
+  composer.setSize(w, h);
+
   const sunWorld = new Vector3();
   const sunNdc = new Vector3();
   let frame = 0;
+
+  /*
+    ⚠️ `still` — GIỮ HẠT PHIM ĐỨNG YÊN, VÀ ĐÂY KHÔNG PHẢI MỘT TIỆN NGHI CHO CÔNG CỤ.
+    Hạt phim được gieo từ `uFrame`, tăng mỗi lượt vẽ. Trong app đó đúng là thứ phải có — hạt đứng
+    yên giữa một cảnh đang động đọc ra là bụi bẩn trên màn hình, không phải hạt phim.
+    Nhưng `city-preview.mjs` chụp ảnh TĨNH bằng **nhiều dải ngang**, mỗi dải một lần đọc màn hình.
+    Hạt đổi giữa hai dải ⇒ hai dải không khớp, và chỗ ghép hiện ra thành một ĐƯỜNG NGANG SẪM vắt
+    qua cả bề rộng — đo được ở vòng 52: bước nhảy 16,5/255 tại hàng 612/700, đúng mốc chia dải mà
+    `chiaBang` tính ra cho khung 1400 điểm ảnh. Trông y hệt một khuyết tật của phép che khuất.
+    ⇒ Ảnh tĩnh thì mọi lượt vẽ phải cho ra CÙNG MỘT BYTE. `still` làm đúng thế.
+  */
+  const stillFrame = still === true;
 
   return {
     composer,
@@ -344,7 +387,7 @@ export function createPostFx({
 
     /** Draw one frame through the chain. */
     render() {
-      frame = (frame + 1) % 4096;
+      if (!stillFrame) frame = (frame + 1) % 4096;
       lens.uniforms.uFrame.value = frame;
       // The depth prepass only when something actually reads depth — see the block above.
       if (lens.uniforms.uDofAmount.value > 0.001) {

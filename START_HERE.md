@@ -32,11 +32,28 @@ Production branch `main` carries **both** work streams (merged 2026-08-28 on Đ�
 ⚠️ Phase 21 therefore shipped **before** Đàm reviewed its screenshots — the "waiting on Đàm's eyes"
 item below is still live, it just now reviews something already running.
 
-- **Loop — ROUND 51 (2026-09-09, LATEST): THE EYE CAME DOWN TO THE STREET (ADR-091).**
+- **Loop — ROUND 52 (2026-09-11, LATEST): THE PICTURE GOT EXPENSIVE (ADR-092).**
+  A **post pass** (`render3d/postFx.js`): AO → god rays → bloom → lens, one profile per daylight phase,
+  switch in Settings. **Generated textures** for all 16 material families (`render3d/surfaceTexture.js`)
+  — no files, no network, sampled TRIPLANAR because the merged geometry has no UVs. **Residents wear
+  their century** and **cast shadows** (map re-dirtied every 2nd animated frame, else they walk and the
+  shadows stay put). Five laws worth the tokens:
+  ⚠️ Tone mapping lives in `OutputPass`, **not on the renderer** — both means it applies twice.
+  ⚠️ **Threshold decides WHAT glows, strength only how much** — night has a 0,5 floor in
+  `postFx.test.js`: fire sits near 0,9 and a sunlit wall near 1,0, so lower selects both and every
+  window blows out white.
+  ⚠️ **AO is OFF in walk mode** — `GTAOPass` returns a BLACK occlusion buffer near the camera at eye
+  level (row 612/700, step 16,5/255; the city view measures 1,4). `TECH_DEBT.md` #52 lists every
+  parameter already ruled out. Do NOT lower `blendIntensity` to hide it.
+  ⚠️ **Clothing is the limb, not a tube around it** (`human.js` `SLEEVE_LOOK`/`LEG_LOOK`) — the obvious
+  build cost 8 parts per resident to hide parts it just made. Ask *"how many OBJECTS is this?"*
+  ⚠️ `city-preview.mjs` needed **`preserveDrawingBuffer`** (screenshots tore into four pieces) and
+  **`still: true`** so grain matches across capture strips.
+
+- **Loop — ROUND 51 (2026-09-09): THE EYE CAME DOWN TO THE STREET (ADR-091).**
   Round 50's walk mode changed the priorities of the four rounds before it: everything from round 47 on
-  was built for a camera looking DOWN, and from the pavement none of it is where the eye is.
-  ⚠️ **The sky is a DECISION, not a backdrop** (`sky.js`, pure): cloud kind/cover, drift, stars behind
-  the era's light pollution, the Milky Way, a real 29,53-day moon. Drawn on a DOME that TURNS — a flat
+  was built for a camera looking DOWN.
+  ⚠️ **The sky is a DECISION, not a backdrop** (`sky.js`, pure). Drawn on a DOME that TURNS — a flat
   cloud plane puts half the clouds between the camera and the city.
   ⚠️ **Geometry has FOUR columns now: `city · backdrop · sky · total`** — `sky` is not inside
   `backdrop`, which exists for being CONSTANT across eras; clouds are the opposite.
@@ -45,8 +62,7 @@ item below is still live, it just now reviews something already running.
   ⚠️ **Role `iron` exists because `trim` borrows the century's colour** (a Manchester gas lamp came out
   brick red). It rides the `wood` family, so no era gained a draw call; any new role must do the same.
   ⚠️ **A wonder opens without relaxing the mirror** (`wonderEntrance.js`): centred at x = 0 or in equal
-  ±pairs. ⚠️ **`specSpan` takes `max(w/2, d/2)`, not the depth** — clamp anything laid on a face by that
-  formula, not by its own depth.
+  ±pairs. ⚠️ **`specSpan` takes `max(w/2, d/2)`, not the depth.**
 - **Loop — ROUND 50 (2026-09-09): MORE TO SEE, MORE TO DO (ADR-090).** Seasons, an hour slider, walk
   mode, the postcard, interiors, facade vocabulary; `#77` · `#81` · `#90(b)` closed. Laws still live:
   the **season is a second axis** (`seasonLook`; summer is the identity look — never "improve" it
@@ -61,32 +77,10 @@ item below is still live, it just now reviews something already running.
   props, fire and weather arrived (ADR-089: `wet ≥ rain` by construction; lesson 106 — a shader injection
   needs its own program cache key). ⚠️ **ADR-007 still locks every building's position**; run its two tests
   (`cityPlan.test.js` «15 kỷ × 120 mốc», `block.test.js` «QUA THỜI GIAN») before every 3D commit.
-- **Loop — ROUND 46 (2026-09-08): THE CITY TAB CATCHES UP WITH THE CITY'S THREE ROLES (ADR-086).**
-  Order: *"THÀNH PHỐ PHẢI TRÔNG NHƯ THỨ ĐÁNG NHẤT TRONG APP."* Measured before (390×844, 12 eras): picture
-  **201 px = 23,8 %** at y = 494 · header 202 px · 12 chips = 6 rows · «SP» said 0 times · museum 2,5× darker
-  at night. After: picture **268 px = 31,8 %** at y = 190 · header 77 · **15 eras = 2 rows @390, 1 @1280** ·
-  stat grid above the tab bar at 12 AND 15 eras · museum 0,37 at 22h = 12h.
-  ⚠️ **`components/city/stageMetrics.js` is the ONE owner of the picture's height** (ADR-083's pattern):
-  aspect floor 1,3 = the engine's `FRAME_FIT_ASPECT` (taller crops the near corner — the only way to
-  cut a building without touching the camera), `100svh − declared reserve`, ceiling. `CityScene3D` runs in
-  `fill` on every tenant. Never add a second height, a ratio'd placeholder, or a transform.
-  ⚠️ **A sealed era is lit ONCE** — `museumDaylight()` / `MUSEUM_HOUR = 15` for `dimmed` scenes. The clock
-  belongs to the living city only.
-  ⚠️ **The tab names its pay from `engine/skillPointEconomy.js`**: cell 2 «Điểm kỹ năng» (whole city +
-  «+N từ kỷ này»), «Đang xây» header, every unbuilt slot. The session count is the plaque under the
-  picture (`cityCopy.eraStatusLine`). The museum's raw-EP cell is gone (nothing to do with it).
-  ⚠️ **Đàm's premise that a sealed era's empty slot can never be built again is FALSE in the approved
-  code** — ADR-012 (his choice, 2026-08-13) restores museum lots from the inventory's restoration
-  section, with no resource gate, and a restored building pays 1 SP. The slot note says so (`slotNote`,
-  sealed variant). What ADR-007 locks is POSITION, not growth.
-  ⚠️ **Arrival moment = a DIFFERENCE, not an event** (`engine/cityArrival.js`, stamp `dc-city-seen-v1` per
-  device in `localStorage`): camera flight to the newest building + 4,2 s banner. First visit stamps
-  silently. Photograph it over the 2D renderer (`--city2d`, `--ls 'dc-city-seen-v1={"builtTotal":N-1}'`):
-  headless SwiftShader does not composite that overlay over WebGL (ADR-086 §Tool lessons).
-  ⚠️ **City-tab photos need `--settle ≥ 1500`**: the first 3D frame is a zoomed transient that looks like a
-  camera bug. `--click "Kỷ 3★"` (tile text). `--hour` moves the day-arc stamps — seed `dc-day-arc-v1`.
-  Decided NOT to build a museum gallery: the tile strip is the overview (stars and gaps in one glance).
-
+- **Loop — ROUND 46 (2026-09-08): THE CITY TAB (ADR-086).** Moved verbatim to
+  `docs/archive/START_HERE_LOG_2026-09-06.md` on 2026-09-11. Still-live rules sit in the code they
+  govern: `stageMetrics.js` owns the picture height, `museumDaylight()` lights a sealed era once,
+  city-tab photos need `--settle ≥ 1500`. Nothing was deleted.
 - **Loop — ROUND 45 (2026-09-08): A BONUS THAT CANNOT BE SEEN IS NOT A BONUS (ADR-085).** Moved verbatim to
   `docs/archive/START_HERE_LOG_2026-09-06.md` on 2026-09-09 (round 48 arrived; keep the 3 most recent) —
   `grep -n 'ROUND 45'` there. Still-live rules: `docs/UI_INVARIANTS.md` (ADR-085 bullets).
@@ -142,11 +136,16 @@ stated twice drifts.
   still needs his eye on top-down photos before any code.
 
 ### B. Ready to build
-0. **Round 51's leftovers, in the brief's order** — Việc 5 (greenery: vines, trellises, planters,
-   vegetable beds, street trees), Việc 6 (more resident roles and animals), Việc 7 (moss, rust, peeling
-   paint, soot by building age), Việc 9 (auto tour, street names, tap while walking, lamps pooling
-   light, remembering where you stood). All additive, none blocked — the round spent its budget on
-   A + B in full, as the brief asked.
+0. **`TECH_DEBT #52` — root-cause the walk-mode AO band** (round 52 left it measured, not fixed).
+   `GTAOPass` returns a solid BLACK occlusion buffer near the camera at eye level; AO is switched off
+   for walk mode until someone fixes it. The debt entry lists everything already ruled out and three
+   ways in, cheapest first — read it before touching a single GTAO parameter, because every parameter
+   has already been tried.
+1. **Round 51 and 52 leftovers, in the briefs' order** — greenery, more resident roles and animals,
+   age traces by building age, walk-mode features (auto tour, street names, tap while walking, lamps
+   pooling light), plus round 52's two: a **wet roughness map** (puddles glossy in the hollows, dry
+   under the eaves) and **per-role body proportions** (broad smith, stooped elder, big-headed child)
+   — the latter rides the resident ROLE system, not a per-era axis, so it waits on that.
 1. **`#65`** — river · canal · estuary still share one geometry; give each its own shape, with the bridge ·
    quay · steps grammar `#60` asks for. Also `#40` (tiles on the slope), more resident roles and animals,
    and people talking in pairs (rounds 49, 50 and 51 all left these).
@@ -157,6 +156,10 @@ stated twice drifts.
    explicitly twice, has barely moved. Do not read the aggregate number as "solved".
 
 ### C. Waiting on Đàm's eyes
+🔴 **Round 52 on the phone** — put two pictures of the SAME street side by side, before and after.
+Đàm's own test, in his words: the after must look like a real game, not a paper model — *"phải đọc
+bảng mới thấy khác thì vòng này chưa đạt."* Also check the Settings switch both ways, and say whether
+it lags; the post pass has never been timed on real hardware (the sandbox is a CPU rasteriser).
 🔴 **Round 51 on the phone** — walk a lap down the street by day and by night in three different eras.
 Đàm's own test: each street must read immediately as that country, that century; an empty road or a
 smooth sky on that lap means the round failed.

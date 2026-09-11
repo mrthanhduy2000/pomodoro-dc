@@ -414,7 +414,24 @@ const canvas = document.getElementById('stage');
 // con số bố cục suy ra từ đây sẽ lệch gấp đôi mà không có gì đỏ lên.
 const VIEW_W = canvas.width;
 const VIEW_H = canvas.height;
-const renderer = new WebGLRenderer({ canvas, antialias: true });
+/*
+  ⚠️ "preserveDrawingBuffer: true" — KHÔNG PHẢI MỘT CỜ BẬT CHO CHẮC, MÀ LÀ GỐC CỦA VẾT RÁCH (ADR-092).
+  Mặc định của WebGL là "false": sau khi trình duyệt ghép canvas lên trang MỘT lần, nội dung đệm
+  vẽ được coi là tiêu thụ xong và KHÔNG còn đảm bảo gì nữa. Mà Chrome headless chụp một khung
+  1400 điểm ảnh bằng NHIỀU LƯỢT đọc theo ô — lượt sau đọc lại cái đệm đã tiêu thụ ấy và nhận
+  về nội dung cũ, rỗng, hoặc một mảnh của lần ghép trước.
+
+  Đó chính là cái đã thấy: tấm "after/3-person.png" của vòng này rách thành bốn mảnh (nửa trên bên
+  phải lặp lại nội dung nửa trái) kèm một dải tối ở đáy — không phải một vết rách NGANG như cổng
+  chống-rách đang dò, nên nó lọt qua.
+
+  ⚠️ VÀ VÌ SAO NÓ CHỈ LỘ RA Ở VÒNG 52, DÙ GỐC ĐÃ CÓ TỪ ĐẦU: không hậu kỳ thì cả khung chỉ là MỘT
+  lệnh "renderer.render()", xong gần như tức thì, nên cửa sổ để chụp trúng lúc đệm bị tiêu thụ rất hẹp.
+  Ống hậu kỳ có bốn lượt và hai tấm đích đổi qua đổi lại ⇒ cửa ấy rộng ra nhiều lần.
+  ⇒ Bài học: **một lỗi có sẵn nhưng hiếm thì một thay đổi KHÔNG LIÊN QUAN cũng đủ làm nó thành
+  thường xuyên.** Đừng đi tìm lỗi trong cái vừa thay đổi trước khi hỏi cái gì đã chờ sẵn ở đó.
+*/
+const renderer = new WebGLRenderer({ canvas, antialias: true, preserveDrawingBuffer: true });
 // ⚠️ ĐÚNG TẦNG CHẤT LƯỢNG CỦA APP, KHÔNG PHẢI 1. Xem MAX_PIXEL_RATIO ở sceneGraph.js.
 renderer.setPixelRatio(DPR);
 // Dùng CHUNG cấu hình nhìn với app — nếu không, trang xem thử sẽ vẽ ra một thành phố khác.
@@ -618,6 +635,8 @@ const postFx = NO_POST ? null : createPostFx({
   profile: postProfileFor(daylight.phase),
   walk: WALK > 0,
   only: POST_ONLY,
+  // Ảnh tĩnh: ghim hạt phim để mọi lượt vẽ ra cùng một byte — xem "still" trong "postFx.js".
+  still: true,
 });
 if (postFx) {
   postFx.update({
@@ -630,7 +649,30 @@ function drawFrame() {
   if (postFx) postFx.render();
   else renderer.render(city.scene, camera);
 }
-drawFrame();
+
+/*
+  ⚠️ VẺ BA LẦN RỒI ĐỌC NGƯỢC MỘT ĐIỂM ẢNH — MỘT KHUNG VẺ LÀ KHÔNG ĐỦ KỂ TỪ VÒNG 52 (ADR-092).
+  Bằng chứng: tấm "after/3-person.png" đầu tiên của vòng này **RÁCH THÀNH BỐN MẢNG** — nửa trên
+  bên phải lặp lại nội dung nửa trái, với một mép vuông sắc. Cổng chống-rách hiện có dò mép NGANG
+  lặp lại qua nhiều lượt; vết này có cả mép DỌC nên nó lọt.
+
+  NGUYÊN NHÂN: "EffectComposer" **đổi qua đổi lại hai tấm đích** ("renderTarget1" ↔ "renderTarget2") rồi
+  mới đổ ra canvas ở lượt cuối. Gọi MỘT lần thì canvas có thể được Chrome chụp lúc đang đổ dở
+  dang — không một lỗi nào được báo, và ảnh trông "gần đúng" nên rất dễ nhận nhầm.
+
+  ⚠️ VÀ "readPixels" MỚI LÀ VẾ CÓ RĂNG, KHÔNG PHẢI SỐ 3. Đọc ngược một điểm ảnh là thứ DUY NHẤT
+  không giả vờ được: muốn trả về một byte thì mọi lệnh vẽ phải xong thật (cùng lý lẽ đã ghi ở khối
+  "settle" của nhánh đo hiệu năng — "gl.finish()" ở đây NÓI DỐI). Bỏ dòng đọc đi mà giữ ba lần vẽ
+  thì vết rách quay lại, chỉ là hiếm hơn — tức tệ hơn, vì lúc ấy không ai tìm ra nữa.
+*/
+const flushProbe = new Uint8Array(4);
+function veLaiVaDoi() {
+  drawFrame();
+  renderer.getContext().readPixels(0, 0, 1, 1, 0x1908 /* RGBA */, 0x1401 /* UNSIGNED_BYTE */, flushProbe);
+}
+for (let i = 0; i < 3; i += 1) veLaiVaDoi();
+// Cho vòng chụp gọi lại trước TỪNG DẢI — xem khối cảnh báo ở chỗ gọi.
+window.__veLai = veLaiVaDoi;
 console.log('[post] ' + (postFx ? 'DANG CHAY: ' + (POST_ONLY ? POST_ONLY.join('+') : 'ao+rays+bloom+lens') : 'TAT (--nopost)'));
 
 if (BENCH > 0) {
@@ -864,7 +906,8 @@ ctx.fillRect(0, 0, sheet.width, sheet.height);
 
 // Một canvas WebGL DUY NHẤT, kích thước đúng một ô.
 const stage = document.createElement('canvas');
-const renderer = new WebGLRenderer({ canvas: stage, antialias: true });
+// Cùng lý do với khối cảnh báo ở nhánh một-cảnh phía trên — xem "preserveDrawingBuffer" ở đó.
+const renderer = new WebGLRenderer({ canvas: stage, antialias: true, preserveDrawingBuffer: true });
 // ⚠️ ĐÚNG TẦNG CHẤT LƯỢNG CỦA APP (Phase 9C). setSize sẽ đặt stage.width = CELL_W × 2; phần hạ
 // mẫu về đúng cỡ ô nằm ở drawImage bên dưới, nên hình học bảng quét KHÔNG đổi — hồ sơ .geom.json
 // và sweep-score.mjs vẫn đọc đúng.
@@ -1540,6 +1583,20 @@ async function shoot(chrome, url, pngPath,
     for (let luot = 1; luot <= SO_LUOT; luot += 1) {
       const dai = [];
       for (const b of dsBang) {
+        /*
+          ⚠️ VẼ LẠI TRƯỚC TỪNG DẢI — ADR-092, và đây là bản vá cho một vệt ĐO ĐƯỢC chứ không phải
+          một biện pháp phòng xa. Mỗi `Page.captureScreenshot` là một lượt đọc màn hình riêng; giữa
+          hai lượt, Chromium có thể ghép lại canvas WebGL và nhận về một nội dung khác. Ở vòng 52
+          nó hiện ra thành một BƯỚC NHẢY ĐỘ SÁNG 16,5/255 vắt ngang cả bề rộng tại **đúng hàng 612**
+          của khung 1400×700 — mà 612 chính là mốc `chiaBang` tính ra cho bề rộng ấy, không phải một
+          chi tiết nào của cảnh.
+          ⚠️ Và nó chỉ lộ ra khi bật phép che khuất (`--post ao`): bốn lượt kia vẽ nhanh nên cửa sổ
+          lệch quá hẹp. ⇒ Cùng bài học với `preserveDrawingBuffer` ở đầu file: **một lỗi có sẵn mà
+          hiếm thì một thay đổi KHÔNG liên quan cũng đủ làm nó thành thường xuyên.**
+          Vế thứ hai nằm ở `postFx.js`: `still: true` ghim hạt phim, nếu không thì chính việc vẽ lại
+          sẽ đẻ ra một nội dung khác cho mỗi dải — tức là chữa một vết rách bằng một vết rách khác.
+        */
+        await cdp('Runtime.evaluate', { expression: 'window.__veLai && window.__veLai()', awaitPromise: false });
         const anh = await cdp('Page.captureScreenshot', {
           format: 'png',
           clip: { x: hopNguyen.x, y: hopNguyen.y + b.y, width: hopNguyen.width, height: b.height, scale: 1 },

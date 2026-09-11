@@ -1293,6 +1293,38 @@ Round 48 built the motion machine — one clock, a per-vertex `aMotion`, particl
 
 ---
 
+## ADR-092 — Round 52: the post pass, surfaces that are not plastic, and the gate that said "how many OBJECTS is this?"
+
+**Date**: 2026-09-11 · **Order**: *"NÂNG CẤP ĐỒ HOẠ … Build lớn. Chuyển động, motion, 3D chuẩn hơn … Đây là phần phải gây hứng thú, tiêm thêm nhiều dopamine … TOÀN QUYỀN. Không đẩy quyết định nào về phía tôi."* Style: *"high detail stylized game art — low-poly nhưng vật liệu và ánh sáng ở mức AAA"*. Order of work A → B → C → D, and *"không đủ sức làm hết thì làm sâu A + B, đừng rải mỏng cả bốn."* Same three laws as rounds 47–51: ADR-007, determinism, and the 105 era pairs across four seasons.
+
+### Context
+Two refusals written into this codebase were both lifted by Đàm in writing on 2026-09-11: `CityScene3D.jsx` had refused an `EffectComposer` and `materials.js`/`occlusion.js` had refused SSAO, both times for fear of weak hardware. His words: *"Cả hai lần đều từ chối vì lo máy yếu. Tôi gỡ cái lo đó: máy tôi rất mạnh. Lag thì tôi nói."* He also required a switch in Settings, so the decision stays reversible by the person who has to live with it.
+
+### Decisions
+1. **One post-processing chain, and its order is physics** (`render3d/postFx.js`). AO → god rays → bloom → lens → output. AO belongs before the light bleeds, because occlusion is a property of the surface, not of the glow; rays come from the scene's own bright pixels, so they read the AO'd image; bloom is what the lens does with the light that survives; grain and vignette are the film, so they come last. **Tone mapping moved into `OutputPass`** so `NeutralToneMapping` + exposure applies exactly ONCE — leaving it on the renderer applies it to the scene AND again to the composited result.
+2. **A profile per daylight phase, and the threshold decides WHAT glows.** Textbook night values (strength 1,05 · threshold 0,26) blew every lit window into a white blob, because round 49's glow sink already puts fire and lit windows near 0,9 while a sunlit wall sits near 1,0 — under about 0,5 a threshold selects BOTH. Night is now threshold 0,72, and `postFx.test.js` holds that floor as a law: *strength says how much, threshold says what*.
+3. **Textures are GENERATED at build time, never fetched** (`render3d/surfaceTexture.js`). A recipe per material family (16 of them) drives one height field, and the normal map is DERIVED from that height's gradient rather than authored beside it — so the bump and the shading can never disagree. `tileNoise` wraps on a torus, so every map tiles seamlessly; `surfaceTexture.test.js` measures the seam (< 120/255) instead of trusting it. No files, no network, byte-identical every build.
+4. **They are sampled TRIPLANAR, by world position** — the only way to texture this scene at all, because its geometry is merged per material family and has **no UVs anywhere**. It also makes the grain continuous across a merge, which a UV layout would not. Built on top of `surfaceDetail.js` as Đàm required (*"đừng dựng hệ thứ hai song song"*), with the shader variation encoded in `customProgramCacheKey` — lesson 106, paid for once already.
+5. **⭐ Clothing is the limb, not a tube around it** (`human.js` `SLEEVE_LOOK` / `LEG_LOOK`). The first build did the obvious thing: a cloth sleeve over each arm, a trouser leg over each leg. Eight extra parts per resident, era 12 at **26 parts** against a ceiling of 18 and **2 856 triangles** against 1 808 — 58% more geometry bought to HIDE the parts it had just built, since the eye never sees the arm inside the sleeve. The parts ceiling went red and it was right. The way out is the question that produced the `hat` shape: *how many OBJECTS is this in real life?* A sleeve is not an object beside an arm; it is what the eye sees where the arm is. So the limb part changes ROLE, SHAPE and WIDTH — width as well as role, because cloth has thickness and thickness is the only thing a silhouette can read. Cost: **0 extra parts, 0 extra draw calls**, and the same per-era triangle counts as before the round.
+6. **Hair is its own axis** (`humanStyle.js` `HAIR_KINDS` + `HAIRDO`). `bun` had been sitting in the headgear table, so the question "what hair does this century have" could not be asked for the other fourteen — the four bare-headed eras walked the street with a smooth skull. The crown holds ONE part: a hat wins it when there is one, hair when there is not. Eight of fifteen eras sit exactly at the parts ceiling and all eight wear hats, so a second part there would buy a strip of hair the hat covers.
+7. **Residents cast shadows**, and the reason they did not has expired: the shadow map went 2048 → 4096, round 48 doubled their size, round 50 lets Đàm walk up to them. A figure with no shadow reads as pasted onto the ground rather than standing on it. It carries an obligation elsewhere — the scene's shadow map does not auto-update, so `CityScene3D` dirties it every other animated frame (15 Hz: smooth to the eye, half the cost of 30). Without that the people walk and the shadows stay put, and no test goes red.
+8. **AO is off in walk mode, and that is a recorded defect, not a taste** (`TECH_DEBT.md` #52). At eye level three's `GTAOPass` returns a solid BLACK occlusion buffer for everything near the camera: measured at era 10, 12:00, 1400×700 as a dead-straight horizontal line at **row 612/700 with a 16,5/255 brightness step**. The city (orbit) view — the one Đàm looks at most — measures **1,4/255**, i.e. nothing. Ship AO where it is right, switch it off where it is wrong, record the measurement, and do NOT lower `blendIntensity` to push the artefact under the eye's threshold, which would be the funnel `CLAUDE.md` forbids.
+
+### Consequences
+| | Before (round 51) | After |
+|---|---|---|
+| Post-processing | refused in a comment | **4 passes**, profile per daylight phase, switch in Settings |
+| Texture maps | 0 material families | **16**, colour + normal, generated, seamless, deterministic |
+| Resident arms | `skin` in all 15 eras | **cloth in 13/15**, with sleeve volume and flare |
+| Eras with a bare skull | 4 | **0** |
+| Residents casting a shadow | no | **yes**, refreshed at 15 Hz while walking |
+| Parts per resident (worst era) | 18 | **18** — the wardrobe cost nothing |
+
+### The lesson worth more than the round
+**When every parameter you turn leaves the defect exactly where it was, stop turning parameters and go look at the INTERMEDIATE BUFFER.** The GTAO band survived radius 0,12 / 0,35 / 0,70, a screen-space radius, thickness 0,6 → 3,5, three image widths, and an extra `composer.setSize` — all at row 612. A number that does not move when you move everything is not coming from any of the things you moved. One line (`gtao.output = OUTPUT.Denoise`) showed the AO buffer itself and the answer was immediate: it was not "too dark", it was BLACK, and its boundary rose where a wall stood closer — so it tracks DEPTH, not pixel rows.
+
+---
+
 ## ADR-091 — Round 51: the eye came down to the street, and the two biggest things in the frame were the two emptiest
 
 **Date**: 2026-09-09 · **Order**: *"PHỐ ĐÃ MỞ, GIỜ PHẢI CÓ NGƯỜI Ở … MẮT TÔI NAY ĐỨNG DƯỚI ĐƯỜNG … Ở tầm mắt, bầu trời chiếm gần nửa khung hình và mặt đường chiếm phần lớn nửa còn lại. Hai thứ lớn nhất trong tầm nhìn đang là hai thứ trống nhất … Không đủ sức làm hết thì làm sâu A + B, đừng rải mỏng cả bốn."* Same three laws: ADR-007, determinism, and the 105 era pairs across all four seasons.

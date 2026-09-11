@@ -537,3 +537,33 @@ stated twice drifts.
   chain closes on a calendar, so "~N phiên" would be invented.
   ⚠️ **Hành trang keeps all three sub-tabs.** «Đã xây» is not a copy of the Thành Phố tab: it is the
   only place that names what a built building's perk does.
+
+---
+
+## Moved from `START_HERE.md` on 2026-09-11 (round 52) — verbatim, nothing deleted
+
+- **Loop — ROUND 46 (2026-09-08): THE CITY TAB CATCHES UP WITH THE CITY'S THREE ROLES (ADR-086).**
+  Order: *"THÀNH PHỐ PHẢI TRÔNG NHƯ THỨ ĐÁNG NHẤT TRONG APP."* Measured before (390×844, 12 eras): picture
+  **201 px = 23,8 %** at y = 494 · header 202 px · 12 chips = 6 rows · «SP» said 0 times · museum 2,5× darker
+  at night. After: picture **268 px = 31,8 %** at y = 190 · header 77 · **15 eras = 2 rows @390, 1 @1280** ·
+  stat grid above the tab bar at 12 AND 15 eras · museum 0,37 at 22h = 12h.
+  ⚠️ **`components/city/stageMetrics.js` is the ONE owner of the picture's height** (ADR-083's pattern):
+  aspect floor 1,3 = the engine's `FRAME_FIT_ASPECT` (taller crops the near corner — the only way to
+  cut a building without touching the camera), `100svh − declared reserve`, ceiling. `CityScene3D` runs in
+  `fill` on every tenant. Never add a second height, a ratio'd placeholder, or a transform.
+  ⚠️ **A sealed era is lit ONCE** — `museumDaylight()` / `MUSEUM_HOUR = 15` for `dimmed` scenes. The clock
+  belongs to the living city only.
+  ⚠️ **The tab names its pay from `engine/skillPointEconomy.js`**: cell 2 «Điểm kỹ năng» (whole city +
+  «+N từ kỷ này»), «Đang xây» header, every unbuilt slot. The session count is the plaque under the
+  picture (`cityCopy.eraStatusLine`). The museum's raw-EP cell is gone (nothing to do with it).
+  ⚠️ **Đàm's premise that a sealed era's empty slot can never be built again is FALSE in the approved
+  code** — ADR-012 (his choice, 2026-08-13) restores museum lots from the inventory's restoration
+  section, with no resource gate, and a restored building pays 1 SP. The slot note says so (`slotNote`,
+  sealed variant). What ADR-007 locks is POSITION, not growth.
+  ⚠️ **Arrival moment = a DIFFERENCE, not an event** (`engine/cityArrival.js`, stamp `dc-city-seen-v1` per
+  device in `localStorage`): camera flight to the newest building + 4,2 s banner. First visit stamps
+  silently. Photograph it over the 2D renderer (`--city2d`, `--ls 'dc-city-seen-v1={"builtTotal":N-1}'`):
+  headless SwiftShader does not composite that overlay over WebGL (ADR-086 §Tool lessons).
+  ⚠️ **City-tab photos need `--settle ≥ 1500`**: the first 3D frame is a zoomed transient that looks like a
+  camera bug. `--click "Kỷ 3★"` (tile text). `--hour` moves the day-arc stamps — seed `dc-day-arc-v1`.
+  Decided NOT to build a museum gallery: the tile strip is the overview (stars and gaps in one glance).

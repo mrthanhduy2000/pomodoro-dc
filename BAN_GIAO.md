@@ -1,3 +1,45 @@
+> Last update: **2026-09-11** — **ROUND 52: THE PICTURE GOT EXPENSIVE (ADR-092).**
+> Order: *"NÂNG CẤP ĐỒ HOẠ … Build lớn … high detail stylized game art — low-poly nhưng vật liệu và
+> ánh sáng ở mức AAA … TOÀN QUYỀN."* Everything on `main`, on top of round 51.
+> Same three laws: ADR-007 · determinism · 105 era pairs × 4 seasons.
+>
+> ### Measured before
+> 0 post-processing passes (refused in a comment) · 0 of 16 material families with a texture map ·
+> resident arms `skin` in 15/15 eras · 4 eras with a bare skull · residents cast no shadow.
+>
+> ### Done
+> 1. **A post pass** (`render3d/postFx.js`): AO → god rays → bloom → lens → output, with a profile per
+>    daylight phase and a switch in Settings ("Hiệu ứng hình ảnh nâng cao"). Tone mapping moved into
+>    `OutputPass` so it applies ONCE.
+> 2. **Textures generated at build time** (`render3d/surfaceTexture.js`): 16 material families, colour
+>    + normal derived from one height field, torus-wrapped so they tile, sampled TRIPLANAR by world
+>    position because the merged geometry has no UVs. No files, no network, byte-identical every build.
+> 3. **Clothing is the limb, not a tube around it** (`human.js`): sleeves and trousers change the ROLE,
+>    SHAPE and WIDTH of the arm and leg parts. 13/15 eras now have cloth arms. **0 extra parts.**
+> 4. **Hair got its own axis** (`humanStyle.js` `HAIR_KINDS` + `HAIRDO`) — 0 eras bare-skulled, still
+>    one part on the crown (a hat wins it when there is one).
+> 5. **Residents cast shadows**, refreshed at 15 Hz while they walk (`CityScene3D.jsx` `SHADOW_EVERY_N`).
+>
+> ### Not done, and why
+> - **AO is off in walk mode** — three's `GTAOPass` returns a solid BLACK occlusion buffer near the
+>   camera at eye level (row 612/700, step 16,5/255). The city view measures 1,4/255, i.e. clean.
+>   Full measurement and everything ruled out: `TECH_DEBT.md` #52.
+> - Volumetric rays, DOF, vignette and grain ship; **no per-role wet roughness map** (Việc 6) and
+>   **no per-role body proportions** (smith/elder/child) — the latter needs the resident ROLE system
+>   that task "R51 V6" owns, not a per-era axis.
+>
+> ### Two capture bugs fixed along the way (both pre-existing, both in `city-preview.mjs`)
+> - The renderer was built without `preserveDrawingBuffer`, so a screenshot assembled from several
+>   reads could tear into four pieces. Older than this round; the post chain only widened the window.
+> - Film grain was seeded per frame, so two capture strips of one STILL image disagreed. `still: true`
+>   in `postFx.js` pins it.
+>
+> ### Gates
+> lint clean · build clean · **1 767 pass · 0 fail · skipped 1** (round 51 baseline: 1 752).
+> New test files: `humanWardrobe.test.js`, plus the walk-mode AO law in `postFx.test.js`.
+
+---
+
 > Last update: **2026-09-09** — **ROUND 51: THE EYE CAME DOWN TO THE STREET (ADR-091).**
 > Order: *"PHỐ ĐÃ MỞ, GIỜ PHẢI CÓ NGƯỜI Ở … Ở tầm mắt, bầu trời chiếm gần nửa khung hình và mặt đường
 > chiếm phần lớn nửa còn lại. Hai thứ lớn nhất trong tầm nhìn đang là hai thứ trống nhất."* Everything

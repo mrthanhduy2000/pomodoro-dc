@@ -10,6 +10,7 @@
  */
 import test from 'node:test';
 import assert from 'node:assert/strict';
+import { readFileSync } from 'node:fs';
 
 import { POST_PROFILE, postProfileFor } from './postFx.js';
 
@@ -75,4 +76,23 @@ test('TẮT LÀ KHÔNG DỰNG GÌ — không có renderer thì trả về null, 
   assert.equal(createPostFx({}), null);
   assert.equal(createPostFx({ renderer: {}, scene: null, camera: {} }), null);
   assert.equal(createPostFx(), null);
+});
+
+/**
+ * ⚠️ ROUND 52 (ADR-092): PHÉP CHE KHUẤT TẮT Ở CHẾ ĐỘ ĐI BỘ, VÀ ĐÓ LÀ MỘT LUẬT, KHÔNG PHẢI MỘT
+ * TUỲ CHỌN. `GTAOPass` của three trả về đệm AO ĐEN ĐẶC cho mọi thứ gần camera ở tầm mắt — đo được
+ * ở kỷ 10, 12 giờ, 1400×700: một đường ngang thẳng tắp tại hàng 612/700, bước nhảy 16,5/255.
+ * Khung nhìn thành phố (quỹ đạo) thì sạch: bước lớn nhất 1,4/255. Đầy đủ ở `TECH_DEBT.md` #52.
+ * Bài này đỏ nếu ai đó bật lại AO cho chế độ đi bộ mà chưa chữa gốc.
+ */
+test('AO tắt ở chế độ đi bộ, bật ở khung nhìn thành phố', () => {
+  // Không có renderer thật ở đây, nên hỏi chính hàm dựng: nó trả `null` khi thiếu renderer.
+  // Thứ kiểm được mà không cần GPU là VĂN BẢN của luật — chỗ duy nhất nó được viết ra.
+  const src = readFileSync(new URL('./postFx.js', import.meta.url), 'utf8');
+  assert.match(src, /if \(want\('ao'\) && !walk\)/,
+    'luật "AO tắt khi đi bộ" đã biến mất khỏi `postFx.js` — nếu gốc đã được chữa thì phải xoá cả'
+    + ' bài test này và mục #52 của `TECH_DEBT.md`, đừng chỉ xoá một vế');
+  assert.match(src, /TECH_DEBT\.md` #52/,
+    'luật còn đó nhưng con trỏ tới chỗ ghi phép đo thì mất — một luật không có lý do là một luật'
+    + ' sẽ bị gỡ bởi người tiếp theo');
 });

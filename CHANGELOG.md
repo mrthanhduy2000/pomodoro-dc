@@ -10,6 +10,26 @@
 > **Muốn hiểu VÌ SAO một quyết định được chọn** → `ARCHITECTURE_DECISIONS.md`. **Muốn biết migration
 > cụ thể nào cần chạy** → `MIGRATION.md`.
 
+## 2026-09-11 — Round 52: the picture got expensive (ADR-092)
+
+**Purpose**: make everything already in the city look like it cost money — materials, lighting,
+people — without adding new content. **Scope**: the 3D city renderer and the resident model only;
+no game logic, no data, no schema. **Compatibility**: fully backward-compatible; the post pass has
+an off switch in Settings ("Hiệu ứng hình ảnh nâng cao") and the scene falls back to the round-51
+look with it off.
+
+- **Post-processing** (`render3d/postFx.js`): ambient occlusion → god rays → bloom → depth of field,
+  vignette and film grain, with a different profile for day, golden hour and night. Tone mapping
+  moved into `OutputPass` so it applies exactly once.
+- **Procedural surface maps** (`render3d/surfaceTexture.js`): all 16 material families get a colour
+  and normal map generated at build time from one height field, tiling seamlessly, sampled by world
+  position. No asset files and no network; identical on every build.
+- **The residents wear their century**: sleeves, trousers and boots are now the arm and leg parts
+  themselves (role + shape + width), not blocks laid over them, so 13 of 15 eras stopped having bare
+  `skin` arms at no cost in geometry. Hair became its own axis; no era has a bare skull any more.
+- **Residents cast shadows**, with the shadow map refreshed every other animated frame.
+- Known limit: ambient occlusion is off in walk mode — see `TECH_DEBT.md` #52 for the measurement.
+
 ## 2026-09-09 — Round 51: the eye came down to the street (ADR-091)
 
 **Purpose.** Round 50's walk mode changed what matters: at eye level the sky is nearly half the frame

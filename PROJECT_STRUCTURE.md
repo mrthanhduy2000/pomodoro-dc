@@ -108,6 +108,19 @@
 │   │   │       │                   #   puffs on a shallow DOME that turns (a flat plane puts half of them between
 │   │   │       │                   #   camera and city), stars + Milky Way band, a moon with its dark disc, and
 │   │   │       │                   #   CLOUD SHADOWS laid on the real ground the walker stands on
+│   │   │       ├── postFx.js       # ROUND 52 (ADR-092): the post pass — AO → god rays → bloom → lens
+│   │   │       │                   #   → output, in THAT order because it is physics. One profile per
+│   │   │       │                   #   daylight phase; tone mapping lives HERE (`OutputPass`), not on the
+│   │   │       │                   #   renderer, or it applies twice. ⚠️ AO is OFF in walk mode —
+│   │   │       │                   #   `TECH_DEBT.md` #52 has the measurement and everything ruled out
+│   │   │       ├── postFx.test.js  # The profile table's shape · phase → profile · the night bloom
+│   │   │       │                   #   threshold floor (0,5) · the walk-mode AO law
+│   │   │       ├── surfaceTexture.js # ROUND 52 (ADR-092): colour + normal maps for all 16 material
+│   │   │       │                   #   families, GENERATED at build time from one height field (the
+│   │   │       │                   #   normal is its gradient, so they can never disagree). Torus-wrapped
+│   │   │       │                   #   noise ⇒ tiles seamlessly. No files, no network, deterministic
+│   │   │       ├── surfaceTexture.test.js # Every family has a recipe · determinism · the tiling SEAM is
+│   │   │       │                   #   measured (< 120/255) · normals unit-length · pattern amplitude
 │   │   │       ├── sceneGraph.js   # Dựng cảnh: trời/đất + ánh sáng 3 nguồn + công trình + cư dân
 │   │   │       │                   #   + NƯỚNG BẢN ĐỒ MÔI TRƯỜNG từ chính bầu trời đang nhìn thấy
 │   │   │       │                   #   (`paintSkyGradient` dùng chung cho vòm trời và quả cầu dò —
@@ -744,6 +757,12 @@
 │   │   │   │                      #   ⚠️ Trục thứ 12 `gait` (2026-08-24, ADR-056/057) — mỗi kỷ
 │   │   │   │                      #   một KIỂU ĐI có thật, buộc vào country; 14 kiểu, không kỷ
 │   │   │   │                      #   liền nhau nào trùng kiểu, và cả 14 phải có người dùng (test)
+│   │   │                      #   ⚠️ ROUND 52 (ADR-092) thêm ba trục: `sleeve` · `leg` (bảng
+│   │   │                      #   `WARDROBE`, 15 kỷ) và `hair` (bảng `HAIRDO`). `bun` rời
+│   │   │                      #   `HEADGEAR_KINDS` — một cái búi tóc không phải một cái mũ
+│   │   ├── humanWardrobe.test.js # ROUND 52: vải phải DÀY LÊN chứ không chỉ đổi màu · ủng lật
+│   │   │                      #   ngược quan hệ giải phẫu · không kỷ nào đầu trơn · tủ đồ tốn
+│   │   │                      #   0 khối và 0 khuôn (bản đầu tốn 8 khối/người và bị trần chặn)
 │   │   │   ├── humanGait.js       # BẢNG 14 KIỂU ĐI (2026-08-24, ADR-057): stride · glide · march ·
 │   │   │   │                      #   mince · trudge · bounce · roll · bustle · saunter · prowl ·
 │   │   │   │                      #   shuffle · swagger · plod · scurry. Mỗi kiểu 6 trường:

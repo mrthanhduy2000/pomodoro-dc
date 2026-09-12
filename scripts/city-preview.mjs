@@ -158,6 +158,8 @@ function parseArgs(argv) {
     // Cần thiết vì ở khoảng nhìn thật, một cư dân cao 0,2 ô chỉ chiếm vài điểm ảnh — không đủ để
     // phân biệt "hình người" với "vệt nhiễu".
     zoom: 1,
+    // `null` = dùng góc mặc định của app. Số = ép góc ngẩng (độ), kẹp bởi chính `clampPitch`.
+    pitch: null,
     /**
      * `--focus N` — CHỤP ĐÚNG CHẾ ĐỘ CẬN CẢNH CỦA APP: bay tới công trình mốc thứ N (1–5) rồi
      * đứng ở chỗ mà `planCityFocus` đã chứng minh là thoáng.
@@ -278,6 +280,9 @@ function parseArgs(argv) {
     else if (key === '--width') { args.width = Number(value); i += 1; }
     else if (key === '--height') { args.height = Number(value); i += 1; }
     else if (key === '--zoom') { args.zoom = Number(value); i += 1; }
+    // round 56: góc ngẩng, ĐỘ. Camera mặc định nhìn xuống 34,4° nên chỉ thấy ĐỈNH ĐẦU cư dân;
+    // app cho kéo xuống tới ~10,3° (`MIN_PITCH`), mà công cụ này trước nay không hỏi tới được.
+    else if (key === '--pitch') { args.pitch = Number(value); i += 1; }
     else if (key === '--focus') { args.focus = Number(value); i += 1; }
     else if (key === '--walk') { args.walk = Number(value); i += 1; }        // round 50: N steps down the street
     else if (key === '--walk-turn') { args.walkTurn = Number(value); i += 1; }  // …then turn this many degrees
@@ -326,6 +331,7 @@ function run(cmd, cmdArgs, options = {}) {
  */
 function entrySource({
   era, level, theme, zoom = 1, focus = 0, hour = null, pending = 0, sessions = 40, dpr = null, bench = 0,
+  pitch = null,
   mask = null, noShadow = false, noAo = false, t = 17.5, lowDetail = false, topdown = false, noMotion = false, dry = false, season = 'summer',
   walk = 0, walkTurn = 0, walkLook = 0, day = 0, noPost = false, post = null,
 }) {
@@ -374,6 +380,7 @@ const ANIM_T = ${t};
 const LOW_DETAIL = ${lowDetail ? 'true' : 'false'};
 const DPR = ${dpr === null ? 'MAX_PIXEL_RATIO' : dpr};
 const BENCH = ${bench};
+const PITCH_DEG = ${pitch === null ? 'null' : pitch};
 
 const allIds = BLUEPRINT_CATALOG[ERA].map((bp) => bp.id);
 // Mấy bản vẽ cuối chuyển sang ĐANG XÂY, mỗi cái một tiến độ khác nhau (còn 1, 2, 3… phiên nữa)
@@ -473,6 +480,24 @@ const orbit = createOrbit({
   distance: orbitOptions.distance * ZOOM,
   minDistance: orbitOptions.minDistance * Math.min(1, ZOOM),
 });
+/*
+  ⚠️ GÓC NGẨNG ÉP TAY — round 56, và nó là một DỤNG CỤ chứ không phải một chế độ mới.
+  Camera mặc định của app nhìn xuống 34,4 độ ('DEFAULT_PITCH' = 0,6 rad). Ở góc ấy, một cư dân chỉ
+  hiện ra cái ĐỈNH ĐẦU và hai vai — không bao giờ thấy mặt. Nghĩa là tiêu chí nghiệm thu
+  "phóng to một cư dân CHÍNH DIỆN" KHÔNG kiểm được bằng công cụ này, và ba vòng qua tôi vẫn chụp
+  cư dân từ trên xuống mà không nhận ra.
+  App thì cho kéo xuống tới 'MIN_PITCH' = 0,18 rad = 10,3 độ — gần ngang tầm mắt, thấy mặt.
+  ⚠️ ĐI QUA 'orbit.set', KHÔNG TỰ TÍNH LẤY: 'createOrbit' kẹp góc bằng 'clampPitch', nên cờ này
+  không thể dựng ra một khung hình mà app không dựng được. Tự đặt camera bằng tay ở đây sẽ là
+  "một luật hai công thức" — đúng cái đã làm 'sweep-score.mjs' bịa ra cả một bộ số ở Phase 4G.
+*/
+if (PITCH_DEG !== null) {
+  const st = orbit.getState();
+  orbit.set({ ...st, pitch: PITCH_DEG * Math.PI / 180 });
+  console.log('[pitch] xin ' + PITCH_DEG + ' do · nhan duoc '
+    + (orbit.getState().pitch * 180 / Math.PI).toFixed(1) + ' do (da kep boi clampPitch)');
+}
+
 // ⚠️ CHẾ ĐỘ CẬN CẢNH GỌI ĐÚNG HÀM MÀ APP GỌI ('planCityFocus'), với ĐÚNG danh sách vật cản mà cảnh
 // vừa dựng ra ('city.blockers'). Không có dòng nào ở đây tự tính lại góc hay khoảng cách — nếu có,
 // tấm ảnh nghiệm thu sẽ mô tả một chế độ cận cảnh không tồn tại trong app.
@@ -1874,6 +1899,9 @@ async function main() {
       // Chỉ gắn nhãn khi KHÁC mặc định, để mọi tên file cũ vẫn tra được (không viết lại lịch sử).
       const widthTag = args.width === 1100 ? '' : `-w${args.width}`;
       const zoomTag = args.zoom === 1 ? '' : `-z${String(args.zoom).replace('.', 'p')}`;
+      // ⚠️ Góc ngẩng PHẢI vào tên file, nếu không hai khung hình khác hẳn nhau sẽ ghi đè lẫn
+      // nhau — đúng cái bẫy "tên file làm bằng chứng về nội dung file" của Phase 13.
+      const pitchTag = args.pitch === null ? '' : `-p${String(args.pitch).replace('.', 'p')}`;
       // ⚠️ LẦN THỨ BẢY VÀ THỨ TÁM CỦA ĐÚNG CÁI BẪY TRÊN — `--t` VÀ `--lowdetail` (2026-08-22).
       // `--t` chọn THỜI ĐIỂM hoạt hoạ: chụp bốn thời điểm của một chu kỳ bước rồi để chúng đè lên
       // nhau thì còn lại đúng cái cuối, mà ba tấm cũ vẫn nằm sẵn trên đĩa từ lần chạy trước — một
@@ -1887,7 +1915,7 @@ async function main() {
       // HẲN (nhìn thẳng xuống, không phải khung app), nên dùng chung tên file với ảnh thường là
       // cách chắc chắn nhất để một phép so trước/sau chấm hai thứ không so được với nhau.
       const topTag = args.topdown ? '-topdown' : '';
-      const pngPath = resolve(OUT_DIR, `city-era${String(era).padStart(2, '0')}-${args.theme}${hourTag}${sessTag}${widthTag}${zoomTag}${tTag}${lodTag}${maskTag}${shadowTag}${aoTag}${dryTag}${seasonTag}${dayTag}${motionTag}${focusTag}${walkTag}${topTag}.png`);
+      const pngPath = resolve(OUT_DIR, `city-era${String(era).padStart(2, '0')}-${args.theme}${hourTag}${sessTag}${widthTag}${zoomTag}${pitchTag}${tTag}${lodTag}${maskTag}${shadowTag}${aoTag}${dryTag}${seasonTag}${dayTag}${motionTag}${focusTag}${walkTag}${topTag}.png`);
       let info = '';
       let hop = null;
       try {

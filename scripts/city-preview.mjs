@@ -1372,6 +1372,50 @@ export function dongNhatKyVetRach({
  * @param {number[]} [hangCauTruc] các hàng mà một mép SẮC LẸM là ĐÚNG THIẾT KẾ — xem `HANG_CAU_TRUC`.
  * @returns {{trungVi: number, xau: {y: number, buoc: number, tiSo: number, trungMocDai: boolean}[], hong: boolean}}
  */
+/**
+ * SÀN ĐỘ SÁNG CỦA MỘT KHUNG HÌNH THẬT. Dưới mức này thì trong ảnh **không có cảnh nào cả**.
+ *
+ * ⚠️ SO BẰNG ĐIỂM SÁNG NHẤT, KHÔNG PHẢI ĐỘ SÁNG TRUNG BÌNH — và đó là cả mẹo của cái gác này.
+ * Một cảnh ĐÊM thật thì tối đều, trung bình rất thấp, nhưng luôn có ít nhất một thứ sáng: mảng
+ * trời, mặt trăng, một ô cửa lên đèn. Một khung hình HỎNG thì không có gì cả — chỉ còn cái vignette
+ * của lớp hậu kỳ vẽ lên nền đen.
+ * Đo ngày 2026-09-12 trên bốn ảnh thật (điểm sáng nhất, thang 0–255):
+ *     kỷ 14 · 12 giờ · rộng 1400  → **206,3**   ✔ thật
+ *     kỷ 15 · 22 giờ · rộng 1400  → **224,3**   ✔ thật, và là ảnh ĐÊM
+ *     kỷ 14 · 12 giờ · rộng 2800  → **12,9**    ✘ đen
+ *     kỷ 14 · 12 giờ · rộng 4200  → **12,9**    ✘ đen
+ * ⇒ Sàn 25 nằm giữa hai đám với biên gấp 8 lần về phía ảnh thật và gấp 2 lần về phía ảnh hỏng.
+ * Không có tham số nào để nới, và nó không dựa vào giờ chụp.
+ */
+const KHUNG_DEN_SAN = 25;
+
+/**
+ * "Khung hình này có cảnh không?" — trả về điểm sáng nhất, hoặc `null` nếu ảnh rỗng.
+ *
+ * ⚠️ VÌ SAO CÁI GÁC NÀY TỒN TẠI. Ngày 2026-09-12, chụp cư dân ở `--width 2800` và `--width 4200`:
+ * công cụ in ra **✓ kỷ 14** kèm đủ số tam giác và số lệnh vẽ, ghi ra một file PNG đúng kích thước,
+ * thoát mã 0 — và tấm ảnh là một hình chữ nhật ĐEN. Bộ đệm của `EffectComposer` ở cỡ ấy
+ * (2800 × 1400 × 8 mẫu MSAA × nửa-thực) vượt sức cấp phát của SwiftShader, nên cảnh không bao giờ
+ * được vẽ; lớp hậu kỳ vẫn chạy và vẫn tô cái vignette lên nền đen, nên ảnh "trông như một tấm ảnh".
+ * Không một dòng nào nói ra điều đó.
+ * ⇒ Đây là lần thứ SÁU dự án bắt được *công cụ đo nói dối* (`LESSONS_3D` luật 1), và là lần nguy
+ * hiểm nhất: một tấm ảnh nghiệm thu đen tuyền mà vẫn mang đúng tên file, đúng kích thước, đúng
+ * dòng "✓" — tức nó lọt qua đúng những thứ ta hay dùng để kiểm.
+ */
+export function soiKhungDen(anh) {
+  const { width, height, pixels } = anh;
+  if (!width || !height) return null;
+  let dinh = 0;
+  for (let y = 0; y < height; y += 3) {
+    for (let x = 0; x < width; x += 3) {
+      const i = (y * width + x) * 4;
+      const l = 0.2126 * pixels[i] + 0.7152 * pixels[i + 1] + 0.0722 * pixels[i + 2];
+      if (l > dinh) dinh = l;
+    }
+  }
+  return dinh;
+}
+
 export function soiVetRach(anh, mocDai = [], hangCauTruc = [], san = VET_RACH_SAN, heSo = VET_RACH_HE_SO) {
   const { pixels, width, height } = anh;
   if (height < 3) return { trungVi: 0, xau: [], hong: false };
@@ -1726,6 +1770,13 @@ async function shoot(chrome, url, pngPath,
           + '  ⇒ KHÔNG ghi ảnh. Một tấm rách trông bình thường nhưng số liệu đo từ nó lệch vài điểm phần trăm.');
       }
       process.stderr.write(`  ⚠️  ảnh rách ngang (${xau}) — chụp lại, lượt ${luot + 1}/${SO_LUOT}\n`);
+    }
+    const dinhSang = soiKhungDen(ghep);
+    if (dinhSang !== null && dinhSang < KHUNG_DEN_SAN) {
+      throw new Error(`khung hình ĐEN: điểm sáng nhất chỉ ${dinhSang.toFixed(1)}/255, dưới sàn `
+        + `${KHUNG_DEN_SAN} — cảnh chưa bao giờ được vẽ.\n`
+        + `  ⇒ KHÔNG ghi ảnh. Nguyên nhân đã gặp: khung quá lớn (${ghep.width}×${ghep.height}) cho bộ `
+        + 'đệm MSAA của SwiftShader. Chụp lại ở --width 1400 rồi phóng to bằng ảnh cắt.');
     }
     writeFileSync(pngPath, encodePng(ghep));
     hop = {

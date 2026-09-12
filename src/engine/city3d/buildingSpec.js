@@ -21,7 +21,11 @@ import { emitMonolithStair, emitWonderEntrance } from './wonderEntrance';
 import { emitRooftop } from './rooftop';
 import { getGroundFloor } from './groundFloorStyle';
 import { getRoofStyle } from './roofStyle';
-import { SIDES_DOME, SIDES_ROUND, countSpecTriangles, gable, prism, specHeight, specSpan } from './parts';
+import {
+  ROOF_FACETS, SIDES_DOME, SIDES_HANDMADE, SIDES_TURNED,
+  countSpecTriangles, gable, prism, specHeight, specSpan,
+} from './parts';
+import { HANDMADE_WOBBLE } from './handmade';
 import { getEraStyle, getVernacularStyle, eaveOverhang } from './eraStyle';
 import { getArchetype, getMassing, getMotifBudget, getRarityScale } from './archetypes';
 import { emitSignature } from './signature';
@@ -175,7 +179,13 @@ export function emitRoof(out, { w, d, top, x, z }, style, ctx) {
 
   switch (style.roof) {
     case 'cone':
-      out.push(prism({ x, z, y: top, w: rw, d: rd, h: pitch, sides: SIDES_ROUND, taper: 0, role: 'roof' }));
+      // ⚠️ ROUND 56, VIỆC 0: `SIDES_ROUND` (48) → `SIDES_HANDMADE` + méo. Mái `cone` chỉ MỘT kỷ
+      // dùng — kỷ 1, Göbekli Tepe — và đó là mái LỢP TRANH/SẬY trên khung gỗ, buộc bằng tay.
+      // Ở 48 cạnh nó thành một cây kem ốc quế tiện máy: sai cả hình lẫn lịch sử.
+      out.push(prism({
+        x, z, y: top, w: rw, d: rd, h: pitch,
+        sides: SIDES_HANDMADE, wobble: HANDMADE_WOBBLE, taper: 0, role: 'roof',
+      }));
       anchors.apexY = top + pitch;
       break;
 
@@ -299,7 +309,7 @@ export function emitRoof(out, { w, d, top, x, z }, style, ctx) {
         const h = pitch * (0.62 - i * 0.06);
         out.push(prism({
           x, z, y: cy, w: rw * shrink, d: rd * shrink, h,
-          sides: 4, taper: 0.34, role: 'roof',
+          sides: ROOF_FACETS, taper: 0.34, role: 'roof',
         }));
         // gờ diềm mỏng dưới mỗi tầng mái — chỗ bắt sáng làm mái "dày" lên
         out.push(prism({
@@ -344,7 +354,9 @@ export function emitRoof(out, { w, d, top, x, z }, style, ctx) {
     }
 
     case 'pyramid':
-      out.push(prism({ x, z, y: top, w: rw, d: rd, h: pitch, sides: 4, taper: 0.06, role: 'roof' }));
+      // Mái chóp lợp tấm (kim tự tháp kỷ 2, mansard kỷ 9): BỐN mặt phẳng gặp nhau ở SỐNG MÁI.
+      // ⚠️ `ROOF_FACETS` bằng đúng con số 4 vốn có — đây là ĐẶT TÊN, không phải đổi hình (round 56).
+      out.push(prism({ x, z, y: top, w: rw, d: rd, h: pitch, sides: ROOF_FACETS, taper: 0.06, role: 'roof' }));
       anchors.apexY = top + pitch;
       break;
 
@@ -607,7 +619,7 @@ function emitMotif(out, name, ctx) {
         const t = (i / (count - 1)) - 0.5;
         out.push(prism({
           x: x + t * w * 0.82, z: z + d / 2 + 0.06, y: base,
-          w: 0.075, h: (top - base) * 0.86, sides: SIDES_ROUND, taper: 0.86, role: 'trim',
+          w: 0.075, h: (top - base) * 0.86, sides: SIDES_TURNED, taper: 0.86, role: 'trim',
         }));
       }
       break;
@@ -651,7 +663,7 @@ function emitMotif(out, name, ctx) {
     case 'dish':
       out.push(prism({
         x: x - w * 0.26, z: z + d * 0.2, y: top, w: 0.18, h: 0.07,
-        sides: SIDES_ROUND, taper: 0.35, ry: r('a') * Math.PI, role: 'trim',
+        sides: SIDES_TURNED, taper: 0.35, ry: r('a') * Math.PI, role: 'trim',
       }));
       break;
     case 'spire':
@@ -713,8 +725,15 @@ function emitMotif(out, name, ctx) {
       }
       break;
     case 'granary':
-      out.push(prism({ x: x - w * 0.62, z: z + d * 0.3, y: base, w: 0.2, h: 0.26, sides: SIDES_ROUND, role: 'wood' }));
-      out.push(prism({ x: x - w * 0.62, z: z + d * 0.3, y: base + 0.26, w: 0.24, h: 0.16, sides: SIDES_ROUND, taper: 0, role: 'roof' }));
+      // Bồ thóc: thân trát đất/đan tre, chóp lợp tranh — cả hai đều làm bằng tay (round 56).
+      out.push(prism({
+        x: x - w * 0.62, z: z + d * 0.3, y: base, w: 0.2, h: 0.26,
+        sides: SIDES_HANDMADE, wobble: HANDMADE_WOBBLE, role: 'wood',
+      }));
+      out.push(prism({
+        x: x - w * 0.62, z: z + d * 0.3, y: base + 0.26, w: 0.24, h: 0.16,
+        sides: SIDES_HANDMADE, wobble: HANDMADE_WOBBLE, taper: 0, role: 'roof',
+      }));
       break;
     case 'boulder':
       for (let i = 0; i < 3; i += 1) {
@@ -726,7 +745,11 @@ function emitMotif(out, name, ctx) {
       }
       break;
     case 'firepit':
-      out.push(prism({ x: x + w * 0.6, z: z + d * 0.5, y: base, w: 0.16, h: 0.05, sides: SIDES_ROUND, role: 'stone' }));
+      // Vòng đá quanh bếp lửa: đá xếp tay, không phải một cái đĩa tiện (round 56).
+      out.push(prism({
+        x: x + w * 0.6, z: z + d * 0.5, y: base, w: 0.16, h: 0.05,
+        sides: SIDES_HANDMADE, wobble: HANDMADE_WOBBLE, role: 'stone',
+      }));
       // Round 49 (ADR-089): the fire is a FLAME (glow role, tagged so fire particles and a local light
       // are born here), no longer a gilded pyramid.
       out.push(prism({ x: x + w * 0.6, z: z + d * 0.5, y: base + 0.05, w: 0.09, h: 0.13, sides: 5, taper: 0, role: 'flame', tag: 'fire' }));
@@ -756,7 +779,7 @@ function emitMotif(out, name, ctx) {
       out.push(prism({ x, z, y: top + 0.22, w: w * 1.05, d: d * 1.05, h: 0.035, sides: SIDES_DOME, role: 'glass' }));
       break;
     case 'float':
-      out.push(prism({ x, z, y: base - 0.16, w: w * 0.55, d: d * 0.55, h: 0.1, sides: SIDES_ROUND, taper: 0.3, role: 'glass' }));
+      out.push(prism({ x, z, y: base - 0.16, w: w * 0.55, d: d * 0.55, h: 0.1, sides: SIDES_TURNED, taper: 0.3, role: 'glass' }));
       break;
     default:
       break;

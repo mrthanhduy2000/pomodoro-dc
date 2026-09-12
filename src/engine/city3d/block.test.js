@@ -520,9 +520,27 @@ test('CHI TIẾT MÁI KHÔNG ĐƯỢC CHẾT — và danh sách kỷ mất một
   0,54120 → 48 cạnh 0,50107 → 72 cạnh 0,50048), nên hình bao co lại chứ không nở — an toàn theo CẤU
   TRÚC, không nhờ một cái kẹp.
 */
+/*
+  ⚠️ ROUND 56, VIỆC 0 — THÁI LẠI 9/15, VÀ LÝ DO NGƯỢC HẲN VỚI VÒNG 55.
+  Vòng 55 làm mọi thứ TRÒN HƠN. Vòng 56 trả lại đúng hình cho ba loại vật mà vòng 55 làm tròn NHẦM:
+    · mái tranh kỷ 1 · bồ thóc · vòng đá bếp lửa  → `SIDES_HANDMADE` (10) + `wobble` (méo thủ công)
+    · vách đất, lều, chòi ngoại ô (7 chỗ)          → như trên
+    · thùng nước gỗ đóng đai trên mái              → `SIDES_STAVED` (14), vì nó là thanh gỗ PHẲNG bó lại
+  Cột đá, chum, đĩa, mái vòm, cơ thể người, thân cây **giữ nguyên số cạnh cao của vòng 55** — chúng
+  thật sự được tiện/đúc/nặn ra. Mái ngói (`pyramid`, `tiered`) chưa bao giờ hỏng: chúng đã khai
+  `sides: 4` từ lâu, nay chỉ được ĐẶT TÊN là `ROOF_FACETS`.
+
+  ⚠️ VÀ LẦN NÀY CHỮ KÝ ĐỔI VÌ **HAI** TRƯỜNG, KHÔNG PHẢI MỘT: `sides` và `wobble`. `wobble` là một
+  trường MỚI trong mô tả khối, nên nó vào chữ ký — dù nó không dời khối đi đâu, nó chỉ dời ĐỈNH lúc
+  dựng hình, và chỉ dời VÀO TRONG.
+  ⇒ Bằng chứng, đo trên hai cây mã (`git worktree` ở `c5820d5` = cuối vòng 54, và cây đang làm việc),
+  băm `spec.parts` sau khi bỏ đúng hai trường ấy: **trùng từng byte ở cả 15 kỷ**. Nghĩa là qua CẢ HAI
+  vòng 55 và 56 — hai vòng xáo số cạnh dữ dội — không một khối nào xê dịch, đổi cỡ, đổi vai hay đổi
+  thẻ. Bốn cổng ADR-007 thật xanh suốt.
+*/
 const GOLDEN = {
-  1: '7e860eb8723b246a75352c2dc991883b',
-  2: '4461f1c695767dba5d1699d018b03d4f',
+  1: '4ba4a7f96cc886e09c00beb88b050733',
+  2: '3c308edd1d0190012bfd401e782b1246',
   3: '8e2ab6e4cae586d3f6f150d7aa3b2029',
   4: 'c2398f85fd8ca47eccbf8b1ba4375afe',
   5: '1f3d376a1be05dd472a9b4cb491f6bce',
@@ -531,9 +549,9 @@ const GOLDEN = {
   8: 'abfa76b38434a163a7b1071dbc4714d1',
   9: '0763e58479c654faf1e0cff6179e943b',
   10: '8de77726555fd9a04716af097940a403',
-  11: 'b566ed705afad32dbf077a43f14bf980',
+  11: 'fc414655dc0fbdd3fe0446227f528048',
   12: '46367dc98da3a4d9b6cd3e60928b8347',
-  13: 'c80cca42a1c662bfdb7f9f5b04478be3',
+  13: '8f5b38de24e111e0c77e1376b207e543',
   14: '8d095a81ba06f4dfefcc7d8767d61624',
   15: 'fa1264fd84bd21ea6aca45165c1007d6',
 };
@@ -545,8 +563,8 @@ const GOLDEN = {
  * thao tác cho hết đỏ: phải chỉ ra khối nào, ở kỷ nào, và vì sao việc ấy là cố ý.
  */
 const GOLDEN_KHOI = {
-  1: 'be4d0594f7a83dbdbd95555031d426b9',
-  2: '2a35da28ba30a9ad8754948acb597640',
+  1: 'b37d0fd46ecbc46be4608968c78ca18b',
+  2: '09a10baa76fc82e8009b6d89c0812522',
   3: 'd5266982f0e9bc84ffb9eb95899b5a44',
   4: '32e5bb43a13685a29bb7750cddaabdf4',
   5: 'cf6333c399f057f2992ad4a3a41d6913',
@@ -555,9 +573,9 @@ const GOLDEN_KHOI = {
   8: '602987b9df464253d5b0aae6f443639e',
   9: '8507d1bbc6465d030bdab8fa91316c2f',
   10: '6f0738715110a2489602f829ff859e20',
-  11: '2e2ad158d59af6bb7cb4d0b3eaec00db',
+  11: '8dfec61ea97b691ce8a2e3c59dfb8bf2',
   12: '49d80e00468e72c38f1d2718c4b2d5ab',
-  13: '73659aedcb47d59e44c70e5e6928298e',
+  13: '975ed584c2143ca3fcfcd43a3e382d4e',
   14: '8db75e65418efceb0fbd3e53ff28e7ce',
   15: '4ba29d9334cead8092736108c2d553b0',
 };

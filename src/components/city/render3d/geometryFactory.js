@@ -38,6 +38,7 @@ import { getEraStyle } from '../../../engine/city3d/eraStyle';
 import { MATERIAL_ORDER, contactShade, materialFamilyFor } from '../../../engine/city3d/materials';
 import { buildOcclusionGrid, occlusionShade } from '../../../engine/city3d/occlusion';
 import { CORNER_SEGMENTS, bevelWidth, cornerRadius, footBevel } from '../../../engine/city3d/parts';
+import { handmadeFactor } from '../../../engine/city3d/handmade';
 
 /** Bộ đệm tích luỹ trong lúc dựng. Mảng JS thường rồi mới đổ sang Float32Array một lần. */
 function createSink() {
@@ -184,6 +185,7 @@ function place(px, py, pz, transform) {
  * Góc bắt đầu `π/n` là thứ làm mặt phẳng quay ra trước thay vì một góc nhọn chĩa vào người xem.
  */
 function emitPrism(sink, part, transform, rgb, shadeBase, bevel = 0, occ = null, corner = 0, foot = 0) {
+  const wobble = part.wobble > 0 ? part.wobble : 0;
   const n = part.sides;
   const half = Math.PI / n;
   const rx = (part.w / 2) / Math.cos(half);
@@ -225,7 +227,10 @@ function emitPrism(sink, part, transform, rgb, shadeBase, bevel = 0, occ = null,
     const az = Math.max(0, rz * radiusScale - inset / Math.cos(half));
     for (let i = 0; i < n; i += 1) {
       const angle = half + (i * 2 * Math.PI) / n;
-      out.push(place(Math.cos(angle) * ax, y, Math.sin(angle) * az, transform));
+      // ⚠️ MÉO THỦ CÔNG (round 56, Việc 0) — hệ số LUÔN ≤ 1, tức khối chỉ co vào. Xem `handmade.js`
+      // để biết vì sao nó phải tất định theo VỊ TRÍ và vì sao nó không được phép nở ra.
+      const k = wobble > 0 ? handmadeFactor(transform.ox, transform.oz, y, i, wobble) : 1;
+      out.push(place(Math.cos(angle) * ax * k, y, Math.sin(angle) * az * k, transform));
     }
     return out;
   };

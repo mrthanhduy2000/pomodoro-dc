@@ -140,10 +140,82 @@ export const MAX_SIDES = 96;
   ⚠️ VÀ THÊM CẠNH LÀM KHỐI **NHỎ ĐI**, không to ra: bán kính ngoại tiếp `0,5 / cos(π/n)` giảm đơn
   điệu theo `n` — 8 cạnh 0,54120 · 32 cạnh 0,50241 · 48 cạnh 0,50107 · 72 cạnh 0,50048. Hình bao
   ADR-007 vì thế an toàn theo CẤU TRÚC, đúng luật số một của vòng 54 ("kẹp ngay từ đầu").
+
+  ⚠️⚠️ NHƯNG CHIỀU NGƯỢC LẠI THÌ **KHÔNG** AN TOÀN, VÀ VÒNG 56 ĐI ĐÚNG CHIỀU ẤY — ĐỌC TRƯỚC KHI HẠ
+  SỐ CẠNH CỦA BẤT CỨ THỨ GÌ. Cùng công thức đọc ngược: **bớt cạnh làm khối TO RA.** Vòng 56 hạ vách
+  đất từ 48 xuống 10 ⇒ bán kính đi từ 0,50107 lên 0,52573, tức **nở 4,9% so với vòng 55**. Đây đúng
+  cái bẫy của bài học 110 · 114 · 118, chỉ khác chiều — và nó im lặng y như vậy.
+  ⇒ Vì sao lần này vẫn an toàn, ĐO ra chứ không đoán: mốc LỊCH SỬ của những khối ấy là **8 cạnh**
+  (từ đầu dự án tới hết vòng 54), tức 0,54120. Mười cạnh nhỏ hơn mốc ấy **2,86%**. Nên so với mọi
+  hình bao từng được phát hành trước vòng 55, khối chỉ CO LẠI — không có chỗ nào để nở vào.
+  ⚠️ Nếu một vòng sau muốn hạ xuống **dưới 8 cạnh**, nó sẽ vượt mốc lịch sử và PHẢI đo lại
+  `specSpan`/`specFootprint` cùng `block.js` trước, vì `block.js` co từng đơn vị theo HÌNH BAO và
+  hậu quả hiện ra cách đó ba tầng (vòng 53: kỷ 6 nở 10% ⇒ **11 căn nhà mất chi tiết mái**).
 */
-export const SIDES_ROUND = 48;
+/*
+  ⚠️ ROUND 56, VIỆC 0 — SỬA LẠI CHÍNH VÒNG 55. ĐỌC HẾT TRƯỚC KHI THÊM MỘT TÊN MỚI VÀO BẢNG NÀY.
+  Vòng 55 gộp 40 chỗ khai `sides: 8` thành MỘT hằng số `SIDES_ROUND = 48`, với lý lẽ "8 là từ vựng
+  chỉ khối tròn". Lý lẽ ấy đúng một nửa và sai một nửa: con số 8 đang gánh **ba nghĩa khác hẳn nhau**,
+  và gộp cả ba lại là làm hỏng hai.
+  Đàm chốt lại hướng: *"Không phải cái gì cũng bo tròn … Chất lượng là mỗi thứ mang đúng hình của
+  chính nó."* Một bức tường gạch thì phẳng. Một cây cột đá thì tròn. Một mái lợp tấm thì có MẶT và
+  SỐNG. Một vách đất nện thì méo.
+
+  ⇒ Nên bảng này phân loại theo **CÁCH VẬT ẤY ĐƯỢC LÀM RA**, không theo "trông có tròn không":
+    · TIỆN / ĐÚC / NẶN  → tròn thật, số cạnh cao. Cột đá, chum vại, bánh xe, đĩa, mái vòm.
+    · GHÉP TỪ THANH     → mặt phẳng hẹp + cạnh dọc thấy được. Thùng gỗ đóng đai, bồn nước.
+    · LỢP BẰNG TẤM      → ít mặt phẳng + SỐNG MÁI rõ. Mái ngói, mái đá phiến, chóp tháp.
+    · LÀM THỦ CÔNG      → méo nhẹ, không đều tay. Vách đất, lều, mái tranh, vòng đá bếp.
+  ⚠️ MỘT HẰNG SỐ MỘT NGHĨA. Vòng sau muốn cho cột tròn hơn thì sửa `SIDES_TURNED` và KHÔNG vô tình
+  biến mái ngói thành cây kem — đó là toàn bộ lý do bảng này tồn tại thay vì một con số chung.
+*/
+
+/** TIỆN · ĐÚC · NẶN — cột đá, trụ, chum, bánh xe, đĩa, thân cây. Tròn thật. (Vòng 55 gọi là `SIDES_ROUND`.) */
+export const SIDES_TURNED = 48;
+/** XÂY VÒM / ĐÚC KHUÔN — mái vòm, tháp tròn. To nhất, viền dài nhất. */
 export const SIDES_DOME = 72;
+/** ĐỒ VẬT TIỆN NHỎ — đèn, bánh xe, chum nhỏ. Trên màn hình chỉ vài chục điểm ảnh. */
 export const SIDES_PROP = 32;
+/**
+ * GHÉP TỪ THANH — thùng gỗ đóng đai, bồn nước mái nhà (`rooftop.js`).
+ * ⚠️ Một cái thùng cooper KHÔNG tròn: nó là 12–16 thanh gỗ PHẲNG bó lại, và chính những cạnh dọc
+ * ấy là thứ mắt đọc ra "thùng gỗ" thay vì "ống nhựa". 14 cạnh ⇒ hai mặt kề lệch 25,7°, DƯỚI ngưỡng
+ * gãy 40° nên vẫn được làm mềm — hơi mềm là đúng, vì thanh gỗ bào thì cạnh không sắc như đá cắt.
+ */
+export const SIDES_STAVED = 14;
+/**
+ * LÀM THỦ CÔNG — vách đất nện, lều, mái tranh, vòng đá quanh bếp lửa.
+ * ⚠️ ÍT CẠNH **VÀ** MÉO. Chỉ giảm cạnh thôi thì ra một hình mười cạnh ĐỀU TĂM TẮP — vẫn là máy
+ * tiện, chỉ thô hơn. Cái làm nó ra "đắp bằng tay" là bán kính KHÔNG ĐỀU (xem `wobble` ở `prism`).
+ * ⚠️ 10 CHỨ KHÔNG PHẢI 9, VÀ LÝ DO LÀ SỰ MONG MANH: 9 cạnh cho đúng **40,0°**, tức NẰM CHÍNH XÁC
+ * trên ngưỡng gãy của `creaseNormals.js`. Một hằng số ngồi đúng trên ngưỡng thì hành vi của nó lật
+ * mặt trong im lặng vào ngày ai đó chỉnh `CREASE_DEGREES` một độ. 10 cạnh cho 36° — nằm hẳn dưới,
+ * nên vách đất được làm mềm một cách CHẮC CHẮN.
+ * ⚠️ VÀ MỘT TÍNH CHẤT ĐẸP TỰ NHIÊN RƠI RA TỪ `wobble`: vì bán kính mỗi đỉnh lệch nhau, góc giữa hai
+ * mặt kề KHÔNG còn đều 36° — chỗ méo nhiều sẽ vọt lên trên 40° và **tự giữ sắc**, chỗ méo ít thì
+ * mềm. Đó đúng là bề mặt của một bức vách trình: phần lớn lượn, thỉnh thoảng có một nếp gãy.
+ */
+export const SIDES_HANDMADE = 10;
+/**
+ * MÁI LỢP BẰNG TẤM — số MẶT của một chóp mái ngói/đá phiến/tôn.
+ * ⚠️ SÁU, KHÔNG PHẢI BỐN MƯƠI TÁM. Mái lợp tấm ngoài đời có một số ít mặt phẳng gặp nhau ở SỐNG
+ * MÁI, và cái sống ấy là đường bắt sáng rõ nhất trên cả mái. Ở 48 cạnh, hai mặt kề lệch 7,5° ⇒
+ * dưới ngưỡng gãy 40° ⇒ bị làm mềm ⇒ **sống mái biến mất hoàn toàn** và mái thành một cây kem ốc
+ * quế. Ở 6 mặt, hai mặt kề lệch 60° ⇒ trên ngưỡng ⇒ sống mái giữ nguyên, sắc lẹm.
+ * ⇒ Đây là ví dụ rõ nhất của luật vòng 56: cùng một cơ chế làm mềm, nhưng "đáng tròn" và "đáng có
+ *   sống" là hai câu trả lời khác nhau, và SỐ CẠNH chính là chỗ trả lời.
+ *
+ * ⚠️ VÀ CON SỐ LÀ **4**, KHÔNG PHẢI 6 — MỘT BÀI TEST ĐÃ DẠY TÔI ĐIỀU ĐÓ, GHI LẠI NGUYÊN VĂN.
+ * Tôi đặt hằng số này ở 6 theo trực giác "mái lợp tấm có 4–8 mặt", rồi áp nó vào chỗ gọi. Bài
+ * «KỶ 2 — AI CẬP LÀ MỘT KHỐI ĐẶC MỌC THẲNG TỪ MẶT ĐẤT» đỏ ngay: *"kim tự tháp phải có BỐN mặt,
+ * đang dựng 6 cạnh"*. Mọi mái lợp tấm của thành phố (`pyramid` kỷ 2 · 9, `tiered` kỷ 4 · 6) **đã
+ * khai `sides: 4` từ lâu và chưa bao giờ hỏng** — vòng 55 chỉ chạm vào những chỗ khai `8`.
+ * ⇒ Hằng số này vì thế nhận đúng giá trị mái VỐN CÓ, và việc của nó là ĐẶT TÊN cho một nghĩa đang
+ *   nằm trần trụi dưới dạng con số 4. **Một hằng số mới không được phép đổi hình ngay lúc nó ra
+ *   đời** — lúc ấy không ai phân biệt được cái đổi đến từ "đặt tên" hay từ "đổi giá trị".
+ */
+export const ROOF_FACETS = 4;
+
 
 function finite(value, fallback) {
   return Number.isFinite(value) ? value : fallback;
@@ -208,6 +280,12 @@ export function prism({
   rz = 0,
   role = 'wall',
   tag = null,
+  /**
+   * Biên độ MÉO THỦ CÔNG (round 56, Việc 0). `0` = khối chuẩn xác như máy làm.
+   * ⚠️ Chỉ méo VÀO TRONG — xem `handmade.js`. Không đổi số tam giác, nên `countTriangles` không
+   * phải biết tới nó; nó chỉ dời vị trí đỉnh.
+   */
+  wobble = 0,
 } = {}) {
   const width = Math.max(0, finite(w, 1));
   return {
@@ -227,6 +305,8 @@ export function prism({
     // round 48: an optional semantic tag (`'stack'` = a chimney the smoke rises from). Written only
     // when given, so untagged specs serialise as before.
     ...(tag ? { tag: String(tag) } : {}),
+    // Ghi RA chỉ khi khác 0, để mọi mô tả cũ tuần tự hoá y hệt trước — cùng quy ước với `tag`.
+    ...(wobble > 0 ? { wobble: clamp(finite(wobble, 0), 0, 0.35) } : {}),
     role: safeRole(role),
   };
 }

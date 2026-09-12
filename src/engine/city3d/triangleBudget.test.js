@@ -152,20 +152,30 @@ const CO_BE = new Set(['building', 'scaffold', 'dwelling']);
   xin phép."* Bảng này vì thế không phải cái phanh — nó là cuốn SỔ: nó bắt mọi thay đổi KHÔNG ai chủ
   ý, và in ra cái giá của mọi thay đổi có chủ ý.
 */
+/*
+  ⚠️ ROUND 56, VIỆC 0 — LẦN ĐẦU BẢNG NÀY ĐI **XUỐNG**, và đó là điều đáng mừng chứ không đáng lo.
+  Vòng 55 đẩy mọi thứ lên (kỷ 1 +94%). Vòng 56 trả lại ít cạnh cho những vật KHÔNG đáng tròn:
+      kỷ 1  292.874 → **270.302** (−7,7%) — mái tranh Göbekli Tepe thôi là cây kem 48 cạnh
+      kỷ 11 352.738 → **330.674** (−6,3%) — thùng nước gỗ trên mái nay là thùng đóng đai 14 thanh
+      mười một kỷ còn lại −0,2% đến −0,9% — đúng phần bồ thóc, vòng đá bếp lửa, lều ngoại ô
+  ⚠️ ĐỌC BẢNG THEO CẢ HAI CHIỀU (bài học vòng 53): **kỷ 14 và 15 KHÔNG đổi một tam giác nào**, và
+  đúng phải như vậy — chúng là kính và thép, không có một vật thủ công nào. Nếu một kỷ hiện đại mà
+  tụt ở đây thì đó là dấu hiệu `SIDES_HANDMADE` đã lan sang chỗ không thuộc về nó.
+*/
 const MOC_TAM_GIAC = {
-  1: 292874,
-  2: 182462,
-  3: 194204,
-  4: 451658,
-  5: 299884,
-  6: 447892,
-  7: 412032,
-  8: 282826,
-  9: 336716,
-  10: 271462,
-  11: 352738,
-  12: 262272,
-  13: 394028,
+  1: 270302,
+  2: 181398,
+  3: 192380,
+  4: 450442,
+  5: 298668,
+  6: 446676,
+  7: 410816,
+  8: 282218,
+  9: 336108,
+  10: 270854,
+  11: 330674,
+  12: 261664,
+  13: 390732,
   14: 350356,
   15: 205774,
 };

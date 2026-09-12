@@ -52,7 +52,7 @@ import { buildTerrain, WATER_SURFACE_Y } from '../../../engine/city3d/terrain';
 import { buildHorizon } from '../../../engine/city3d/horizon';
 import { placeBounds, specBounds } from '../../../engine/city3d/pick';
 import { buildResidents, residentAt } from '../../../engine/city3d/residents';
-import { buildHumanBody, buildHumanBodyLowDetail } from '../../../engine/city3d/human';
+import { buildHumanBody, buildHumanBodyLowDetail, humanRoleColors } from '../../../engine/city3d/human';
 import { buildHumanShapeGeometry } from './humanGeometry';
 import { poseAt } from '../../../engine/city3d/humanPose';
 import { fogDensityFor, sunDirectionAt } from '../../../engine/city3d/daylight';
@@ -1619,22 +1619,22 @@ export function createCityScene({
       peopleMeshes.push(mesh);
     }
 
-    // Màu theo VAI của từng bộ phận. Sáu vai đọc thẳng từ bảng màu, mà bảng màu thì đọc `cloth`
-    // từ `humanStyle.js` — một luật, một chỗ khai (xem `palette3d.js` mục `cloth`).
-    const roleColor = {
-      skin: palette.roles?.skin ?? palette.wall,
-      cloth: palette.roles?.cloth ?? palette.roof,
-      cloth2: palette.roles?.cloth2 ?? palette.roles?.trim ?? palette.roof,
-      // Sợi mộc (nón lá, mũ rơm, khăn lanh) — xem `humanStyle.js` mục `HEAD_MATERIALS`.
-      straw: palette.roles?.straw ?? palette.roles?.cloth2 ?? palette.roof,
-      hair: palette.roles?.hair ?? palette.roles?.dark ?? palette.wall,
-      gear: palette.roles?.gear ?? palette.roles?.wood ?? palette.wall,
-    };
+    /*
+      Màu theo VAI của từng bộ phận. Bảng nay ở `human.js` (`humanRoleColors`) — cùng file khai
+      `HUMAN_ROLES` — vì bản chép ở ĐÂY đã bỏ quên vai `steel` suốt từ round 49 và mọi cái mũ trụ
+      trong thành phố tô bằng màu vải. Đọc khối chú thích của `humanRoleColors` trước khi đụng vào.
+      ⚠️ VÀ KHÔNG CÒN `?? màu-mặc-định` Ở DÒNG DÙNG. Một vai chưa khai màu phải NÉM, không được tô
+      nhầm rồi im lặng — đó đúng là cách khuyết tật cũ sống được ba tuần.
+    */
+    const roleColor = humanRoleColors(palette);
     for (let i = 0; i < residents.length; i += 1) {
       for (let k = 0; k < parts.length; k += 1) {
         const mesh = meshOf[k];
-        mesh.setColorAt(i * mesh.userData.partsPerResident + slotOf[k],
-          tint.setHex(roleColor[parts[k].role] ?? roleColor.cloth));
+        const mau = roleColor[parts[k].role];
+        if (mau === undefined) {
+          throw new Error(`sceneGraph: khối "${parts[k].id}" khai vai "${parts[k].role}" chưa có màu`);
+        }
+        mesh.setColorAt(i * mesh.userData.partsPerResident + slotOf[k], tint.setHex(mau));
       }
     }
     for (const mesh of peopleMeshes) {

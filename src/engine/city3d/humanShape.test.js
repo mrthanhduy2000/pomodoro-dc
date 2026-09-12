@@ -11,7 +11,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 
-import { buildHumanBody } from './human.js';
+import { HUMAN_ROLES, buildHumanBody, humanRoleColors } from './human.js';
 import { HUMAN_SHAPES, humanShapeMesh, isValidHumanShape, shapeTriangles } from './humanShape.js';
 
 const ERAS = Array.from({ length: 15 }, (_, i) => i + 1);
@@ -377,6 +377,40 @@ test('CHÂN TÓC KHÔNG ĐƯỢC NẰM NGANG — trán phải cao hơn gáy, th�
     + 'ngang tầm mắt hai bên đầu.');
   console.log(`[tóc] chân tóc: gáy ${gay.toFixed(3)} · thái dương ${thaiDuong.toFixed(3)}`
     + ` · trán ${tran.toFixed(3)} (lần chiều cao đầu)`);
+});
+
+test('MỌI VAI MÀU PHẢI CÓ MÀU — và phải là màu của CHÍNH nó, không phải màu rơi nhầm', () => {
+  /*
+    ⚠️ BÀI NÀY SINH RA TỪ MỘT LỖI ĐÃ SỐNG BA TUẦN MÀ KHÔNG GÌ ĐỎ.
+    Round 49 tách vai `steel` khỏi `gear` và làm đủ mọi phía: `HUMAN_ROLES` thêm tên, `palette3d.js`
+    thêm `steel`, `palette3d.test.js` thêm cả danh sách ngoại lệ cho nó. Chỉ bảng `roleColor` bên
+    `sceneGraph.js` là không ai sửa — nó khai sáu vai và dòng dùng nó kết thúc bằng `?? cloth`.
+    ⇒ Mọi mũ trụ và mọi đầu công cụ kim loại tô đúng **màu vải** của kỷ suốt từ đó. Bài test của
+    bảng màu vẫn xanh, vì nó kiểm BẢNG chứ không kiểm chỗ TIÊU THỤ bảng (`TECH_DEBT #42`).
+
+    ⚠️ DÙNG BẢNG MÀU GIẢ VỚI MỖI VAI MỘT SỐ RIÊNG, KHÔNG DÙNG BẢNG THẬT. Bảng thật có thể tình cờ
+    cho hai vai cùng màu ở một kỷ nào đó, và khi ấy bài test không phân biệt được "đi đúng đường"
+    với "rơi nhầm mà may". Bảng giả thì mỗi vai một giá trị duy nhất, nên một vai rơi nhầm là lộ
+    ngay và lộ ở mọi vai, không riêng `steel`. Vế "màu kim loại khác màu vải ở cả 15 kỷ thật" nằm
+    ở `palette3d.test.js`, cạnh chỗ dựng bảng màu.
+    THỬ-CHO-ĐỎ (đã chạy): bỏ dòng `steel:` trong `humanRoleColors` ⇒ vế một đỏ; đổi nó thành
+    `r.cloth` ⇒ vế hai đỏ.
+  */
+  const gia = { wall: 0x101010, roof: 0x202020, roles: {} };
+  HUMAN_ROLES.forEach((vai, i) => { gia.roles[vai] = 0xa00000 + i; });
+  const mau = humanRoleColors(gia);
+  assert.deepEqual(Object.keys(mau).sort(), [...HUMAN_ROLES].sort(),
+    'bảng màu vai không khớp HUMAN_ROLES — một vai thiếu màu sẽ tô nhầm trong im lặng');
+  for (const vai of HUMAN_ROLES) {
+    assert.equal(mau[vai], gia.roles[vai],
+      `vai "${vai}" nhận ${mau[vai]?.toString(16)} trong khi bảng khai ${gia.roles[vai].toString(16)}`
+      + ' — nó đang rơi về màu của một vai khác.');
+  }
+  // Và khi bảng màu KHÔNG khai gì cả thì vẫn phải ra đủ số, không được ra `undefined`.
+  const tran = humanRoleColors({});
+  for (const vai of HUMAN_ROLES) {
+    assert.equal(typeof tran[vai], 'number', `vai "${vai}" ra ${tran[vai]} khi bảng màu rỗng`);
+  }
 });
 
 test('MŨ VÀNH PHẢI ĐỘI VỪA CÁI ĐẦU — chỏm rộng hơn sọ', () => {

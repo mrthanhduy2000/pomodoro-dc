@@ -30,6 +30,7 @@ import { DAY_PHASES, deriveDaylight } from './daylight.js';
 import { SEASONS } from './season.js';
 import { STREET_STYLES } from './streetStyle.js';
 import { ERA_METADATA } from '../constants.js';
+import { humanRoleColors } from './human.js';
 
 test('parseCssColor: đọc đúng các dạng getComputedStyle thật sự trả về', () => {
   assert.deepEqual(parseCssColor('#c96442'), { r: 201, g: 100, b: 66 });
@@ -92,6 +93,30 @@ test('buildScenePalette: mọi màu là số hợp lệ, kể cả khi KHÔNG đ
 
   assert.ok(count >= 20, `thiếu màu trong bảng (đếm được ${count})`);
   assert.equal(typeof palette.isDark, 'boolean');
+});
+
+test('VAI KIM LOẠI PHẢI KHÁC VAI VẢI Ở CẢ 15 KỶ — qua đúng hàm mà cảnh thật dùng', () => {
+  /*
+    ⚠️ BÀI NGAY TRÊN KIỂM BẢNG MÀU; BÀI NÀY KIỂM CHỖ TIÊU THỤ NÓ, và khoảng cách giữa hai việc ấy
+    đã nuốt trọn round 49 → 56. `palette3d.js` khai `steel` (lam-xám) tách khỏi `gear` (nâu) bằng
+    SẮC, có cả danh sách ngoại lệ riêng ở bài trên — trong khi `sceneGraph.js` không hề khai vai ấy
+    và mọi mũ trụ tô bằng màu VẢI. Một bảng đúng mà chỗ dùng sai thì bảng vẫn xanh.
+    ⇒ Nay cảnh thật gọi `humanRoleColors`, và bài này gọi ĐÚNG hàm ấy trên ĐÚNG bảng màu của từng
+    kỷ. THỬ-CHO-ĐỎ (đã chạy): đổi `steel: r.steel ?? …` thành `r.cloth` ⇒ đỏ ở cả 15 kỷ.
+  */
+  for (const era of Array.from({ length: 15 }, (_, i) => i + 1)) {
+    const bang = buildScenePalette({
+      tokens: FALLBACK_TOKENS, eraColor: ERA_METADATA[era]?.accentColor, era,
+      daylight: deriveDaylight(12),
+    });
+    const mau = humanRoleColors(bang);
+    assert.equal(mau.steel, bang.roles.steel,
+      `kỷ ${era}: vai kim loại không nhận màu kim loại của chính kỷ ấy`);
+    assert.notEqual(mau.steel, mau.cloth,
+      `kỷ ${era}: mũ trụ đang mang đúng màu vải — đúng khuyết tật round 49 sinh ra để chữa`);
+    assert.notEqual(mau.steel, mau.gear,
+      `kỷ ${era}: kim loại và đồ gỗ cùng một màu — phép tách bằng SẮC của round 49 đã mất`);
+  }
 });
 
 test('buildScenePalette: đủ vai màu cho ngôn ngữ hình khối, không vai nào thiếu', () => {

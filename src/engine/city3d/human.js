@@ -81,7 +81,51 @@ export { HUMAN_BASE_HEIGHT };
  */
 // Round 49 (ADR-089, debt #79): `steel` split out of `gear` — a helmet and a tool head are metal,
 // a spear shaft, a bundle and a leather case are not. One role per material the eye can name.
-export const HUMAN_ROLES = ['skin', 'cloth', 'cloth2', 'straw', 'hair', 'gear', 'steel'];
+// Round 56 (Phần A, Việc 2): `eyeWhite` — lòng trắng mắt. Vai thứ tám, và nó KHÔNG tốn lệnh vẽ
+// nào: cư dân đi qua một `InstancedMesh` mỗi KHUÔN, còn vai màu là `setColorAt` theo từng thể
+// hiện. Chú thích round 52 nói ngược (*"thêm một vai là thêm một họ vật liệu cho cả 15 kỷ"*) —
+// câu ấy đúng với vật liệu CÔNG TRÌNH, không đúng với cư dân. Xem `sceneGraph.js` chỗ `roleColor`.
+export const HUMAN_ROLES = ['skin', 'cloth', 'cloth2', 'straw', 'hair', 'gear', 'steel', 'eyeWhite'];
+
+/**
+ * VAI MÀU → MÀU THẬT. Một bảng, ở tầng thuần, và đây là chỗ sửa gốc của một lỗi ba tuần tuổi.
+ *
+ * ⚠️ VÌ SAO BẢNG NÀY PHẢI Ở ĐÂY CHỨ KHÔNG Ở `sceneGraph.js`. Round 49 (ADR-089, debt #79) tách vai
+ * `steel` ra khỏi `gear` — mũ trụ và đầu rìu là KIM LOẠI, cán giáo và bao da thì không — và làm
+ * đủ cả: `HUMAN_ROLES` nhận thêm một tên, `palette3d.js` nhận `steel: paint(212, 0.08, 0.36, 0.27)`
+ * (lam-xám, tách khỏi nâu của `gear` bằng SẮC chứ không bằng độ sáng), `palette3d.test.js` nhận cả
+ * một danh sách ngoại lệ [12, 15] cho nó.
+ * **Chỉ có bảng `roleColor` trong `sceneGraph.js` là không ai sửa.** Nó khai sáu vai, không có
+ * `steel`, và dòng dùng nó kết thúc bằng `?? roleColor.cloth`. ⇒ Từ round 49 tới nay, **mọi cái mũ
+ * trụ và mọi đầu công cụ kim loại đều tô đúng màu VẢI của kỷ ấy** — mũ SSh-40 của kỷ 12 xanh y hệt
+ * bộ quân phục. Không gì đỏ lên: bảng màu có test riêng và nó xanh, vì nó kiểm BẢNG MÀU chứ không
+ * kiểm chỗ TIÊU THỤ bảng màu. Đúng họ `TECH_DEBT #42` — *kiểm con số đã KHAI thay vì con số đã DÙNG*.
+ *
+ * ⇒ Cái vá gốc không phải thêm một dòng `steel:` vào `sceneGraph.js` (thế thì vai thứ tám lại rơi
+ * đúng cái hố ấy), mà là **đưa bảng về một chỗ và bắt nó khai đủ `HUMAN_ROLES`**, có bài test đo.
+ * Không còn `??` nào ở chỗ tiêu thụ, nên một vai chưa khai màu là một lỗi NÉM chứ không phải một
+ * lỗi tô nhầm.
+ */
+export function humanRoleColors(palette) {
+  const r = palette?.roles ?? {};
+  const nen = palette?.wall ?? 0x888888;
+  const vai = palette?.roof ?? nen;
+  return {
+    skin: r.skin ?? nen,
+    cloth: r.cloth ?? vai,
+    cloth2: r.cloth2 ?? r.trim ?? vai,
+    // Sợi mộc (nón lá, mũ rơm, khăn lanh) — xem `humanStyle.js` mục `HEAD_MATERIALS`.
+    straw: r.straw ?? r.cloth2 ?? vai,
+    hair: r.hair ?? r.dark ?? nen,
+    gear: r.gear ?? r.wood ?? nen,
+    // ⚠️ Lùi về `gear` chứ không về `cloth`: kim loại và gỗ đều là ĐỒ NGHỀ, còn vải thì không.
+    // Rơi nhầm về `cloth` chính là khuyết tật đã mô tả ở trên.
+    steel: r.steel ?? r.gear ?? nen,
+    // Lòng trắng mắt — lùi về `skin` chứ không về tường: hỏng màu thì được một khuôn mặt không
+    // có mắt, chứ không được hai đốm màu tường giữa mặt.
+    eyeWhite: r.eyeWhite ?? r.skin ?? nen,
+  };
+}
 
 /**
  * Tên các khớp. `sceneGraph.js` và `humanPose.js` cùng đọc danh sách này — một chỗ khai duy nhất.
@@ -410,6 +454,53 @@ function hairPieces(kind, d) {
 }
 
 /**
+ * KHUÔN MẶT — round 56, Phần A, Việc 2. Đàm xếp sẵn thứ tự: *"lông mày trước (nhiều biểu cảm nhất,
+ * rẻ nhất) · mắt có lòng trắng và con ngươi · một cái miệng một nét. Mũi và má thì tí thôi."*
+ *
+ * ⚠️ MỌI KHỐI TREO VÀO KHỚP `head`, KHÔNG VÀO `torso`. Đầu xoay được từ vòng 48; một con mắt neo
+ * vào thân thì đầu quay sang trái còn mắt vẫn nhìn thẳng. Đàm nhắc đúng điều này ở Phần A.
+ *
+ * ⚠️ MỘT KHỐI NHỎ NẰM TRONG MỘT KHỐI LỚN THÌ KHÔNG HIỆN RA — và đây là cùng một bài học vừa trả
+ * giá ở chân tóc, chỉ nhỏ hơn. Con ngươi đặt ĐỒNG TÂM với lòng trắng thì nó nằm gọn bên trong và
+ * thứ ta thấy lại là giao tuyến của hai mặt tròn xoay. Nên con ngươi đặt ở ĐÚNG CỰC TRƯỚC của lòng
+ * trắng (x = 0,55 `headW`, trong khi cực trước của lòng trắng ở 0,57): một nửa nó thò hẳn ra ngoài,
+ * nên đường viền ta thấy là viền của chính nó.
+ *
+ * ⚠️ LÔNG MÀY VÀ MIỆNG DÙNG KHUÔN `box`, CÓ CHỦ Ý. Chúng là những NÉT, và một nét thì có hai đầu
+ * cắt — `box` cho đúng điều đó, lại là khuôn kỷ nào cũng đã vẽ nên tốn **0 lệnh vẽ**. Bo tròn
+ * chúng là làm đúng cái việc Đàm cấm ở Việc 0: *"không phải cái gì cũng bo tròn"*.
+ *
+ * ⚠️ VÀ ĐÂY LÀ RỦI RO PHẢI NÓI RA, ĐÃ SOI ẢNH Ở CẢ HAI CỠ: đổi con mắt từ một chấm TỐI đặc sang
+ * lòng trắng + con ngươi làm khối mắt SÁNG hơn ở xa. Ở khung toàn cảnh sát nhất, cư dân cao ~30
+ * điểm ảnh và cái đầu ~7 — ở cỡ ấy hai thứ trộn lại thành một chấm xám. Đó là cái giá, và nó đổi
+ * lấy một khuôn mặt đọc được ở chế độ đi bộ, nơi cùng cái đầu ấy cao ~40 điểm ảnh.
+ */
+function facePieces(d) {
+  const W = d.headW;
+  const H = d.headH;
+  return [
+    // LÒNG TRẮNG — HẸP HƠN con mắt vòng 54 (0,30 → 0,23 `headW`), và con số ấy đến từ một tấm ảnh,
+    // không từ giải phẫu. Giữ nguyên cỡ cũ thì mảng SÁNG chiếm đúng chỗ mảng TỐI từng chiếm, và
+    // khuôn mặt đọc ra là đang trợn mắt — đúng thứ Đàm cấm ở vòng 54 (*"đừng làm mặt tả thực — ở
+    // cỡ này nó sẽ thành đáng sợ"*). Một con mắt hoạt hình hiền là **ít lòng trắng, nhiều con ngươi**.
+    piece('eyeL', 'eyeWhite', 'dome', 'head', [W * 0.23, H * 0.20, W * 0.18], [W * 0.44, H * 0.54, -W * 0.25]),
+    piece('eyeR', 'eyeWhite', 'dome', 'head', [W * 0.23, H * 0.20, W * 0.18], [W * 0.44, H * 0.54, W * 0.25]),
+    // CON NGƯƠI — ở cực trước của lòng trắng, xem khối chú thích trên. To hơn bản đầu (0,11 → 0,13)
+    // để tỉ lệ ngươi/trắng nghiêng hẳn về phía ngươi.
+    piece('pupilL', 'hair', 'dome', 'head', [W * 0.13, H * 0.15, W * 0.13], [W * 0.53, H * 0.53, -W * 0.25]),
+    piece('pupilR', 'hair', 'dome', 'head', [W * 0.13, H * 0.15, W * 0.13], [W * 0.53, H * 0.53, W * 0.25]),
+    // LÔNG MÀY — ngay trên mí trên (mắt trải 0,44…0,64 `headH`), MẢNH (0,03) và NGẮN (0,20). Bản
+    // đầu để 0,05 dày × 0,26 dài và ảnh cho ra một VỆT TỐI liền một dải dưới vành mũ, không ra hai
+    // cái lông mày. Lông mày là thứ đọc được nhờ KHOẢNG HỞ với con mắt, không nhờ bề dày.
+    piece('browL', 'hair', 'box', 'head', [W * 0.09, H * 0.03, W * 0.20], [W * 0.46, H * 0.69, -W * 0.26]),
+    piece('browR', 'hair', 'box', 'head', [W * 0.09, H * 0.03, W * 0.20], [W * 0.46, H * 0.69, W * 0.26]),
+    // MIỆNG — một nét, ở 0,30 `headH`. Cao hơn thì nó nằm ngay dưới mũi; thấp hơn thì rơi xuống cằm.
+    // NGẮN (0,20 `headW`): một nét dài bằng khoảng cách hai mắt đọc ra là đang nhăn mặt.
+    piece('mouth', 'hair', 'box', 'head', [W * 0.07, H * 0.03, W * 0.20], [W * 0.46, H * 0.30, 0]),
+  ];
+}
+
+/**
  * ĐỘI ĐẦU. Gắn vào khớp `head` nên nó nghiêng theo đầu. Trả về MỘT MẢNG, có thể rỗng.
  *
  * ⚠️ VAI MÀU CỦA NÓ KHÔNG SUY TỪ `kind` MÀ TỪ `material` — hai cái mũ CÙNG HÌNH có thể khác
@@ -704,12 +795,7 @@ export function buildHumanBody(era) {
       nên hai con mắt tốn **0 lệnh vẽ**. Thêm một vai `eye` là thêm một họ vật liệu cho cả 15 kỷ để
       vẽ hai chấm — đúng thứ `iron` ở vòng 51 sinh ra để tránh, nhìn từ chiều ngược lại.
     */
-    piece('eyeL', 'hair', 'dome', 'head',
-      [d.headW * 0.30, d.headH * 0.26, d.headW * 0.22],
-      [d.headW * 0.42, d.headH * 0.54, -d.headW * 0.26]),
-    piece('eyeR', 'hair', 'dome', 'head',
-      [d.headW * 0.30, d.headH * 0.26, d.headW * 0.22],
-      [d.headW * 0.42, d.headH * 0.54, d.headW * 0.26]),
+    ...facePieces(d),
 
     // ── TAY: CÁNH TAY TRÊN → KHUỶU → CẲNG TAY → BÀN TAY ───────────────────────────────────
     // ⚠️ BÀN TAY DÙNG KHUÔN `dome` CHỨ KHÔNG THÊM KHUÔN MỚI, và đó là một quyết định về LỆNH VẼ:

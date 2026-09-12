@@ -818,7 +818,18 @@ test('⚠️ NGÂN SÁCH TAM GIÁC CƯ DÂN — chấm TỪNG KỶ trên cảnh 
     ⇒ Nếu bài này đỏ: đếm xem khối thừa đến từ ĐÂU trước khi nâng số. Ba lần nâng liên tiếp là dấu
     hiệu của một phép đo sai chỗ, không phải của một cơ thể phức tạp dần.
   */
-  const MAX_PARTS = 32;
+  /*
+    ⚠️ 32 → 40 (round 56, Phần A). ĐỌC LÝ DO TRƯỚC KHI COI ĐÂY LÀ MỘT LẦN NỚI.
+    Lệnh của Đàm, vòng 55, nguyên văn: *"Số cạnh cứ tăng lên gấp nhiều lần nếu ảnh đẹp hơn. Trần
+    nào chắn đường thì NÂNG hoặc XOÁ, kể cả trần trong test. Máy tôi rất mạnh."* — kèm đúng một
+    ràng buộc: *"đừng xoá cái máy dò chạy loạn mà vòng 53 dựng… Nâng con số, giữ cái quan hệ."*
+    Vòng 56 Phần A thêm sáu khối vào ĐÚNG chỗ Đàm đặt hàng: mũ tóc (+1 ở bốn kỷ đầu trần), hai con
+    ngươi, hai lông mày, một cái miệng. Kỷ dày nhất đi từ 27 lên **33**.
+    ⇒ Trần lên 40 giữ NGUYÊN quan hệ mà con số này sinh ra để canh — *"một vòng lặp lồng nhầm thì
+    số khối nhân theo số chi hoặc số tầng, tức ≥ 2×"*. 40 so với 33 là 21% biên: quá hẹp cho một
+    phép nhân, quá rộng cho một bản vá nhỏ. Cái cân vẫn cân; chỉ cái vạch dời.
+  */
+  const MAX_PARTS = 40;
   // ⚠️ TRẦN TỈ LỆ 6% → 11% (2026-08-24 sáng) → **30%** (2026-08-24 tối). ĐỌC TRƯỚC KHI TIN NÓ.
   //
   // Con số 6% chưa bao giờ được buộc vào một phép đo THỜI GIAN nào — nó là một trần tự đặt, và một
@@ -887,8 +898,8 @@ test('⚠️ NGÂN SÁCH TAM GIÁC CƯ DÂN — chấm TỪNG KỶ trên cảnh 
   // bằng đúng thứ vừa mua. Cách đúng là hỏi lại *"ngoài đời cái mũ là MẤY vật?"*: một. Gộp lại
   // thành khuôn `hat` (một mặt tròn xoay) thì kỷ 8 về 11 khối, hình học ĐÚNG HƠN, và RẺ HƠN 12
   // tam giác. ⇒ **Khi một cái cổng chặn lại, hãy để nó chỉ ra một thiết kế đúng hơn.**
-  assert.ok(MAX_PARTS <= 32,
-    `trần ${MAX_PARTS} khối/người đã bị nâng quá 32 — mỗi lần nâng phải là một lệnh tường minh của`
+  assert.ok(MAX_PARTS <= 40,
+    `trần ${MAX_PARTS} khối/người đã bị nâng quá 40 — mỗi lần nâng phải là một lệnh tường minh của`
     + ' Đàm kèm lý do, không được nâng cho vừa một bản vá');
 
   /*

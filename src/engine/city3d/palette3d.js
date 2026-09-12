@@ -749,6 +749,10 @@ export function buildScenePalette({ tokens, eraColor, era: eraNumber, daylight, 
     // the one helmet in the set (kỷ 12, SSh-40) was PAINTED the colour of the padded jacket — the
     // `palette3d.test.js` exception list [12, 15] is a historical fact, not a threshold to beat.
     steel: paint(212, 0.08, 0.36, 0.27),
+    // Round 56 (Phần A, Việc 2): lòng trắng mắt. KHÔNG phải trắng tinh — một lòng trắng thật là
+    // xám ngà, và trắng tinh trên một khuôn mặt cỡ này đọc ra là hai cái đèn. Gần như hết sắc
+    // (0,08) và ấm nhẹ, sáng hơn `skin` (0,78) đủ để con ngươi tối nổi lên trên nó.
+    eyeWhite: paint(38, 0.08, 0.93, 0.80),
     // Ô cửa ĐANG SÁNG ĐÈN (chỉ dùng khi trời đã tối — xem `daylight.js`).
     // ⚠️ Vẽ bằng vật liệu KHÔNG nhận ánh sáng, nên màu này hiện ra Y NGUYÊN chứ không bị nhân với
     // ánh sáng cảnh. Vì vậy nó phải là màu của **ánh đèn nhìn từ xa** — vàng ấm, sáng nhưng không

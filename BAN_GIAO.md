@@ -1,3 +1,68 @@
+> Last update: **2026-09-12** — **ROUND 57: THE PICTURE WAS NEVER DRAWN AT FULL SIZE.**
+> Order: *"Build lớn … bám sát lịch sử … Đây là phần phải gây hứng thú."* Branch
+> `claude/city-skill-points-display-7k4nof`. Đàm's own hypothesis opened it, and MEASURING IT
+> FIRST is the whole lesson of the round.
+>
+> ### Việc 1 — the hypothesis was WRONG, and the measurement found something else
+> He suspected the post chain ran at CSS pixels and was stretched. A new permanent `[res]` line
+> asked WebGL and the composer directly:
+>
+>     chuỗi (composer)            5600×2800   ← pixelRatio nhân HAI lần
+>     đệm độ sâu                  2800×1400
+>     bloom (tấm đích THẬT)       1400×700
+>     `uTexel` của lượt ống kính  2800×1400
+>
+> `EffectComposer.setSize` multiplies by the renderer's pixelRatio **itself** (three places in
+> three.js) and our call sites had multiplied already. So the colour chain ran at pixelRatio
+> **squared** — the mirror of the hypothesis. **Second time `EffectComposer` fails to inherit the
+> renderer's configuration** (round 55: `samples`).
+> ⚠️ The expensive consequence was not waste: **the lens pass blurred at twice its intended
+> radius**, because `uTexel` described a 2800-wide buffer while sampling a 5600-wide one. AO and
+> depth of field were both smeared 2×. That is the "mềm nhũn", and it was never a shortage of pixels.
+>
+> ### And the stretch IS real — from a different cause
+> `MAX_PIXEL_RATIO = 2` clamped his iPhone's DPR 3. A 390 CSS frame was drawn into **780** pixels
+> on a screen area **1170** wide: **stretch 1.50×, only 44% of the pixels ever drawn.**
+> ⚠️ **A ceiling that bites on one class of device is invisible on every other** — it never showed
+> on the MacBook (DPR 2), which is the only place acceptance photos were ever taken.
+>
+> ### Việc 2–4 — fixed for the whole chain, and the tool answered honestly
+> `composer.setPixelRatio(1)` (one convention: every size in `postFx.js` is device pixels) ·
+> `MAX_PIXEL_RATIO` 3 · the app's initial size in device pixels. After: **every pass 4200×2100,
+> ratio 1.000**, bloom exactly half by design.
+> Việc 4: the capture tool renders through the app's own `createPostFx` (so it never lied about the
+> chain) but captures at `deviceScaleFactor: 1` — with the canvas at 3× that makes every acceptance
+> photo a 3× **downsample**, i.e. BETTER than Đàm's screen. Use `--dpr 1` at the device width for a
+> true 1:1 photo. `--width 4200` works again too: round 56 blamed SwiftShader for its black frame,
+> but the buffer then was 8400×4200 because of this same double multiply.
+>
+> ### Việc 5 — measured, and it inverted the assumption
+> Tallest resident on a real iPhone frame (1170×726 device px), era 12, by `--mask residents`:
+>
+> | chế độ | cao |
+> |---|---|
+> | toàn cảnh (mặc định) | **82 px** |
+> | đi bộ (6 bước) | **23 px** |
+> | cận cảnh CÔNG TRÌNH | **22 px** |
+>
+> **Both close modes are SMALLER than the overview.** Walk mode puts the camera mid-street while
+> people are spread along it, and `cityFocus` flies to a *building*. So before round 57 there was
+> no mode at all in which a resident exceeded 82 px — at which the eyes of round 56 are 2–3 px.
+> Three rounds of character work had nowhere to be seen.
+>
+> ### Việc 6 — tap a resident and the camera goes to them
+> New pure module `engine/city3d/residentFocus.js` (touch box · eye point · caption from the real
+> 15-era wardrobe · `planResidentFocus`), 9 tests. `--nguoi N` photographs it.
+> ⚠️ **`planCityFocus` is the wrong planner for a person, and the photo said so before any test
+> did.** It keeps `yaw` and has two levers when blocked — raise, and back off. Both are right for a
+> building and wrong for a person: raising looks at the top of a head, backing off loses the very
+> thing you came to see. Measured: a resident 0.204 units tall asking to stand at 0.60 got **6.10**
+> back — overview distance again. A person needs the third lever: **walk around them.**
+> ⚠️ And the clearance question differs too: `pathGuarantee` asks whether the whole FLIGHT grazes a
+> building, which diving into a street always does. For a person the question is whether the camera
+> **ends up inside a wall**.
+> Result: 82 px → **~390 px** tall in the same 726-px frame.
+
 > Last update: **2026-09-12** — **ROUND 56 (in progress): EACH THING ITS OWN SHAPE.**
 > Order: *"Không phải cái gì cũng bo tròn. Đích của tôi là chất lượng phim hoạt hình 3D, bám sát
 > thực tế và lịch sử — không phải 'nhiều cạnh'."* Branch `claude/city-skill-points-display-7k4nof`;

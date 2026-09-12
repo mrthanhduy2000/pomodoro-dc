@@ -7,6 +7,107 @@
 
 ## Tách thêm ngày 2026-09-12 (vòng 55 + 56 tới, `START_HERE.md` chạm trần 16.000)
 
+- **Loop — ROUNDS 37 & 38 (2026-09-06/07): A SESSION ALWAYS LAYS A BRICK (ADR-077) · THE CITY
+  LIVES ON THE FOCUS SCREEN (ADR-078).** Moved verbatim to
+  `docs/archive/START_HERE_LOG_2026-09-06.md` — `grep` them when you need those rounds. Their
+  still-live rules are the ones already stated above and in `docs/UI_INVARIANTS.md`; two lessons
+  from 38 are still load-bearing: *the sandbox's software GL trips the FPS watchdog in ~3 s — shoot
+  3D with `--settle 600`* and *`--click` matches a button's FULL text*. Nothing was deleted.
+- 📚 **Rounds 20 → 38 moved to `docs/archive/START_HERE_LOG_2026-09-06.md`** (verbatim), together
+  with the 3D city details (BSP skeleton · `reach` 0.8 · two-layer shadows · 15 eras/`country` ·
+  12×12 grid · 3.2× perf headroom) — the city's mechanics are stable and not worth paying tokens for
+  every session (its ART was reopened in round 47). **Keep at most 3 rounds here**; a new round pushes
+  the oldest down.
+  Older rounds: `grep -n 'VÒNG 2[0-9]\|VÒNG 33\|ROUND 3[4-8]' docs/archive/START_HERE_LOG_2026-09-06.md`.
+
+### UI invariants — read before touching the UI
+⚠️ **Changing anything under `src/components/` or `src/store/uiSkins.js` means reading
+[`docs/UI_INVARIANTS.md`](docs/UI_INVARIANTS.md) FIRST.** It holds the rules that are guarded by
+tests: one shared reward card and exactly four rarity tiers · the no-exceptions interruption law
+(`lastWeeklyReportDate` vs `…SeenDate`) · exactly three motion presets · 5 sidebar items / 4 iPhone
+buttons + "Thêm" · 5 skins and the one-time migration that must never run again · the three-way
+choice for notifying Đàm · the era-stage progress bar. They are not repeated here because a rule
+stated twice drifts.
+
+## Next up
+### A. Đàm must choose — do not decide these alone
+- **The living city after round 48 — does it move enough in 10 seconds on the iPhone?** The sandbox
+  cannot show it (SwiftShader, 3 s watchdog); Đàm's eye decides the wind amplitude (`ERA_MOTION`), the
+  smoke density and whether the +6 %/stage camera pull-back feels like growth. `#88` (plots per block)
+  still needs his eye on top-down photos before any code.
+
+### B. Ready to build
+0. **Round 54's one leftover** — **distance-softening shadows** (Việc 8b). A penumbra that widens with
+   distance from the occluder is PCSS, i.e. rewriting three's shadow sampling; the cheap substitute
+   (VSM + `shadow.radius`) blurs uniformly and bleeds light through the thin window reveals round 53
+   built, which Việc 12 forbids. Logged rather than faked. Round 53's leftovers: Việc 6 (wet roughness),
+   Phần D (value variation across ONE face; moss/rust by age). `BEVEL_MAX`/`MAX_SIDES` done in round 54.
+1. **Rounds 49–52 leftovers, in the briefs' order** — greenery and age traces by building age;
+   walk-mode features (auto tour, street names, tap while walking, lamps pooling light); a **wet
+   roughness map**; **`#65`/`#60`** (river · canal · estuary still share one geometry — give each its
+   own shape plus the bridge · quay · steps grammar); `#40` (tiles on the slope); more resident roles
+   and animals, people talking in pairs. **Per-role body proportions** (broad smith, stooped elder,
+   big-headed child) ride the resident ROLE system, not a per-era axis, so they wait on that.
+2. **`TECH_DEBT #88`** — the one-cell ceiling (`BLOCK_MAX_CELLS = 1`) pins the plot count at 4 across
+   all 15 eras, making the `units`/`cols`/`rows` columns of the district table a dead axis. Three
+   options already measured.
+3. **`TECH_DEBT #89` is still OPEN** despite the day-stage gate passing (12.44) — the SKY band, named
+   explicitly twice, has barely moved. Do not read the aggregate number as "solved".
+
+### C. Waiting on Đàm's eyes
+🔴 **Round 54 on the phone** — stand at eye level beside ONE resident. Đàm's own test: that person
+must read as a soft, round, likeable cartoon character, not a stack of woodblocks — *"vẫn thấy các
+mặt phẳng ghép lại thì vòng này chưa đạt"*, however green every other box is. Also: scene triangles
+rose 13–43% per era for the round trees; say if anything lags.
+🔴 **Round 53 on the phone** — stand before a sunlit wall. Đàm's test: it must shadow ITSELF — in the
+recess, under the sill, under the eave, beside the pilaster. Still flat = the round failed.
+🔴 **Round 52 on the phone** — put two pictures of the SAME street side by side, before and after.
+Đàm's own test, in his words: the after must look like a real game, not a paper model — *"phải đọc
+bảng mới thấy khác thì vòng này chưa đạt."* Also check the Settings switch both ways, and say whether
+it lags; the post pass has never been timed on real hardware (the sandbox is a CPU rasteriser).
+🔴 **Rounds 50 · 51 and Phase 21, all still unseen** — one walk covers them: drag the hour and the
+season, walk a lap by day and by night in three eras, save a postcard. Each street must read at once
+as that country and that century. Phase 21's own check (eras 1–9 no rows, 11–15 rows) needs the
+top-down sweep. ⚠️ All of it is already running in production.
+
+### D. Known blind spots in the tooling (not "not done" — "cannot be seen")
+- **3D in the sandbox lives ~3 s** — SwiftShader is slow, the FPS watchdog (`renderLoop.js`) gives up
+  after three slow samples and BOTH the City tab and the Focus postcard fall back to the 2D drawing.
+  That is the tool, not the app: pass `--settle 600` to `shot.mjs` to catch the 3D frame (ADR-078).
+- ✅ **Solved 2026-09-02** — `src/dev/previewStage.js` + `shot.mjs --preview <scene>` (`loot` ·
+  `loot-max` · `era` · `level` · `toasts`); round 33 added `dc-preview-card=<card>`. Why it was
+  needed: `ui` is not in the store's `partialize`, so it cannot be seeded via `--fixture`/`--ls`, and
+  the store is not exposed on `window`, so `--probe` cannot open dialogs either. **Never click Start
+  on dev.** This blind spot had blocked a REAL fix (`TECH_DEBT #94`, since closed), not just convenience.
+- **Treasure › Relics tab** — the fixture never seeds `relics`/`research`, so it always shows 0/15 and
+  15 "??? KHOÁ" rows. That emptiness belongs to the TOOL, not the app. Seed `relics` in
+  `scripts/make-fixture.mjs` first.
+- **`refinedEarned` / `jackpot` are always 0 in fixtures** — `make-fixture.mjs` does not replay those
+  two fields, so never infer frequency from them. Ask the formula directly:
+  `minutes >= T2_DROP_THRESHOLD_MIN` (45′) and `>= DEEP_SESSION_THRESHOLD` (60′).
+
+## Commands
+```
+npm install --legacy-peer-deps                                   # required flag
+npm run test:quiet                                               # 2,132 chars of output, not 408,514
+node scripts/doc-budget.mjs [--map <file>]                       # doc token budget / table of contents
+node scripts/city-preview.mjs --era 6 --hour 12 --width 1500     # inspect one era
+node scripts/shot.mjs --phone --tab "Thống kê" --full            # 2D UI screenshot
+```
+(`npm test` / lint / build semantics: `CLAUDE.md` §Testing.)
+
+## Where to look things up
+`CLAUDE.md` §DOC MAP is the canonical routing table (which file, when to open, what is `grep`-only).
+
+---
+
+- **Loop — ROUND 52 (ADR-092): THE PICTURE GOT EXPENSIVE.** Archived verbatim. Still-live: tone
+  mapping is in `OutputPass`, **not on the renderer** · threshold decides WHAT glows, strength only
+  how much · **clothing is the limb, not a tube around it** · `city-preview.mjs` needs
+  `preserveDrawingBuffer` and `still: true`.
+
+---
+
 - **Loop — ROUND 54 (2026-09-11): FROM BLOCKS TO ROUND (ADR-094).**
   Đàm's diagnosis again, again right: the geometry had been curved since ADR-057, but both
   `geometryFactory.js` and `humanShape.js` wrote ONE normal per FACE, so a 12-sided body rendered as

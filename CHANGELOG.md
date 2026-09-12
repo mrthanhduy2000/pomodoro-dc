@@ -10,6 +10,28 @@
 > **Muốn hiểu VÌ SAO một quyết định được chọn** → `ARCHITECTURE_DECISIONS.md`. **Muốn biết migration
 > cụ thể nào cần chạy** → `MIGRATION.md`.
 
+## 2026-09-12 — Round 57: the picture was never drawn at full size
+
+**Purpose**: find out why the city looks soft on iPhone, and fix it for every pixel of every era at
+once. **Scope**: the post-processing chain's resolution, the pixel-ratio ceiling, a permanent
+resolution indicator, and a way to look a resident in the face. No game logic, no data, no schema.
+**Compatibility**: fully backward-compatible; ADR-007 untouched.
+
+- **The post chain ran at pixelRatio SQUARED.** `EffectComposer.setSize` multiplies by the
+  renderer's pixel ratio itself and our call sites multiplied too. The worst effect was not waste
+  but that the lens pass blurred at twice its intended radius — its texel size described a buffer
+  half the width of the one it sampled. Fixed with `composer.setPixelRatio(1)`, so every size in
+  the file is device pixels.
+- **`MAX_PIXEL_RATIO` 2 → 3.** On iPhone (DPR 3) a 390-point frame was drawn into 780 pixels and
+  stretched onto 1170: 44% of the pixels were interpolated. Only ever visible on phones.
+- **A permanent `[res]` indicator** plus four red-proven guards that check the RELATION (every pass
+  the same size as the renderer; bloom exactly half, by design) rather than any number.
+- **Tap a resident to look at them.** New pure `residentFocus.js` with its own camera planner: a
+  person needs "walk around them" where a building needs "raise and back off". A resident goes from
+  82 px to ~390 px tall on an iPhone-sized frame.
+- Measured and recorded: before this round no mode showed a resident larger than the default
+  overview — walk mode (23 px) and building close-up (22 px) were both smaller.
+
 ## 2026-09-12 — Round 56 (Phần A, in progress): each thing its own shape
 
 **Purpose**: make a resident survive being looked at closely — no seam, a face, hair that is hair —

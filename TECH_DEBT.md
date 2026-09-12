@@ -67,6 +67,7 @@
 > `docs/archive/TECH_DEBT_CLOSED_2026-09-06.md` § "Threshold history" on 2026-09-06 (ADR-075).
 > They are a log of past counts, re-read on every `head` of this file for no operational
 > benefit. Nothing was deleted.
+- **#106** — Cận cảnh cư dân: 3/15 kỷ báo thoáng 0,00 vì camera rơi vào hộp của một CỘT/BIỂN, không phải công trình
 - **#105** — Draw-call gate asleep three weeks: the formula under-counts real city draw calls by 3/3/1, and the frame subtraction has been wrong since round 51
 - **#52** — ĐÃ ĐÓNG (2026-09-11, round 53) · `GTAOPass` trả đệm AO đen đặc ở tầm mắt — nay AO viết thẳng trong `LensShader`
 - **#103** — Reference archive so large that one `cat` blew the context window, with no guard
@@ -279,6 +280,37 @@ ngưỡng mắt, đúng cái "cửa phễu" mà `CLAUDE.md` cấm.
 </details>
 
 ---
+## #106 — Cận cảnh cư dân: hộp chặn của PROP báo vướng ở 3/15 kỷ
+
+**Priority**: Low · **Mở**: 2026-09-12 (round 57, Việc 6) · **Chủ**: `engine/city3d/residentFocus.js` + chỗ dựng `blockers` ở `sceneGraph.js`
+
+### Đo được
+`--nguoi 3`, khung 1170×726, 15 kỷ. Mười bốn kỷ đứng đúng 0,60–0,61 đơn vị; kỷ 11 lùi ra 0,90.
+Ba kỷ **5 · 9 · 13** báo `thoang 0,00` — tức `planResidentFocus` thử hết 17 hướng vòng quanh, hướng
+nào cũng cho khoảng hở 0, rồi lùi 12 bước vẫn 0, và trả về phương án `blocked`.
+
+### Nhưng ẢNH CHỤP CỦA CẢ BA KỶ ẤY ĐỀU SẠCH
+Không có tường nào cắt ngang khung. Lý do: `blockers` gồm cả **prop** (cột đèn, biển, cọc) chứ
+không riêng công trình, và hộp của chúng đã được NỚI để ngón tay dễ trỏ. Camera đứng cách người 0,6
+đơn vị ở tầm mắt thì rơi vào hộp nới ấy — "đứng trong một cái cột đèn" về mặt hình học, còn về mặt
+hình ảnh thì cái cột mảnh và nằm sau mặt phẳng gần của camera.
+⇒ Đây là **phép đo bi quan**, không phải một va chạm thật. Ghi ra vì một con số 0,00 để lại trong
+nhật ký sẽ được một phiên sau đọc là "hỏng" và đi chữa nhầm chỗ.
+
+### Hướng chữa khi mở lại (chọn một, đừng làm cả hai)
+1. Cho `blockers` một nhãn nhóm (`nhom` đã có sẵn ở dòng `blockers.push`) và để cận cảnh cư dân bỏ
+   qua nhóm `props` — đúng cách vùng quê và vùng phụ cận đã được bỏ qua, cùng một lý lẽ: thứ mảnh
+   và thấp thì không chắn được tầm nhìn.
+2. Hoặc dùng hộp CHƯA nới cho phép đo đường bay, và chỉ nới cho phép dò chạm. Hai câu hỏi khác
+   nhau đang dùng chung một hộp.
+
+### Vì sao chưa làm ngay
+Nó không hỏng cái gì đang nhìn thấy được, và cả hai hướng chữa đều đụng vào `blockers` — thứ mà
+camera cận cảnh CÔNG TRÌNH cũng đang dùng. Sửa mù sẽ đổi hành vi của một tính năng đang đúng để
+chữa một con số đang nói quá.
+
+---
+
 ## #105 — Cổng lệnh vẽ ngủ ba tuần: công thức đếm THIẾU 3 · 3 · 1 so với Chromium
 
 **Priority**: Medium · **Mở**: 2026-09-12 (round 56, Phần A) · **Chủ**: `src/engine/city3d/drawCallBudget.test.js`

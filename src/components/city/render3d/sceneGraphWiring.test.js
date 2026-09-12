@@ -543,8 +543,23 @@ test('⚠️ TRANG XEM THỬ PHẢI DỰNG Ở ĐÚNG TẦNG ĐIỂM ẢNH CỦA
   // `setPixelRatio(1)` ở CẢ HAI khối — tức mọi nhận xét mỹ thuật rút ra từ nó (răng cưa, mép khối,
   // cây cối, chi tiết nhỏ) suốt nhiều tháng đều đang nói về một bản dựng THẤP HƠN bản thật. Cùng
   // hình dạng lỗi với cỡ bóng đổ ở bài trên, ở một cần gạt khác.
-  assert.match(CODE, /export const MAX_PIXEL_RATIO = 2;/,
+  /*
+    ⚠️ HỎI "HẰNG SỐ CÓ NẰM ĐÂY KHÔNG", KHÔNG HỎI "NÓ BẰNG MẤY" — sửa ở round 57.
+    Bản trước khớp nguyên văn `= 2;`. Nhưng điều bài test này nói nó canh, và điều đáng canh, là
+    *"trần nằm ở MỘT chỗ, hai nơi kia nhập về"* — con số cụ thể là một quyết định mỹ thuật-phần
+    cứng, được phép đổi. Ghim con số vào đây làm bài test đỏ ở round 57 khi trần lên 3 **vì một lý
+    do không liên quan gì đến thứ nó canh**, và một bài test đỏ sai chỗ là một bài test sắp bị ai đó
+    sửa cho vừa — đúng cái phễu mà cả file này tránh.
+    ⇒ Nay: hằng số phải TỒN TẠI ở đây và phải là một số dương; ba nơi dùng phải NHẬP nó về.
+    ⚠️ Và nó phải ≥ 2: dưới 2 thì mọi màn hình Retina đều bị kéo giãn, tức đúng khuyết tật round 57
+    vừa đo được (trần 2 trên iPhone DPR 3 ⇒ canvas 780 điểm ảnh trên một vùng màn hình 1.170).
+  */
+  const khaiTran = /export const MAX_PIXEL_RATIO = (\d+(?:\.\d+)?);/.exec(CODE);
+  assert.ok(khaiTran,
     'Trần tỉ lệ điểm ảnh không còn nằm ở `sceneGraph.js` — hai nơi sắp tự khai lại.');
+  assert.ok(Number(khaiTran[1]) >= 2,
+    `MAX_PIXEL_RATIO = ${khaiTran[1]} — dưới 2 thì mọi màn Retina đều vẽ thiếu điểm ảnh rồi bị kéo`
+    + ' giãn. Đó là khuyết tật round 57 đã đo và chữa; đừng hạ lại.');
   assert.match(SCENE3D_CODE, /Math\.min\(window\.devicePixelRatio \|\| 1, MAX_PIXEL_RATIO\)/,
     'App không còn dùng `MAX_PIXEL_RATIO` nhập về — nó đang tự khai lại một trần thứ hai.');
   // Trang xem thử: cờ `--dpr` được phép tồn tại (nó dùng để THỬ NGƯỢC lời hứa này), nhưng MẶC ĐỊNH

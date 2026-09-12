@@ -720,6 +720,41 @@ if (postFx) {
     + (thuc > 0 ? ' ⇒ CO khu rang cua' : ' ⇒ KHONG khu rang cua'));
 }
 
+/*
+  ⚠️ ĐỘ PHÂN GIẢI THẬT CỦA CẢ CHUỖI — round 57, Việc 1 + 3. Cùng họ với dòng [aa] ngay trên, và nó
+  tồn tại vì CÙNG MỘT LÝ DO: EffectComposer **không thừa hưởng cấu hình của bộ dựng**. Vòng 55
+  bắt được nó ở samples; câu hỏi của vòng 57 là nó có cũng bỏ quên KÍCH THƯỚC không.
+  ⇒ Hỏi thẳng WebGL và hỏi thẳng composer, in ba con số cạnh nhau. Chúng phải bằng nhau. Tỉ lệ lệch
+  chính là mức độ ảnh bị kéo giãn — một con số, không phải một cảm giác.
+  ⚠️ gl.drawingBufferWidth là thứ KHÔNG THỂ NÓI DỐI: nó là bề ngang thật của khung đệm mà phần
+  cứng đang tô, sau mọi phép kẹp của trình duyệt. canvas.width là thứ ta XIN; hai số ấy lệch nhau
+  khi trình duyệt từ chối cấp (quá lớn) — đúng cái đã làm ảnh đen trên 1400 px ở vòng 56.
+*/
+if (postFx) {
+  const gl2 = renderer.getContext();
+  const rb = postFx.composer.readBuffer;
+  const veW = gl2.drawingBufferWidth;
+  const veH = gl2.drawingBufferHeight;
+  const khop = veW === rb.width && veH === rb.height && veW === canvas.width && veH === canvas.height;
+  console.log('[res] bo dung ve o ' + veW + 'x' + veH
+    + ' · chuoi hau ky ' + rb.width + 'x' + rb.height
+    + ' · canvas ' + canvas.width + 'x' + canvas.height
+    + ' · khung CSS ' + canvas.clientWidth + 'x' + canvas.clientHeight
+    + ' · pixelRatio=' + renderer.getPixelRatio() + ' (devicePixelRatio=' + window.devicePixelRatio + ')'
+    + ' · ti le hau ky/bo dung ' + (rb.width / veW).toFixed(3)
+    + (khop ? ' \u21d2 DUNG' : ' \u21d2 LECH — anh dang bi keo gian'));
+  const co = postFx.sizes();
+  const dong = Object.keys(co).map((k) => k + ' ' + co[k][0] + 'x' + co[k][1]).join(' · ');
+  // ⚠️ BLOOM CHAY O NUA CO LA CO CHU Y (Math.round(w/2) trong three), nen no KHONG duoc tinh la
+  // lech. Ban dau cua dong nay bao "LECH" cho mot cau hinh DUNG — va mot chi bao keu oan la mot
+  // chi bao sap bi bo qua, dung cai bay ma ca du an nay tranh.
+  const bang = (a, b) => a[0] === b[0] && a[1] === b[1];
+  const deu = bang(co.depth, co.composer) && bang(co.lensTexel, co.composer)
+    && bang(co.bloom, [Math.round(co.composer[0] / 2), Math.round(co.composer[1] / 2)]);
+  console.log('[res] tung luot: ' + dong
+    + (deu ? ' \u21d2 DUNG (bloom nua co la thiet ke)' : ' \u21d2 LECH CO GIUA CAC LUOT'));
+}
+
 if (BENCH > 0) {
   // ⚠️ PHẢI ÉP ỐNG DẪN HOÀN TẤT TRƯỚC KHI BẤM GIỜ DỪNG. WebGL xếp lệnh không đồng bộ, nên đo trần
   // renderer.render() chỉ đo thời gian ĐẨY LỆNH VÀO HÀNG ĐỢI.
@@ -1516,7 +1551,12 @@ async function shoot(chrome, url, pngPath,
     child.on('error', (e) => { clearTimeout(hen); fail(e); });
     child.stderr.on('data', (b) => {
       const s = String(b);
-      if (choNoi) process.stderr.write(s);
+      // ⚠️ HAI CHỈ BÁO LUÔN ĐƯỢC NÓI RA, DÙ CHẠY VỚI CỜ NÀO. `[aa]` (round 55) và `[res]` (round 57)
+      // canh hai thứ mà `EffectComposer` KHÔNG thừa hưởng từ bộ dựng: số mẫu và kích thước. Cả hai
+      // khuyết tật ấy đã sống nhiều vòng vì không ai nhìn thấy chúng; một chỉ báo chỉ hiện ra khi
+      // gõ đúng một cờ hiếm thì cũng bằng không có. Chúng ngắn, mỗi lượt chụp một dòng.
+      const batBuoc = /\[(aa|res)\]/.test(s);
+      if (choNoi || batBuoc) process.stderr.write(batBuoc && !choNoi ? s.replace(/^[\s\S]*?(\[(?:aa|res)\])/, '  $1') : s);
       if (dongDevtools !== null) {
         dongDevtools += s;
         const m = /ws:\/\/127\.0\.0\.1:(\d+)\//.exec(dongDevtools);

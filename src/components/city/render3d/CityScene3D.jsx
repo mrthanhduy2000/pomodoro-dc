@@ -304,8 +304,14 @@ export default function CityScene3D({
           renderer,
           scene: city.scene,
           camera,
-          width: Math.max(1, host.clientWidth),
-          height: Math.max(1, Math.round(host.clientWidth * 0.62)),
+          // ⚠️ ĐIỂM ẢNH THẬT, KHÔNG PHẢI ĐIỂM ẢNH CSS — round 57. Cả `postFx.js` nhận cỡ bằng
+          // điểm ảnh thật (xem khối `setPixelRatio(1)` ở đó); truyền cỡ CSS vào đây thì lượt cấp
+          // phát ĐẦU TIÊN nhỏ đi đúng `pixelRatio` lần. `resize()` ngay dưới sửa lại được, nên
+          // khuyết tật này chưa từng lên tới màn hình — nhưng một dòng mã nói sai ý mình là thứ
+          // phiên sau sẽ đọc và tin. Đàm nghi đúng chỗ này ở vòng 57; nó chỉ không phải nguyên
+          // nhân của vết mờ (nguyên nhân là `MAX_PIXEL_RATIO`, xem `sceneGraph.js`).
+          width: Math.max(1, Math.round(host.clientWidth * renderer.getPixelRatio())),
+          height: Math.max(1, Math.round(host.clientWidth * 0.62 * renderer.getPixelRatio())),
           profile: postProfileFor(daylight.phase),
           walk: false,
         })

@@ -410,7 +410,31 @@ export const SHADOW_MAP_MOBILE = 512;
  * THẤP HƠN bản thật. Đúng cái bẫy đã cắn với cỡ bóng đổ ở Phase 9B, lặp lại nguyên hình dạng ở một
  * cần gạt khác — nên nó được xử lý y hệt: một hằng số, mọi nơi nhập về.
  */
-export const MAX_PIXEL_RATIO = 2;
+/*
+  ══════════════════════════════════════════════════════════════════════════════════════════════
+  ⚠️ 2 → 3 (ROUND 57, VIỆC 1). ĐÂY LÀ NGUYÊN NHÂN THẬT CỦA VẾT MỜ, VÀ NÓ ĐO ĐƯỢC.
+  ══════════════════════════════════════════════════════════════════════════════════════════════
+  iPhone của Đàm có `devicePixelRatio = 3`. Với trần 2, một khung thành phố rộng 390 điểm ảnh CSS
+  được vẽ vào một khung đệm rộng **780** điểm ảnh thật — trong khi vùng màn hình ấy có **1.170**
+  điểm ảnh. Trình duyệt kéo giãn 780 lên 1.170:
+
+      ti le keo gian  1.170 / 780 = **1,50×**        so diem anh that  (780/1.170)² = **44%**
+
+  Tức hơn một nửa số điểm ảnh của màn hình chưa bao giờ được vẽ — chúng là nội suy. Đó chính là
+  thứ Đàm gọi là *"mềm nhũn và vỡ hạt"*, và không một lượng MSAA hay hậu kỳ nào chữa được: khử
+  răng cưa làm mượt cái đã vẽ, nó không tạo ra điểm ảnh chưa từng tồn tại.
+  ⚠️ Trên MacBook (`devicePixelRatio = 2`) trần này KHÔNG chặn gì — nên khuyết tật chỉ có trên
+  điện thoại, đúng nơi Đàm nhìn app nhiều nhất và đúng nơi không ai chụp được ảnh nghiệm thu.
+  Bài học: **một cái trần chỉ cắn ở một loại máy thì nó vô hình ở mọi máy còn lại.**
+
+  ⚠️ VÌ SAO ĐƯỢC PHÉP NÂNG, VÀ NÂNG TỚI 3 CHỨ KHÔNG PHẢI BỎ HẲN. Đàm, vòng 57: *"MAX_PIXEL_RATIO
+  là một cái trần thật, và nó có thể đang chặn đúng thứ này. Xem nó bằng bao nhiêu; nếu nó đang kẹp
+  dưới DPR máy tôi thì nâng lên."* 3 là DPR THẬT của máy anh — nó là một quan hệ với phần cứng, không
+  phải một con số chọn bừa. Bỏ hẳn trần (dùng thẳng `devicePixelRatio`) thì một màn 4× hay 5× trong
+  tương lai sẽ tự cấp cho mình 25 lần số điểm ảnh mà không ai quyết — đúng loại trôi âm thầm mà cả
+  file này canh. Giữ một cái trần, đặt nó ở đúng phần cứng đã biết.
+*/
+export const MAX_PIXEL_RATIO = 3;
 
 /**
  * TÊN NHÓM mà cờ đo `tachDeDo` (xem `createCityScene`) cắt được, chia theo KHỐI bị cắt.

@@ -12,7 +12,9 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 
-import { MSAA_SAMPLES, POST_PROFILE, postProfileFor } from './postFx.js';
+import { PerspectiveCamera, Scene, Vector2 } from 'three';
+
+import { MSAA_SAMPLES, POST_PROFILE, createPostFx, postProfileFor } from './postFx.js';
 
 const ROWS = ['day', 'golden', 'night'];
 
@@ -137,4 +139,140 @@ test('KHUNG ĐỆM HẬU KỲ PHẢI ĐA MẪU — cờ `antialias` của render
   //     một phiên sau đừng "cho nhất quán" rồi trả một lượt phân giải mà không đổi một điểm ảnh nào.
   assert.doesNotMatch(src, /new WebGLRenderTarget\(w, h, \{\s*depthTexture[^}]*samples/,
     'đệm độ sâu không cần đa mẫu — xem chú thích ở chỗ dựng nó');
+});
+
+/*
+  ══════════════════════════════════════════════════════════════════════════════════════════════
+  ĐỘ PHÂN GIẢI CỦA CẢ CHUỖI — ROUND 57, VIỆC 3. LẦN THỨ HAI `EffectComposer` KHÔNG THỪA HƯỞNG
+  CẤU HÌNH CỦA BỘ DỰNG, NÊN CÁI GÁC NÀY CANH **QUAN HỆ**, KHÔNG CANH MỘT CON SỐ.
+  ══════════════════════════════════════════════════════════════════════════════════════════════
+  Lần đầu là `samples` (round 55): cờ `antialias` của renderer không tới được khung đệm composer.
+  Lần này là KÍCH THƯỚC, và nó đi theo hướng ngược lại — `EffectComposer.setSize` **tự nhân**
+  `pixelRatio` (`this._width * this._pixelRatio`, ba chỗ trong three), trong khi chỗ gọi đã nhân
+  sẵn. ⇒ Nhân hai lần.
+
+  ĐO ĐƯỢC 2026-09-12 bằng dòng `[res]` của công cụ chụp, khung 1400×700 · pixelRatio 2:
+      chuỗi (composer)            5600×2800   ← nhân hai lần
+      đệm độ sâu                  2800×1400
+      bloom (tấm đích THẬT)       1400×700    ← nửa của 2800, tức MỘT PHẦN TƯ chuỗi
+      `uTexel` của lượt ống kính  2800×1400
+  Hậu quả nặng nhất không phải lãng phí mà là **lượt ống kính làm mờ gấp đôi bán kính định làm**:
+  `uTexel` là bề rộng một điểm ảnh của tấm nó lấy mẫu, khai theo 2800 mà tấm thật 5600 thì mỗi
+  bước nhảy HAI điểm ảnh. Che khuất và xoá phông đều nhoè gấp đôi — đúng vết "mềm nhũn".
+
+  ⚠️ BLOOM CHẠY Ở NỬA CỠ LÀ CÓ CHỦ Ý, KHÔNG PHẢI LỖI (`Math.round(width / 2)` trong three). Nên
+  bài này đòi **bằng nhau** ở ba lượt và **đúng một nửa** ở bloom. Một bài đòi cả bốn bằng nhau sẽ
+  đỏ vĩnh viễn và sẽ bị ai đó tắt đi — một cái gác sai là một cái gác sắp bị gỡ.
+
+  ⚠️ VÀ `sizes()` PHẢI ĐỌC TẤM ĐÍCH THẬT. Bản đầu của nó đọc `bloom.resolution`, thứ `setSize()`
+  của three KHÔNG cập nhật — nên nó báo bloom đã đổi cỡ trong khi chưa. Dụng cụ đo suýt nói dối
+  ngay trong hàm sinh ra để bắt lỗi ấy (`TECH_DEBT #42`).
+*/
+function boDungGia(pixelRatio, cssW, cssH) {
+  return {
+    getPixelRatio: () => pixelRatio,
+    getSize: (v) => (v ?? new Vector2()).set(cssW, cssH),
+    getDrawingBufferSize: (v) => (v ?? new Vector2()).set(cssW * pixelRatio, cssH * pixelRatio),
+    getRenderTarget: () => null,
+    setRenderTarget: () => {},
+    capabilities: { isWebGL2: true, maxSamples: 8 },
+    outputColorSpace: 'srgb',
+    toneMapping: 0,
+  };
+}
+
+function dungChuoi(pixelRatio, cssW, cssH, truyenCo) {
+  const renderer = boDungGia(pixelRatio, cssW, cssH);
+  const be = renderer.getDrawingBufferSize(new Vector2());
+  const fx = createPostFx({
+    renderer,
+    scene: new Scene(),
+    camera: new PerspectiveCamera(),
+    width: truyenCo[0],
+    height: truyenCo[1],
+    profile: postProfileFor('day'),
+  });
+  return { fx, be };
+}
+
+test('MỌI LƯỢT CÙNG MỘT CỠ, VÀ CỠ ẤY BẰNG CỠ BỘ DỰNG — canh quan hệ, không canh con số', () => {
+  for (const pixelRatio of [1, 2, 3]) {
+    const { fx, be } = dungChuoi(pixelRatio, 1400, 700, [1400 * pixelRatio, 700 * pixelRatio]);
+    const co = fx.sizes();
+    assert.deepEqual(co.composer, [be.x, be.y],
+      `pixelRatio ${pixelRatio}: chuỗi hậu kỳ ${co.composer} ≠ cỡ bộ dựng ${[be.x, be.y]}. `
+      + 'Nếu lớn hơn đúng pixelRatio lần thì `composer.setPixelRatio(1)` đã bị gỡ và three đang '
+      + 'nhân lần thứ hai.');
+    assert.deepEqual(co.depth, co.composer, `pixelRatio ${pixelRatio}: đệm độ sâu lệch cỡ với chuỗi`);
+    assert.deepEqual(co.lensTexel, co.composer,
+      `pixelRatio ${pixelRatio}: uTexel khai theo ${co.lensTexel} trong khi tấm thật là `
+      + `${co.composer} — lượt ống kính sẽ làm mờ sai bán kính đúng ${co.composer[0] / co.lensTexel[0]} lần`);
+    assert.deepEqual(co.bloom, [Math.round(co.composer[0] / 2), Math.round(co.composer[1] / 2)],
+      `pixelRatio ${pixelRatio}: bloom phải chạy ở ĐÚNG nửa cỡ chuỗi (thiết kế của three)`);
+  }
+});
+
+test('ĐỔI CỠ PHẢI ĐI QUA **MỌI** LƯỢT — một lượt ở lại cỡ cũ là cả chuỗi sai', () => {
+  /*
+    ⚠️ THỬ-CHO-ĐỎ, VÀ LẦN THỬ THỨ TƯ ĐÃ VẠCH RA MỘT LỖ TRONG CHÍNH BÀI TEST NÀY — ghi lại nguyên văn
+    vì cái lỗ ấy mới là thứ đáng học. Đo được:
+        bỏ `depthTarget.setSize(sw, sh)`      ⇒ ĐỎ  ✓
+        bỏ `lens.uniforms.uTexel...`          ⇒ ĐỎ  ✓
+        bỏ `composer.setPixelRatio(1)`        ⇒ ĐỎ ba bài  ✓
+        bỏ `bloom.setSize(sw, sh)`            ⇒ **VẪN XANH** ✗
+    Vì sao: `EffectComposer.setSize` tự gọi `pass.setSize` cho MỌI lượt đang nằm trong danh sách của
+    nó, và bloom là một lượt. Nên ở bản dựng đầy đủ, dòng `bloom.setSize` của ta là thừa.
+    ⚠️ NHƯNG NÓ KHÔNG THỪA Ở BẢN DỰNG LỌC. Với `only`, bloom vẫn được DỰNG nhưng KHÔNG được
+    `addPass` (xem `want('bloom')`), nên composer không với tới nó — và khi ấy dòng của ta là thứ
+    duy nhất giữ nó đúng cỡ. Bài dưới dựng đúng trường hợp đó, nên lần thử thứ tư nay ĐỎ.
+    ⇒ Bài học: **một thử-cho-đỏ không đỏ là một phát hiện, không phải một phiền toái.** Nó nói rằng
+    bài test đang canh ít hơn nó tưởng, và ở đây nó chỉ ra đúng một trường hợp chưa ai canh.
+    Đây đúng kiểu lỗi Đàm gọi tên ở vòng 57: *"một lượt còn ở độ phân giải thấp là cả chuỗi vẫn mờ"*.
+  */
+  const { fx } = dungChuoi(3, 1400, 700, [4200, 2100]);
+  fx.setSize(2400, 1200);
+  const co = fx.sizes();
+  assert.deepEqual(co.composer, [2400, 1200], 'chuỗi không nhận cỡ mới');
+  assert.deepEqual(co.depth, [2400, 1200], 'đệm độ sâu ở lại cỡ cũ');
+  assert.deepEqual(co.lensTexel, [2400, 1200], 'uTexel ở lại cỡ cũ');
+  assert.deepEqual(co.bloom, [1200, 600], 'bloom ở lại cỡ cũ');
+});
+
+test('TRUYỀN CỠ CSS THAY VÌ ĐIỂM ẢNH THẬT PHẢI ĐỎ — đây là nghi vấn Đàm nêu ở vòng 57', () => {
+  /*
+    Vế thứ hai Đàm đặt hàng: *"đỏ khi truyền cỡ CSS"*. Chuỗi nhận đúng con số ta đưa, nên nếu chỗ
+    gọi quên nhân `pixelRatio` thì cả chuỗi nhỏ đi đúng ngần ấy lần và ảnh bị kéo giãn khi ghép lên
+    canvas. Bài này dựng đúng cái sai ấy rồi đòi nó KHÔNG khớp cỡ bộ dựng — tức chứng minh phép đo
+    ở bài trên có răng, chứ không xanh với mọi thứ.
+    ⚠️ Giả thuyết gốc của Đàm là chuỗi ĐANG chạy ở cỡ CSS. Đo ra thì NGƯỢC LẠI (nó chạy ở
+    pixelRatio²). Bài test vẫn giữ cả hai chiều, vì cái cần canh là QUAN HỆ chứ không phải một
+    trong hai hướng lệch.
+  */
+  const { fx, be } = dungChuoi(3, 1400, 700, [1400, 700]);   // quên nhân — cỡ CSS
+  const co = fx.sizes();
+  assert.notDeepEqual(co.composer, [be.x, be.y],
+    'truyền cỡ CSS mà chuỗi vẫn khớp cỡ bộ dựng ⇒ phép đo ở bài trên không phân biệt được gì');
+  assert.equal(be.x / co.composer[0], 3,
+    'cỡ CSS phải cho ra một chuỗi nhỏ hơn đúng pixelRatio lần — đó là tỉ lệ ảnh bị kéo giãn');
+});
+
+test('BẢN DỰNG LỌC (`--post ao`) CŨNG PHẢI ĐỔI CỠ MỌI LƯỢT — kể cả lượt KHÔNG nằm trong chuỗi', () => {
+  // ⚠️ Bài này tồn tại vì lần thử-cho-đỏ thứ tư ở bài trên KHÔNG đỏ (đọc khối chú thích ở đó).
+  // Với `only`, bloom được dựng nhưng không được `addPass`, nên `composer.setSize` không với tới.
+  // THỬ-CHO-ĐỎ (đã chạy): bỏ `bloom.setSize(sw, sh)` ⇒ bài này đỏ, bloom ở lại 2100×1050.
+  const renderer = boDungGia(3, 1400, 700);
+  const fx = createPostFx({
+    renderer,
+    scene: new Scene(),
+    camera: new PerspectiveCamera(),
+    width: 4200,
+    height: 2100,
+    profile: postProfileFor('day'),
+    only: ['ao'],
+  });
+  fx.setSize(2400, 1200);
+  const co = fx.sizes();
+  assert.deepEqual(co.bloom, [1200, 600],
+    'bloom không nhận cỡ mới ở bản dựng lọc — composer không với tới nó, chỉ `setSize` của ta với tới');
+  assert.deepEqual(co.depth, [2400, 1200], 'đệm độ sâu ở lại cỡ cũ ở bản dựng lọc');
 });

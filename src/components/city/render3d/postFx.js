@@ -372,6 +372,35 @@ export function createPostFx({
   */
   const target = new WebGLRenderTarget(w, h, { type: HalfFloatType, samples: MSAA_SAMPLES });
   const composer = new EffectComposer(renderer, target);
+  /*
+    ══════════════════════════════════════════════════════════════════════════════════════════════
+    ⚠️ `setPixelRatio(1)` — MỘT QUY ƯỚC CỠ CHO CẢ CHUỖI. ROUND 57, VIỆC 2. ĐỌC TRƯỚC KHI SỬA.
+    ══════════════════════════════════════════════════════════════════════════════════════════════
+    `EffectComposer` **TỰ NHÂN `pixelRatio` của bộ dựng** — ba chỗ, không chỗ nào ghi trong tài liệu
+    ta hay đọc: `setSize` (`this._width * this._pixelRatio`), `addPass`, và `render` khi cỡ đổi.
+    Mà `createPostFx` lại nhận cỡ tính bằng ĐIỂM ẢNH THẬT (chỗ gọi đã nhân sẵn). ⇒ Nhân hai lần.
+
+    ĐO ĐƯỢC ngày 2026-09-12, khung 1400×700, pixelRatio 2, bằng dòng `[res]` của công cụ chụp:
+        chuỗi hậu kỳ (composer)  5600×2800     ← điểm ảnh thật × 2 LẦN NỮA
+        đệm độ sâu               2800×1400
+        bloom                    2800×1400
+        `uTexel` của lượt ống kính 2800×1400
+    Ba lượt dưới nhận cỡ ta truyền (đã đúng, một lần nhân); riêng composer nhân thêm lần nữa.
+
+    ⚠️ VÀ HẬU QUẢ NẶNG NHẤT KHÔNG PHẢI LÃNG PHÍ, MÀ LÀ **LƯỢT ỐNG KÍNH LÀM MỜ GẤP ĐÔI BÁN KÍNH
+    ĐỊNH LÀM.** `uTexel` là bề rộng MỘT điểm ảnh của tấm ảnh nó đang lấy mẫu. Nếu `uTexel` khai theo
+    tấm 2800 mà tấm thật là 5600 thì mỗi bước lấy mẫu nhảy HAI điểm ảnh — che khuất và xoá phông đều
+    nhoè gấp đôi. Đó chính là "mềm nhũn" mà Đàm tả, và nó KHÔNG phải do thiếu điểm ảnh.
+
+    ⇒ Cách chữa gốc là bỏ hẳn phép nhân của composer (`setPixelRatio(1)`) chứ không phải chia đôi
+    số ta truyền: chia đôi thì quy ước lại thành "chỗ này tính bằng CSS, chỗ kia bằng điểm ảnh thật"
+    — đúng loại mập mờ đã đẻ ra lỗi này. Nay **mọi cỡ trong file này là ĐIỂM ẢNH THẬT, không trừ
+    một lượt nào**, và `sizes()` bên dưới cho phép đo lại điều đó bất cứ lúc nào.
+    ⚠️ Đây là lần THỨ HAI `EffectComposer` không thừa hưởng cấu hình của bộ dựng (lần đầu: `samples`,
+    round 55). Nên bài test giữ chỗ này canh QUAN HỆ "mọi lượt cùng một cỡ, và cỡ ấy bằng cỡ bộ
+    dựng", chứ không canh một con số.
+  */
+  composer.setPixelRatio(1);
   composer.setSize(w, h);
 
   /**
@@ -481,6 +510,27 @@ export function createPostFx({
   return {
     composer,
     passes: { renderPass, rays, bloom, lens },
+    /**
+     * Kích thước THẬT của từng lượt, để dụng cụ đo hỏi được thay vì phải đoán — round 57, Việc 3.
+     * ⚠️ Đọc từ chính các đối tượng đang chạy, KHÔNG từ `w`/`h` đã khai. Cả khuyết tật của vòng này
+     * là "số đã khai" và "số đang dùng" khác nhau, nên một phép đo đọc lại số đã khai thì mù đúng
+     * cái nó sinh ra để thấy (`TECH_DEBT #42`).
+     */
+    sizes() {
+      return {
+        composer: [composer.readBuffer.width, composer.readBuffer.height],
+        depth: [depthTarget.width, depthTarget.height],
+        // ⚠️ `renderTargetBright`, KHÔNG PHẢI `bloom.resolution` — VÀ ĐÂY LÀ DỤNG CỤ ĐO SUÝT NÓI DỐI.
+        // `UnrealBloomPass.setSize()` đổi mọi tấm đích BÊN TRONG nhưng KHÔNG cập nhật trường
+        // `resolution`; trường ấy đứng nguyên giá trị lúc dựng. Bản đầu của hàm này đọc `resolution`
+        // và báo bloom đã đổi cỡ trong khi nó chưa — đúng `TECH_DEBT #42`: đọc con số đã KHAI thay
+        // vì con số đang DÙNG, ở ngay trong cái hàm sinh ra để phát hiện chuyện đó.
+        // Bloom chạy ở NỬA cỡ chuỗi (dòng `Math.round(width / 2)` của three) — một quan hệ CÓ CHỦ Ý,
+        // nên bài test canh đúng quan hệ ấy chứ không canh bằng nhau.
+        bloom: [bloom.renderTargetBright.width, bloom.renderTargetBright.height],
+        lensTexel: [1 / lens.uniforms.uTexel.value.x, 1 / lens.uniforms.uTexel.value.y],
+      };
+    },
 
     /** Draw one frame through the chain. */
     render() {

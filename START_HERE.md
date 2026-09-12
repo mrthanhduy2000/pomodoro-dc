@@ -126,3 +126,32 @@ item below is still live, it just now reviews something already running.
   BECAME THE REWARD.** Moved verbatim to `docs/archive/START_HERE_LOG_2026-09-06.md` on 2026-09-12
   — it was the oldest and by far the largest entry here (7.042 chars), and round 57 pushed the file
   past its 16.000 guard. Nothing deleted; `grep` the archive for the full text.
+
+### D. Known blind spots in the tooling (not "not done" — "cannot be seen")
+- **3D in the sandbox lives ~3 s** — SwiftShader is slow, the FPS watchdog (`renderLoop.js`) gives up
+  after three slow samples and BOTH the City tab and the Focus postcard fall back to the 2D drawing.
+  That is the tool, not the app: pass `--settle 600` to `shot.mjs` to catch the 3D frame (ADR-078).
+- ✅ **Solved 2026-09-02** — `src/dev/previewStage.js` + `shot.mjs --preview <scene>` (`loot` ·
+  `loot-max` · `era` · `level` · `toasts`); round 33 added `dc-preview-card=<card>`. Why it was
+  needed: `ui` is not in the store's `partialize`, so it cannot be seeded via `--fixture`/`--ls`, and
+  the store is not exposed on `window`, so `--probe` cannot open dialogs either. **Never click Start
+  on dev.** This blind spot had blocked a REAL fix (`TECH_DEBT #94`, since closed), not just convenience.
+- **Treasure › Relics tab** — the fixture never seeds `relics`/`research`, so it always shows 0/15 and
+  15 "??? KHOÁ" rows. That emptiness belongs to the TOOL, not the app. Seed `relics` in
+  `scripts/make-fixture.mjs` first.
+- **`refinedEarned` / `jackpot` are always 0 in fixtures** — `make-fixture.mjs` does not replay those
+  two fields, so never infer frequency from them. Ask the formula directly:
+  `minutes >= T2_DROP_THRESHOLD_MIN` (45′) and `>= DEEP_SESSION_THRESHOLD` (60′).
+
+## Commands
+```
+npm install --legacy-peer-deps                                   # required flag
+npm run test:quiet                                               # 2,132 chars of output, not 408,514
+node scripts/doc-budget.mjs [--map <file>]                       # doc token budget / table of contents
+node scripts/city-preview.mjs --era 6 --hour 12 --width 1500     # inspect one era
+node scripts/shot.mjs --phone --tab "Thống kê" --full            # 2D UI screenshot
+```
+(`npm test` / lint / build semantics: `CLAUDE.md` §Testing.)
+
+## Where to look things up
+`CLAUDE.md` §DOC MAP is the canonical routing table (which file, when to open, what is `grep`-only).

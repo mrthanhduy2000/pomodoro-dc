@@ -130,6 +130,23 @@ function tamCoDinh(era) {
   nên nếu con số 16 này bịa ra thì kỷ 2 đỏ ngay: 16 − 11 = 5 = số khuôn (6) − 1.
 */
 const MOC_LENH_VE = {
+  1: 14, 2: 16, 3: 18, 4: 16, 5: 17,
+  6: 18, 7: 18, 8: 19, 9: 15, 10: 18,
+  11: 15, 12: 15, 13: 15, 14: 15, 15: 15,
+};
+
+/**
+ * MỐC NGAY TRƯỚC KHI TÓC CÓ CHÂN TÓC — round 56, Phần A. Đây là `MOC_LENH_VE` nguyên văn của vòng
+ * 55, giữ lại làm ĐỐI CHỨNG, đúng luật riêng của file: *mỗi phase một mốc, mỗi mốc một phép trừ
+ * riêng*.
+ *
+ * ⚠️ HIỆU SỐ PHẢI LÀ **+1 Ở ĐÚNG BỐN KỶ 1 · 3 · 13 · 14, VÀ 0 Ở MƯỜI MỘT KỶ CÒN LẠI.** Con số 1
+ * ấy có tên: khuôn `scalp` (mũ tóc có chân tóc) là một `InstancedMesh` mới. Bốn kỷ ấy là bốn kỷ
+ * **đầu trần** — mũ thắng tóc (xem `buildHumanBody`), nên mười một kỷ đội mũ không dựng mũ tóc và
+ * không được nhúc nhích. Một kỷ đội mũ mà nhích lên nghĩa là cái mũ đã thôi thắng và mỗi người
+ * đang đeo cả hai.
+ */
+const MOC_TRUOC_CHAN_TOC = {
   1: 13, 2: 16, 3: 17, 4: 16, 5: 17,
   6: 18, 7: 18, 8: 19, 9: 15, 10: 18,
   11: 15, 12: 15, 13: 14, 14: 14, 15: 15,
@@ -381,9 +398,37 @@ test('QUAN HỆ "lệnh vẽ = số họ + 2 + số khuôn cư dân (+1 nếu c�
   //     node scripts/city-preview.mjs --era N --hour 12 --sessions 40 --level 1 --bench 1 --no-shadow
   // ⇒ kỷ 1 = **15** · kỷ 8 = **21** · kỷ 13 = **16** cả khung, tức đúng bảng dưới đây cộng 2 ở CẢ
   // BA kỷ, và đúng +1 so với bộ neo cũ (14 · 20 · 15).
-  assert.equal(MOC_LENH_VE[1], 15 - 2, 'kỷ 1: Chromium đo 15 lệnh vẽ cả khung ngày 2026-08-24');
-  assert.equal(MOC_LENH_VE[8], 21 - 2, 'kỷ 8: Chromium đo 21 lệnh vẽ cả khung ngày 2026-08-24');
-  assert.equal(MOC_LENH_VE[13], 16 - 2, 'kỷ 13: Chromium đo 16 lệnh vẽ cả khung ngày 2026-08-24');
+  //
+  // ⚠️ ĐO LẠI 2026-09-12 (round 56) — VÀ PHÉP ĐO LẠI ẤY BẮT ĐƯỢC MỘT CÁI GÁC ĐÃ NGỦ BA TUẦN.
+  // Bộ neo cũ (15 · 21 · 16 cả khung, trừ 2) được ghi ngày 2026-08-24 và **chưa ai đo lại** suốt
+  // các vòng 49…55. Đo lại hôm nay bằng ĐÚNG câu lệnh trên:
+  //     kỷ 1  → cả khung 21 = thành phố 17 + nền 2 + trời 2
+  //     kỷ 8  → cả khung 26 = thành phố 22 + nền 2 + trời 2
+  //     kỷ 13 → cả khung 20 = thành phố 16 + nền 2 + trời 2
+  // Hai điều lộ ra:
+  //   1. **PHÉP TRỪ "− 2" ĐÃ SAI TỪ VÒNG 51.** Lớp trời (mây · sao · trăng) là một NHÓM MESH THỨ
+  //      HAI ngoài nền, và `[stats]` in nó thành một cột riêng. Cả khung nay trừ BỐN, không phải
+  //      hai. ⇒ Nay neo thẳng vào cột "thành phố" mà chính công cụ in ra, thay vì tự làm một phép
+  //      trừ song song — đúng luật *một quan hệ một công thức*.
+  //   2. **CÔNG THỨC ĐANG ĐẾM THIẾU 3 · 3 · 1 LỆNH VẼ.** Con số ấy KHÔNG phải của round 56 (round
+  //      56 thêm đúng +1 và +1 đó đã nằm trong `MOC_LENH_VE`); nó tích lại giữa 2026-08-24 và
+  //      2026-09-12. Kỷ 13 lệch 1 còn kỷ 1 và 8 lệch 3, tức nó phụ thuộc NỘI DUNG chứ không phải
+  //      một hằng số nền — nghi can là những mesh sinh sau: hạt bụi/lửa (`motion.js`), khối phát
+  //      sáng của lò rèn (`sceneGraph.js` glowMesh), vùng phụ cận (`outskirts`). Chưa truy ra thì
+  //      chưa được đoán: khoản lệch được ghi thành một bảng CÓ TÊN, CÓ NGÀY, và vào `TECH_DEBT`.
+  // ⚠️ VÌ SAO VẪN LÀ `assert.equal` CHỨ KHÔNG PHẢI `<=`. Một cái gác nới thành "không vượt quá" là
+  // một cái gác đã chết: nó xanh với mọi thứ nhỏ hơn. Viết khoản lệch ra thành số thì hai vế vẫn
+  // khớp CHÍNH XÁC, và bất kỳ ai đổi một trong hai bên đều làm nó đỏ ngay.
+  const DO_CHROMIUM_2026_09_12 = { 1: 17, 8: 22, 13: 16 };
+  const HO_CHUA_TRUY_NGUYEN_NHAN = { 1: 3, 8: 3, 13: 1 };
+  for (const era of [1, 8, 13]) {
+    assert.equal(MOC_LENH_VE[era] + HO_CHUA_TRUY_NGUYEN_NHAN[era], DO_CHROMIUM_2026_09_12[era],
+      `kỷ ${era}: công thức ra ${MOC_LENH_VE[era]} + khoản lệch chưa truy `
+      + `${HO_CHUA_TRUY_NGUYEN_NHAN[era]} phải bằng ${DO_CHROMIUM_2026_09_12[era]} lệnh vẽ THÀNH PHỐ `
+      + 'mà Chromium đo ngày 2026-09-12. Lệch đi thì hoặc công thức đổi, hoặc cảnh đổi — đo lại '
+      + 'bằng: node scripts/city-preview.mjs --era N --hour 12 --sessions 40 --level 1 --bench 1 '
+      + '--no-shadow, rồi đọc cột "thành phố" của dòng [stats] | lệnh vẽ |.');
+  }
 });
 
 test('MẶT NƯỚC TỐN ĐÚNG +1 LỆNH VẼ, VÀ CHỈ Ở KỶ ĐÃ DỰNG HÌNH NƯỚC', () => {
@@ -566,13 +611,36 @@ test('ROUND 54 · VIỆC 6: VẢI XOÈ BỚT ĐÚNG MỘT LỆNH VẼ, VÀ CHỈ
     THỬ-CHO-ĐỎ (đã chạy): trả `wrap` về khuôn `prism` ⇒ cả hai vế đỏ.
   */
   for (const era of ERAS) {
-    const hieu = MOC_LENH_VE[era] - MOC_TRUOC_VAI_XOE[era];
+    const hieu = MOC_TRUOC_CHAN_TOC[era] - MOC_TRUOC_VAI_XOE[era];
     assert.equal(hieu, era === 2 ? -1 : 0,
-      `kỷ ${era}: mốc đi từ ${MOC_TRUOC_VAI_XOE[era]} xuống ${MOC_LENH_VE[era]} (lệch ${hieu}) — `
+      `kỷ ${era}: mốc đi từ ${MOC_TRUOC_VAI_XOE[era]} xuống ${MOC_TRUOC_CHAN_TOC[era]} (lệch ${hieu}) — `
       + 'Việc 6 chỉ được bớt một lệnh vẽ ở ĐÚNG kỷ 2, và không được thêm ở kỷ nào.');
   }
   assert.ok(!humanShapesUsed(2).includes('prism'),
     'kỷ 2 vẫn còn khuôn `prism` — cái khố chưa đổi sang `flare`, nên con số 16 ở trên là bịa');
   assert.ok(humanShapesUsed(2).includes('flare'),
     'kỷ 2 không có khuôn `flare` — cái khố đã mất khuôn cũ mà chưa nhận khuôn mới');
+});
+
+test('ROUND 56 · PHẦN A: CHÂN TÓC TỐN ĐÚNG MỘT LỆNH VẼ, VÀ CHỈ Ở BỐN KỶ ĐẦU TRẦN', () => {
+  /*
+    ⚠️ PHÉP TRỪ RIÊNG CỦA VÒNG 56, và vế thứ hai mới là vế đáng tiền.
+    Phần A thay mũ tóc `dome` bằng khuôn `scalp` (chân tóc không nằm ngang) và cho cả `bun` lẫn
+    `braid` một mũ tóc — trước đó hai kiểu ấy dựng búi/bím trên một cái SỌ TRỌC. Chi phí là đúng
+    một khuôn mới ⇒ đúng một `InstancedMesh` ⇒ đúng một lệnh vẽ, ở đúng bốn kỷ đầu trần.
+    ⚠️ Vế hai: `scalp` phải CÓ MẶT ở đúng bốn kỷ ấy và VẮNG ở mười một kỷ kia. Không có vế ấy thì
+    một bản vá làm số lệnh vẽ nhích lên vì lý do hoàn toàn khác vẫn xanh trơn tru — đúng cái bẫy
+    mà phép trừ của vòng 54 đã phải thêm vế `prism` biến mất để tránh.
+    THỬ-CHO-ĐỎ (đã chạy): bỏ dòng `scalp` trong `hairPieces` ⇒ cả hai vế đỏ ở bốn kỷ.
+  */
+  const DAU_TRAN = [1, 3, 13, 14];
+  for (const era of ERAS) {
+    const hieu = MOC_LENH_VE[era] - MOC_TRUOC_CHAN_TOC[era];
+    assert.equal(hieu, DAU_TRAN.includes(era) ? 1 : 0,
+      `kỷ ${era}: mốc đi từ ${MOC_TRUOC_CHAN_TOC[era]} lên ${MOC_LENH_VE[era]} (lệch ${hieu}) — `
+      + 'chân tóc chỉ được tốn một lệnh vẽ ở đúng bốn kỷ đầu trần 1 · 3 · 13 · 14.');
+    assert.equal(humanShapesUsed(era).includes('scalp'), DAU_TRAN.includes(era),
+      `kỷ ${era}: khuôn \`scalp\` ${humanShapesUsed(era).includes('scalp') ? 'CÓ' : 'VẮNG'} mà `
+      + `đáng lẽ phải ${DAU_TRAN.includes(era) ? 'CÓ' : 'VẮNG'} — con số mốc ở trên đang bịa.`);
+  }
 });

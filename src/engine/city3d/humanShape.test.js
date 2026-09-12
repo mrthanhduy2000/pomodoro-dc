@@ -267,6 +267,118 @@ test('MỌI BỘ PHẬN CỦA MỌI KỶ PHẢI KHAI MỘT KHUÔN HỢP LỆ', (
   assert.throws(() => humanShapeMesh('không-có'), /khuôn lạ/, 'khuôn lạ phải NÉM, không rơi ngầm');
 });
 
+/**
+ * Bề mặt cái đầu ở độ cao `y` (toạ độ khớp `head`), tính bằng BÁN KÍNH NGOẠI TIẾP.
+ *
+ * ⚠️ NGOẠI TIẾP LÀ CỐ Ý VÀ NÓ LÀM BÀI TEST KHÓ HƠN, không dễ hơn: mặt sọ thật là một đa giác 60
+ * cạnh nằm TRONG đường tròn ngoại tiếp, nên "nằm ngoài đường tròn ngoại tiếp" là một đòi hỏi
+ * mạnh hơn "nằm ngoài mặt sọ". Lấy bán kính nội tiếp cho dễ thì bài test sẽ xanh cả với một mũ
+ * tóc đang cắm vào sọ ở giữa hai đỉnh.
+ */
+function matSo(y, headW, headH) {
+  const rings = [[-0.5, 0.60], [-0.28, 0.84], [-0.02, 1.00], [0.20, 0.92], [0.38, 0.74], [0.50, 0.40]];
+  const R = 0.5 / Math.cos(Math.PI / 60);
+  const u = y / headH - 0.5;
+  if (u < -0.5 || u > 0.5) return null;            // ngoài khoảng cái đầu ⇒ chắc chắn không đâm vào
+  for (let i = 0; i < rings.length - 1; i += 1) {
+    const [y0, r0] = rings[i];
+    const [y1, r1] = rings[i + 1];
+    if (u >= y0 && u <= y1) return R * (r0 + (r1 - r0) * ((u - y0) / (y1 - y0))) * headW;
+  }
+  return null;
+}
+
+/** Mọi đỉnh của một khối, đã đưa về toạ độ khớp mà nó treo vào. */
+function dinhTheoKhop(part) {
+  const mesh = humanShapeMesh(part.shape);
+  const out = [];
+  for (let i = 0; i < mesh.positions.length; i += 3) {
+    out.push([
+      mesh.positions[i] * part.w + part.rest.x,
+      mesh.positions[i + 1] * part.h + part.rest.y,
+      mesh.positions[i + 2] * part.d + part.rest.z,
+    ]);
+  }
+  return out;
+}
+
+test('MŨ TÓC PHẢI NẰM NGOÀI CÁI SỌ — nếu không thì đường viền ta thấy KHÔNG PHẢI cái vành ta vẽ', () => {
+  /*
+    ⚠️ ĐÂY LÀ BÀI GIỮ CHO MỘT PHÉP ĐO KHỎI QUAY LẠI, VÀ PHÉP ĐO ẤY MỚI LÀ THỨ ĐÁNG ĐỌC.
+    Tóc `crop` của vòng 52 là một `dome` rộng hơn sọ 6% nhưng chỉ cao 0,52 `headH`, đặt ở 0,74
+    `headH`. Vành đáy của nó nằm ở bán kính 0,3184 `headW` trong khi mặt sọ ở chỗ ấy là 0,5007 —
+    tức **vành tóc nằm sâu 36% BÊN TRONG sọ**. Thứ mắt thấy vì thế không phải cái vành, mà là
+    GIAO TUYẾN của hai mặt tròn xoay cùng trục — và giao tuyến ấy luôn là một đường tròn NẰM
+    NGANG, ở đây là `y/headH = 0,6364`, giống hệt nhau ở cả 60 phương vị.
+    ⇒ Vẽ lại cái vành cho đẹp không sửa được gì. Điều kiện cần là mũ tóc nằm HẲN bên ngoài sọ.
+
+    THỬ-CHO-ĐỎ (đã chạy): hạ `SCALP_LIFT` từ 1,07 về 1,00 ⇒ **1.191/2.154 đỉnh đâm vào sọ**.
+  */
+  const body = buildHumanBody(13);                 // kỷ 13: `crop`, đầu trần ⇒ mũ tóc lộ nguyên
+  const scalp = body.parts.find((p) => p.shape === 'scalp');
+  assert.ok(scalp, 'kỷ 13 phải dựng một mũ tóc — nếu không, bài test này đang đo cái không có');
+  const { headW, headH } = body.dims;
+
+  let dam = 0;
+  let leMin = Infinity;
+  for (const [x, y, z] of dinhTheoKhop(scalp)) {
+    const ban = Math.hypot(x, z);
+    if (ban < 1e-9) continue;                      // mũi nhọn bịt đáy — nằm trong sọ CÓ CHỦ Ý
+    const so = matSo(y, headW, headH);
+    if (so === null) continue;                     // cao hơn đỉnh sọ ⇒ đã ở ngoài
+    if (ban <= so) dam += 1;
+    leMin = Math.min(leMin, ban / so);
+  }
+  assert.equal(dam, 0, `${dam} đỉnh mũ tóc nằm TRONG sọ — đường viền sẽ lại là một vòng tròn ngang`);
+  assert.ok(leMin > 1.03,
+    `chỗ sát nhất chỉ hở ${((leMin - 1) * 100).toFixed(2)}% — dưới 3% thì một lần chỉnh `
+    + '`headW` cũng đủ làm tóc thụt vào sọ');
+  console.log(`[tóc] mũ tóc hở sọ ít nhất ${((leMin - 1) * 100).toFixed(1)}%`);
+});
+
+test('CHÂN TÓC KHÔNG ĐƯỢC NẰM NGANG — trán phải cao hơn gáy, thái dương ở giữa', () => {
+  /*
+    ⚠️ BÀI NÀY ĐỎ VỚI ĐÚNG KHUYẾT TẬT VÒNG 56 ĐI CHỮA, và đó là lý do nó tồn tại: bài trên chỉ nói
+    mũ tóc nằm ngoài sọ — một cái `dome` phóng to đều cũng thoả, mà nó lại cho ra đúng một đường
+    viền NẰM NGANG. Câu hỏi thật là *"cái viền ấy có hình của một chân tóc không"*.
+    Đàm, vòng 56: *"có đường viền màu nào đang nằm ở chỗ đời thật không có đường viền không?"*
+    ⚠️ THỬ-CHO-ĐỎ PHẢI LÀM ĐỎ ĐÚNG PHÉP ĐO, KHÔNG PHẢI LÀM SẬP BÀI TEST. Lần thử đầu đổi khuôn
+    `scalp` sang `dome`, và bài đỏ vì `find` trả về `undefined` — một cái đỏ KHÔNG chứng minh gì
+    về phép đo cả, vì phép đo chưa kịp chạy. Thử-cho-đỏ đúng là để nguyên khuôn mà **làm phẳng
+    chân tóc**: `HAIRLINE_SWING = HAIRLINE_BULGE = HAIRLINE_PEAK = 0` ⇒ chênh lệch trán − gáy đo
+    ra **0,000** (đã chạy). Đó là con số của chính khuyết tật vòng 52.
+  */
+  const body = buildHumanBody(13);
+  const scalp = body.parts.find((p) => p.shape === 'scalp');
+  assert.ok(scalp, 'kỷ 13 phải dựng một mũ tóc — nếu không, bài test này đang đo cái không có');
+  const { headH } = body.dims;
+
+  // Chân tóc theo phương vị: đỉnh THẤP NHẤT của mũ tóc ở mỗi hướng, bỏ mũi nhọn trên trục.
+  let tran = -Infinity;
+  let gay = Infinity;
+  let thaiDuong = null;
+  const day = new Map();
+  for (const [x, y, z] of dinhTheoKhop(scalp)) {
+    if (Math.hypot(x, z) < 1e-9) continue;
+    const goc = Math.round((Math.atan2(z, x) * 180) / Math.PI);
+    day.set(goc, Math.min(day.get(goc) ?? Infinity, y / headH));
+  }
+  for (const [goc, y] of day) {
+    if (Math.abs(goc) <= 4) tran = Math.max(tran, y);
+    if (Math.abs(Math.abs(goc) - 180) <= 4) gay = Math.min(gay, y);
+    if (Math.abs(Math.abs(goc) - 90) <= 4) thaiDuong = thaiDuong === null ? y : Math.min(thaiDuong, y);
+  }
+  assert.ok(tran - gay > 0.40,
+    `chân tóc trán ${tran.toFixed(3)} − gáy ${gay.toFixed(3)} = ${(tran - gay).toFixed(3)} `
+    + 'lần chiều cao đầu. Dưới 0,40 thì nó vẫn đọc ra một cái vạch ngang quanh sọ.');
+  assert.ok(thaiDuong > gay && thaiDuong < tran,
+    `thái dương ${thaiDuong?.toFixed(3)} phải nằm GIỮA gáy ${gay.toFixed(3)} và trán `
+    + `${tran.toFixed(3)} — bậc nhất theo cos(θ) cho thái dương ra đúng trung điểm, tức tóc dừng `
+    + 'ngang tầm mắt hai bên đầu.');
+  console.log(`[tóc] chân tóc: gáy ${gay.toFixed(3)} · thái dương ${thaiDuong.toFixed(3)}`
+    + ` · trán ${tran.toFixed(3)} (lần chiều cao đầu)`);
+});
+
 test('MŨ VÀNH PHẢI ĐỘI VỪA CÁI ĐẦU — chỏm rộng hơn sọ', () => {
   // ⚠️ Bản đầu của khuôn `hat` để chỏm bằng 0,42 bề rộng vành ⇒ với vành 1,9 `headW` thì chỏm chỉ
   // 0,80 `headW`, tức HẸP HƠN cái đầu nó đang đội lên. Con số ấy không sai về mặt hình học nên

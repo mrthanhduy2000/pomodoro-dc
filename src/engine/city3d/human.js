@@ -53,7 +53,7 @@
  */
 
 import { HUMAN_BASE_HEIGHT, getHumanStyle } from './humanStyle';
-import { isValidHumanShape, shapeTriangles } from './humanShape';
+import { isValidHumanShape, scalpFit, shapeTriangles } from './humanShape';
 
 /**
  * Chiều cao cư dân cỡ chuẩn, đơn vị ô. `stature` của mỗi kỷ nhân vào con số này.
@@ -354,44 +354,59 @@ export function sleeveLook(kind) { return SLEEVE_LOOK[kind] ?? SLEEVE_LOOK.bare;
 export function legLook(kind) { return LEG_LOOK[kind] ?? LEG_LOOK.none; }
 
 /**
- * TÓC — ROUND 52 (ADR-092), Việc 9. MỘT khối, gắn vào khớp `head` nên nó quay theo đầu.
+ * TÓC — round 52 (ADR-092) dựng khối đầu tiên; **round 56 (Phần A) cho nó một CHÂN TÓC.**
+ * Gắn vào khớp `head` nên cả mái tóc quay theo đầu.
  *
- * ⚠️ CHỈ ĐƯỢC DỰNG KHI ĐỈNH ĐẦU CÒN TRỐNG — xem chỗ gọi trong `buildHumanBody`. Đây không phải
- * một phép tiết kiệm tuỳ hứng: trần 18 khối/người đang bị 8/15 kỷ chạm đúng đỉnh, và 8 kỷ ấy
- * đều đội mũ. Xem khối chú thích của `HAIR_KINDS`.
+ * ⚠️ TRẢ VỀ MỘT MẢNG, KHÔNG PHẢI MỘT KHỐI — và đây là chỗ sửa gốc của round 56. Trước vòng này
+ * hàm trả về ĐÚNG MỘT khối, nên `bun` (búi) và `braid` (bím) dựng ra một cái búi lơ lửng trên một
+ * cái **sọ trọc**: mắt đọc ra một người hói đội cái nơ, không đọc ra một búi tóc. Kiểu `crop` thì
+ * có mũ tóc nhưng nó chỉ là một `dome` nằm LỌT trong sọ (xem khối chú thích của khuôn `scalp`).
+ * ⇒ Nay mọi kiểu tóc trừ `shaved` đều bắt đầu bằng CÙNG một mũ tóc, rồi mới thêm phần đặc trưng.
+ * Búi và bím là **thứ mọc ra từ mái tóc**, không phải thứ thay cho mái tóc.
  *
- * ⚠️ KHUÔN `dome` CHO `crop` VÀ `loose` LÀ MỘT PHÉP TẮT CÓ LÝ DO, không phải sự lười: `dome` là
- * khuôn của chính cái sọ, nên một cái mũ tóc ôm sọ ĐÚNG là cái sọ phóng to vài phần trăm.
- * Và vì kỷ nào cũng đã vẽ `dome` (cái đầu), tóc tốn **0 lệnh vẽ**.
+ * ⚠️ `SCALP_LIFT` LÀ MỘT QUAN HỆ, KHÔNG PHẢI MỘT BỀ DÀY. Mái tóc = cái sọ phóng to đúng 7% quanh
+ * gốc khớp `head`; `scalpFit` (tầng `humanShape.js`) tính ra ba con số từ chính cái đầu, nên đổi
+ * `headW`/`headH` ở `humanDims` thì mái tóc tự đi theo — đúng bài học `#81` của vòng 49, nơi một
+ * cái mũ khai bằng hằng số đã không lớn theo cái đầu và thành ra nhỏ hơn cái sọ nó đội lên.
+ * 7% của bán kính sọ ≈ 7 mm ở tỉ lệ người thật — đúng cỡ một mái tóc cắt ngắn.
  */
-function hairPiece(kind, d) {
+const SCALP_LIFT = 1.07;
+
+function hairPieces(kind, d) {
+  if (kind === 'shaved') return [];
+  const fit = scalpFit(d.headW, d.headH, SCALP_LIFT);
+  const parts = [piece('hair', 'hair', 'scalp', 'head', fit.size, fit.rest)];
   switch (kind) {
-    case 'shaved':
-      return null;
-    // Ôm sọ, nhô lên một chút ở đỉnh và rộng hơn sọ 6% — đủ để cả chỏm đầu đổi màu mà đường
-    // bao gần như không đổi. Ở tầm mắt đây là hiệu quả lớn nhất trên mỗi đồng tam giác của cả vòng.
+    // Ôm sọ và hết — chân tóc do chính khuôn `scalp` vẽ ra, không cần khối nào nữa.
     case 'crop':
-      return piece('hair', 'hair', 'dome', 'head',
-        [d.headW * 1.06, d.headH * 0.52, d.headW * 1.06], [0, d.headH * 0.74, 0]);
+      break;
     case 'bun':
-      return piece('hair', 'hair', 'prism', 'head',
+      parts.push(piece('hairTop', 'hair', 'prism', 'head',
         [d.headW * 0.48, d.headH * 0.44, d.headW * 0.48],
-        [-d.headW * 0.12, d.headH * 1.06, 0]);
+        [-d.headW * 0.12, d.headH * 1.06, 0]));
+      break;
     // Bím buông sau gáy: hẹp theo trục đi (x) mà DÀI xuống, đặt LỆCH VỀ SAU. ⚠️ Lệch theo −x vì
     // `humanPose.js` để +x là hướng đi — đặt nhầm dấu thì cái bím mọc trước mặt, hình học vẫn
     // hợp lệ nên không có gì đỏ lên.
     case 'braid':
-      return piece('hair', 'hair', 'calf', 'head',
+      parts.push(piece('hairTop', 'hair', 'calf', 'head',
         [d.headW * 0.34, d.headH * 1.15, d.headW * 0.34],
-        [-d.headW * 0.44, d.headH * 0.18, 0]);
+        [-d.headW * 0.44, d.headH * 0.18, 0]));
+      break;
     // Xoã ngang vai: `flare` rộng ở ĐÁY ⇒ bó ở đỉnh đầu, loạc ra hai bên má rồi xuống gáy.
+    // ⚠️ HẠ XUỐNG SAU CHÂN TÓC (0,56 → 0,30 `headH`) ĐỂ KHÔNG PHỦ MẶT. Bản vòng 52 đặt khối này
+    // cao tới 1,07 `headH` và rộng hơn sọ ở ngang tầm mắt, tức nó **trùm kín cả khuôn mặt** —
+    // chưa ai thấy vì cả bốn kỷ dùng `loose` (5 · 7 · 8 · 9) đều đội mũ, mà mũ thì thắng tóc.
+    // Nay mũ tóc lo phần sọ, nên khối này chỉ còn là phần **xoã xuống** và phải bắt đầu từ dưới.
     case 'loose':
-      return piece('hair', 'hair', 'flare', 'head',
-        [d.headW * 1.34, d.headH * 1.02, d.headW * 1.30],
-        [-d.headW * 0.04, d.headH * 0.56, 0]);
+      parts.push(piece('hairTop', 'hair', 'flare', 'head',
+        [d.headW * 1.26, d.headH * 0.80, d.headW * 1.22],
+        [-d.headW * 0.04, d.headH * 0.30, 0]));
+      break;
     default:
-      return null;
+      break;
   }
+  return parts;
 }
 
 /**
@@ -771,8 +786,7 @@ export function buildHumanBody(era) {
   // cả 8 đều đội mũ: mua thêm một khối ở đó là mua một dải tóc bị chính cái mũ che gần hết.
   // ⇒ Bốn kỷ đầu trần (1 · 3 · 13 · 14) thôi trọc, mà không kỷ nào đắt thêm một khối.
   if (headgear.length === 0) {
-    const hair = hairPiece(style.hair, d);
-    if (hair) parts.push(hair);
+    for (const h of hairPieces(style.hair, d)) parts.push(h);
   }
   const carry = carryPiece(style.carry, d);
   if (carry) parts.push(carry);

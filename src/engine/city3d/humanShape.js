@@ -108,7 +108,7 @@ import { smoothCrease } from './creaseNormals';
 // Nó ném thay vì trôi, nên mất ba mươi giây thay vì ba vòng.
 const ROUND_SIDES = 60;
 
-export const HUMAN_SHAPES = ['box', 'prism', 'limb', 'calf', 'chest', 'flare', 'cone', 'dome', 'hat'];
+export const HUMAN_SHAPES = ['box', 'prism', 'limb', 'calf', 'chest', 'flare', 'cone', 'dome', 'hat', 'scalp'];
 
 /**
  * Hồ sơ từng khuôn. `sides` = số cạnh đa giác; `rings` = [y, r] từ đáy lên đỉnh.
@@ -242,6 +242,39 @@ const PROFILES = {
   },
 
   /**
+   * DA ĐẦU CÓ CHÂN TÓC — round 56, Phần A, và khuôn duy nhất trong bộ có **đường viền dưới không
+   * nằm trên một mặt phẳng**. Nó tồn tại vì một phép đo, không vì một ý thích.
+   *
+   * ⚠️ ĐO TRƯỚC KHI SỬA (`scripts/` không giữ, số in lại được bằng bài test cuối file). Tóc `crop`
+   * của vòng 52 là một `dome` rộng hơn sọ 6% nhưng CHỈ CAO 0,52 `headH` và ngồi ở 0,74 `headH`, nên
+   * vành đáy của chính nó nằm **sâu 36% bên trong** cái sọ — tức thứ mắt nhìn thấy KHÔNG PHẢI cái
+   * vành ta vẽ, mà là **giao tuyến** của hai mặt tròn xoay cùng trục. Và đó là mấu chốt:
+   *
+   *     HAI MẶT TRÒN XOAY CÙNG TRỤC CẮT NHAU LUÔN CHO MỘT ĐƯỜNG TRÒN NẰM NGANG.
+   *
+   * Đo được: giao tuyến ấy nằm đúng ở `y/headH = 0,6364` ở **mọi** phương vị — một cái vạch ngang
+   * tuyệt đối chạy quanh sọ, và tóc chỉ phủ 36,4% trên cùng của cái đầu. Vẽ lại cái vành cho đẹp
+   * hơn KHÔNG đổi được gì, vì cái vành ấy không phải thứ đang hiện ra.
+   * ⇒ Muốn chân tóc là chân tóc thì cái mũ tóc phải nằm **hoàn toàn bên ngoài** cái sọ, để vành
+   * của chính nó trở thành đường viền. `scalpFit` bên dưới làm đúng điều đó và bài test
+   * «MŨ TÓC PHẢI NẰM NGOÀI CÁI SỌ» giữ nó — không có bài test ấy thì lỗi này quay lại im lặng.
+   *
+   * ⚠️ VÀ ĐÂY LÀ MỘT LUẬT CHUNG, KHÔNG PHẢI MỘT CHI TIẾT VỀ TÓC. Đàm, vòng 56: *"có đường viền màu
+   * nào đang nằm ở chỗ đời thật không có đường viền không?"* Cái vạch ngang này là **lần thứ ba**
+   * cùng một hình dạng lỗi: khớp cầu `skin` trên tay áo sẫm (vòng 54), cổ 0,46 thành vòng cổ áo
+   * trắng (vòng 54), nay là chân tóc. Cả ba đều là một RANH GIỚI MÀU đặt sai chỗ, và cả ba đều chỉ
+   * bị bắt bởi một tấm ảnh soi gần — không bài test nào trong 1.779 bài thấy được.
+   *
+   * `rings` đúng bằng `dome`: mũ tóc là **chính cái sọ phóng to đều**, nên nó bám sát hộp sọ ở mọi
+   * chỗ thay vì là một cái bát úp lên. Thứ duy nhất khác là `hairline`.
+   */
+  scalp: {
+    sides: ROUND_SIDES,
+    rings: [[-0.5, 0.60], [-0.28, 0.84], [-0.02, 1.00], [0.20, 0.92], [0.38, 0.74], [0.50, 0.40]],
+    hairline: true,
+  },
+
+  /**
    * MŨ VÀNH CỨNG — VÀNH và CHỎM trong MỘT khối, và đây là khuôn duy nhất trong bộ sinh ra vì một
    * lý do KHÔNG phải thẩm mỹ.
    *
@@ -301,6 +334,52 @@ const HEM_DROP = [0.055, 0.030, 0, 0.030, 0.055];
 /** Chu kỳ của hai bảng trên. `ROUND_SIDES` phải chia hết cho nó, không thì nếp bị lệch mối. */
 const FOLD_PERIOD = FOLD_RADIUS.length;
 
+/*
+  ══════════════════════════════════════════════════════════════════════════════════════════════
+  CHÂN TÓC — ROUND 56, PHẦN A. Bốn con số, và cả bốn đều đọc được từ giải phẫu chứ không chỉnh tay.
+  ══════════════════════════════════════════════════════════════════════════════════════════════
+  Vành dưới của mũ tóc chạy theo **tham số đường sinh** `p` (0 = vành đáy sọ, 5 = đỉnh sọ), chứ
+  không theo một độ cao `y` cố định. Chọn `p` thay vì `y` là có lý do: bán kính đi kèm `p` luôn là
+  bán kính ĐÚNG của sọ ở chỗ ấy, nên vành tóc **bám mặt sọ** ở mọi phương vị. Khai theo `y` thì
+  phải tự tra lại bán kính, tức hai công thức cho một quan hệ — đúng cái bẫy `TECH_DEBT #42`.
+
+  Ba mốc giải phẫu, quy ra `p` bằng chính bảng `rings` của `dome`:
+    · gáy   `y/headH ≈ 0,16` → p = 0,727     (tóc phủ xuống tận chân tóc sau gáy)
+    · thái dương `0,34`      → p = 1,462     (tóc xuống quá đuôi mắt, trước vành tai)
+    · trán  `0,72`           → p = 3,111     (chân tóc trước)
+  Một hàm BẬC HAI theo `cos(θ)` đi qua đúng cả ba — bậc nhất thì thái dương lệch 8,6 điểm phần
+  trăm, tức tóc dừng ngang tầm mắt hai bên đầu. `θ = 0` là hướng mặt (`humanPose.js` để +x là
+  hướng đi); đặt nhầm dấu thì được một người có chân tóc trước gáy, hình học vẫn hợp lệ.
+
+  ⚠️ ĐỈNH NHỌN GIỮA TRÁN DÙNG `c^24`, KHÔNG PHẢI `c^6`. Số mũ 6 trải cái hõm ra tới ±40°, tức nó
+  không tạo ra một cái hõm mà chỉ **bạt phẳng đỉnh đường cong** — đo được: giữa trán 0,716 so với
+  ±30° là 0,686, vẫn cao hơn hai bên, tức ngược hẳn ý định. Mũ 24 thu cái hõm về trong ±20°, đúng
+  bề ngang một cái đỉnh tóc thật. Đây là lần thứ hai trong dự án một hàm mượt được chọn vì tên gọi
+  chứ không vì đồ thị của nó (lần đầu: `cos(k·θ)` cho nếp vải, xem khối trên).
+*/
+const HAIRLINE_TEMPLE = 1.462;   // p ở thái dương (θ = 90°)
+const HAIRLINE_SWING = 1.192;    // nửa quãng trán ↔ gáy
+const HAIRLINE_BULGE = 0.457;    // độ cong bậc hai, thứ kéo thái dương xuống đúng chỗ
+const HAIRLINE_PEAK = 0.45;      // hõm giữa trán, tính bằng p
+
+/** Tham số đường sinh của chân tóc tại phương vị có `cos(θ) = c`. Tất định, không tra bảng. */
+function hairlineParam(c) {
+  const peak = c > 0 ? HAIRLINE_PEAK * c ** 24 : 0;
+  return HAIRLINE_TEMPLE + HAIRLINE_SWING * c + HAIRLINE_BULGE * c * c - peak;
+}
+
+/** Điểm `[y, r]` trên đường sinh tại tham số `p` liên tục (0 … rings.length − 1). */
+function profileAt(rings, p) {
+  const last = rings.length - 1;
+  const q = Math.min(last, Math.max(0, p));
+  const i = Math.min(last - 1, Math.floor(q));
+  const t = q - i;
+  return [
+    rings[i][0] + (rings[i + 1][0] - rings[i][0]) * t,
+    rings[i][1] + (rings[i + 1][1] - rings[i][1]) * t,
+  ];
+}
+
 /** Bán kính ngoại tiếp cho quy ước "bề rộng đo ngang mặt phẳng = 1,0". Xem QUY ƯỚC mục 1. */
 function circumradius(sides) {
   return 0.5 / Math.cos(Math.PI / sides);
@@ -322,6 +401,109 @@ function pushTri(pos, nor, a, b, c) {
     pos.push(p[0], p[1], p[2]);
     nor.push(nx, ny, nz);
   }
+}
+
+/*
+  ══════════════════════════════════════════════════════════════════════════════════════════════
+  DỰNG MỘT KHỐI TIỆN BỊ CẮT XÉO — mỗi cột một điểm xuất phát riêng trên cùng một đường sinh.
+  ══════════════════════════════════════════════════════════════════════════════════════════════
+  Cách hiển nhiên là giữ nguyên các vành rồi HẠ vành đáy xuống theo phương vị (đúng cách `HEM_DROP`
+  làm cho gấu váy). Nó hỏng ở đây, và hỏng nặng: chân tóc phải đi từ p = 0,7 (gáy) tới p = 3,1
+  (trán), tức nó VƯỢT QUA vành 1 và vành 2 ở phía trước. Vành nào nằm dưới chân tóc sẽ phải bẹp
+  vào đúng chân tóc ⇒ tam giác diện tích 0 ⇒ `pushTri` chia cho một vectơ pháp tuyến dài 0. Cái
+  `|| 1` trong `pushTri` sẽ nuốt chuyện đó và trả về pháp tuyến (0, 0, 0) — **một khuyết tật im
+  lặng**, đúng họ lỗi mà cả file này được viết ra để tránh.
+  ⇒ Thay vào đó, mỗi cột lấy ĐỦ `rings.length` mức, trải đều từ chân tóc của chính nó lên tới
+  đỉnh. Không mức nào trùng mức nào, không tam giác nào bẹp, và số tam giác không phụ thuộc hình
+  dạng chân tóc — nên đổi `HAIRLINE_*` không bao giờ làm trôi ngân sách tam giác.
+
+  ⚠️ ĐÁY BỊT BẰNG MỘT MŨI NHỌN TRÊN TRỤC, KHÔNG PHẢI MỘT CÁI NẮP PHẲNG. Một cái nắp phẳng bắc qua
+  đường chân tóc là một mặt VÊNH cắt xuyên qua hộp sọ, nên nó lòi ra thành những mảnh màu tóc lởm
+  chởm quanh chân tóc. Mũi nhọn ở tâm vành đáy sọ thì nằm gọn bên trong sọ (đã kiểm bằng bài test
+  «MŨ TÓC PHẢI NẰM NGOÀI CÁI SỌ»), chỉ để lộ một vệt rất mỏng ngay dưới chân tóc — mà vệt ấy chính
+  là **bề dày của mái tóc ở chỗ cắt**, tức một thứ đúng chứ không phải một thứ phải chịu đựng.
+  Nó cũng dùng lại đúng nhánh `r = 0` mà vòng lặp thường đã có, nên không thêm một luật dựng nào.
+
+  ⚠️ VÀ PHẢI KÉO LẠI CHO ĐẦY HỘP ĐƠN VỊ. Cắt xéo thì không cột nào còn đi qua chỗ phình rộng nhất
+  (p = 2, r = 1,00), nên khối HẸP HƠN hộp của nó — và bài «NẰM GỌN TRONG HỘP ĐƠN VỊ … chạm ĐÚNG
+  mép» đỏ, đúng như nó phải đỏ: `humanPose.partCornersAt` và `silhouetteSpanX` đo hình bóng từ tám
+  đỉnh hộp, một khối hẹp hơn hộp làm mọi con số ấy nói quá. Kéo x và z lại cho chạm đúng ±0,5 rồi
+  TRẢ RA hệ số đã kéo (`boxFillX`), để `scalpFit` khử ngược nó đi và cái mũ tóc vẫn đúng bằng cái
+  sọ phóng to đều. Trục y không cần kéo: mũi nhọn đã ở −0,5 và đỉnh sọ ở +0,5 sẵn.
+*/
+function buildHairline(pos, nor, rings, sides, R) {
+  const last = rings.length - 1;
+  const cols = [];
+  for (let j = 0; j < sides; j += 1) {
+    const ang = (j + 0.5) * ((Math.PI * 2) / sides);
+    const cos = Math.cos(ang);
+    cols.push({ cos, sin: Math.sin(ang), p0: hairlineParam(cos) });
+  }
+  /** Đỉnh thứ `j` của mức thứ `i`, với mức 0 = chân tóc của chính cột ấy. */
+  const vert = (i, j) => {
+    const col = cols[j % sides];
+    const [y, r] = profileAt(rings, col.p0 + (last - col.p0) * (i / last));
+    return [R * r * col.cos, y, R * r * col.sin];
+  };
+
+  const from = pos.length;
+  for (let i = 0; i < last; i += 1) {
+    for (let j = 0; j < sides; j += 1) {
+      const a = vert(i, j);
+      const b = vert(i, j + 1);
+      const c = vert(i + 1, j + 1);
+      const d = vert(i + 1, j);
+      pushTri(pos, nor, a, c, b);
+      pushTri(pos, nor, a, d, c);
+    }
+  }
+  // Nắp đỉnh — đỉnh sọ là một đĩa nhỏ (r = 0,40), y như `dome`. Bỏ nó đi thì nhìn từ trên xuống
+  // thấy thủng một lỗ đúng chỗ camera 34° nhìn vào nhiều nhất.
+  for (let j = 1; j < sides - 1; j += 1) {
+    pushTri(pos, nor, vert(last, 0), vert(last, j + 1), vert(last, j));
+  }
+  /*
+    Mũi nhọn bịt đáy.
+    ⚠️ KHÔNG CHÉP CHIỀU QUAY TỪ NHÁNH `rLo === 0` CỦA VÒNG LẶP THƯỜNG — nhánh ấy **chưa bao giờ
+    chạy**: không hồ sơ nào trong `PROFILES` có vành ĐÁY bằng 0 (`cone` có vành ĐỈNH bằng 0, rơi
+    vào nhánh `rHi === 0`). Bản đầu của hàm này chép nó và lập tức bị bài «MỌI KHUÔN NGỬA MẶT RA
+    NGOÀI» bắt: 60 cạnh có hướng bị dùng hai lần, tức mũi nhọn cãi nhau về chiều quay với dải mặt
+    bên ngay trên nó. Quy ước của file là **vành DƯỚI của một dải đi theo chiều j+1 → j, vành TRÊN
+    đi theo j → j+1**; chân tóc là vành DƯỚI của dải trên nó, nên mũi nhọn phải coi nó là vành
+    TRÊN của chính mình ⇒ `(apex, j, j+1)`.
+    ⇒ Và đây là một phát hiện đáng ghi riêng: một nhánh mã chưa từng chạy thì cũng chưa từng được
+    kiểm — nó trông như một tiền lệ đáng tin nhưng không phải. `TECH_DEBT` nhận một mục.
+  */
+  const apex = [0, rings[0][0], 0];
+  for (let j = 0; j < sides; j += 1) {
+    pushTri(pos, nor, apex, vert(0, j), vert(0, j + 1));
+  }
+
+  /*
+    ⚠️ TRỤC x KHÔNG ĐỐI XỨNG, VÀ ĐÓ CHÍNH LÀ ĐIỀU KHUÔN NÀY SINH RA ĐỂ LÀM. Chân tóc sau gáy nằm
+    thấp (p = 0,73) nên cột phía sau vẫn đi qua chỗ phình rộng nhất của sọ (p = 2, r = 1,00); chân
+    tóc trước trán nằm cao (p = 2,7) nên cột phía trước KHÔNG đi qua chỗ ấy. Đo được: trải x là
+    [−0,500; 0,490] — lệch tâm 1%. Một phép NHÂN không đưa được một khoảng lệch tâm về [−0,5; 0,5],
+    nên phải dời tâm rồi mới kéo, và `scalpFit` khử ngược cả hai. Trục z thì đối xứng thật (chân
+    tóc chỉ phụ thuộc `cos θ`, mà `cos` đối xứng qua mặt phẳng x–y), nên nó chỉ cần kéo.
+    ⚠️ Bản đầu chỉ kéo theo `max|x|` và bài «NẰM GỌN TRONG HỘP ĐƠN VỊ» đỏ ngay — đúng việc của nó.
+  */
+  let loX = Infinity;
+  let hiX = -Infinity;
+  let hiZ = 0;
+  for (let i = from; i < pos.length; i += 3) {
+    loX = Math.min(loX, pos[i]);
+    hiX = Math.max(hiX, pos[i]);
+    hiZ = Math.max(hiZ, Math.abs(pos[i + 2]));
+  }
+  const spanX = hiX - loX;
+  const midX = (hiX + loX) / 2;
+  const spanZ = hiZ * 2;
+  for (let i = from; i < pos.length; i += 3) {
+    pos[i] = (pos[i] - midX) / spanX;
+    pos[i + 2] /= spanZ;
+  }
+  return { spanX, midX, spanZ };
 }
 
 const CACHE = new Map();
@@ -348,7 +530,7 @@ export function humanShapeMesh(name) {
   const profile = PROFILES[name];
   if (!profile) throw new Error(`humanShapeMesh: khuôn lạ "${name}"`);
 
-  const { sides, rings, folds = false } = profile;
+  const { sides, rings, folds = false, hairline = false } = profile;
   const R = circumradius(sides);
   const pos = [];
   const nor = [];
@@ -375,35 +557,46 @@ export function humanShapeMesh(name) {
     return [R * rr * Math.cos(ang), yy, R * rr * Math.sin(ang)];
   };
 
-  // ── Mặt bên ────────────────────────────────────────────────────────────────
-  for (let i = 0; i < rings.length - 1; i += 1) {
-    const rLo = rings[i][1];
-    const rHi = rings[i + 1][1];
-    for (let j = 0; j < sides; j += 1) {
-      const a = vert(i, j);
-      const b = vert(i, j + 1);
-      const c = vert(i + 1, j + 1);
-      const d = vert(i + 1, j);
-      // Thứ tự đỉnh đã kiểm bằng tay tại góc 0 (pháp tuyến phải ra +x). Sai thứ tự thì mặt biến
-      // mất khi nhìn từ ngoài mà lại hiện ra khi nhìn từ trong — đúng khuyết tật chiều quay tam
-      // giác đã nuốt 19,2% mặt đường ở Phase 14 §1(1), và nó KHÔNG có triệu chứng nào khác.
-      if (rHi === 0) pushTri(pos, nor, a, c, b);
-      else if (rLo === 0) pushTri(pos, nor, d, a, c);
-      else { pushTri(pos, nor, a, c, b); pushTri(pos, nor, a, d, c); }
+  // ⚠️ HAI ĐƯỜNG DỰNG, MỘT CÁI ĐUÔI CHUNG. `hairline` không phải một biến thể của vòng lặp bên
+  // dưới mà là một cách dựng KHÁC HẲN (mỗi cột một điểm xuất phát riêng), nên nó đứng thành một
+  // nhánh thay vì rắc `if` vào giữa vòng lặp cũ — thứ đã làm `geometryFactory` khó đọc suốt hai
+  // phase. Phần làm mềm và phần đóng gói thì DÙNG CHUNG, để không có khuôn nào lọt ra ngoài
+  // `smoothCrease` một cách im lặng.
+  let boxFit = null;
+  if (hairline) {
+    boxFit = buildHairline(pos, nor, rings, sides, R);
+  } else {
+    // ── Mặt bên ────────────────────────────────────────────────────────────────
+    for (let i = 0; i < rings.length - 1; i += 1) {
+      const rLo = rings[i][1];
+      const rHi = rings[i + 1][1];
+      for (let j = 0; j < sides; j += 1) {
+        const a = vert(i, j);
+        const b = vert(i, j + 1);
+        const c = vert(i + 1, j + 1);
+        const d = vert(i + 1, j);
+        // Thứ tự đỉnh đã kiểm bằng tay tại góc 0 (pháp tuyến phải ra +x). Sai thứ tự thì mặt biến
+        // mất khi nhìn từ ngoài mà lại hiện ra khi nhìn từ trong — đúng khuyết tật chiều quay tam
+        // giác đã nuốt 19,2% mặt đường ở Phase 14 §1(1), và nó KHÔNG có triệu chứng nào khác.
+        if (rHi === 0) pushTri(pos, nor, a, c, b);
+        else if (rLo === 0) pushTri(pos, nor, d, a, c);
+        else { pushTri(pos, nor, a, c, b); pushTri(pos, nor, a, d, c); }
+      }
     }
-  }
 
-  // ── Nắp đáy và nắp đỉnh ────────────────────────────────────────────────────
-  if (rings[0][1] > 0) {
-    for (let j = 1; j < sides - 1; j += 1) {
-      pushTri(pos, nor, vert(0, 0), vert(0, j), vert(0, j + 1));
+    // ── Nắp đáy và nắp đỉnh ────────────────────────────────────────────────────
+    if (rings[0][1] > 0) {
+      for (let j = 1; j < sides - 1; j += 1) {
+        pushTri(pos, nor, vert(0, 0), vert(0, j), vert(0, j + 1));
+      }
     }
-  }
-  const top = rings.length - 1;
-  if (rings[top][1] > 0) {
-    for (let j = 1; j < sides - 1; j += 1) {
-      pushTri(pos, nor, vert(top, 0), vert(top, j + 1), vert(top, j));
+    const top = rings.length - 1;
+    if (rings[top][1] > 0) {
+      for (let j = 1; j < sides - 1; j += 1) {
+        pushTri(pos, nor, vert(top, 0), vert(top, j + 1), vert(top, j));
+      }
     }
+
   }
 
   /*
@@ -423,7 +616,7 @@ export function humanShapeMesh(name) {
   */
   smoothCrease(pos, nor);
 
-  const out = { positions: pos, normals: nor, triangles: pos.length / 9 };
+  const out = { positions: pos, normals: nor, triangles: pos.length / 9, boxFit };
   CACHE.set(name, out);
   return out;
 }
@@ -436,4 +629,26 @@ export function shapeTriangles(name) {
 /** Khuôn có tồn tại không. `human.js` gọi để một `shape` khai sai bị bắt ngay ở tầng thuần. */
 export function isValidHumanShape(name) {
   return Object.hasOwn(PROFILES, name);
+}
+
+/**
+ * KÍCH THƯỚC VÀ CHỖ TREO CỦA MŨ TÓC, tính từ chính cái đầu — không phải ba con số chép tay.
+ *
+ * ⚠️ VÌ SAO PHÉP NÀY PHẢI Ở ĐÂY CHỨ KHÔNG Ở `human.js`. Nó phải khử ngược `boxFillX`, thứ chỉ
+ * `buildHairline` biết; chép con số ấy sang `human.js` là dựng một công thức thứ hai cho cùng một
+ * quan hệ, và ngày nào ai đó đổi `HAIRLINE_*` thì hai bên lệch nhau **im lặng** — mũ tóc thụt vào
+ * trong sọ vài phần trăm và cái vạch ngang quay lại y như cũ. Đây đúng `TECH_DEBT #42`.
+ *
+ * Kết quả: mũ tóc = **chính cái sọ phóng to đều `lift` lần quanh gốc khớp `head`**. Phóng to ĐỀU
+ * (cả y) chứ không chỉ theo bán kính, vì ở đỉnh sọ mặt sọ gần như nằm ngang — giãn theo bán kính
+ * thôi thì ở đúng đỉnh đầu hai mặt chồng khít lên nhau và ta được z-fighting. Gốc khớp `head` nằm
+ * ở đáy cái đầu và đường sinh của `dome` nhìn từ điểm ấy là đơn điệu, nên phóng to đều quanh nó
+ * chắc chắn nằm ngoài — không phải hy vọng, mà là thứ bài test cuối `humanShape.test.js` đo.
+ */
+export function scalpFit(headW, headH, lift) {
+  const { spanX, midX, spanZ } = humanShapeMesh('scalp').boxFit;
+  return {
+    size: [lift * headW * spanX, lift * headH, lift * headW * spanZ],
+    rest: [lift * headW * midX, lift * headH * 0.5, 0],
+  };
 }

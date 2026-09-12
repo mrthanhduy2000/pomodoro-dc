@@ -1,3 +1,67 @@
+> Last update: **2026-09-12** — **ROUND 56 (in progress): EACH THING ITS OWN SHAPE.**
+> Order: *"Không phải cái gì cũng bo tròn. Đích của tôi là chất lượng phim hoạt hình 3D, bám sát
+> thực tế và lịch sử — không phải 'nhiều cạnh'."* Branch `claude/city-skill-points-display-7k4nof`;
+> rounds 55 and 56 are NOT on `main` yet.
+>
+> ### Việc 0 — a vocabulary by HOW THE THING IS MADE (`14cdc8d`)
+> `SIDES_ROUND` said one word for four different facts. Split into `SIDES_TURNED` (thrown/cast/
+> moulded, 48) · `SIDES_DOME` (72) · `SIDES_PROP` (32) · `SIDES_STAVED` (built from planks, 14) ·
+> `SIDES_HANDMADE` (10, + a deterministic `handmadeFactor` wobble that is a function of position,
+> never `Math.random`) · `ROOF_FACETS` (4 — a tiled pitched roof has ridges, not a cone).
+>
+> ### Phần A — the resident, by photograph first
+> Đàm's method for this part, verbatim: *"CHỤP TRƯỚC, SỬA SAU … đừng làm xong cả mạch mới chụp."*
+> Building the acceptance shot found the FIRST defect in the instrument, not the city.
+>
+> 1. **`--pitch` (`9a3a18a`).** `DEFAULT_PITCH = 0.6 rad = 34.4°` looks DOWN at the tops of heads,
+>    so every resident acceptance photo of rounds 52, 54 and 55 was taken from an angle that has
+>    never once shown a face. The app itself reaches 10.3° by dragging; only the tool could not.
+>    Routed through the app's own `orbit.set` so it cannot produce a frame the app cannot.
+> 2. **A black frame is now refused (`fc6d410`).** `--width 2800` and `--width 4200` printed the
+>    success line, wrote a PNG of the right size and exited 0 — and both images were BLACK
+>    (brightest pixel 12.9/255 against 206 for a real noon frame and 224 for a real NIGHT one).
+>    The composer buffer at that size exceeds SwiftShader's allocation, the scene is never drawn,
+>    and the post pass still paints its vignette onto black. **Sixth time the measuring tool lied,
+>    and the worst shape of it: an acceptance photo with the right name, size and tick mark.**
+> 3. **A hairline that is a hairline (`305a58a`).** Measured first: round 52's hair cap is buried
+>    36% INSIDE the skull, so what the eye sees is not the rim we drew but the intersection of two
+>    coaxial lathes — and **that is always a horizontal circle**, measured at `y/headH = 0.6364` at
+>    all 60 azimuths. New engine shape `scalp`: the skull's own generatrix lifted 7%, so it is
+>    provably outside and its own rim is the boundary; the rim then follows the generatrix
+>    parameter, quadratic in `cos θ`, through three anatomical marks —
+>    **nape 0.171 · temple 0.347 · forehead 0.672** head-heights, plus a widow's peak using `c^24`
+>    (`c^6` spreads the notch to ±40° and flattens the curve instead of cutting it).
+>    `bun` and `braid` had been building a bun or a plait on a BALD skull; `hairPiece` returned one
+>    block, so the hair itself was never there.
+> 4. **A face (Việc 2).** Đàm's order: eyebrows, then eyes with whites and pupils, then a one-stroke
+>    mouth. Eight roles now; `eyeWhite` costs **0 draw calls** because residents are one
+>    `InstancedMesh` per SHAPE and the role is a per-instance colour — the round-52 comment saying
+>    otherwise was about building materials, not people.
+> 5. **⚠️ `steel` never reached the renderer — three weeks (`in this round`).** Round 49 split
+>    `steel` out of `gear` and did every side of it: `HUMAN_ROLES`, `palette3d.js`, even an
+>    exception list in `palette3d.test.js`. The one place nobody changed was the `roleColor` table
+>    inside `sceneGraph.js`: six roles, and the line using it ended `?? roleColor.cloth`. **Every
+>    helmet and every steel tool head has rendered in the era's CLOTH colour since.** The palette
+>    test stayed green because it tests the TABLE, not the place that consumes it. Root fix: the
+>    table moved into `human.js` next to `HUMAN_ROLES`, the `??` at the call site is gone (an
+>    undeclared role now throws), and two guards cover it.
+>
+> ### Gates
+> lint clean · **1782 pass · 0 fail · skipped 1** (1779 at the start of the round).
+> New guards, each proven red for the right reason: hair outside the skull (red at `SCALP_LIFT`
+> 1.00: 1191/2154 vertices inside) · hairline not horizontal (red with the curve flattened: 0.000
+> spread) · every role has its own colour (red both by removing `steel` and by aliasing it to
+> `cloth`) · draw calls +1 at exactly the four bare-headed eras.
+>
+> ### ⚠️ Found and NOT fixed — a gate asleep three weeks
+> Re-measuring the three Chromium draw-call anchors (last taken 2026-08-24) showed the formula in
+> `drawCallBudget.test.js` under-counts real city draw calls by **3 · 3 · 1** (eras 1 · 8 · 13), and
+> that the `- 2` subtraction has been wrong since round 51 (the sky layer is a second group beside
+> the backdrop, so a frame is minus FOUR). None of it is round 56's: round 56 adds exactly +1 and
+> that +1 is in the table. The shortfall is content-dependent, so not a constant — suspects are the
+> meshes born since (particles, forge glow, outskirts). Written out as a named, dated table so the
+> assertion stays an exact equality, and filed as a debt rather than guessed at.
+
 > Last update: **2026-09-11** — **ROUND 54: FROM BLOCKS TO ROUND (ADR-094).**
 > Order: *"TỪ KHỐI SANG TRÒN … Pixar-style 3D animation — hình tròn mềm, tô sáng mượt, nhân vật dễ
 > thương, ánh sáng dịu."* Acceptance, his words: *"tôi nhìn một cư dân ở tầm mắt — và người đó phải

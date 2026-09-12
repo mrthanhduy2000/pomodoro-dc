@@ -32,33 +32,32 @@ Production branch `main` carries **both** work streams (merged 2026-08-28 on Đ�
 ⚠️ Phase 21 therefore shipped **before** Đàm reviewed its screenshots — the "waiting on Đàm's eyes"
 item below is still live, it just now reviews something already running.
 
-- **Loop — ROUND 54 (2026-09-11, LATEST): FROM BLOCKS TO ROUND (ADR-094).**
-  Đàm's diagnosis again, again right: the geometry had been curved since ADR-057, but both
-  `geometryFactory.js` and `humanShape.js` wrote ONE normal per FACE, so a 12-sided body rendered as
-  12 flat plates. `engine/city3d/creaseNormals.js` merges normals under **40°** — zero triangles
-  added, every curved object in 15 eras changed. Five laws:
-  ⚠️ **The crease ANGLE needs no role table.** 4-gon faces are 90° apart (sharp), a 12-gon's 30°
-  (smooth), side meets cap at 90° (sharp). A box keeps its corners and a column turns round with
-  nobody declaring either — already right for blocks not yet written.
-  ⚠️ **Raising a block's `sides` IS switching smoothing on for it** — `360/n` crosses 40° between 9
-  and 10. Hence tree lobes at 10, resident bodies at 20.
-  ⚠️ **Residents do NOT go through `geometryFactory`** (`humanShape` → `humanGeometry` → `InstancedMesh`),
-  so the law lives in `engine/` where both pipelines reach it. In `render3d/` it rounded the whole city
-  and left the PEOPLE flat — the one thing the round was judged on.
-  ⚠️ **A joint wears the colour of the limb it joins**, like the foot. Found by a PHOTOGRAPH: six
-  `skin` balls read as six rivets on a dark uniform — round 52's "white sticks" one level down.
-  ⚠️ **A museum signature must not contain a render cost.** `GOLDEN` hashes the whole spec including
-  `triangles`; a draw-layer change reddened 5 eras while no block moved. **`GOLDEN_KHOI`** (parts only)
-  now sits beside it — two questions, two digests.
+- **Loop — ROUNDS 55 + 56 (2026-09-12, LATEST): NOT ON `main` YET.** Branch
+  `claude/city-skill-points-display-7k4nof`. Detail in `BAN_GIAO.md`; five laws live here:
+  ⚠️ **Two coaxial lathes always meet in a HORIZONTAL circle.** Round 52's hair cap sat 36% inside
+  the skull, so the visible hairline was that intersection, not the rim drawn — identical at all 60
+  azimuths. A cap must be provably OUTSIDE the skull for its own rim to be the boundary.
+  ⚠️ **A colour boundary must not sit where real life has none** (Đàm, R56). Third instance of one
+  defect shape: joint balls as rivets · a neck as a white collar · the hairline. All three found by
+  a PHOTOGRAPH; none by any of 1,784 tests.
+  ⚠️ **Roles on a resident cost NO draw calls** — one `InstancedMesh` per SHAPE, colour per instance.
+  ⚠️ **A table has a test; the place that CONSUMES it may not.** Role `steel` reached `HUMAN_ROLES`,
+  `palette3d.js` and an exception list in `palette3d.test.js` at round 49 — and never reached
+  `sceneGraph.js`, so every helmet rendered in the era's CLOTH colour for three weeks.
+  ⚠️ **The preview tool lied twice more** (5th and 6th): it could not photograph a face at all
+  (34.4° default pitch), and above 1400 px it wrote BLACK images while reporting success.
 
-- **Loop — ROUND 53 (2026-09-11): A WALL THAT CAN SHADOW ITSELF (ADR-093).** Every window became a
-  recess with two JAMBS (the missing half was the VERTICAL half — **the sun stands to one side**);
-  the wall got pilasters; AO runs at eye level in `LensShader`, `GTAOPass` gone, `TECH_DEBT #52` closed.
-  ⚠️ **`TOTAL_RELIEF_CAP` = the old `SILL_RELIEF`, to the digit** — `block.js` shrinks each unit by its
-  ENVELOPE, and a 10% growth cost era 6 **11 roofs** three stages away, silently.
-  ⚠️ **`prism`'s `y` is the BOTTOM of a block** — writing an emitter as if it were the centre surfaced
-  two layers away as an ASPECT-RATIO failure. `git stash` and measure both ways before reasoning.
-  ⚠️ **Triangle ceilings are runaway detectors, not limits**, with a relation as the real guard.
+- **Loop — ROUND 54 (ADR-094): FROM BLOCKS TO ROUND.** Archived verbatim (2026-09-12). Still-live:
+  **the crease ANGLE needs no role table** (4-gon 90° sharp · 12-gon 30° smooth · side-meets-cap 90°
+  sharp) · **raising `sides` IS switching smoothing on** — `360/n` crosses 40° between 9 and 10 ·
+  **residents do NOT go through `geometryFactory`**, so a shape law must live in `engine/` to reach
+  both pipelines · **a joint wears the colour of the limb it joins** · **a museum signature must not
+  contain a render cost** — `GOLDEN` (whole spec) and `GOLDEN_KHOI` (parts only), two digests.
+
+- **Loop — ROUND 53 (ADR-093): A WALL THAT CAN SHADOW ITSELF.** Archived verbatim (2026-09-12).
+  Still-live: **`TOTAL_RELIEF_CAP` = the old `SILL_RELIEF` to the digit** — `block.js` shrinks each
+  unit by its ENVELOPE, and a 10% growth cost era 6 eleven roofs three stages away, silently ·
+  **`prism`'s `y` is the BOTTOM of a block** · **triangle ceilings are runaway detectors, not limits.**
 
 - **Loop — ROUND 52 (ADR-092): THE PICTURE GOT EXPENSIVE.** Archived verbatim. Still-live: tone
   mapping is in `OutputPass`, **not on the renderer** · threshold decides WHAT glows, strength only

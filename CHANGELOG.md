@@ -10,6 +10,29 @@
 > **Muốn hiểu VÌ SAO một quyết định được chọn** → `ARCHITECTURE_DECISIONS.md`. **Muốn biết migration
 > cụ thể nào cần chạy** → `MIGRATION.md`.
 
+## 2026-09-12 — Round 56 (Phần A, in progress): each thing its own shape
+
+**Purpose**: make a resident survive being looked at closely — no seam, a face, hair that is hair —
+without rounding off the things that are not round. **Scope**: the resident's hair, face and role
+colours; the preview tool's camera and its refusal to write a blank frame; draw-call baselines. No
+game logic, no data, no schema. **Compatibility**: fully backward-compatible; ADR-007 untouched (no
+building geometry changed).
+
+- **A hairline that is a hairline.** New engine shape `scalp` with a rim that runs nape 0.171 →
+  temple 0.347 → forehead 0.672 head-heights, replacing a boundary that was a perfect horizontal
+  circle at 0.6364 everywhere. The old cap sat 36% inside the skull, so the visible edge was the
+  intersection of two coaxial lathes — which is always horizontal, whatever rim is drawn.
+- **A face**: eyebrows, eye whites with pupils, a one-stroke mouth. New role `eyeWhite`, costing no
+  draw calls — residents are one InstancedMesh per shape and roles are per-instance colours.
+- **Fixed: role `steel` never reached the renderer.** Since round 49 every helmet and steel tool
+  head has rendered in the era's cloth colour, because the colour table in `sceneGraph.js` never
+  learned the role and the call site ended in a silent fallback. The table now lives beside
+  `HUMAN_ROLES` and an undeclared role throws.
+- **Preview tool**: `--pitch` (the app can look at a face; the tool could not), and a blank-frame
+  guard — renders above 1400 px wide were silently black while reporting success.
+- **Known, not fixed**: the draw-call formula under-counts real city draw calls by 3/3/1, and the
+  frame subtraction has been wrong since round 51. Recorded as a dated table plus a debt.
+
 ## 2026-09-11 — Round 54: from blocks to round (ADR-094)
 
 **Purpose**: make the city read as soft 3D animation rather than assembled woodblocks. The geometry

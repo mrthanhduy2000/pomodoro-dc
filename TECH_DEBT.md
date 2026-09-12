@@ -67,6 +67,7 @@
 > `docs/archive/TECH_DEBT_CLOSED_2026-09-06.md` § "Threshold history" on 2026-09-06 (ADR-075).
 > They are a log of past counts, re-read on every `head` of this file for no operational
 > benefit. Nothing was deleted.
+- **#105** — Draw-call gate asleep three weeks: the formula under-counts real city draw calls by 3/3/1, and the frame subtraction has been wrong since round 51
 - **#52** — ĐÃ ĐÓNG (2026-09-11, round 53) · `GTAOPass` trả đệm AO đen đặc ở tầm mắt — nay AO viết thẳng trong `LensShader`
 - **#103** — Reference archive so large that one `cat` blew the context window, with no guard
 - **#86** — 137 nút tự vẽ trên 28 file KHÔNG đọc token skin, và `ActionButton` không nhận nổi chúng — ADR-078: GATED (`eslint.config.js`, palette classes or hex/rgb literals on any button = error, 0 violations); 11 action buttons through the door, the rest read tokens
@@ -278,6 +279,49 @@ ngưỡng mắt, đúng cái "cửa phễu" mà `CLAUDE.md` cấm.
 </details>
 
 ---
+## #105 — Cổng lệnh vẽ ngủ ba tuần: công thức đếm THIẾU 3 · 3 · 1 so với Chromium
+
+**Priority**: Medium · **Mở**: 2026-09-12 (round 56, Phần A) · **Chủ**: `src/engine/city3d/drawCallBudget.test.js`
+
+### Đo được
+Đo lại ba cái neo Chromium của chính bài test, bằng ĐÚNG câu lệnh nó ghi
+(`--era N --hour 12 --sessions 40 --level 1 --bench 1 --no-shadow`), lần trước đo **2026-08-24**:
+
+| kỷ | cả khung | thành phố | nền | trời | `MOC_LENH_VE` | lệch |
+|---|---|---|---|---|---|---|
+| 1 | 21 | **17** | 2 | 2 | 14 | **3** |
+| 8 | 26 | **22** | 2 | 2 | 19 | **3** |
+| 13 | 20 | **16** | 2 | 2 | 15 | **1** |
+
+### Hai chuyện, và cả hai đều KHÔNG phải của round 56
+1. **Phép trừ `− 2` sai từ round 51.** Lớp trời (mây · sao · trăng) là một nhóm mesh THỨ HAI bên
+   cạnh nền; `[stats]` in nó thành một cột riêng. Cả khung nay phải trừ BỐN. Đã sửa: cái neo đọc
+   thẳng cột "thành phố" mà công cụ in ra, thay vì tự làm một phép trừ song song.
+2. **Công thức thiếu 3 · 3 · 1 lệnh vẽ.** Round 56 thêm đúng +1 và +1 ấy đã nằm trong bảng; khoản
+   lệch này tích lại giữa 2026-08-24 và 2026-09-12. Nó phụ thuộc NỘI DUNG (kỷ 13 lệch 1, kỷ 1 và 8
+   lệch 3) nên không phải một hằng số nền.
+
+### Nghi can (chưa truy, đừng coi là kết luận)
+Những mesh sinh sau 2026-08-24 và nằm trong nhóm "thành phố": hạt bụi/lửa (`motion.js`), khối phát
+sáng của lò rèn (`sceneGraph.js`, `glowMesh`), vùng phụ cận (`outskirts`). Kỷ 13 hiện đại, ít lửa —
+khớp với hướng ấy, nhưng khớp KHÔNG phải chứng minh.
+
+### Cách truy khi mở lại
+Đặt tên cho từng mesh lúc thêm vào cảnh rồi in danh sách tên ở `--bench`, và so với
+`hoVatLieu(era)`. Đếm bằng tên thì biết ngay thứ nào không có trong công thức; đoán bằng hiệu số
+thì mãi mãi chỉ ra một con số.
+
+### Cổng đang giữ
+`assert.equal(MOC_LENH_VE[era] + HO_CHUA_TRUY_NGUYEN_NHAN[era], DO_CHROMIUM_2026_09_12[era])` —
+vẫn là ĐẲNG THỨC CHÍNH XÁC, không nới thành `<=`. Khoản lệch được viết ra thành bảng có tên có
+ngày, nên đổi một trong hai vế là đỏ ngay. Một cổng nới thành "không vượt quá" là một cổng đã chết.
+
+### Bài học (đã ghi vào chính bài test)
+Ba cái neo "đo từ thực tế" vẫn có thể mục ra thành hằng số tự soi gương, nếu **không ai đo lại**.
+Một phép đo có ngày tháng mà không có lịch đo lại thì chỉ là một con số có chú thích đẹp.
+
+---
+
 ## #1 — God Function: `completeFocusSession`
 
 - **Module**: `src/store/gameStore.js`

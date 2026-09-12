@@ -5,6 +5,40 @@
 
 ---
 
+## Tách thêm ngày 2026-09-12 (vòng 55 + 56 tới, `START_HERE.md` chạm trần 16.000)
+
+- **Loop — ROUND 54 (2026-09-11): FROM BLOCKS TO ROUND (ADR-094).**
+  Đàm's diagnosis again, again right: the geometry had been curved since ADR-057, but both
+  `geometryFactory.js` and `humanShape.js` wrote ONE normal per FACE, so a 12-sided body rendered as
+  12 flat plates. `engine/city3d/creaseNormals.js` merges normals under **40°** — zero triangles
+  added, every curved object in 15 eras changed. Five laws:
+  ⚠️ **The crease ANGLE needs no role table.** 4-gon faces are 90° apart (sharp), a 12-gon's 30°
+  (smooth), side meets cap at 90° (sharp). A box keeps its corners and a column turns round with
+  nobody declaring either — already right for blocks not yet written.
+  ⚠️ **Raising a block's `sides` IS switching smoothing on for it** — `360/n` crosses 40° between 9
+  and 10. Hence tree lobes at 10, resident bodies at 20.
+  ⚠️ **Residents do NOT go through `geometryFactory`** (`humanShape` → `humanGeometry` → `InstancedMesh`),
+  so the law lives in `engine/` where both pipelines reach it. In `render3d/` it rounded the whole city
+  and left the PEOPLE flat — the one thing the round was judged on.
+  ⚠️ **A joint wears the colour of the limb it joins**, like the foot. Found by a PHOTOGRAPH: six
+  `skin` balls read as six rivets on a dark uniform — round 52's "white sticks" one level down.
+  ⚠️ **A museum signature must not contain a render cost.** `GOLDEN` hashes the whole spec including
+  `triangles`; a draw-layer change reddened 5 eras while no block moved. **`GOLDEN_KHOI`** (parts only)
+  now sits beside it — two questions, two digests.
+
+---
+
+- **Loop — ROUND 53 (2026-09-11): A WALL THAT CAN SHADOW ITSELF (ADR-093).** Every window became a
+  recess with two JAMBS (the missing half was the VERTICAL half — **the sun stands to one side**);
+  the wall got pilasters; AO runs at eye level in `LensShader`, `GTAOPass` gone, `TECH_DEBT #52` closed.
+  ⚠️ **`TOTAL_RELIEF_CAP` = the old `SILL_RELIEF`, to the digit** — `block.js` shrinks each unit by its
+  ENVELOPE, and a 10% growth cost era 6 **11 roofs** three stages away, silently.
+  ⚠️ **`prism`'s `y` is the BOTTOM of a block** — writing an emitter as if it were the centre surfaced
+  two layers away as an ASPECT-RATIO failure. `git stash` and measure both ways before reasoning.
+  ⚠️ **Triangle ceilings are runaway detectors, not limits**, with a relation as the real guard.
+
+---
+
 - **Loop — ROUND 40 (2026-09-08): THINGS THAT HAPPEN AND VANISH (ADR-080).** Order: fill the
   gap round 39 exposed, with a static budget of ZERO — only things that happen and are gone. Session
   beats (`engine/sessionBeats.js`: settled · halfway · final stretch · last minute — an 8-second whisper

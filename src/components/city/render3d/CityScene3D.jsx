@@ -25,10 +25,12 @@ import { museumWeather, weatherAt } from '../../../engine/city3d/weather';
 import { museumSeason, seasonForMonth } from '../../../engine/city3d/season';
 import { CITY_CAMERA_FOV, MIN_PITCH, cityOrbitOptions, createOrbit } from '../../../engine/city3d/orbit';
 import { STEP, WALK_FOV, WALK_NEAR, WALK_PITCH_MAX, WALK_PITCH_MIN, createWalker } from '../../../engine/city3d/walk';
-import { planCityFocus } from '../../../engine/city3d/cityFocus';
+import { boxDistance, nearestBlocker, planCityFocus } from '../../../engine/city3d/cityFocus';
 import { createRenderLoop } from '../../../engine/city3d/renderLoop';
 import { createPostFx, postProfileFor } from './postFx';
 import { pickNearest } from '../../../engine/city3d/pick';
+import { planResidentFocus } from '../../../engine/city3d/residentFocus';
+import { orbitPosition } from '../../../engine/city3d/orbit';
 import { ERA_METADATA } from '../../../engine/constants';
 import { getVietnamDayIndex, getVietnamHour, getVietnamMonthIndex } from '../../../engine/time';
 import { applyPaintedLook, createCityScene, MAX_PIXEL_RATIO } from './sceneGraph';
@@ -345,6 +347,16 @@ export default function CityScene3D({
       // nhờ vậy bỏ lỡ khung hình (máy bận, tab bị treo) không làm thành phố trôi chậm lại, và
       // quay lại tab sau nửa tiếng thì cư dân đang ở đúng chỗ đáng lẽ phải tới.
       const startedAt = performance.now();
+      /*
+        ⚠️ MỘT CÁI ĐỒNG HỒ, MỘT CÔNG THỨC — round 57, Việc 6. Cư dân được ĐẶT bằng
+        `city.update((now - startedAt) / 1000)`; hộp chạm của họ phải hỏi ĐÚNG con số ấy. Viết lại
+        phép tính ở chỗ dò chạm (dù chỉ là một phép trừ) là dựng công thức thứ hai cho cùng một
+        quan hệ: ngày nào đồng hồ đổi (tạm dừng, tua, đóng băng bảo tàng), hình người đi một đằng
+        còn hộp chạm ở một nẻo — và cú chạm trượt mà không có gì đỏ lên.
+      */
+      const motionTimeNow = () => (performance.now() - startedAt) / 1000;
+      /** `bpId` của cư dân đang được ngắm, hoặc `null`. Xem `applyFocus` và vòng lặp vẽ. */
+      let followResident = null;
 
       // ── BAY TỚI MỘT KHU PHỐ (VIỆC 2) ────────────────────────────────────────
       //
@@ -416,24 +428,56 @@ export default function CityScene3D({
             homeState = null;
           }
           focusedRef = null;
+          followResident = null;
           return;
         }
 
-        const target = city.pickTargets.find((t) => t.kind === ref.kind && t.bpId === ref.bpId);
+        /*
+          ⚠️ HAI LOẠI ĐÍCH, HAI LUẬT KHOẢNG CÁCH — round 57, Việc 6.
+          Một công trình cao ~7 đơn vị và `FOCUS_VIEW_DISTANCE = 7,5` được chọn cho nó. Một cư dân
+          cao chưa tới 1 đơn vị; dùng lại 7,5 là đứng xa gấp bảy lần mức cần — và đó KHÔNG phải suy
+          đoán, Việc 5 đã đo: cận cảnh công trình cho cư dân **22 điểm ảnh**, còn NHỎ HƠN khung
+          toàn cảnh (82). Tức trước vòng này, không có cách nào nhìn gần một con người.
+        */
+        const nguoi = ref.kind === 'resident'
+          ? (city.residentTargets ? city.residentTargets(motionTimeNow()) : [])
+            .find((t) => t.bpId === ref.bpId)
+          : null;
+        const target = nguoi
+          ?? city.pickTargets.find((t) => t.kind === ref.kind && t.bpId === ref.bpId);
         if (!target?.box) return;    // công trình vừa biến mất (đổi kỷ, xây xong) ⇒ đứng yên
 
         const box = target.box;
-        const plan = planCityFocus({
-          from: orbit.getState(),
-          focus: {
-            x: (box.minX + box.maxX) / 2,
-            // Ngắm vào GIỮA THÂN chứ không vào chân tường: ngắm chân thì mái chạy lên mép trên
-            // khung hình, mà mái mới là nơi Phase 11 để chi tiết.
-            y: (box.minY + box.maxY) / 2,
-            z: (box.minZ + box.maxZ) / 2,
-          },
-          blockers: city.blockers,
-        });
+        /*
+          ⚠️ HAI LOẠI ĐÍCH, HAI PHÉP DỰNG ĐƯỜNG BAY — và bản đầu của vòng 57 đã dùng chung, rồi ảnh
+          chụp ra một MÁI NHÀ. `planCityFocus` giữ nguyên `yaw` và chỉ biết hai cách gỡ vướng: ngẩng
+          lên, lùi ra. Với người thì ngẩng = nhìn đỉnh đầu, lùi = mất đúng cái vừa muốn xem (đo được:
+          xin 0,60 đơn vị, nhận về 6,10). Người thì phải **đi vòng quanh** — xem `planResidentFocus`.
+        */
+        const plan = nguoi
+          ? planResidentFocus({
+            resident: nguoi,
+            /*
+              ⚠️ ĐO CHỖ ĐỨNG, KHÔNG ĐO ĐƯỜNG BAY — và bản đầu của vòng 57 đo nhầm cái thứ hai.
+              `pathGuarantee` hỏi *"cả chuyến bay có chỗ nào cọ vào công trình không"*, đúng cho một
+              công trình vì ta bay NGANG tới nó. Bay xuống đứng cạnh một người thì đường bay gần như
+              luôn liếm qua một mái nhà trên đường hạ xuống — nên phép đo ấy báo vướng ở MỌI hướng,
+              và cái cận cảnh lại lùi ra 3,30 đơn vị (đo được). Câu hỏi đúng với một người là
+              *"chỗ camera dừng lại có nằm trong tường không"*.
+            */
+            clearanceOf: (to) => boxDistance(orbitPosition(to), nearestBlocker(orbitPosition(to), city.blockers)),
+          })
+          : planCityFocus({
+            from: orbit.getState(),
+            focus: {
+              x: (box.minX + box.maxX) / 2,
+              // Ngắm vào GIỮA THÂN chứ không vào chân tường: ngắm chân thì mái chạy lên mép trên
+              // khung hình, mà mái mới là nơi Phase 11 để chi tiết.
+              y: (box.minY + box.maxY) / 2,
+              z: (box.minZ + box.maxZ) / 2,
+            },
+            blockers: city.blockers,
+          });
 
         if (!homeState) homeState = orbit.getState();
         beginFlight(
@@ -441,6 +485,9 @@ export default function CityScene3D({
           { minPitch: plan.pitch, minDistance: plan.distance },
         );
         focusedRef = key;
+        // ⚠️ NHỚ LẠI AI ĐANG ĐƯỢC NGẮM. Người thì ĐI: bay tới chỗ họ vừa đứng rồi thả ra là nhìn
+        // họ bước ra khỏi khung trong hai giây. `followResident` dưới vòng lặp kéo điểm ngắm theo.
+        followResident = nguoi ? ref.bpId : null;
       }
 
       let shadowsDirty = true;
@@ -466,6 +513,23 @@ export default function CityScene3D({
         const now = performance.now();
         stepFlight(now);
         if (city.isAnimated) city.update((now - startedAt) / 1000);
+        /*
+          ⚠️ NGƯỜI THÌ ĐI — round 57, Việc 6. Bay tới chỗ họ VỪA đứng rồi thả ra là nhìn họ bước ra
+          khỏi khung trong khoảng hai giây, và cái cận cảnh vừa mua bằng cả một vòng thành vô dụng.
+          ⇒ Trong lúc đang ngắm một người, kéo ĐIỂM NGẮM theo họ mỗi khung hình. Chỉ đổi `target`,
+          KHÔNG đổi `yaw`/`pitch`/`distance`: Đàm vẫn xoay và phóng được như thường, camera chỉ
+          không chịu rời mắt khỏi người ấy.
+          ⚠️ Không chạy trong lúc `flight` còn bay: chuyến bay đang nội suy `target`, ghi đè giữa
+          chừng thì đường bay giật. Người đi 0,34–0,62 đơn vị/giây nên trong 0,6 giây bay họ nhích
+          không đáng kể; tới nơi là bám ngay.
+        */
+        if (followResident && !flight && city.residentTargets) {
+          const ai = city.residentTargets(motionTimeNow()).find((t) => t.bpId === followResident);
+          if (ai) {
+            const st = orbit.getState();
+            orbit.set({ ...st, target: ai.eye });
+          }
+        }
         applyCamera();
         // Cảnh vừa đổi (dựng xong, đổi giờ, đổi mùa) thì vẽ lại ngay, không chờ nhịp.
         if (city.isAnimated) {
@@ -616,7 +680,17 @@ export default function CityScene3D({
         raycaster.setFromCamera(pickPointer, camera);
         // Phần khó (tia cắt hộp, chọn cái gần nhất) nằm ở engine THUẦN và test được — ở đây chỉ
         // làm đúng một việc mà three.js buộc phải làm hộ: đổi điểm ảnh thành một tia.
-        return pickNearest(raycaster.ray, city.pickTargets) ?? null;
+        /*
+          ⚠️ CƯ DÂN ĐỨNG SAU CÔNG TRÌNH TRONG DANH SÁCH — round 57, Việc 6, và thứ tự ấy là một
+          quyết định, không phải tình cờ. `pickNearest` dùng `t <= bestT`, tức khi hai hộp cho
+          CÙNG một khoảng cách thì cái ĐỨNG SAU thắng. Người đứng sát tường nhà thì hai hộp chồng
+          lên nhau; ngón tay chỉ vào một hình người rõ ràng phải trúng NGƯỜI, không trúng bức tường
+          sau lưng họ. Đặt trước thì ngược lại, và cú chạm sẽ "không ăn" đúng lúc nó hiển nhiên
+          nhất với người dùng.
+          ⚠️ Hộp người dựng lại theo THỜI ĐIỂM HIỆN TẠI (họ đi) — xem `residentTargets` ở sceneGraph.
+        */
+        const nguoi = city.residentTargets ? city.residentTargets(motionTimeNow()) : [];
+        return pickNearest(raycaster.ray, [...city.pickTargets, ...nguoi]) ?? null;
       }
 
       function reportPick(event) {

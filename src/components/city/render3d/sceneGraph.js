@@ -53,6 +53,7 @@ import { buildHorizon } from '../../../engine/city3d/horizon';
 import { placeBounds, specBounds } from '../../../engine/city3d/pick';
 import { buildResidents, residentAt } from '../../../engine/city3d/residents';
 import { buildHumanBody, buildHumanBodyLowDetail, humanRoleColors } from '../../../engine/city3d/human';
+import { residentBox, residentEye } from '../../../engine/city3d/residentFocus';
 import { buildHumanShapeGeometry } from './humanGeometry';
 import { poseAt } from '../../../engine/city3d/humanPose';
 import { fogDensityFor, sunDirectionAt } from '../../../engine/city3d/daylight';
@@ -1554,6 +1555,7 @@ export function createCityScene({
   const residents = still ? [] : buildResidents(layout, stats);
   /** Đặt lại vị trí cả cộng đồng theo thời gian. `null` khi thành phố không có ai. */
   let placeResidents = null;
+  let residentTargets = () => [];
   if (residents.length > 0) {
     // ⚠️ MỘT CƠ THỂ CÓ KHỚP, KHÔNG PHẢI HAI CÁI HỘP — và đây là khác biệt giữa "cư dân" với
     // "viên gạch màu biết trôi".
@@ -1669,6 +1671,42 @@ export function createCityScene({
     // Gọi mỗi khung hình khi có hoạt hoạ.
     // ⚠️ Nhận THỜI GIAN làm tham số chứ không tự cộng dồn — nhờ vậy rời tab nửa tiếng rồi quay lại
     // thì thành phố hiện ra ở đúng trạng thái đáng lẽ phải có, thay vì đứng im từ lúc bị đóng băng.
+    /*
+      HỘP CHẠM CỦA CƯ DÂN — round 57, Việc 6.
+
+      ⚠️ DỰNG LẠI MỖI LẦN HỎI, KHÔNG DỰNG MỘT LẦN RỒI CẤT. Cư dân ĐI; một mảng hộp dựng lúc mở cảnh
+      sẽ trỏ vào chỗ họ đứng lúc ấy, và cú chạm sẽ trúng một người đã đi khỏi từ lâu — sai lặng lẽ,
+      càng để lâu càng sai. `pickTargets` của công trình thì ngược lại: công trình KHÔNG di chuyển
+      (ADR-007), nên nó dựng một lần là đúng mãi. Hai thứ khác nhau về bản chất, nên hai đường.
+
+      ⚠️ VÀ NÓ DÙNG ĐÚNG BA DÒNG ĐẶT NGƯỜI CỦA `placeResidents` ngay dưới — `residentAt`, `cellToWorld`,
+      `terrain.heightAt + ROAD_SURFACE_Y`. Chép lại phép đặt ở đây là dựng công thức thứ hai cho cùng
+      một quan hệ, và ngày nào một trong hai đổi thì hộp chạm lệch khỏi hình người mà không gì đỏ lên
+      (đúng bài học `cityFocus`: *một đầu vào dựng lại thì đo chính bản dựng lại, không đo thành phố*).
+    */
+    residentTargets = (timeSeconds) => {
+      const out = [];
+      for (let i = 0; i < residents.length; i += 1) {
+        const spot = residentAt(residents[i], timeSeconds);
+        if (!spot) continue;
+        const { x, z } = cellToWorld(spot.x, spot.y, gridSize);
+        const feet = terrain.heightAt(spot.x, spot.y) + ROAD_SURFACE_Y;
+        const box = residentBox({ x, y: feet, z }, body.dims.height);
+        if (!box) continue;
+        out.push({
+          kind: 'resident',
+          bpId: `r${i}`,
+          index: i,
+          box,
+          eye: residentEye({ x, y: feet, z }, body.dims.height, body.dims.headH),
+          height: body.dims.height,
+          // Hướng người đang nhìn — `planResidentFocus` cần nó để đứng TRƯỚC MẶT chứ không sau gáy.
+          angle: spot.angle,
+        });
+      }
+      return out;
+    };
+
     placeResidents = (timeSeconds) => {
       for (let i = 0; i < residents.length; i += 1) {
         const spot = residentAt(residents[i], timeSeconds);
@@ -2103,6 +2141,11 @@ export function createCityScene({
      * `dispose()`. Cảnh nào không cần chạm thì bỏ qua mảng này là xong.
      */
     pickTargets,
+    /**
+     * Hộp chạm của CƯ DÂN tại một thời điểm — round 57, Việc 6. Hàm chứ không phải mảng, vì họ đi.
+     * Xem khối chú thích ở chỗ dựng: nó dùng chung phép đặt người với `placeResidents`.
+     */
+    residentTargets: (timeSeconds) => residentTargets(timeSeconds),
     /**
      * Round 50 (ADR-090): the height of the GROUND at a world point — the walker's floor. It reads
      * the ONE terrain this scene was built from (`buildTerrain` above); a second copy in the walker

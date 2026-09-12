@@ -172,6 +172,7 @@ function parseArgs(argv) {
      * 0 = tắt (khung toàn cảnh như cũ).
      */
     focus: 0,
+    nguoi: 0,
     walk: 0,
     walkTurn: 0,
     walkLook: 0,
@@ -284,6 +285,7 @@ function parseArgs(argv) {
     // app cho kéo xuống tới ~10,3° (`MIN_PITCH`), mà công cụ này trước nay không hỏi tới được.
     else if (key === '--pitch') { args.pitch = Number(value); i += 1; }
     else if (key === '--focus') { args.focus = Number(value); i += 1; }
+    else if (key === '--nguoi') { args.nguoi = Number(value); i += 1; }   // round 57: bay toi cu dan thu N
     else if (key === '--walk') { args.walk = Number(value); i += 1; }        // round 50: N steps down the street
     else if (key === '--walk-turn') { args.walkTurn = Number(value); i += 1; }  // …then turn this many degrees
     else if (key === '--walk-look') { args.walkLook = Number(value); i += 1; }  // …and look up this many degrees
@@ -330,7 +332,7 @@ function run(cmd, cmdArgs, options = {}) {
  * phiên bản three và đúng các module thật — nếu bản gói lỗi thì bản chạy thật cũng lỗi.
  */
 function entrySource({
-  era, level, theme, zoom = 1, focus = 0, hour = null, pending = 0, sessions = 40, dpr = null, bench = 0,
+  era, level, theme, zoom = 1, focus = 0, nguoi = 0, hour = null, pending = 0, sessions = 40, dpr = null, bench = 0,
   pitch = null,
   mask = null, noShadow = false, noAo = false, t = 17.5, lowDetail = false, topdown = false, noMotion = false, dry = false, season = 'summer',
   walk = 0, walkTurn = 0, walkLook = 0, day = 0, noPost = false, post = null,
@@ -344,8 +346,9 @@ import { isSeason } from '${ROOT}/src/engine/city3d/season.js';
 import { WALK_FOV, WALK_NEAR, WALK_PITCH_MAX, WALK_PITCH_MIN, createWalker } from '${ROOT}/src/engine/city3d/walk.js';
 import { applyPaintedLook, createCityScene, MAX_PIXEL_RATIO } from '${ROOT}/src/components/city/render3d/sceneGraph.js';
 import { createPostFx, postProfileFor } from '${ROOT}/src/components/city/render3d/postFx.js';
-import { CITY_CAMERA_FOV, cityOrbitOptions, createOrbit } from '${ROOT}/src/engine/city3d/orbit.js';
-import { planCityFocus } from '${ROOT}/src/engine/city3d/cityFocus.js';
+import { planResidentFocus } from '${ROOT}/src/engine/city3d/residentFocus.js';
+import { CITY_CAMERA_FOV, cityOrbitOptions, createOrbit, orbitPosition } from '${ROOT}/src/engine/city3d/orbit.js';
+import { boxDistance, nearestBlocker, planCityFocus } from '${ROOT}/src/engine/city3d/cityFocus.js';
 import { BLUEPRINT_CATALOG, ERA_METADATA } from '${ROOT}/src/engine/constants.js';
 import { Color, MeshBasicMaterial, PerspectiveCamera, WebGLRenderer } from 'three';
 
@@ -372,6 +375,7 @@ const LEVEL = ${level};
 const IS_DARK = ${theme === 'dark'};
 const ZOOM = ${zoom};
 const FOCUS = ${focus};
+const NGUOI = ${nguoi};
 const TOPDOWN = ${topdown ? 'true' : 'false'};
 const HOUR = ${hour === null ? 'null' : hour};
 const PENDING = ${pending};
@@ -522,6 +526,31 @@ if (FOCUS > 0) {
     + ' · thoáng ' + plan.clearance.toFixed(2)
     + ' · ngẩng thêm ' + (plan.raisedPitch * 180 / Math.PI).toFixed(1) + ' độ'
     + ' · lùi thêm ' + plan.raisedDistance.toFixed(2));
+}
+
+/*
+  Round 57, Viec 6: --nguoi N bay toi CU DAN thu N, dung dung hai ham thuan ma app dung
+  (residentViewDistance, va diem ngam residentEye do sceneGraph tinh san trong residentTargets).
+  ⚠️ KHONG tu dung lai phep dat nguoi o day: mot dau vao dung lai thi do chinh ban dung lai, khong
+  do thanh pho (bai hoc cityFocus). Hop cham lay thang tu city.residentTargets.
+  (no backticks in this block: it lives INSIDE the entry template literal)
+*/
+if (NGUOI > 0 && city.residentTargets) {
+  const ds = city.residentTargets(ANIM_T);
+  const ai = ds[Math.min(ds.length, Math.max(1, NGUOI)) - 1];
+  if (!ai) throw new Error('ky nay khong co cu dan nao de ngam gan');
+  const plan = planResidentFocus({
+    resident: ai,
+    clearanceOf: (to) => boxDistance(orbitPosition(to), nearestBlocker(orbitPosition(to), city.blockers)),
+  });
+  orbit.set(plan);
+  console.log('[nguoi] cu dan ' + Math.max(1, NGUOI) + '/' + ds.length
+    + ' · cao ' + ai.height.toFixed(3) + ' don vi'
+    + ' · dung cach ' + plan.distance.toFixed(2)
+    + ' · goc ngang ' + (plan.pitch * 180 / Math.PI).toFixed(1) + ' do'
+    + ' · xoay quanh ' + (plan.turned * 180 / Math.PI).toFixed(0) + ' do'
+    + ' · lui them ' + plan.backed.toFixed(2)
+    + ' · thoang ' + plan.clearance.toFixed(2));
 }
 
 // Round 50 (ADR-090): --walk N puts the camera on the street — the SAME crane, in walk mode, N
@@ -1512,13 +1541,13 @@ const nghi = (ms) => new Promise((r) => setTimeout(r, ms));
  * `#info` qua CDP rồi trả về để chỗ gọi in ra terminal. Đổi chỗ hiển thị, không bỏ thông tin.
  */
 async function shoot(chrome, url, pngPath,
-  { width, height, bench = 0, mask = null, noShadow = false, noAo = false, gpu = false, focus = 0,
+  { width, height, bench = 0, mask = null, noShadow = false, noAo = false, gpu = false, focus = 0, nguoi = 0,
     hangCauTruc = [] }) {
   // Lúc đo hiệu năng thì PHẢI để stderr chảy ra, vì dòng [bench] đi bằng đường đó — và lúc dựng
   // mặt nạ cũng vậy, vì dòng [mask] là thứ DUY NHẤT chứng minh mặt nạ khớp đúng khối cần khớp.
   // ⚠️ Chế độ cận cảnh cũng phải mở đường này: dòng [focus] là thứ DUY NHẤT nói ra camera đã đứng
   // ở đâu. Ngoài mấy ca đó thì im, vì Chromium trong hộp cát này chửi dbus không ngớt.
-  const choNoi = bench > 0 || !!mask || noShadow || noAo || focus > 0;
+  const choNoi = bench > 0 || !!mask || noShadow || noAo || focus > 0 || nguoi > 0;
 
   // ⚠️ KHUNG NHÌN RỘNG RÃI CÓ CHỦ Ý. Cắt theo hộp bao rồi thì thừa bao nhiêu cũng không vào ảnh;
   // thứ duy nhất phải chắc là canvas KHÔNG bị xén. Vẫn kiểm lại bằng `kiemKhungNhin` phía dưới —
@@ -1972,6 +2001,7 @@ async function main() {
       // ảnh mang tên "cận mái" hoá ra trùng TỪNG BYTE với ảnh khung thường. Một khung hình khác
       // hẳn mà dùng chung tên file là cách chắc chắn nhất để một phép đo đúng cho ra kết luận sai.
       const focusTag = args.focus > 0 ? `-focus${args.focus}` : '';
+      const nguoiTag = args.nguoi > 0 ? `-nguoi${args.nguoi}` : '';
       const walkTag = args.walk > 0 ? `-walk${args.walk}${args.walkTurn ? `t${args.walkTurn}` : ''}${args.walkLook ? `u${args.walkLook}` : ''}` : '';
       // ⚠️ SỐ PHIÊN CŨNG PHẢI CÓ TÊN RIÊNG — VÀ ĐÂY LÀ LẦN THỨ TƯ CÙNG MỘT CÁI BẪY TRONG CHÍNH
       // FILE NÀY (giờ · mặt nạ · cận cảnh, nay tới số phiên). `--sessions` quyết mạng đường mở tới
@@ -2006,7 +2036,7 @@ async function main() {
       // HẲN (nhìn thẳng xuống, không phải khung app), nên dùng chung tên file với ảnh thường là
       // cách chắc chắn nhất để một phép so trước/sau chấm hai thứ không so được với nhau.
       const topTag = args.topdown ? '-topdown' : '';
-      const pngPath = resolve(OUT_DIR, `city-era${String(era).padStart(2, '0')}-${args.theme}${hourTag}${sessTag}${widthTag}${zoomTag}${pitchTag}${tTag}${lodTag}${maskTag}${shadowTag}${aoTag}${dryTag}${seasonTag}${dayTag}${motionTag}${focusTag}${walkTag}${topTag}.png`);
+      const pngPath = resolve(OUT_DIR, `city-era${String(era).padStart(2, '0')}-${args.theme}${hourTag}${sessTag}${widthTag}${zoomTag}${pitchTag}${tTag}${lodTag}${maskTag}${shadowTag}${aoTag}${dryTag}${seasonTag}${dayTag}${motionTag}${focusTag}${nguoiTag}${walkTag}${topTag}.png`);
       let info = '';
       let hop = null;
       try {
@@ -2047,6 +2077,7 @@ async function main() {
         sessions: args.sessions,
         mask: args.mask,
         focus: args.focus,
+        nguoi: args.nguoi,
         topdown: args.topdown,
         zoom: args.zoom,
         theme: args.theme,

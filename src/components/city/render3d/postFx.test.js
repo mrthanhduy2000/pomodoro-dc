@@ -12,7 +12,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 
-import { POST_PROFILE, postProfileFor } from './postFx.js';
+import { MSAA_SAMPLES, POST_PROFILE, postProfileFor } from './postFx.js';
 
 const ROWS = ['day', 'golden', 'night'];
 
@@ -101,4 +101,40 @@ test('GTAOPass KHÔNG được quay lại ống hậu kỳ — và AO phải ch�
   // mẫu trên một đệm chưa ai ghi vào, và kết quả là rác chứ không phải "không có AO".
   assert.match(src, /uDofAmount\.value > 0\.001 \|\| lens\.uniforms\.uAo\.value > 0\.001/,
     'đệm độ sâu nay có HAI người đọc (xoá phông và che khuất) — điều kiện dựng nó phải hỏi cả hai');
+});
+
+/**
+ * ⚠️ KHỬ RĂNG CƯA — ROUND 55, VIỆC 1, VÀ BÀI TEST NÀY TỒN TẠI VÌ KHUYẾT TẬT ẤY SỐNG SÓT **BA VÒNG**.
+ *
+ * Vòng 52 chuyển cảnh từ "vẽ thẳng ra canvas" sang "vẽ vào khung đệm của `EffectComposer`". Cờ
+ * `antialias: true` ở `CityScene3D.jsx` vẫn nằm nguyên đó — nhưng nó chỉ áp cho khung đệm MẶC ĐỊNH
+ * của canvas, mà từ vòng 52 thứ duy nhất vẽ vào đó là một tấm quad phủ màn hình. Một hình chữ nhật
+ * không có cạnh chéo nào để khử. Nên suốt vòng 52 · 53 · 54, mọi mép mái là bậc thang, và **không
+ * một bài test nào có thể đỏ**, vì không bài nào hỏi câu ấy.
+ *
+ * ⇒ Bài học đã có tên trong dự án này: *"một câu tự trấn an phải được kiểm như một con số"*. Lần
+ * này câu trấn an là một THAM SỐ THƯ VIỆN còn đúng cú pháp nhưng đã hết tác dụng vì đường vẽ đổi.
+ *
+ * THỬ-CHO-ĐỎ (đã chạy cả hai vế): bỏ `samples: MSAA_SAMPLES` khỏi lời `new WebGLRenderTarget` ⇒ vế
+ * (b) đỏ. Đặt `MSAA_SAMPLES = 0` ⇒ vế (a) đỏ.
+ * ⚠️ VÌ SAO PHẢI CÓ CẢ HAI VẾ: một hằng số đúng mà không ai dùng, và một lời gọi đúng với hằng số
+ * bằng 0, đều cho ra CÙNG MỘT cái ảnh răng cưa. Chỉ hỏi một vế là để ngỏ vế kia.
+ */
+test('KHUNG ĐỆM HẬU KỲ PHẢI ĐA MẪU — cờ `antialias` của renderer đã hết tác dụng từ vòng 52', () => {
+  // (a) con số phải là một mức đa mẫu THẬT. 2 là mức thấp nhất WebGL2 bảo đảm; dưới 4 thì mép chéo
+  //     vẫn còn bậc nhìn thấy ở cỡ màn hình của Đàm, nên đây là sàn chứ không phải mức mong muốn.
+  assert.ok(Number.isInteger(MSAA_SAMPLES) && MSAA_SAMPLES >= 4,
+    `MSAA_SAMPLES = ${MSAA_SAMPLES} — phải là số nguyên ≥ 4. three tự kẹp xuống \`gl.MAX_SAMPLES\``
+    + ' của phần cứng, nên đặt cao KHÔNG có rủi ro; đặt thấp thì ảnh răng cưa trên mọi máy.');
+
+  // (b) và nó phải THẬT SỰ ĐI VÀO khung đệm mà `EffectComposer` dùng để vẽ cảnh.
+  const src = readFileSync(new URL('./postFx.js', import.meta.url), 'utf8');
+  assert.match(src, /new WebGLRenderTarget\(w, h, \{[^}]*samples: MSAA_SAMPLES/,
+    'khung đệm của `EffectComposer` không khai `samples` ⇒ nó mặc định 0 ⇒ KHÔNG khử răng cưa, và'
+    + ' cờ `antialias` của `WebGLRenderer` không cứu được vì cảnh không còn vẽ ra canvas nữa.');
+
+  // (c) ⚠️ ĐỆM ĐỘ SÂU CỐ Ý KHÔNG ĐA MẪU — nó được ĐỌC từng điểm ảnh, không được NHÌN. Khoá lại để
+  //     một phiên sau đừng "cho nhất quán" rồi trả một lượt phân giải mà không đổi một điểm ảnh nào.
+  assert.doesNotMatch(src, /new WebGLRenderTarget\(w, h, \{\s*depthTexture[^}]*samples/,
+    'đệm độ sâu không cần đa mẫu — xem chú thích ở chỗ dựng nó');
 });

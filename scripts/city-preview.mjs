@@ -674,6 +674,26 @@ for (let i = 0; i < 3; i += 1) veLaiVaDoi();
 // Cho vòng chụp gọi lại trước TỪNG DẢI — xem khối cảnh báo ở chỗ gọi.
 window.__veLai = veLaiVaDoi;
 console.log('[post] ' + (postFx ? 'DANG CHAY: ' + (POST_ONLY ? POST_ONLY.join('+') : 'ao+rays+bloom+lens') : 'TAT (--nopost)'));
+/*
+  ⚠️ IN RA SỐ MẪU THẬT SỰ ĐƯỢC CẤP PHÁT — round 55, Việc 1, và dòng này là MỘT DỤNG CỤ, không phải
+  một dòng gỡ lỗi bỏ quên. Khuyết tật "hậu kỳ không khử răng cưa" sống sót BA VÒNG vì không ai nhìn
+  thấy được nó: cờ "antialias: true" vẫn nằm trong mã, và không phép đo ảnh nào phân biệt nổi
+  (chuỗi hậu kỳ tự làm mềm biên bằng loé sáng + hạt phim, nên mọi tỉ lệ "biên gắt" đều bão hoà).
+  ⇒ Hỏi thẳng WebGL: gl.getParameter(SAMPLES) khi đang gắn khung đệm của composer. Con số này
+  KHÔNG thể nói dối — 0 nghĩa là không khử răng cưa, dù mã nguồn có khai gì đi nữa.
+  MAX_SAMPLES in kèm để biết trần của MÁY, phân biệt "ta xin thấp" với "máy chỉ có thế".
+*/
+if (postFx) {
+  const gl = renderer.getContext();
+  const rt = postFx.composer.renderTarget1;
+  const truoc = renderer.getRenderTarget();
+  renderer.setRenderTarget(rt);
+  const thuc = gl.getParameter(gl.SAMPLES);
+  renderer.setRenderTarget(truoc);
+  console.log('[aa] khai=' + rt.samples + ' · cap phat THAT=' + thuc
+    + ' · tran cua may MAX_SAMPLES=' + gl.getParameter(gl.MAX_SAMPLES)
+    + (thuc > 0 ? ' ⇒ CO khu rang cua' : ' ⇒ KHONG khu rang cua'));
+}
 
 if (BENCH > 0) {
   // ⚠️ PHẢI ÉP ỐNG DẪN HOÀN TẤT TRƯỚC KHI BẤM GIỜ DỪNG. WebGL xếp lệnh không đồng bộ, nên đo trần

@@ -53,6 +53,14 @@ import { OutputPass } from 'three/examples/jsm/postprocessing/OutputPass.js';
  * ~0,5 does not separate "a lamp" from "a bright wall", it selects BOTH. The threshold is what
  * decides WHAT glows; the strength only decides how much. Fix the threshold first, always.
  */
+/**
+ * Số mẫu mỗi điểm ảnh của khung đệm hậu kỳ (MSAA). Round 55, Việc 1.
+ * Xem khối cảnh báo lớn ở chỗ dựng `target` trong `createPostFx` — nó giải thích vì sao cờ
+ * `antialias` của `WebGLRenderer` đã mất tác dụng từ vòng 52, và vì sao số này phải đặt CAO.
+ * three tự kẹp xuống `gl.MAX_SAMPLES`, nên đây là "xin tối đa", không phải "ép phần cứng".
+ */
+export const MSAA_SAMPLES = 8;
+
 export const POST_PROFILE = Object.freeze({
   day:   { bloom: 0.26, threshold: 1.05, radius: 0.40, ao: 0.62, rays: 0.34, grain: 0.018, vignette: 0.22 },
   golden:{ bloom: 0.42, threshold: 0.92, radius: 0.52, ao: 0.70, rays: 0.85, grain: 0.024, vignette: 0.28 },
@@ -334,7 +342,35 @@ export function createPostFx({
    * ⚠️ HALF FLOAT. Bloom needs values ABOVE 1 to know what is bright — in an 8-bit buffer a forge
    * fire and a whitewashed wall are both 1,0 and the threshold has nothing left to separate.
    */
-  const target = new WebGLRenderTarget(w, h, { type: HalfFloatType });
+  /*
+    ══════════════════════════════════════════════════════════════════════════════════════════════
+    ⚠️ `samples` — KHỬ RĂNG CƯA. ROUND 55, VIỆC 1. ĐỌC CẢ KHỐI NÀY TRƯỚC KHI ĐỘNG VÀO DÒNG DƯỚI.
+    ══════════════════════════════════════════════════════════════════════════════════════════════
+    Phát hiện của Đàm, và nó đúng: `CityScene3D.jsx` khai `antialias: true` lúc dựng `WebGLRenderer`,
+    nhưng **từ vòng 52 cảnh không còn vẽ thẳng ra màn hình nữa**. Nó vẽ vào khung đệm của
+    `EffectComposer`, và một `WebGLRenderTarget` mặc định `samples: 0` — tức KHÔNG đa mẫu. Cái cờ
+    `antialias` chỉ áp cho khung đệm mặc định của canvas, mà thứ duy nhất còn vẽ vào đó là một tấm
+    quad phủ kín màn hình của `OutputPass` — một hình chữ nhật không có cạnh chéo nào để khử.
+    ⇒ **Ba vòng liền (52 · 53 · 54) mọi mép mái, mép cột, viền người đều là bậc thang**, trong khi
+    một dòng mã nói rằng đã khử răng cưa. Đây đúng họ bài học *"một câu tự trấn an phải được kiểm
+    như một con số"* — chỉ khác là lần này câu trấn an là một tham số của thư viện.
+
+    ⚠️ VÀ CÔNG CỤ CHỤP ẢNH KHÔNG NÓI DỐI — đã kiểm, và câu trả lời quan trọng hơn bản vá.
+    `scripts/city-preview.mjs` **gọi đúng `createPostFx` của file này** (dòng import ở đầu nó), nên
+    nó mang y hệt khuyết tật. Nghĩa là mọi ảnh nghiệm thu từ vòng 52 tới nay **xấu đúng bằng** thứ
+    Đàm nhìn trên máy, không xấu hơn và không đẹp hơn. Nếu công cụ ấy đã tự dựng lấy một chuỗi hậu
+    kỳ riêng thì ba vòng ảnh vừa qua đã là bằng chứng giả — đó là lý do phải kiểm trước khi vá.
+
+    ⚠️ `8` KHÔNG PHẢI MỘT CON SỐ MẠO HIỂM: three tự kẹp xuống `gl.MAX_SAMPLES` của phần cứng
+    (`WebGLRenderer`: `Math.min(capabilities.maxSamples, renderTarget.samples)`), nên máy chỉ hỗ trợ
+    4 sẽ nhận 4, không lỗi và không cảnh báo. Đặt cao là cách duy nhất để máy MẠNH của Đàm dùng hết
+    những gì nó có, đúng lệnh ngân sách của vòng 55.
+    ⚠️ ĐỪNG BỎ `HalfFloatType` để "cho nhẹ": đa mẫu và dải động là hai chuyện khác nhau, và bỏ nửa
+    thực thì bloom mất ngưỡng (xem khối ngay trên).
+    ⚠️ ĐỆM ĐỘ SÂU BÊN DƯỚI CỐ Ý KHÔNG ĐA MẪU: nó được ĐỌC theo từng điểm ảnh cho xoá phông và che
+    khuất, không được NHÌN. Đa mẫu ở đó chỉ thêm một lượt phân giải mà không đổi một điểm ảnh nào.
+  */
+  const target = new WebGLRenderTarget(w, h, { type: HalfFloatType, samples: MSAA_SAMPLES });
   const composer = new EffectComposer(renderer, target);
   composer.setSize(w, h);
 

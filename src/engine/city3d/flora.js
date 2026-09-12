@@ -85,7 +85,10 @@ const SHADE = 'leaf2';
  * ⚠️ VÀ NÓ KHÔNG LÀM TÁN TO RA: bán kính ngoại tiếp là `0,5 / cos(π/n)`, giảm khi `n` tăng
  * (6 cạnh → 0,57735 · 10 cạnh → 0,52573 · 13 cạnh → 0,51494). Thêm cạnh chỉ làm khối NHỎ đi.
  */
-const LOBE_SIDES_MIN = 10;
+// ⚠️ ROUND 55, VIỆC 2: 10 → 24. Vòng 54 chọn 10 vì đó là ngưỡng TỐI THIỂU để vượt góc gãy 40°
+// (360/10 = 36°) — tức nó mua được phần TÔ SÁNG mềm và dừng đúng ở đó. Viền ngoài một thuỳ tán ở
+// 10 nhịp vẫn còn đọc ra được ở tầm mắt. 24 đưa nó xuống 15° mỗi nhịp.
+const LOBE_SIDES_MIN = 24;
 const lobeSides = (key, spread = 4) => LOBE_SIDES_MIN + pickIndex(key, spread);
 
 /** Cây tán rộng: sồi, bàng, cây đầu làng. Loài phổ thông nhất, tán tròn lồi lõm. */

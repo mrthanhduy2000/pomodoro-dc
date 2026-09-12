@@ -25,7 +25,7 @@
  */
 
 import { unit, signed, pickIndex } from '../hashId';
-import { prism, countSpecTriangles, specHeight } from './parts';
+import { SIDES_PROP, countSpecTriangles, prism, specHeight } from './parts';
 import { growEraTree } from './flora';
 import { buildGroundCover } from './groundCover';
 import { COVER_KINDS, getGroundCoverStyle } from './groundCoverStyle';
@@ -173,8 +173,8 @@ function lamp(seed, era, detail) {
   }
 
   // Đèn phố hiện đại: cột trơn cao, cần vươn ngang, chao đèn dẹt hướng xuống.
-  parts.push(prism({ y: 0, w: 0.065, h: 0.045, sides: 8, taper: 0.75, role: 'stone' }));
-  parts.push(prism({ y: 0.04, w: 0.036, h: 0.46, sides: 8, taper: 0.92, role: 'stone' }));
+  parts.push(prism({ y: 0, w: 0.065, h: 0.045, sides: SIDES_PROP, taper: 0.75, role: 'stone' }));
+  parts.push(prism({ y: 0.04, w: 0.036, h: 0.46, sides: SIDES_PROP, taper: 0.92, role: 'stone' }));
   parts.push(prism({ x: 0.08 + skew, y: 0.48, w: 0.19, d: 0.03, h: 0.028, sides: 4, role: 'stone' }));
   parts.push(prism({ x: 0.16 + skew, y: 0.445, w: 0.11, d: 0.06, h: 0.035, sides: 4, taper: 0.7, role: 'gold' }));
   return parts;
@@ -409,7 +409,7 @@ function brazier(seed, era) {
   const parts = [];
   if (eraNum >= 12) {
     // the oil drum of a besieged street
-    parts.push(prism({ y: 0, w: 0.16, h: 0.24, sides: 8, taper: 1, role: 'dark' }));
+    parts.push(prism({ y: 0, w: 0.16, h: 0.24, sides: SIDES_PROP, taper: 1, role: 'dark' }));
     parts.push(prism({ y: 0.22, w: 0.11, h: 0.17, sides: 5, taper: 0, role: 'flame', tag: 'fire' }));
     return parts;
   }
@@ -417,7 +417,7 @@ function brazier(seed, era) {
     const a = (i / 3) * Math.PI * 2 + signed(`${seed}|a`) * 0.3;
     parts.push(prism({ x: Math.cos(a) * 0.07, z: Math.sin(a) * 0.07, y: 0, w: 0.02, h: 0.26, sides: 4, rz: 0.22, ry: a, role: 'dark' }));
   }
-  parts.push(prism({ y: 0.24, w: 0.2, h: 0.07, sides: 8, taper: 0.55, role: 'dark' }));   // the bowl
+  parts.push(prism({ y: 0.24, w: 0.2, h: 0.07, sides: SIDES_PROP, taper: 0.55, role: 'dark' }));   // the bowl
   parts.push(prism({ y: 0.29, w: 0.11, h: 0.17, sides: 5, taper: 0, role: 'flame', tag: 'fire' }));
   return parts;
 }
@@ -438,8 +438,8 @@ function forge(seed, era, detail) {
 function well(seed, era, detail) {
   const eraNum = Number.isFinite(era) ? era : 3;
   const parts = [];
-  parts.push(prism({ y: 0, w: 0.26, h: 0.16, sides: 8, role: 'stone' }));
-  parts.push(prism({ y: 0.16, w: 0.28, h: 0.03, sides: 8, taper: 1, role: 'stone' }));
+  parts.push(prism({ y: 0, w: 0.26, h: 0.16, sides: SIDES_PROP, role: 'stone' }));
+  parts.push(prism({ y: 0.16, w: 0.28, h: 0.03, sides: SIDES_PROP, taper: 1, role: 'stone' }));
   if (detail !== 'low' && eraNum >= 4) {
     for (const sx of [-1, 1]) parts.push(prism({ x: sx * 0.12, y: 0.16, w: 0.03, h: 0.3, sides: 4, role: 'wood' }));
     parts.push(prism({ y: 0.45, w: 0.34, d: 0.3, h: 0.1, sides: 4, taper: 0, role: 'roof' }));
@@ -452,7 +452,7 @@ function barrels(seed, _era, detail) {
   const parts = [];
   const n = detail === 'low' ? 2 : 3;
   for (let i = 0; i < n; i += 1) {
-    parts.push(prism({ x: (i - 1) * 0.13 + signed(`${seed}|x${i}`) * 0.03, z: signed(`${seed}|z${i}`) * 0.05, y: 0, w: 0.11, h: 0.15, sides: 8, taper: 0.92, role: 'wood' }));
+    parts.push(prism({ x: (i - 1) * 0.13 + signed(`${seed}|x${i}`) * 0.03, z: signed(`${seed}|z${i}`) * 0.05, y: 0, w: 0.11, h: 0.15, sides: SIDES_PROP, taper: 0.92, role: 'wood' }));
   }
   return parts;
 }
@@ -485,14 +485,14 @@ function cart(seed, era, detail) {
     parts.push(prism({ y: 0.05, w: 0.34, d: 0.16, h: 0.08, sides: 4, role: 'trim' }));
     parts.push(prism({ x: -0.02, y: 0.13, w: 0.18, d: 0.14, h: 0.08, sides: 4, taper: 0.7, role: 'glass' }));
     for (const [sx, sz] of [[-1, -1], [1, -1], [-1, 1], [1, 1]]) {
-      parts.push(prism({ x: sx * 0.11, z: sz * 0.085, y: 0.0, w: 0.09, h: 0.03, sides: 8, rx: Math.PI / 2, role: 'dark' }));
+      parts.push(prism({ x: sx * 0.11, z: sz * 0.085, y: 0.0, w: 0.09, h: 0.03, sides: SIDES_PROP, rx: Math.PI / 2, role: 'dark' }));
     }
     return parts;
   }
   // a wooden cart: bed, two big wheels, shafts
   parts.push(prism({ y: 0.09, w: 0.32, d: 0.2, h: 0.05, sides: 4, role: 'wood' }));
   for (const sz of [-1, 1]) {
-    parts.push(prism({ z: sz * 0.115, y: 0.0, w: 0.16, h: 0.025, sides: 8, rx: Math.PI / 2, role: 'wood' }));
+    parts.push(prism({ z: sz * 0.115, y: 0.0, w: 0.16, h: 0.025, sides: SIDES_PROP, rx: Math.PI / 2, role: 'wood' }));
   }
   parts.push(prism({ x: 0.28, y: 0.09, w: 0.24, d: 0.03, h: 0.03, sides: 4, role: 'wood' }));
   if (detail !== 'low') {

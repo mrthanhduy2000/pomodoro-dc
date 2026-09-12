@@ -59,7 +59,7 @@
  * trình chính.
  */
 
-import { prism } from './parts';
+import { SIDES_ROUND, prism } from './parts';
 import { unit } from '../hashId';
 import { isValidRoofStyle } from './roofStyle.js';
 import { CELL_PIXELS, EYE_PIXELS } from './streetStyle.js';
@@ -516,14 +516,14 @@ function emitTank(out, a, ctx) {
       }
     }
     out.push(prism({
-      x: cx, z: cz, y: a.deck.y + legH, w, d: w, h: bodyH, sides: 8, taper: 0.94, role: 'wood',
+      x: cx, z: cz, y: a.deck.y + legH, w, d: w, h: bodyH, sides: SIDES_ROUND, taper: 0.94, role: 'wood',
     }));
     if (plain) continue;
     // Đai sắt — hai vòng thít quanh thùng. Bỏ ở nhà dân (ngân sách LOD phải cắn).
     for (const t of [0.28, 0.7]) {
       out.push(prism({
         x: cx, z: cz, y: a.deck.y + legH + bodyH * t, w: w * 1.05, d: w * 1.05,
-        h: bodyH * 0.07, sides: 8, role: 'trim',
+        h: bodyH * 0.07, sides: SIDES_ROUND, role: 'trim',
       }));
     }
   }

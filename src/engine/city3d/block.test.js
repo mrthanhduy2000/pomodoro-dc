@@ -504,22 +504,38 @@ test('CHI TIẾT MÁI KHÔNG ĐƯỢC CHẾT — và danh sách kỷ mất một
       `tag`…) mà bảng kia mù.
   Hai bảng, hai câu hỏi khác nhau — đúng luật "một trường không gánh hai việc" của dự án này.
 */
+/*
+  ⚠️ ROUND 55, VIỆC 2 — THÁI LẠI 9/15, VÀ SÁU KỶ ĐỨNG YÊN LÀ BẰNG CHỨNG PHẠM VI.
+  Việc 2 đổi số cạnh KHAI Ở CHỖ GỌI: `sides: 8` → `SIDES_ROUND` (48) cho cột · ống khói · chóp nón,
+  `sides: 12` → `SIDES_DOME` (72) cho mái vòm. `sides` là một trường NẰM TRONG `spec.parts`, nên hai
+  chữ ký dưới đây đổi — đúng như hợp đồng của chúng, vì HÌNH đã đổi thật.
+  Sáu kỷ không đổi (3 · 5 · 8 · 10 · 12 · 14) là sáu kỷ không có khối tròn nào trong bộ công trình.
+
+  ⚠️ VÀ ĐÂY LÀ PHẦN PHẢI ĐỌC: **KHÔNG MỘT KHỐI NÀO XÊ DỊCH.** Không suy đoán — đo theo đúng cách
+  vòng 54 đặt ra, trên hai cây mã (`git worktree` ở `c5820d5` và cây đang làm việc), băm `spec.parts`
+  sau khi **bỏ đúng trường `sides`**: trùng từng byte ở **cả 15 kỷ**. Vị trí, kích thước, vai màu,
+  thẻ — không gì nhúc nhích. Bốn cổng ADR-007 thật (hai bài ở file này, hai bài ở `cityPlan.test.js`)
+  đều xanh suốt.
+  ⚠️ Và thêm cạnh chỉ làm khối NHỎ ĐI (bán kính ngoại tiếp `0,5/cos(π/n)` giảm đơn điệu: 8 cạnh
+  0,54120 → 48 cạnh 0,50107 → 72 cạnh 0,50048), nên hình bao co lại chứ không nở — an toàn theo CẤU
+  TRÚC, không nhờ một cái kẹp.
+*/
 const GOLDEN = {
-  1: 'e37d0f2d69611808dad47eda64aa7d23',
-  2: '3e66f4ffe10c91a02b38cffd5f431be5',
+  1: '7e860eb8723b246a75352c2dc991883b',
+  2: '4461f1c695767dba5d1699d018b03d4f',
   3: '8e2ab6e4cae586d3f6f150d7aa3b2029',
-  4: '4b86731192d19516a9360b7dc71890ae',
+  4: 'c2398f85fd8ca47eccbf8b1ba4375afe',
   5: '1f3d376a1be05dd472a9b4cb491f6bce',
-  6: 'a97061cf5842e397ce5243944eacd7ef',
-  7: 'e695a3000a966d735d8d70377312089d',
+  6: 'ddb271952a86706dd7429d7f76efcee3',
+  7: '365b0f252112603e2bbbc2cf6fbb67a2',
   8: 'abfa76b38434a163a7b1071dbc4714d1',
-  9: '07c7478f57a3050bd9cefde565df92c5',
+  9: '0763e58479c654faf1e0cff6179e943b',
   10: '8de77726555fd9a04716af097940a403',
-  11: '8fde66bfed92defe9ee4f084828cd69f',
+  11: 'b566ed705afad32dbf077a43f14bf980',
   12: '46367dc98da3a4d9b6cd3e60928b8347',
-  13: 'c582a58f3f1fa83104b5a8ea1b9a6460',
+  13: 'c80cca42a1c662bfdb7f9f5b04478be3',
   14: '8d095a81ba06f4dfefcc7d8767d61624',
-  15: 'ff7c4324f3b7a6a932306c5e9fac738a',
+  15: 'fa1264fd84bd21ea6aca45165c1007d6',
 };
 
 /**
@@ -529,21 +545,21 @@ const GOLDEN = {
  * thao tác cho hết đỏ: phải chỉ ra khối nào, ở kỷ nào, và vì sao việc ấy là cố ý.
  */
 const GOLDEN_KHOI = {
-  1: 'b0a434cb4c644e6295dc1c88c8f68834',
-  2: 'ff5ee056cdf864e3db7dfb012aa8beb4',
+  1: 'be4d0594f7a83dbdbd95555031d426b9',
+  2: '2a35da28ba30a9ad8754948acb597640',
   3: 'd5266982f0e9bc84ffb9eb95899b5a44',
-  4: 'aa7b629deeda5c4fcebd8675a39d895e',
+  4: '32e5bb43a13685a29bb7750cddaabdf4',
   5: 'cf6333c399f057f2992ad4a3a41d6913',
-  6: '7cf0de0a1fa5c112ae6c1a207f0e6a43',
-  7: '79984ce7a2d926896d6acd75901e372d',
+  6: '47c8ed13bffc3ee640acecef14aa3120',
+  7: '66ff4c813d2e8b44bf60e8fea4033d16',
   8: '602987b9df464253d5b0aae6f443639e',
-  9: '190d75db6efff6dfb58050ba2eb00f5e',
+  9: '8507d1bbc6465d030bdab8fa91316c2f',
   10: '6f0738715110a2489602f829ff859e20',
-  11: 'e505731e15c326b64c4673c4bd1e00b0',
+  11: '2e2ad158d59af6bb7cb4d0b3eaec00db',
   12: '49d80e00468e72c38f1d2718c4b2d5ab',
-  13: '3f2dfc96a6cba344bef8c92e3c136b37',
+  13: '73659aedcb47d59e44c70e5e6928298e',
   14: '8db75e65418efceb0fbd3e53ff28e7ce',
-  15: '6799e0cb2fa40ca866783b95ba3383ac',
+  15: '4ba29d9334cead8092736108c2d553b0',
 };
 
 test('GOLDEN — thêm tham số `plot` KHÔNG được đổi một chữ số nào của lối gọi cũ', () => {

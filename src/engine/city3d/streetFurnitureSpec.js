@@ -22,7 +22,7 @@
  * does not.
  */
 import { unit, signed } from '../hashId';
-import { prism } from './parts';
+import { SIDES_PROP, prism } from './parts';
 
 /** A short post: a hitching post, a boundary stake. The oldest piece of street furniture there is. */
 function post(seed, era) {
@@ -111,8 +111,8 @@ function milestone(seed) {
   const h = 0.24 + unit(`${seed}|h`) * 0.06;
   return [
     prism({ y: 0, w: 0.14, h: 0.04, sides: 4, taper: 0.9, role: 'stone' }),
-    prism({ y: 0.04, w: 0.10, h, sides: 8, taper: 0.94, role: 'stone' }),
-    prism({ y: h + 0.04, w: 0.11, h: 0.02, sides: 8, taper: 0.6, role: 'stone' }),
+    prism({ y: 0.04, w: 0.10, h, sides: SIDES_PROP, taper: 0.94, role: 'stone' }),
+    prism({ y: h + 0.04, w: 0.11, h: 0.02, sides: SIDES_PROP, taper: 0.6, role: 'stone' }),
     // the cut face, a shade darker: the only thing that says "there is writing on this"
     prism({ z: -0.045, y: 0.10, w: 0.06, d: 0.012, h: 0.10, sides: 4, role: 'dark' }),
   ];
@@ -145,8 +145,8 @@ function trough(seed, era) {
   if (eraNum === 6) {
     // a glazed water jar, the thing that actually stands at a Hanoi alley mouth
     return [
-      prism({ y: 0, w: 0.15, h: 0.20, sides: 8, taper: 0.72, role: 'trim' }),
-      prism({ y: 0.20, w: 0.12, h: 0.03, sides: 8, taper: 1, role: 'dark' }),
+      prism({ y: 0, w: 0.15, h: 0.20, sides: SIDES_PROP, taper: 0.72, role: 'trim' }),
+      prism({ y: 0.20, w: 0.12, h: 0.03, sides: SIDES_PROP, taper: 1, role: 'dark' }),
     ];
   }
   return [
@@ -179,9 +179,9 @@ function bin(seed, era) {
 function gaslamp(seed, era, detail) {
   const h = 0.62 + unit(`${seed}|h`) * 0.10;
   const parts = [
-    prism({ y: 0, w: 0.10, h: 0.05, sides: 8, taper: 0.72, role: 'stone' }),
-    prism({ y: 0.05, w: 0.055, h: 0.08, sides: 8, taper: 0.82, role: 'iron' }),
-    prism({ y: 0.13, w: 0.038, h, sides: 8, taper: 0.9, role: 'iron' }),
+    prism({ y: 0, w: 0.10, h: 0.05, sides: SIDES_PROP, taper: 0.72, role: 'stone' }),
+    prism({ y: 0.05, w: 0.055, h: 0.08, sides: SIDES_PROP, taper: 0.82, role: 'iron' }),
+    prism({ y: 0.13, w: 0.038, h, sides: SIDES_PROP, taper: 0.9, role: 'iron' }),
   ];
   if (detail !== 'low') {
     // the lamplighter's ladder bar — the detail that dates the lamp to gas rather than electricity
@@ -224,10 +224,10 @@ function manhole() {
 /** A fire hydrant: 1801 Philadelphia, and unmistakable ever since. */
 function hydrant() {
   return [
-    prism({ y: 0, w: 0.10, h: 0.025, sides: 8, taper: 0.82, role: 'iron' }),
-    prism({ y: 0.025, w: 0.075, h: 0.16, sides: 8, taper: 0.9, role: 'iron' }),
-    prism({ y: 0.185, w: 0.09, h: 0.022, sides: 8, taper: 0.7, role: 'iron' }),
-    prism({ y: 0.207, w: 0.05, h: 0.035, sides: 8, taper: 0.5, role: 'iron' }),
+    prism({ y: 0, w: 0.10, h: 0.025, sides: SIDES_PROP, taper: 0.82, role: 'iron' }),
+    prism({ y: 0.025, w: 0.075, h: 0.16, sides: SIDES_PROP, taper: 0.9, role: 'iron' }),
+    prism({ y: 0.185, w: 0.09, h: 0.022, sides: SIDES_PROP, taper: 0.7, role: 'iron' }),
+    prism({ y: 0.207, w: 0.05, h: 0.035, sides: SIDES_PROP, taper: 0.5, role: 'iron' }),
     // the two side outlets: the silhouette nobody mistakes for anything else
     prism({ x: 0.05, y: 0.11, w: 0.05, d: 0.035, h: 0.035, sides: 6, ry: Math.PI / 2, role: 'dark' }),
     prism({ x: -0.05, y: 0.11, w: 0.05, d: 0.035, h: 0.035, sides: 6, ry: Math.PI / 2, role: 'dark' }),
@@ -255,8 +255,8 @@ function streetlight(seed, era) {
   const eraNum = Number.isFinite(era) ? era : 11;
   const h = (eraNum === 15 ? 0.98 : 0.78) + unit(`${seed}|h`) * 0.12;
   const parts = [
-    prism({ y: 0, w: 0.085, h: 0.035, sides: 8, taper: 0.8, role: 'stone' }),
-    prism({ y: 0.035, w: 0.05, h, sides: 8, taper: 0.88, role: 'iron' }),
+    prism({ y: 0, w: 0.085, h: 0.035, sides: SIDES_PROP, taper: 0.8, role: 'stone' }),
+    prism({ y: 0.035, w: 0.05, h, sides: SIDES_PROP, taper: 0.88, role: 'iron' }),
   ];
   if (eraNum === 12) {
     // the Soviet swan-neck: a stepped curve rather than a straight arm
@@ -292,7 +292,7 @@ function utilitypole(seed, era, detail) {
   const eraNum = Number.isFinite(era) ? era : 13;
   const h = 0.92 + unit(`${seed}|h`) * 0.14;
   const parts = [
-    prism({ y: 0, w: 0.055, h, sides: 8, taper: 0.86, role: eraNum === 12 ? 'wood' : 'trim' }),
+    prism({ y: 0, w: 0.055, h, sides: SIDES_PROP, taper: 0.86, role: eraNum === 12 ? 'wood' : 'trim' }),
   ];
   const arms = detail === 'low' ? 1 : (eraNum === 13 ? 3 : 2);
   for (let i = 0; i < arms; i += 1) {
@@ -306,7 +306,7 @@ function utilitypole(seed, era, detail) {
   }
   // the transformer drum: era 13's poles carry one, and it is half of their silhouette
   if (eraNum === 13 && detail !== 'low') {
-    parts.push(prism({ x: 0.055, y: h - 0.34, w: 0.08, h: 0.13, sides: 8, taper: 0.94, role: 'trim' }));
+    parts.push(prism({ x: 0.055, y: h - 0.34, w: 0.08, h: 0.13, sides: SIDES_PROP, taper: 0.94, role: 'trim' }));
   }
   return parts;
 }

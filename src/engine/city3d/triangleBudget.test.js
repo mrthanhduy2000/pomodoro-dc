@@ -140,22 +140,34 @@ const CO_BE = new Set(['building', 'scaffold', 'dwelling']);
   *"cây tròn"*. Bảng này vì thế không còn là một cái phanh — nó là một cuốn SỔ: nó bắt bất kỳ thay
   đổi nào KHÔNG ai chủ ý, và in ra cái giá của mọi thay đổi có chủ ý.
 */
+/*
+  ⚠️ ROUND 55, VIỆC 2 — THÁI LẠI CẢ 15/15. Số cạnh khai ở chỗ gọi đi lên đồng loạt: cột · ống khói ·
+  chóp nón 8 → 48, mái vòm 12 → 72, đồ vật 8 → 32, thuỳ tán cây 10 → 24, cơ thể 20 → 60.
+  Mức tăng đọc thẳng ra "kỷ này có bao nhiêu thứ TRÒN":
+      kỷ 1  +94,0% (151.010 → 292.874) — Göbekli Tepe: cột đá tròn là toàn bộ kiến trúc của nó
+      kỷ 12 +43,8% · kỷ 11 +49,2% · kỷ 5 +43,1% · kỷ 4 +56,0% · kỷ 7 +52,0% · kỷ 13 +44,5%
+      kỷ 2  +25,4% — Ai Cập: kim tự tháp và tường phẳng, ít thứ tròn nhất
+  ⚠️ ĐÂY LÀ KHOẢN CHI LỚN NHẤT TỪ TRƯỚC TỚI NAY, VÀ LÀ KHOẢN CÓ Ý THỨC. Lệnh ngân sách của vòng 55:
+  *"Số cạnh cứ tăng lên gấp nhiều lần nếu ảnh đẹp hơn … Không đo hiệu năng, không đếm tam giác để
+  xin phép."* Bảng này vì thế không phải cái phanh — nó là cuốn SỔ: nó bắt mọi thay đổi KHÔNG ai chủ
+  ý, và in ra cái giá của mọi thay đổi có chủ ý.
+*/
 const MOC_TAM_GIAC = {
-  1: 151010,
-  2: 145534,
-  3: 154204,
-  4: 289514,
-  5: 209540,
-  6: 321508,
-  7: 271152,
-  8: 218602,
-  9: 245932,
-  10: 209350,
-  11: 236482,
-  12: 182424,
-  13: 272652,
-  14: 243300,
-  15: 166926,
+  1: 292874,
+  2: 182462,
+  3: 194204,
+  4: 451658,
+  5: 299884,
+  6: 447892,
+  7: 412032,
+  8: 282826,
+  9: 336716,
+  10: 271462,
+  11: 352738,
+  12: 262272,
+  13: 394028,
+  14: 350356,
+  15: 205774,
 };
 
 /** Số BỆ KÈ của từng kỷ — tách riêng vì nó là hàm của ĐỊA HÌNH, không của kiến trúc. */

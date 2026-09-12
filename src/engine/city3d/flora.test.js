@@ -184,7 +184,10 @@ test('NGÂN SÁCH TAM GIÁC: một cái cây không được đắt hơn một c
         worst = Math.max(worst, countSpecTriangles(parts));
       }
       if (worst > nang.tri) nang = { species, detail, tri: worst };
-      assert.ok(worst <= 900,
+      // ⚠️ ROUND 55, VIỆC 2: 900 → 2.600. Thuỳ tán đi từ 10 lên 24 cạnh ⇒ loài nặng nhất (`banyan`)
+      // 616 → **1.288 tam giác/cây**. Cùng lý lẽ với trần cư dân: nâng SỐ, giữ VIỆC. 2.600 ≈ 2× mức
+      // thật — vẫn bắt được một vòng lặp thuỳ không có điểm dừng, thứ nhân lên chứ không gấp đôi.
+      assert.ok(worst <= 2600,
         `"${species}" (${detail}) tốn tới ${worst} tam giác cho MỘT cái cây`);
     }
   }

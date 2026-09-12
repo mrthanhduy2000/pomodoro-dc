@@ -902,8 +902,19 @@ test('⚠️ NGÂN SÁCH TAM GIÁC CƯ DÂN — chấm TỪNG KỶ trên cảnh 
     bảng này, và vẫn đỏ ngay nếu ai đó dựng một cư dân trong một vòng lặp lồng nhầm.
     ⚠️ Con số 5.124 được IN RA ở dòng dưới mỗi lần chạy — nó là phép đo, cái trần chỉ là cái lưới.
   */
-  assert.ok(tệNhất.tri <= 12000,
-    `kỷ ${tệNhất.era} dựng ${tệNhất.tri} tam giác/người — vượt trần tuyệt đối 12.000`);
+  /*
+    ⚠️ ROUND 55, VIỆC 2: 12.000 → 40.000. Cư dân đi từ 20 lên **60 cạnh** (`ROUND_SIDES`), nên mỗi
+    khuôn tiện tròn đắt gấp ba: 5.124 → **15.524 tam giác/người** ở kỷ nặng nhất.
+    Đàm ra lệnh ngân sách cho cả vòng 55: *"Số cạnh cứ tăng lên gấp nhiều lần nếu ảnh đẹp hơn. Trần
+    nào chắn đường thì NÂNG hoặc XOÁ, kể cả trần trong test."* — nhưng cùng câu ấy giữ lại đúng một
+    thứ: *"đừng xoá cái máy dò chạy loạn"*.
+    ⇒ Nên con số lên, CÔNG VIỆC của nó giữ nguyên: 40.000 ≈ 2,6× mức thật, đủ chỗ cho Phần B của
+    vòng này (mặt, tóc, thân liền) mà vẫn đỏ ngay nếu ai đó dựng cư dân trong một vòng lặp lồng nhầm
+    — thứ ấy nhân lên theo BỘI, không nhích lên 2–3 lần.
+    ⚠️ Con số thật được IN RA ở dòng dưới mỗi lần chạy. Cái trần là cái lưới; dòng log mới là phép đo.
+  */
+  assert.ok(tệNhất.tri <= 40000,
+    `kỷ ${tệNhất.era} dựng ${tệNhất.tri} tam giác/người — vượt trần tuyệt đối 40.000`);
 
   console.log(`[cư dân] 15 kỷ · ca xấu nhất kỷ ${tệNhất.era}: ${tệNhất.tri} tam giác/người`
     + ` × ${MAX_RESIDENTS} = ${(tệNhất.tyLe * 100).toFixed(2)}% cảnh (trần`

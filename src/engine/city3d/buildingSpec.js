@@ -21,7 +21,7 @@ import { emitMonolithStair, emitWonderEntrance } from './wonderEntrance';
 import { emitRooftop } from './rooftop';
 import { getGroundFloor } from './groundFloorStyle';
 import { getRoofStyle } from './roofStyle';
-import { gable, prism, countSpecTriangles, specHeight, specSpan } from './parts';
+import { SIDES_DOME, SIDES_ROUND, countSpecTriangles, gable, prism, specHeight, specSpan } from './parts';
 import { getEraStyle, getVernacularStyle, eaveOverhang } from './eraStyle';
 import { getArchetype, getMassing, getMotifBudget, getRarityScale } from './archetypes';
 import { emitSignature } from './signature';
@@ -175,7 +175,7 @@ export function emitRoof(out, { w, d, top, x, z }, style, ctx) {
 
   switch (style.roof) {
     case 'cone':
-      out.push(prism({ x, z, y: top, w: rw, d: rd, h: pitch, sides: 8, taper: 0, role: 'roof' }));
+      out.push(prism({ x, z, y: top, w: rw, d: rd, h: pitch, sides: SIDES_ROUND, taper: 0, role: 'roof' }));
       anchors.apexY = top + pitch;
       break;
 
@@ -325,15 +325,15 @@ export function emitRoof(out, { w, d, top, x, z }, style, ctx) {
       const drum = Math.min(w, d) * 0.78;
       const cornice = pitch * 0.26;
       // Round 47 (ADR-087): 8 → 12 sides. An octagon reads as a lantern; a 12-gon reads as a dome.
-      out.push(prism({ x, z, y: top, w: drum * 1.12, d: drum * 1.12, h: cornice * 0.5, sides: 12, role: 'trim' }));
-      out.push(prism({ x, z, y: top + cornice * 0.5, w: drum, d: drum, h: cornice, sides: 12, role: 'trim' }));
+      out.push(prism({ x, z, y: top, w: drum * 1.12, d: drum * 1.12, h: cornice * 0.5, sides: SIDES_DOME, role: 'trim' }));
+      out.push(prism({ x, z, y: top + cornice * 0.5, w: drum, d: drum, h: cornice, sides: SIDES_DOME, role: 'trim' }));
       out.push(prism({
         x, z, y: top + cornice * 1.5, w: drum * 1.04, d: drum * 1.04, h: pitch * 0.42,
-        sides: 12, taper: 0.82, role: 'roof',
+        sides: SIDES_DOME, taper: 0.82, role: 'roof',
       }));
       out.push(prism({
         x, z, y: top + cornice * 1.5 + pitch * 0.42, w: drum * 0.85, d: drum * 0.85, h: pitch * 0.46,
-        sides: 12, taper: 0.24, role: 'roof',
+        sides: SIDES_DOME, taper: 0.24, role: 'roof',
       }));
       out.push(prism({
         x, z, y: top + cornice * 1.5 + pitch * 0.88, w: drum * 0.2, d: drum * 0.2, h: pitch * 0.3,
@@ -607,7 +607,7 @@ function emitMotif(out, name, ctx) {
         const t = (i / (count - 1)) - 0.5;
         out.push(prism({
           x: x + t * w * 0.82, z: z + d / 2 + 0.06, y: base,
-          w: 0.075, h: (top - base) * 0.86, sides: 8, taper: 0.86, role: 'trim',
+          w: 0.075, h: (top - base) * 0.86, sides: SIDES_ROUND, taper: 0.86, role: 'trim',
         }));
       }
       break;
@@ -651,7 +651,7 @@ function emitMotif(out, name, ctx) {
     case 'dish':
       out.push(prism({
         x: x - w * 0.26, z: z + d * 0.2, y: top, w: 0.18, h: 0.07,
-        sides: 8, taper: 0.35, ry: r('a') * Math.PI, role: 'trim',
+        sides: SIDES_ROUND, taper: 0.35, ry: r('a') * Math.PI, role: 'trim',
       }));
       break;
     case 'spire':
@@ -713,8 +713,8 @@ function emitMotif(out, name, ctx) {
       }
       break;
     case 'granary':
-      out.push(prism({ x: x - w * 0.62, z: z + d * 0.3, y: base, w: 0.2, h: 0.26, sides: 8, role: 'wood' }));
-      out.push(prism({ x: x - w * 0.62, z: z + d * 0.3, y: base + 0.26, w: 0.24, h: 0.16, sides: 8, taper: 0, role: 'roof' }));
+      out.push(prism({ x: x - w * 0.62, z: z + d * 0.3, y: base, w: 0.2, h: 0.26, sides: SIDES_ROUND, role: 'wood' }));
+      out.push(prism({ x: x - w * 0.62, z: z + d * 0.3, y: base + 0.26, w: 0.24, h: 0.16, sides: SIDES_ROUND, taper: 0, role: 'roof' }));
       break;
     case 'boulder':
       for (let i = 0; i < 3; i += 1) {
@@ -726,7 +726,7 @@ function emitMotif(out, name, ctx) {
       }
       break;
     case 'firepit':
-      out.push(prism({ x: x + w * 0.6, z: z + d * 0.5, y: base, w: 0.16, h: 0.05, sides: 8, role: 'stone' }));
+      out.push(prism({ x: x + w * 0.6, z: z + d * 0.5, y: base, w: 0.16, h: 0.05, sides: SIDES_ROUND, role: 'stone' }));
       // Round 49 (ADR-089): the fire is a FLAME (glow role, tagged so fire particles and a local light
       // are born here), no longer a gilded pyramid.
       out.push(prism({ x: x + w * 0.6, z: z + d * 0.5, y: base + 0.05, w: 0.09, h: 0.13, sides: 5, taper: 0, role: 'flame', tag: 'fire' }));
@@ -753,10 +753,10 @@ function emitMotif(out, name, ctx) {
       break;
     case 'halo':
       // Vòng sáng lơ lửng trên nóc — hình bóng nhận ra ngay là "kỷ AI" dù nhìn từ xa.
-      out.push(prism({ x, z, y: top + 0.22, w: w * 1.05, d: d * 1.05, h: 0.035, sides: 12, role: 'glass' }));
+      out.push(prism({ x, z, y: top + 0.22, w: w * 1.05, d: d * 1.05, h: 0.035, sides: SIDES_DOME, role: 'glass' }));
       break;
     case 'float':
-      out.push(prism({ x, z, y: base - 0.16, w: w * 0.55, d: d * 0.55, h: 0.1, sides: 8, taper: 0.3, role: 'glass' }));
+      out.push(prism({ x, z, y: base - 0.16, w: w * 0.55, d: d * 0.55, h: 0.1, sides: SIDES_ROUND, taper: 0.3, role: 'glass' }));
       break;
     default:
       break;

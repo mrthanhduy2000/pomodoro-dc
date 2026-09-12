@@ -88,7 +88,25 @@ import { smoothCrease } from './creaseNormals';
  * toàn, và viền ngoài của một cái đầu ở cỡ 40 điểm ảnh thì 20 nhịp đã dưới một điểm ảnh mỗi nhịp.
  * 24 chỉ thêm tam giác mà không thêm gì mắt đọc được.
  */
-const ROUND_SIDES = 20;
+// ⚠️ ROUND 55, VIỆC 2: 20 → 48. Đây là thứ Đàm soi gần nhất, và tiêu chí anh tự chấm nói thẳng:
+// *"phóng to một cư dân … không được thấy một khúc gãy nào ở đường viền"*. Ở 20 cạnh, viền ngoài
+// một cái đầu gãy đúng 20 nhịp — pháp tuyến mềm của vòng 54 chữa được TÔ SÁNG nhưng không chữa
+// được HÌNH BÓNG, và hình bóng mới là thứ mắt đọc trước.
+// ⚠️ 60 chứ không phải 24: ở cỡ tầm mắt (đầu ~40–80 điểm ảnh) thì 24 nhịp vẫn còn đọc ra được ở
+// viền; 60 đưa mỗi nhịp xuống 6°, dưới một điểm ảnh ở mọi cỡ cư dân từng xuất hiện.
+//
+// ⚠️ VÀ CON SỐ NÀY BỊ RÀNG BUỘC HAI PHÍA — PHẢI CHIA HẾT CHO **20**, KHÔNG ĐƯỢC CHỌN TUỲ Ý.
+// Tôi đặt 48 trước (đúng con số Đàm gợi ý) và `humanShapeMesh` NÉM NGAY: *"48 cạnh không chia hết
+// cho chu kỳ nếp 5"*. Hai ràng buộc độc lập, mỗi cái do một vòng trước đặt ra:
+//   · **chia hết cho 4** — vòng 47: điều kiện để hộp bao trải đúng [−0,5; 0,5] theo cả x và z
+//     (`humanShape.test.js` «NẰM GỌN TRONG HỘP ĐƠN VỊ»), thứ mà mọi phép đo hình bóng dựa vào.
+//   · **chia hết cho 5** — vòng 54: chu kỳ của bảng nếp vải (`FOLD_PERIOD`), đặt sống nếp đúng vào
+//     tám đỉnh mép để hình bao không xê dịch một chữ số nào.
+//   ⇒ bội chung nhỏ nhất là 20, nên dãy hợp lệ là 20 · 40 · **60** · 80. 48 không nằm trong đó.
+// ⚠️ VÀ ĐÂY LÀ LÝ DO CÁI GUARD ẤY ĐÁNG GIÁ: không có nó, 48 cạnh sẽ cho ra nếp vải LỆCH MỐI — sống
+// nếp rơi vào giữa mặt thay vì vào đỉnh mép — và hình bao co lại vài phần nghìn một cách IM LẶNG.
+// Nó ném thay vì trôi, nên mất ba mươi giây thay vì ba vòng.
+const ROUND_SIDES = 60;
 
 export const HUMAN_SHAPES = ['box', 'prism', 'limb', 'calf', 'chest', 'flare', 'cone', 'dome', 'hat'];
 

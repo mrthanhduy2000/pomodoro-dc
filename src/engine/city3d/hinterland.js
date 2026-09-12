@@ -45,7 +45,7 @@
  * được — nếu không thì đúng lại thất bại "làm rồi mà không thấy" của Phase 11.
  */
 
-import { prism, gable, specHeight, countSpecTriangles } from './parts';
+import { SIDES_ROUND, countSpecTriangles, gable, prism, specHeight } from './parts';
 import { hamletBonus, landStage } from './landGrowth';
 import { PROP_SHORE_CLEAR, buildSetting, distanceOutsideGrid } from './setting';
 import { getHinterlandStyle, isValidHinterland } from './hinterlandStyle';
@@ -393,8 +393,8 @@ const INFRA_BUILDERS = {
   },
   // Kho thóc: khối tròn nắp nón. Ai Cập, Lưỡng Hà, Trung Hoa đều có, hình gần như không đổi.
   granary: (seed) => [
-    prism({ y: 0, w: 0.34, h: 0.36 + unit(`${seed}|h`) * 0.12, sides: 8, taper: 0.9, role: 'wall' }),
-    prism({ y: 0.40, w: 0.36, h: 0.18, sides: 8, taper: 0.1, role: 'roof' }),
+    prism({ y: 0, w: 0.34, h: 0.36 + unit(`${seed}|h`) * 0.12, sides: SIDES_ROUND, taper: 0.9, role: 'wall' }),
+    prism({ y: 0.40, w: 0.36, h: 0.18, sides: SIDES_ROUND, taper: 0.1, role: 'roof' }),
   ],
   // Tháp canh: cao, mảnh, có sàn nhô. Đường viền dứt khoát nhất trong nhóm tiền công nghiệp.
   watchtower: (seed, _style, detail) => {
@@ -411,8 +411,8 @@ const INFRA_BUILDERS = {
   windmill: (seed, _style, detail) => {
     const cao = 0.58 + unit(`${seed}|h`) * 0.16;
     const parts = [
-      prism({ y: 0, w: 0.32, h: cao, sides: 8, taper: 0.66, role: 'wall' }),
-      prism({ y: cao, w: 0.26, h: 0.12, sides: 8, taper: 0.35, role: 'roof' }),
+      prism({ y: 0, w: 0.32, h: cao, sides: SIDES_ROUND, taper: 0.66, role: 'wall' }),
+      prism({ y: cao, w: 0.26, h: 0.12, sides: SIDES_ROUND, taper: 0.35, role: 'roof' }),
     ];
     const n = detail === 'low' ? 2 : 4;
     for (let i = 0; i < n; i += 1) {
@@ -429,7 +429,7 @@ const INFRA_BUILDERS = {
   // công nghiệp — và là hình rẻ nhất mà mắt bắt được từ xa nhất.
   chimney: (seed) => [
     prism({ y: 0, w: 0.26, h: 0.14, sides: 4, role: 'wall' }),
-    prism({ y: 0.12, w: 0.17, h: 0.98 + unit(`${seed}|h`) * 0.34, sides: 8, taper: 0.62, role: 'wall' }),
+    prism({ y: 0.12, w: 0.17, h: 0.98 + unit(`${seed}|h`) * 0.34, sides: SIDES_ROUND, taper: 0.62, role: 'wall' }),
   ],
   // Đường sắt: tà vẹt + hai ray. Ở xa nó là một ĐƯỜNG KẺ SỌC, khác hẳn đường bộ (dải liền).
   railway: (seed, _style, detail) => {
@@ -517,8 +517,8 @@ const INFRA_BUILDERS = {
   },
   // Lò nung (vôi / gạch / gốm): khối nón cụt có miệng tối. Bồ Đào Nha, Ý, Đức đều có.
   kiln: (seed) => [
-    prism({ y: 0, w: 0.40, h: 0.42 + unit(`${seed}|h`) * 0.12, sides: 8, taper: 0.52, role: 'wall' }),
-    prism({ y: 0.40, w: 0.13, h: 0.10, sides: 8, role: 'dark' }),
+    prism({ y: 0, w: 0.40, h: 0.42 + unit(`${seed}|h`) * 0.12, sides: SIDES_ROUND, taper: 0.52, role: 'wall' }),
+    prism({ y: 0.40, w: 0.13, h: 0.10, sides: SIDES_ROUND, role: 'dark' }),
   ],
   // Dãy nhà thợ dính liền: một khối DÀI chia nhịp bằng ống khói nhỏ. Chữ ký của ngoại ô Manchester
   // — và nó khác nhà xóm ở chỗ nó LIỀN NHAU, tức đọc ra là "ở đây đông người".

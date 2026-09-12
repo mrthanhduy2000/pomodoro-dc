@@ -106,7 +106,44 @@ export const MIN_SIDES = 3;
 // ⚠️ Thêm cạnh làm khối NHỎ ĐI, không to ra: quy ước "bề rộng ngang mặt phẳng = 1,0" cho bán kính
 // ngoại tiếp `0,5 / cos(π/n)` — 16 cạnh là 0,50980, 24 cạnh là 0,50431. Hình bao chỉ co lại, nên
 // luật số một của vòng 54 (cẩn thận `specSpan`) được thoả theo CẤU TRÚC, không nhờ một cái kẹp.
-export const MAX_SIDES = 24;
+// ⚠️ ROUND 55, VIỆC 2: 24 → 96. VÀ ĐÂY LÀ CHỖ PHẢI ĐỌC KỸ NHẤT CẢ VÒNG, VÌ NÂNG SỐ NÀY MỘT MÌNH
+// **KHÔNG ĐỔI MỘT ĐIỂM ẢNH NÀO**. `MAX_SIDES` chỉ là cái KẸP TRÊN của `prism()`; đo ra thì cả thành
+// phố khai nhiều nhất là 12 (mái vòm), còn lại là 4 (325 chỗ) · 6 (63) · 8 (62) · 5 (26) · 10 (3).
+// Không có khối nào chạm trần 24, nên trần ấy chưa bao giờ là thứ chặn đường.
+// ⇒ Thứ quyết định độ tròn là **số cạnh KHAI Ở TỪNG CHỖ GỌI**, và đó là việc của `SIDES_*` dưới đây.
+//   Trần này nâng lên chỉ để MỞ ĐƯỜNG cho chúng, không phải để tự nó làm gì.
+// ⚠️ Bài học: khi một cái trần được nâng mà ảnh không đổi, đừng kết luận "số cạnh không ăn thua" —
+// hãy hỏi xem có ai chạm tới cái trần ấy không. Vòng 47 và 54 đều nâng nó và đều ghi công nhầm chỗ.
+export const MAX_SIDES = 96;
+
+/*
+  ══════════════════════════════════════════════════════════════════════════════════════════════
+  BẢNG SỐ CẠNH THEO NGHĨA — ROUND 55, VIỆC 2.
+  ══════════════════════════════════════════════════════════════════════════════════════════════
+  Trước vòng này, "khối tròn" được khai bằng con số 8 viết thẳng vào chỗ gọi, ở 62 nơi. Chú thích
+  của chính file này (mục QUY ƯỚC bên dưới) đã nói rõ `sides: 8` NGHĨA LÀ "trụ tròn / nón / nửa
+  vòm" — tức con số 8 không bao giờ là một lựa chọn hình học, nó là một TỪ VỰNG. Nhưng vì nó là
+  một con số trần trụi, muốn cho cả thành phố tròn hơn thì phải sửa 62 chỗ và chắc chắn sót.
+
+  ⚠️ VÀ 8 CẠNH LÀ MỘT CON SỐ TỒI ĐÚNG THEO LUẬT CỦA VÒNG 54: hai mặt kề của khối 8 cạnh lệch nhau
+  **45°**, tức NẰM TRÊN ngưỡng gãy 40° của `creaseNormals.js` ⇒ chúng **cố ý không được làm mềm**.
+  Nên suốt vòng 54, mọi cây cột, ống khói, chóp nón của thành phố vẫn là tám tấm phẳng — trong khi
+  thân người 20 cạnh đã tròn. Hai hệ số cạnh khác nhau cho hai thứ cùng phải tròn.
+
+  ⇒ Từ đây mỗi NGHĨA có một tên, và đổi một con số là đổi mọi chỗ mang nghĩa ấy:
+    · `SIDES_ROUND` 48 — cột, ống khói, chóp nón, nửa vòm. 360/48 = 7,5° ⇒ mềm tuyệt đối.
+    · `SIDES_DOME`  72 — mái vòm, tháp tròn. To nhất, đường viền dài nhất, gãy khúc lộ nhất; kỷ 7
+      (Duomo Firenze) và kỷ 9 (Panthéon Paris) sống chết bằng cái vòm của chúng.
+    · `SIDES_PROP`  32 — thùng, chum, bánh xe, đèn, giếng. Nhỏ trên màn hình nên 32 đã quá đủ.
+  ⚠️ KHÔNG ĐỤNG tới `sides: 6` và `sides: 5` (89 chỗ): chúng CỐ Ý có góc — lục giác, ngũ giác, và
+  vòng 54 giữ chúng sắc bằng đúng ngưỡng 40°. Làm tròn chúng là xoá một sự đa dạng, không phải thêm.
+  ⚠️ VÀ THÊM CẠNH LÀM KHỐI **NHỎ ĐI**, không to ra: bán kính ngoại tiếp `0,5 / cos(π/n)` giảm đơn
+  điệu theo `n` — 8 cạnh 0,54120 · 32 cạnh 0,50241 · 48 cạnh 0,50107 · 72 cạnh 0,50048. Hình bao
+  ADR-007 vì thế an toàn theo CẤU TRÚC, đúng luật số một của vòng 54 ("kẹp ngay từ đầu").
+*/
+export const SIDES_ROUND = 48;
+export const SIDES_DOME = 72;
+export const SIDES_PROP = 32;
 
 function finite(value, fallback) {
   return Number.isFinite(value) ? value : fallback;

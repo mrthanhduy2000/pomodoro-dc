@@ -211,6 +211,19 @@ const HAIRDO = Object.freeze({
   15: 'crop',   // Dubai: dưới ghutra
 });
 
+/*
+  ⚠️ `gloves` LÀ MỘT TRƯỜNG CÓ **MỘT** KỶ BẬT, VÀ ĐÓ LÀ Ý ĐỊNH — KHÔNG PHẢI MỘT TRƯỜNG CHƯA LÀM XONG.
+  Round 58, Việc 1: bàn tay phải mang màu DA khi tay áo để hở, và màu GĂNG khi có găng — không bao
+  giờ một màu thứ ba (Đàm). Bản đầu viết `style.gloves ? sv.loRole : 'skin'` trong khi `gloves`
+  **chưa tồn tại trong tủ đồ** ⇒ nhánh ấy vĩnh viễn sai, tức một dòng mã tự xưng là có luật mà
+  không có. Đó đúng họ với `vernacularRoof` (Phase 7C): một trường tuỳ chọn rơi ngầm và không có gì
+  đỏ lên.
+  ⇒ Khai thật, và chỉ khai chỗ đời thật có: kỷ 12 (Stalingrad, mùa đông) đeo bao tay bông cùng
+  màu tay áo bông — nên ở đó bàn tay KHÔNG có mép, và `humanSeams.js` cũng im lặng đúng cả hai
+  chiều. Kỷ 9 (Paris) đời thật đeo găng TRẮNG trên áo đuôi tôm sẫm: đó là một cái mép THẬT, mà mã
+  hiện tại lại tô găng bằng màu tay áo ⇒ khai `gloves` ở kỷ 9 sẽ XOÁ một đường viền có thật.
+  Chưa dựng được găng màu riêng thì để nguyên bàn tay trần — thà thiếu găng còn hơn sai mép.
+*/
 const WARDROBE = Object.freeze({
   1:  { sleeve: 'bare',  leg: 'wrap' },     // Göbekli Tepe: da thú khoác lệch, chân trần
   2:  { sleeve: 'bare',  leg: 'wrap' },     // Ai Cập: shendyt lanh quấn hông, thân trần
@@ -223,7 +236,7 @@ const WARDROBE = Object.freeze({
   9:  { sleeve: 'long',  leg: 'trouser' },  // Paris: áo đuôi tôm tay dài
   10: { sleeve: 'short', leg: 'trouser' },  // Manchester: thợ xắn tay áo, quần vải thô
   11: { sleeve: 'long',  leg: 'trouser' },  // New York: măng tô tay dài
-  12: { sleeve: 'long',  leg: 'boot' },     // Stalingrad: áo bông, quần đóng thùng trong ủng
+  12: { sleeve: 'long',  leg: 'boot', gloves: true },  // Stalingrad: áo bông, quần trong ủng, bao tay bông
   13: { sleeve: 'long',  leg: 'trouser' },  // Tokyo: com lê
   14: { sleeve: 'short', leg: 'trouser' },  // Singapore: sơ mi ngắn tay, xích đạo
   15: { sleeve: 'long',  leg: 'none' },     // Dubai: kandura trắng dài kín, tay dài
@@ -833,6 +846,8 @@ export function getHumanStyle(era) {
     sleeve: SLEEVE_SET.has(merged.sleeve) ? merged.sleeve
       : (WARDROBE[era]?.sleeve ?? 'long'),
     leg: LEG_SET.has(merged.leg) ? merged.leg : (WARDROBE[era]?.leg ?? 'trouser'),
+    // Bao tay: mặc định KHÔNG, và luôn là boolean — `human.js` đọc nó để chọn vai màu bàn tay.
+    gloves: typeof merged.gloves === 'boolean' ? merged.gloves : (WARDROBE[era]?.gloves ?? false),
     /**
      * ⚠️ `headgear: 'bun'` CỦA DỮ LIỆU CŨ ĐƯỢC DẪN SANG ĐÂY, KHÔNG Bỏ RƠI. Trước ADR-092 cái búi
      * tóc đứng nhầm chỗ trong bảng mũ; một bản lưu cũ (localStorage hoặc Supabase) vẫn có thể khai

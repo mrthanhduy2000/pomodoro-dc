@@ -53,7 +53,7 @@
  */
 
 import { HUMAN_BASE_HEIGHT, getHumanStyle } from './humanStyle';
-import { isValidHumanShape, scalpFit, shapeTriangles } from './humanShape';
+import { isValidHumanShape, scalpFit, shapeEndRadius, shapeMaxRadius, shapeTriangles } from './humanShape';
 
 /**
  * Chiều cao cư dân cỡ chuẩn, đơn vị ô. `stature` của mỗi kỷ nhân vào con số này.
@@ -258,9 +258,14 @@ export function humanDims(style) {
  * theo quy ước "mặt phẳng = 1,0" nên độ trải theo x và z của khối ĐÚNG BẰNG độ trải của hộp cũ ⇒
  * `partCornersAt` / `silhouetteSpanX` / `human-scale.mjs` không phải đổi một dòng nào.
  */
-function piece(id, role, shape, joint, size, rest) {
+/**
+ * @param {string} [continues] id của khối mà khối này **nối dài** — xem `humanSeams.js`.
+ *   Khai nó là tuyên bố *"đây không phải một vật riêng, nó là phần tiếp theo của cái kia"*, và cái
+ *   gác sẽ đòi hai bên CÙNG một vai màu. Bỏ trống nghĩa là "một vật riêng, được phép có mép".
+ */
+function piece(id, role, shape, joint, size, rest, continues = null) {
   if (!isValidHumanShape(shape)) throw new Error(`human.js: khối "${id}" khai khuôn lạ "${shape}"`);
-  return {
+  const out = {
     id,
     role,
     shape,
@@ -270,6 +275,8 @@ function piece(id, role, shape, joint, size, rest) {
     d: size[2],
     rest: { x: rest[0], y: rest[1], z: rest[2] },
   };
+  if (continues) out.continues = continues;
+  return out;
 }
 
 /**
@@ -684,6 +691,16 @@ export function buildHumanBody(era) {
   // có gì đỏ lên — đúng hình dạng "một luật hai công thức" mà `humanDims` được tách ra để tránh.
   const sv = sleeveLook(style.sleeve);
   const lg = legLook(style.leg);
+  /*
+    ⚠️ VAI MÀU CỦA BÀN TAY — HAI TRẠNG THÁI, KHÔNG BAO GIỜ CÓ TRẠNG THÁI THỨ BA (round 58, Việc 1).
+    Đàm: *"màu da khi tay áo ngắn, màu găng khi có găng — và không bao giờ là một màu thứ ba."*
+    Có găng ⇒ bàn tay mang ĐÚNG vai màu của cẳng tay (một chiếc găng vải bông cùng lò với áo, đúng
+    kiểu Stalingrad 1942); không găng ⇒ da. Không có nhánh nào khác, nên không có chỗ cho một màu
+    lạ chen vào.
+    ⚠️ Mép tay áo ↔ bàn tay trần LÀ một đường viền CÓ THẬT ngoài đời (cửa tay), nên nó KHÔNG nằm
+    trong họ lỗi "ranh giới màu sai chỗ" — xem danh sách `VIEN_CO_THAT` ở `humanSeams.js`.
+  */
+  const hand = { role: style.gloves ? sv.loRole : 'skin' };
 
   // ⚠️ CHÂN TRƯỚC, và không phải để cho gọn: chân là khối DUY NHẤT bắt buộc phải có ở mọi kỷ để
   // phép đo "hình bóng đổi theo pha bước" còn ý nghĩa. Đặt cụm chân ở đầu danh sách thì một bài
@@ -755,10 +772,10 @@ export function buildHumanBody(era) {
     // Một bàn chân dẹt là một cái bóng dẹt — ở tầm mắt nó đọc ra là cái chân bàn, không phải cái giày.
     piece('footL', lg.loRole, 'box', 'kneeL',
       [d.limbW * 1.7, d.limbW * 0.76, d.limbW * 1.08],
-      [d.limbW * 0.42, -d.shinLen + d.limbW * 0.38, 0]),
+      [d.limbW * 0.42, -d.shinLen + d.limbW * 0.38, 0], 'shinL'),
     piece('footR', lg.loRole, 'box', 'kneeR',
       [d.limbW * 1.7, d.limbW * 0.76, d.limbW * 1.08],
-      [d.limbW * 0.42, -d.shinLen + d.limbW * 0.38, 0]),
+      [d.limbW * 0.42, -d.shinLen + d.limbW * 0.38, 0], 'shinR'),
 
     // ── THÂN: XƯƠNG CHẬU → LỒNG NGỰC → ĐẦU ────────────────────────────────────────────────
     // ⚠️ XƯƠNG CHẬU LÀ KHỐI MỚI, VÀ NÓ SỬA MỘT KHUYẾT TẬT CÓ TỪ ĐẦU: hai cái chân trước nay mọc
@@ -818,10 +835,49 @@ export function buildHumanBody(era) {
     // tay thụng chứ không phải một cái chuông: có một chấm da thò ra ở đáy cái xoè.
     // Việc 7 *"bàn tay có khối"*: 0,94 → 1,02 ngang và 0,74 → 0,86 dày — một nắm tay thật gần bằng
     // bề ngang cổ tay nhân đôi, chứ không mỏng hơn cổ tay như bản cũ.
-    piece('handL', 'skin', 'dome', 'elbowL',
-      [d.limbW * 1.02, d.handLen, d.limbW * 0.86], [0, -d.forearmLen - d.handLen * 0.5, 0]),
-    piece('handR', 'skin', 'dome', 'elbowR',
-      [d.limbW * 1.02, d.handLen, d.limbW * 0.86], [0, -d.forearmLen - d.handLen * 0.5, 0]),
+    /*
+      ══════════════════════════════════════════════════════════════════════════════════════════
+      ⚠️ BÀN TAY — ROUND 58, VIỆC 1. LẦN THỨ NĂM CÙNG MỘT HÌNH DẠNG LỖI, VÀ LẦN NÀY CÓ CÁI GÁC.
+      ══════════════════════════════════════════════════════════════════════════════════════════
+      Ảnh cận cảnh vòng 57 cho ra **hai quả cầu TRẮNG gắn vào tay áo sẫm**. Bốn lần trước cùng
+      một hình: đinh tán trắng ở khớp (vòng 54) · vành cổ áo trắng (vòng 54) · chân tóc ngang
+      (vòng 56) · mũ trụ tô màu vải (vòng 49→56). Và cái luật chữa nó đã nằm sẵn **ngay trong file
+      này, ở bàn chân**, từ vòng 52: *khối nối mang vai màu của đoạn nó nối.*
+
+      HAI LỖI, KHÔNG PHẢI MỘT:
+      1. **VAI MÀU CỨNG `skin`.** Bàn chân đọc `lg.loRole`; bàn tay thì viết cứng. Kỷ nào có găng
+         thì bàn tay phải là GĂNG, không phải một mảng da trần giữa mùa đông Stalingrad.
+      2. **HÌNH LÀ QUẢ CẦU.** `dome` co giãn gần đều ([1,02 · 0,86] bề ngang) — ở 70 điểm ảnh nó
+         là một chấm, ở 390 điểm ảnh nó là **một quả bóng**. Bàn tay thật DẸT, và có ngón cái
+         tách ra. Hai điều ấy là HÌNH, và ở cự ly gần hình đọc mạnh hơn mọi chi tiết.
+      ⇒ Nay: một khối dẹt (dày bằng 0,46 bề ngang) + một ngón cái tách ra. Ngón cái là thứ khiến
+      mắt đọc ra "bàn tay" chứ không "cái vây" — nó rẻ và nó quyết định.
+    */
+    piece('handL', hand.role, 'calf', 'elbowL',
+      [d.limbW * 0.46, d.handLen * 1.18, d.limbW * 1.02],
+      [0, -d.forearmLen - d.handLen * 0.55, 0]),
+    piece('handR', hand.role, 'calf', 'elbowR',
+      [d.limbW * 0.46, d.handLen * 1.18, d.limbW * 1.02],
+      [0, -d.forearmLen - d.handLen * 0.55, 0]),
+    /*
+      NGÓN CÁI — lệch về phía TRƯỚC (+x là hướng đi) và hơi vào trong, đúng chỗ ngón cái nằm khi tay
+      buông. Nhỏ, nhưng nó là dấu hiệu duy nhất phân biệt một bàn tay với một cái mái chèo.
+
+      ⚠️ KHUÔN PHẢI LÀ `calf`, ĐÚNG KHUÔN CỦA BÀN TAY — KHÔNG PHẢI `prism`. Bản đầu dùng `prism` vì
+      nó "trông giống một cái ngón" hơn, và `drawCallBudget.test.js` đỏ ngay: **kỷ 2 tốn 17 lệnh vẽ,
+      vượt mốc 16**. Vòng 54 (Việc 6) đã cố ý xoá `prism` khỏi kỷ 2 để lấy lại đúng một lệnh vẽ, nên
+      một cái ngón cái tưởng là miễn phí đã lặng lẽ trả lại cả phần thắng ấy. Mỗi KHUÔN mới trên
+      một `InstancedMesh` là MỘT lệnh vẽ cho toàn bộ dân số — không phải một khối.
+      ⇒ Dùng lại khuôn của bàn tay: 0 khuôn mới, 0 lệnh vẽ, ở cả 15 kỷ. Hình thì `calf` bóp nhỏ ở
+      cỡ này đọc ra đúng một cái ngón ngắn — cái mắt đọc ở đây là VỊ TRÍ TÁCH RA, không phải đường
+      sinh của một khối dài 0,004 ô.
+    */
+    piece('thumbL', hand.role, 'calf', 'elbowL',
+      [d.limbW * 0.30, d.handLen * 0.52, d.limbW * 0.30],
+      [d.limbW * 0.16, -d.forearmLen - d.handLen * 0.34, -d.limbW * 0.34], 'handL'),
+    piece('thumbR', hand.role, 'calf', 'elbowR',
+      [d.limbW * 0.30, d.handLen * 0.52, d.limbW * 0.30],
+      [d.limbW * 0.16, -d.forearmLen - d.handLen * 0.34, d.limbW * 0.34], 'handR'),
   ];
 
   /*
@@ -849,14 +905,46 @@ export function buildHumanBody(era) {
     lấy đúng phía DA, tức cái khớp nằm đúng bên dưới mép tay áo, y như ngoài đời.
     ⚠️ VÀ NÓ KHÔNG TỐN THÊM GÌ: mọi vai màu dùng ở đây đều đã có mặt trên chính cái chi ấy.
   */
-  const ball = (id, role, joint, w) => piece(id, role, 'dome', joint,
-    [w * 1.04, w * 1.04, w * 1.04], [0, 0, 0]);
+  /*
+    ══════════════════════════════════════════════════════════════════════════════════════════════
+    ⚠️ ĐƯỜNG KÍNH KHỚP CẦU — ROUND 58, VIỆC 2. ĐO ĐƯỢC, KHÔNG CÒN LÀ MỘT HỆ SỐ ĐOÁN.
+    ══════════════════════════════════════════════════════════════════════════════════════════════
+    Bản vòng 54 lấy `bề ngang chi × 1,04`, tức GIẢ ĐỊNH rằng đoạn chi dày đúng bằng bề ngang khai
+    báo của nó. Sai: `limb` thu về **0,3505** ở đầu dưới, `calf` nở tới **0,4506** ở đầu trên (đơn
+    vị hộp — hỏi `shapeEndRadius`). Ở tay áo dài, quả cầu ra bán kính 0,4686 `limbW` trong khi chỗ
+    dày nhất nó nối chỉ 0,4055 ⇒ **to hơn 15,6%**, và ở 390 điểm ảnh nó đọc ra là một cục u.
+
+    ⚠️ BÁN KÍNH ĐÚNG BẰNG BÁN KÍNH CHI, VÀ **GÓC GẬP KHÔNG DỰ PHẦN** — đây là kết quả đáng nhớ.
+    Trực giác nói "gập càng nhiều thì khe càng to, cầu phải to theo". Đo thì không: vành mép của cả
+    hai đoạn chi đều nằm ĐÚNG trên mặt cầu bán kính r (mọi điểm của vành cách tâm khớp đúng r), nên
+    một quả cầu bán kính r căng kín cái nêm giữa hai vành ở MỌI góc. Đo bằng `ball2.mjs` (đi dọc
+    từng tia, tìm chỗ độ phủ ĐỨT rồi NỐI LẠI):
+
+        R = 1,00·r → khe 0,000 ở 20° · 40° · 60° · 80° · 100°
+        R = 0,95·r → khe 0,030 ở 40°        R = 0,70·r → khe 0,160 ở 40°
+
+    ⇒ Lấy đúng bán kính lớn hơn trong hai đoạn, không nhân thêm gì. Một hệ số an toàn ở đây chính
+    là cái đã đẻ ra cục u.
+    ⚠️ Và phép đo ĐẦU TIÊN của tôi sai: nó quét cả mặt phẳng rồi báo "hở 1,900" ở mọi cấu hình —
+    vì nó đang đo KHÔNG KHÍ quanh cánh tay chứ không đo cái khe ở khớp. Định nghĩa đúng của "hở" là
+    *đi dọc một tia từ tâm khớp, độ phủ đứt rồi nối lại*. Lại một lần dụng cụ đo nói dối trước.
+  */
+  const ball = (id, role, joint, worldRadius, continues) => {
+    // `dome` rộng nhất ở vành GIỮA (r = 1,00) ⇒ bán kính thật = shapeMaxRadius × size. Đảo lại.
+    const size = worldRadius / shapeMaxRadius('dome');
+    return piece(id, role, 'dome', joint, [size, size, size], [0, 0, 0], continues);
+  };
+  /** Bán kính (đơn vị thế giới) ở đầu `which` của một đoạn chi khuôn `shape`, bề ngang `w`. */
+  const endR = (shape, w, which) => shapeEndRadius(shape, which) * d.limbW * w;
   for (const side of ['L', 'R']) {
-    parts.push(ball(`shoulderBall${side}`, sv.upRole, `shoulder${side}`, d.limbW * sv.upW));
+    // Vai: đầu TRÊN của cánh tay trên (nó treo xuống từ khớp vai).
+    parts.push(ball(`shoulderBall${side}`, sv.upRole, `shoulder${side}`,
+      endR(sv.upShape, sv.upW, 1), `upperArm${side}`));
+    // Khuỷu: đầu DƯỚI của cánh tay trên gặp đầu TRÊN của cẳng tay.
     parts.push(ball(`elbowBall${side}`, sv.loRole, `elbow${side}`,
-      d.limbW * Math.max(sv.loW, sv.upW * 0.8)));
+      Math.max(endR(sv.upShape, sv.upW, -1), endR(sv.loShape, sv.loW, 1)), `forearm${side}`));
     parts.push(ball(`kneeBall${side}`, lg.loRole, `knee${side}`,
-      d.limbW * Math.max(lg.loW, lg.upW * 0.8)));
+      Math.max(endR(lg.upShape, lg.upW, -1), endR(lg.loShape, lg.loW, 1)), `shin${side}`));
   }
 
   const garment = garmentPiece(style.garment, d);

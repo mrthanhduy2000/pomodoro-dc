@@ -621,6 +621,35 @@ export function humanShapeMesh(name) {
   return out;
 }
 
+/**
+ * BÁN KÍNH CỦA MỘT KHUÔN Ở ĐẦU TRÊN (`+1`) HOẶC ĐẦU DƯỚI (`-1`), tính theo HỘP ĐƠN VỊ.
+ * Nhân với `size` của khối là ra bán kính thật trong cảnh.
+ *
+ * ⚠️ TỒN TẠI ĐỂ KHỚP CẦU THÔI PHÌNH — round 58, Việc 2. Trước vòng này, đường kính quả cầu ở khớp
+ * là `bề ngang chi × 1,04`, tức một hằng số nhân **đoán** rằng mọi chi đều dày bằng bề ngang khai
+ * báo của nó. Không đúng: `limb` thu về 0,70 ở đầu dưới còn `calf` nở tới 0,90 ở đầu trên, nên quả
+ * cầu to hơn chỗ nó nối **15%** và đọc ra là một cục u. Hỏi thẳng hồ sơ khuôn thì con số không thể
+ * lệch khỏi hình đang dựng.
+ */
+export function shapeEndRadius(name, which = 1) {
+  const profile = PROFILES[name];
+  if (!profile) throw new Error(`shapeEndRadius: khuôn lạ "${name}"`);
+  const { rings, sides } = profile;
+  const ring = which >= 0 ? rings[rings.length - 1] : rings[0];
+  return circumradius(sides) * ring[1];
+}
+
+/**
+ * BÁN KÍNH LỚN NHẤT của một khuôn, theo HỘP ĐƠN VỊ. Nhân với `size` là ra bán kính thật.
+ * ⚠️ Khác `shapeEndRadius`: `dome` phình tới r = 1,00 ở GIỮA nhưng chỉ 0,60/0,40 ở hai đầu, nên
+ * hỏi nhầm hàm sẽ cho một quả cầu nhỏ hơn ý định gần một nửa.
+ */
+export function shapeMaxRadius(name) {
+  const profile = PROFILES[name];
+  if (!profile) throw new Error(`shapeMaxRadius: khuôn lạ "${name}"`);
+  return circumradius(profile.sides) * Math.max(...profile.rings.map((r) => r[1]));
+}
+
 /** Số tam giác của một khuôn. Đọc từ chính mảng đã dựng — xem chú thích `humanShapeMesh`. */
 export function shapeTriangles(name) {
   return humanShapeMesh(name).triangles;

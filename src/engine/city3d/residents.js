@@ -180,6 +180,15 @@ export function buildResidentRoute(index, roadCells, walkSpeed = DEFAULT_WALK_SP
     speed: walkSpeed * (0.75 + unit(`${seed}|s`) * 0.5),
     // Lệch pha: không có nó thì tất cả cùng xuất phát một chỗ, thành một đoàn diễu hành.
     phase: unit(`${seed}|p`),
+    /*
+      DANH TÍNH — round 58, Việc 8. Một số thực `[0,1)` KHÔNG ĐỔI theo thời gian, dùng làm đầu vào
+      duy nhất của `stanceOf` (dáng lệch trọng tâm).
+      ⚠️ HẠT MUỐI RIÊNG (`|d`), KHÔNG DÙNG LẠI `phase`. Dùng lại thì dáng đứng của một người bị
+      buộc chặt vào chỗ họ xuất phát: ai đi trước đám thì luôn nghiêng vai trái, ai đi sau thì luôn
+      nghiêng phải. Ở một đoàn 28 người, một tương quan như thế đọc ra ngay thành một quy luật —
+      và một quy luật thấy được thì phá đúng cái ảo giác "mỗi người một kiểu" mà Việc 8 mua.
+    */
+    danhTinh: unit(`${seed}|d`),
   };
 }
 

@@ -32,7 +32,27 @@ Production branch `main` carries **both** work streams (merged 2026-08-28 on Đ�
 ⚠️ Phase 21 therefore shipped **before** Đàm reviewed its screenshots — the "waiting on Đàm's eyes"
 item below is still live, it just now reviews something already running.
 
-- **Loop — ROUND 57 (2026-09-12, LATEST): THE PICTURE WAS NEVER DRAWN AT FULL SIZE.**
+- **Loop — ROUND 58 (2026-09-13, LATEST): THE FIRST TIME I LOOKED A RESIDENT IN THE FACE.**
+  Detail in `BAN_GIAO.md` and ADR-095; five laws live here:
+  ⚠️ **A sum of CONVEX bodies is not a smooth surface — it is a set of bumps.** Seven skull features
+  built as eight blocks glued on a sphere measured correct on every number and photographed as a
+  headband, two chipmunk cheeks and a ball chin. Five of the seven belong in ONE lathe profile
+  (`SKULL_RINGS`); only front-back asymmetry (`occiput`, `browRidge`) may be a separate block.
+  Same lesson the brimmed hat taught: ask *"how many objects is this in real life?"*.
+  ⚠️ **A promise written in prose has no teeth.** `scalp`'s comment promised its rings equalled the
+  head's; changing the head broke it in silence and put the hair INSIDE the skull. One shared
+  constant, not two copies. (`TECH_DEBT #42`.)
+  ⚠️ **A number only means something together with the frame it was solved in.** The hairline's
+  three constants were in RING-INDEX units, solved for a 6-ring profile; on 9 rings the front
+  hairline fell from 0.672 to 0.343 of head height — down to eye level. Express positions in HEIGHT.
+  ⚠️ **A geometric sufficiency proof EXPIRES when the shape changes, and nothing reminds you.**
+  Round 56's "the generating line is monotone ⇒ the hair is provably outside" died at the temple
+  pinch. What caught it was the measured 3% clearance FLOOR, not the sentence in the comment.
+  ⚠️ **A quantity computed correctly can be dropped before it arrives.** Deleting the head-tilt term
+  from the pose left all 1,823 other tests green. Test at the OUTPUT: change one input, demand the
+  output move. (Same family as the helmet that carried cloth colour for seven rounds.)
+
+- **Loop — ROUND 57 (2026-09-12): THE PICTURE WAS NEVER DRAWN AT FULL SIZE.**
   Detail in `BAN_GIAO.md`; four laws live here:
   ⚠️ **`EffectComposer` inherits NOTHING from the renderer** — round 55 found it for `samples`,
   round 57 for SIZE: `setSize` multiplies by pixelRatio itself, so our own multiply made the chain

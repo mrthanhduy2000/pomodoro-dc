@@ -211,7 +211,7 @@ export function solveTwoBone(joint, target, l1, l2) {
  * @param {number} travelled                  quãng đường đã đi, đơn vị ô
  * @returns {{bob:number, cycle:number, phase:number, reach:number, joints:object}}
  */
-export function poseAt(body, travelled) {
+export function poseAt(body, travelled, dang = null) {
   const style = body?.style;
   const d = body?.dims ?? (style ? humanDims(style) : null);
   if (!style || !d) return null;
@@ -287,7 +287,17 @@ export function poseAt(body, travelled) {
   const headLook = HEAD_LOOK_RAD * Math.sin(dist * 0.55) * Math.max(0, Math.sin(dist * 0.55 + 1.2));
   const cosSw = Math.cos(shoulderTwist);
   const sinSw = Math.sin(shoulderTwist);
-  const shoulderY = d.torsoH * 0.88;
+  /*
+    ⚠️ 0,88 → 0,74 `torsoH` (round 58, Việc 4). ĐỌC SỐ ĐO TRƯỚC KHI ĐƯA NÓ VỀ CHỖ CŨ.
+    Ở 0,88, đỉnh quả cầu vai (y = 0,17335 ở kỷ 1) nằm CAO HƠN đáy cái đầu (0,17231) ⇒ chiều cao cổ
+    nhìn thấy được là ÂM 0,020 `headH`. Cái cổ có trong mã mà không có trên ảnh.
+    Ở 0,74 nó thành **+0,158 `headH`**, và đầu ngón tay rơi đúng giữa đùi — mốc mà chú thích của
+    `armLen` bên `human.js` vẫn tự nhận là đang giữ. Tức một con số sửa hai chỗ sai cùng lúc, và cả
+    hai đều là hệ quả của việc cái vai bị treo quá cao, không phải của chiều dài cánh tay.
+    ⚠️ `humanSkull.test.js` gác quan hệ ấy dưới dạng *"đỉnh vai phải nằm DƯỚI hàm"* chứ không gác
+    con số 0,74 — nâng đầu hay hạ vai đều được, miễn cái cổ còn nhìn thấy.
+  */
+  const shoulderY = d.torsoH * 0.74;
   /** Chỗ đặt một chỏm vai: theo thân đã khom và nghiêng, rồi xoay quanh trục đứng. */
   const shoulderAt = (side) => {
     const v = rotateByJoint(aTorso, bTorso, { x: 0, y: shoulderY, z: side * d.shoulderZ });
@@ -326,6 +336,22 @@ export function poseAt(body, travelled) {
     return { x: sh.x + v.x, y: sh.y + v.y, z: sh.z + v.z };
   };
 
+  /*
+    ⚠️ DÁNG LỆCH TRỌNG TÂM — ROUND 58, VIỆC 8. Cộng SAU khi mọi khớp đã giải xong, có chủ ý.
+    Năm độ lệch của `humanStance.js` là một thứ CỦA NGƯỜI ẤY, không phải của bước đi: chúng không
+    đổi theo `travelled`, nên chúng không được lọt vào bài toán động học ngược ở trên. Cộng vào
+    trước thì bàn chân sẽ bị kéo lệch và `solveTwoBone` phải bù lại — tức chân trượt trên mặt đất,
+    đúng thứ ADR-057 vừa xoá. Cộng vào sau thì hông/vai/đầu nghiêng còn bàn chân đứng yên, và đó
+    chính là contrapposto.
+    ⚠️ `dang === null` PHẢI CHO RA ĐÚNG TƯ THẾ CŨ, BIT-FOR-BIT: `scripts/human-scale.mjs` và một
+    loạt bài test cũ gọi `poseAt` hai tham số, và một sai lệch âm thầm ở đó sẽ đọc thành "hình học
+    trôi" ở tận đâu.
+  */
+  const lechHong = dang ? dang.hong : 0;
+  const lechVai = dang ? dang.vai : 0;
+  const lechDau = dang ? dang.dau : 0;
+  const coTay = dang ? dang.tayCo : 0;
+
   return {
     bob,
     cycle,
@@ -337,8 +363,19 @@ export function poseAt(body, travelled) {
      */
     reach,
     joints: {
-      pelvis: { x: pelvisPos.x, y: pelvisPos.y, z: pelvisPos.z, a: 0, b: list, c: pelvisTwist },
-      torso: { x: pelvisPos.x, y: pelvisPos.y, z: pelvisPos.z, a: aTorso, b: bTorso, c: shoulderTwist },
+      pelvis: {
+        x: pelvisPos.x, y: pelvisPos.y, z: pelvisPos.z, a: 0, b: list + lechHong, c: pelvisTwist,
+      },
+      torso: {
+        x: pelvisPos.x,
+        y: pelvisPos.y,
+        z: pelvisPos.z,
+        a: aTorso,
+        // Đai vai nghiêng NGƯỢC đai hông — xem khối chú thích đầu `humanStance.js`. Cộng cả `lechHong`
+        // vì thân treo trên đai hông: không cộng thì thân đứng thẳng trên một cái hông đang nghiêng.
+        b: bTorso + lechHong + lechVai,
+        c: shoulderTwist,
+      },
       head: {
         x: headPos.x,
         y: headPos.y,
@@ -346,7 +383,10 @@ export function poseAt(body, travelled) {
         // Đầu ngẩng lại một nửa độ khom: người khom lưng vẫn nhìn về phía trước chứ không nhìn
         // xuống chân. Đây là góc TUYỆT ĐỐI, không phải góc so với thân.
         a: aTorso * 0.5,
-        b: bTorso * 0.5,
+        // Đầu bù lại MỘT NỬA độ nghiêng của thân rồi mới ngoẹo theo kiểu riêng của người ấy: mắt
+        // người luôn tìm về đường chân trời, nên một cái đầu nghiêng đúng bằng thân đọc ra là đang
+        // ngã, không đọc ra là đang đứng lệch.
+        b: bTorso * 0.5 + (lechHong + lechVai) * 0.5 + lechDau,
         c: shoulderTwist * 0.5 + headLook,
       },
       hipL: { x: hipPosL.x, y: hipPosL.y, z: hipPosL.z, a: legL.a1, b: legL.b, c: pelvisTwist },
@@ -355,8 +395,20 @@ export function poseAt(body, travelled) {
       kneeR: { x: legR.mid.x, y: legR.mid.y, z: legR.mid.z, a: legR.a2, b: legR.b, c: pelvisTwist },
       shoulderL: { x: shoulderPosL.x, y: shoulderPosL.y, z: shoulderPosL.z, a: aArmL, b: bArmL, c: shoulderTwist },
       shoulderR: { x: shoulderPosR.x, y: shoulderPosR.y, z: shoulderPosR.z, a: aArmR, b: bArmR, c: shoulderTwist },
-      elbowL: { ...elbowPos(shoulderPosL, aArmL, bArmL), a: aArmL + elbowL, b: bArmL, c: shoulderTwist },
-      elbowR: { ...elbowPos(shoulderPosR, aArmR, bArmR), a: aArmR + elbowR, b: bArmR, c: shoulderTwist },
+      // ⚠️ MỘT TAY CO — và chỉ MỘT. `coTay` cộng vào bên `dang.ben` (bên chân trụ), bên kia buông
+      // thẳng. Cộng cả hai bên thì đó không còn là dáng lệch, đó là tư thế thủ.
+      elbowL: {
+        ...elbowPos(shoulderPosL, aArmL, bArmL),
+        a: aArmL + elbowL + (dang && dang.ben > 0 ? coTay : 0),
+        b: bArmL,
+        c: shoulderTwist,
+      },
+      elbowR: {
+        ...elbowPos(shoulderPosR, aArmR, bArmR),
+        a: aArmR + elbowR + (dang && dang.ben < 0 ? coTay : 0),
+        b: bArmR,
+        c: shoulderTwist,
+      },
     },
   };
 }

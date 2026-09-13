@@ -129,7 +129,32 @@ function tamCoDinh(era) {
   thích ngay trên cảnh báo. Bài test ở cuối file vẫn kiểm hiệu số `− MOC_TRUOC_HINH_KHOI` từng kỷ,
   nên nếu con số 16 này bịa ra thì kỷ 2 đỏ ngay: 16 − 11 = 5 = số khuôn (6) − 1.
 */
+/*
+  ⚠️ ROUND 58, VIỆC 3: **+1 Ở CẢ MƯỜI LĂM KỶ**, VÀ CON SỐ 1 ẤY CÓ TÊN — khuôn `skull`.
+  Cái đầu thôi dùng `dome` và có đường sinh riêng: cằm · hàm thu · gò má · **chỗ thót ở thái
+  dương** · trán dốc — năm trong bảy đặc điểm sọ Đàm đặt hàng, gói trong MỘT mặt tròn xoay không
+  có chỗ gãy nào. Bản trước đã thử làm đúng bảy đặc điểm ấy bằng **tám khối lồi dán lên quả cầu**
+  với 0 khuôn mới, tức 0 lệnh vẽ; ảnh chụp chính diện bác thẳng: gờ mày thành một thanh ngang như
+  băng-đô, hai gò má thành hai quả bóng, cằm thành quả bóng thứ ba. Cộng nhiều vật LỒI không ra một
+  mặt cong liền.
+  ⇒ Đây là +1 lệnh vẽ cho toàn bộ dân số, ở mọi kỷ, và nó được trả tường minh: thành phố tiêu 18
+  lệnh vẽ nên đây là +5,5%, đổi lấy hình dạng của thứ Đàm nay nhìn ở cự ly gần gấp năm. Không né
+  được bằng cách sửa `dome`: `dome` còn dùng cho hai con mắt, con ngươi và sáu khớp cầu — một cái
+  đầu gối hình đầu lâu thì tệ hơn nhiều.
+  ⚠️ HIỆU SỐ VỚI MỐC CŨ PHẢI LÀ **+1 ĐỀU Ở CẢ 15 KỶ** — không kỷ nào +2. Một kỷ +2 nghĩa là có
+  người vừa thêm một khuôn thứ hai mà không khai ở đây. Đo lại: 2026-09-13.
+*/
 const MOC_LENH_VE = {
+  1: 15, 2: 17, 3: 19, 4: 17, 5: 18,
+  6: 19, 7: 19, 8: 20, 9: 16, 10: 19,
+  11: 16, 12: 16, 13: 16, 14: 16, 15: 16,
+};
+
+/**
+ * MỐC NGAY TRƯỚC KHI CÁI ĐẦU CÓ KHUÔN RIÊNG — round 58, Việc 3. Giữ lại làm ĐỐI CHỨNG, đúng luật
+ * riêng của file: *mỗi phase một mốc, mỗi mốc một phép trừ riêng*. Hiệu số phải là +1 ở cả 15 kỷ.
+ */
+const MOC_TRUOC_SO_RIENG = {
   1: 14, 2: 16, 3: 18, 4: 16, 5: 17,
   6: 18, 7: 18, 8: 19, 9: 15, 10: 18,
   11: 15, 12: 15, 13: 15, 14: 15, 15: 15,
@@ -419,7 +444,14 @@ test('QUAN HỆ "lệnh vẽ = số họ + 2 + số khuôn cư dân (+1 nếu c�
   // ⚠️ VÌ SAO VẪN LÀ `assert.equal` CHỨ KHÔNG PHẢI `<=`. Một cái gác nới thành "không vượt quá" là
   // một cái gác đã chết: nó xanh với mọi thứ nhỏ hơn. Viết khoản lệch ra thành số thì hai vế vẫn
   // khớp CHÍNH XÁC, và bất kỳ ai đổi một trong hai bên đều làm nó đỏ ngay.
-  const DO_CHROMIUM_2026_09_12 = { 1: 17, 8: 22, 13: 16 };
+  /*
+    ⚠️ ROUND 58: +1 Ở CẢ BA KỶ ĐO ĐƯỢC — khuôn `skull`. Đây là một bảng ĐO BẰNG CHROMIUM, không phải
+    một bảng suy ra từ công thức, nên nó chỉ được sửa khi biết chắc khoản +1 ấy là gì. Ở đây biết:
+    cái đầu có `InstancedMesh` riêng từ vòng 58, ở mọi kỷ, nên mọi cảnh đều +1. Khoản "lệch chưa
+    truy nguyên nhân" giữ NGUYÊN (3 · 3 · 1) — nếu nó cũng phải đổi thì thay đổi này không phải
+    chỉ là +1 khuôn, và đó mới là tin đáng sợ.
+  */
+  const DO_CHROMIUM_2026_09_12 = { 1: 18, 8: 23, 13: 17 };
   const HO_CHUA_TRUY_NGUYEN_NHAN = { 1: 3, 8: 3, 13: 1 };
   for (const era of [1, 8, 13]) {
     assert.equal(MOC_LENH_VE[era] + HO_CHUA_TRUY_NGUYEN_NHAN[era], DO_CHROMIUM_2026_09_12[era],
@@ -635,9 +667,13 @@ test('ROUND 56 · PHẦN A: CHÂN TÓC TỐN ĐÚNG MỘT LỆNH VẼ, VÀ CHỈ
   */
   const DAU_TRAN = [1, 3, 13, 14];
   for (const era of ERAS) {
-    const hieu = MOC_LENH_VE[era] - MOC_TRUOC_CHAN_TOC[era];
+    // ⚠️ ROUND 58: VẾ TRÁI ĐỔI TỪ `MOC_LENH_VE` SANG `MOC_TRUOC_SO_RIENG`, VÀ ĐÓ LÀ LUẬT CỦA CHÍNH
+    // FILE NÀY: *mỗi phase một mốc, mỗi mốc một phép trừ riêng*. Vòng 58 thêm khuôn `skull` (+1 ở
+    // CẢ 15 kỷ), nên nếu phép trừ của vòng 56 vẫn trỏ vào mốc hiện tại thì nó đo HAI thay đổi cùng
+    // lúc và báo "lệch 2" ở bốn kỷ đầu trần. Mỗi phép trừ phải kẹp đúng một thay đổi.
+    const hieu = MOC_TRUOC_SO_RIENG[era] - MOC_TRUOC_CHAN_TOC[era];
     assert.equal(hieu, DAU_TRAN.includes(era) ? 1 : 0,
-      `kỷ ${era}: mốc đi từ ${MOC_TRUOC_CHAN_TOC[era]} lên ${MOC_LENH_VE[era]} (lệch ${hieu}) — `
+      `kỷ ${era}: mốc đi từ ${MOC_TRUOC_CHAN_TOC[era]} lên ${MOC_TRUOC_SO_RIENG[era]} (lệch ${hieu}) — `
       + 'chân tóc chỉ được tốn một lệnh vẽ ở đúng bốn kỷ đầu trần 1 · 3 · 13 · 14.');
     assert.equal(humanShapesUsed(era).includes('scalp'), DAU_TRAN.includes(era),
       `kỷ ${era}: khuôn \`scalp\` ${humanShapesUsed(era).includes('scalp') ? 'CÓ' : 'VẮNG'} mà `

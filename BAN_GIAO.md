@@ -1,3 +1,122 @@
+> Last update: **2026-09-13** — **ROUND 58: THE FIRST TIME I LOOKED A RESIDENT IN THE FACE.**
+> Order: *"Chín vòng qua nhân vật được dựng cho một hình cao 70 px — nay tôi nhìn gần gấp năm lần,
+> và ở cỡ ấy nó đọc ra là một con ma-nơ-canh… Không phải thiếu chi tiết. Là thiếu HÌNH."* Branch
+> `claude/city-skill-points-display-7k4nof`.
+>
+> ### Việc 1 — the fifth instance of one defect shape gets a GUARD, not a fix
+> Đàm counted them: white rivets on the shoulders (r54) · a white collar ring (r54) · a flat
+> hairline (r56) · a helmet in cloth colour (49→56) · white spheres for hands (r58). All five
+> passed every existing test; all five were caught by a photograph. His instruction was explicit —
+> *"dựng một cái gác cho hình dạng lỗi này, không phải sửa từng ca."*
+>
+> The obvious measurement was built FIRST and rejected: enumerate adjacent blocks of differing
+> colour → **99 pairs** across 15 eras, including `forearmR ↔ pelvis` and `carry ↔ head`, whose
+> bounding boxes overlap while their surfaces never meet. A 99-row whitelist is a guard nobody
+> reads, and a guard nobody reads is about to be loosened.
+>
+> `humanSeams.js` asks by STRUCTURE instead: a block declares `continues: '<id>'` — *"I am not a
+> thing, I am the next part of that segment"* — and must then carry that segment's colour role.
+> Feet, thumbs and the six joint balls declare it. **10 declarations per person, 0 faults in 15/15
+> eras.** `VIEN_CO_THAT` lists the 7 places real life DOES have an edge, so widening the guard means
+> claiming one more of those exists.
+>
+>     era 1 → 15   khối nối dài: 10/người   ·   kỷ có lỗi viền màu: 0/15
+>
+> ⚠️ **The first version of this guard shipped its own bug, and the guard's own test now locks it.**
+> Feet declared `continues: 'calfL'` — but `calf` is the SHAPE name; the BLOCK is `shinL`. A check
+> that only compares colours reads `undefined !== undefined` as "equal" and goes silent on exactly
+> the four blocks it must watch. The test fires a body whose `continues` points at a non-existent id
+> and demands the guard SHOUT.
+>
+> **Hands**: a flat block plus a thumb, skin when the sleeve is open, glove colour when gloved,
+> never a third colour. `style.gloves` did not exist in the wardrobe, so that branch was permanently
+> false — code claiming a law it did not have. Now a real fact, declared only where real life has it:
+> era 12 (Stalingrad), a padded mitten the same colour as the padded sleeve. Era 9's white gloves on
+> a dark tailcoat are a REAL edge this model would erase, so that era keeps bare hands.
+> The thumb uses the hand's own `calf` shape, not `prism`: a new shape is one draw call for the
+> whole population, and `prism` cost era 2 the exact draw call round 54 had won back (17 > 16, red).
+>
+> ### Việc 2 — the smallest sealing radius, and it does not depend on the angle
+> Maximum bend the gait produces, re-measured by the test itself rather than pinned:
+>
+>     đầu gối 84,3°   ·   khuỷu 32,9°   ·   vai 27,1°
+>
+> Then the surprise: a segment's end rim is a circle **centred ON the joint**, and rotation about
+> the joint preserves distance from it ⇒ a ball of radius `max(the two end radii)` seals at EVERY
+> angle. 84° costs nothing extra. That is the number now used, derived from the real profiles.
+> The load-bearing premise is that the ball is centred on the joint, so the test checks that in
+> three walking frames — a displaced ball only opens its gap while the limb is bent.
+>
+> ### Việc 3 — a photograph rejected the first skull, and the rejection is the lesson
+> Before: z/x of the head measured **1.000** (a human skull is 0.78), and the whole face lay in a
+> band 0.10 head-widths deep — a flat plate with dots on it.
+>
+> First attempt: all seven features as **eight convex blocks glued onto the sphere**, 0 new shapes,
+> 0 extra draw calls. Every number correct. The photo:
+>
+>     gờ mày   → một THANH NGANG sáng giữa tóc và mắt (băng-đô / kính bảo hộ)
+>     gò má    → hai QUẢ BÓNG dưới mắt (má chuột túi)
+>     cằm      → quả bóng thứ ba dán dưới miệng
+>     hàm      → một TẤM BẸT có góc cạnh hai bên
+>
+> **A sum of convex bodies is not a smooth surface — it is a set of bumps.** Each block brings its
+> own silhouette and its own normal break. The result was an assembled mask, worse than round 56's
+> plain face. Same lesson the brimmed hat taught in August: ask *"how many objects is this in real
+> life?"*, and one surface of revolution beat two blocks on both looks and cost.
+>
+> Second attempt, shipped: the head gets its own lathe (`skull` / `SKULL_RINGS`) carrying five of
+> the seven — chin · jaw taper · cheekbone · **temple pinch** · sloping forehead. Only `occiput` and
+> `browRidge` stay blocks, because no surface of revolution is asymmetric front-to-back.
+> Price: **+1 draw call in all 15 eras** (18 → 19, +5.5%), paid explicitly with a dated baseline.
+>
+> ⚠️ Three faults surfaced only because a gate fired, and each is worth more than the feature:
+> · `scalp` promised in PROSE that its rings equalled the head's. Changing the head broke it in
+>   silence — hair 0.984 vs skull 1.00 at the parietal ⇒ hair inside the skull, round 56's seam back.
+>   Now one shared constant. **A promise in prose has no teeth.**
+> · The hairline's three numbers were in RING-INDEX units, solved for a 6-ring profile. On 9 rings
+>   the front hairline fell 0.672 → **0.343** — down to eye level. Re-expressed in HEIGHT.
+> · Round 56's geometric sufficiency proof ("the generating line is monotone") EXPIRED when the
+>   temple pinch broke monotonicity. Clearance 2.79%, under its own 3% floor. What caught it was the
+>   measured floor, not the sentence.
+>
+> ### Việc 4 — the neck existed in code and had never existed in a photograph
+> Measured, era 1: jaw at y = 0.17231, top of the shoulder ball at y = 0.17335 ⇒ **visible neck =
+> −0.020 head heights**. A negative number: the shoulder balls stood higher than the jaw, the pose of
+> a man permanently shrugging. Shoulder line 0.88 → 0.74 `torsoH` (neck now +0.158) plus a trapezius
+> block bridging neck to shoulder. One number fixed two faults — the fingertips now reach mid-thigh,
+> the landmark `armLen`'s own comment had always claimed to hold.
+>
+> ### Việc 5 — three of the four hair elements already existed, and saying so beat adding blocks
+> Sideburns come free from round 56's quadratic hairline (temple at 0.346 head heights, below the
+> outer eye corner); the nape likewise (0.100); crown mass from `SCALP_LIFT`. Only the fringe needed
+> a block. Its first two numbers were both wrong and both fixed by MEASUREMENT, not by eye: at
+> x = 0.30 it sat INSIDE the scalp (0.530 vs 0.512) and at y = 0.735 it covered the eyebrows.
+>
+> ### Việc 8 — a stance that is a function of identity, not of time
+> `humanStance.js`: standing leg · hip drop · **shoulder tilt OPPOSITE the hip** · head tilt · one
+> bent arm. Applied as a constant bias ON TOP of the gait rather than as a separate standing pose,
+> because residents are almost always walking. Twelve residents measured:
+>
+>     người  chân trụ   hông    vai     đầu    tay co
+>       0     trái      1,9°  −2,5°  −0,2°    9,0°
+>       1     phải     −3,0°   1,7°   0,2°   13,3°
+>       6     phải     −2,2°   2,1°   0,6°   15,7°
+>      11     trái      1,3°  −2,4°  −0,9°    5,2°
+>
+> ⚠️ **Two red-tests that came back GREEN were the most valuable thing in this section.**
+> · Making the elbow share a salt with the hip — deliberately coupling two axes — left the
+>   correlation test green, because `hong` carries a random SIGN (`ben`) that erases linear
+>   correlation. The test compares magnitudes now.
+> · Deleting `+ lechDau` from the head joint — switching OFF one of the five things Đàm asked for —
+>   left the whole suite green. Nothing asked whether a computed quantity ARRIVED. Same family as the
+>   helmet that carried cloth colour for seven rounds. A new test changes one stance field at a time
+>   and demands the pose change.
+>
+> ### Gates
+> lint · build · `npm run test:quiet`: **1,824 pass · 0 fail · skipped 1** (start line 1,797).
+> Nineteen red-tests run this round, each naming what to break; two of them did not go red on the
+> first try, and both became findings.
+
 > Last update: **2026-09-12** — **ROUND 57: THE PICTURE WAS NEVER DRAWN AT FULL SIZE.**
 > Order: *"Build lớn … bám sát lịch sử … Đây là phần phải gây hứng thú."* Branch
 > `claude/city-skill-points-display-7k4nof`. Đàm's own hypothesis opened it, and MEASURING IT

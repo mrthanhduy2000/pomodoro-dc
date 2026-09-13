@@ -119,7 +119,11 @@ test('TRẢ 0 KHỐI VÀ 0 LỆNH VẼ: tủ đồ không được làm phình c
   // ⇒ Giữ 8, và đó chính là lời hứa của bài này: tủ đồ vòng 52 không thêm một khuôn nào.
   for (const era of ERAS) {
     const dung = new Set(buildHumanBody(era).parts.map((p) => p.shape));
-    assert.ok(dung.size <= 8,
+    // ⚠️ 8 → 9 (round 58, Việc 3): khuôn `skull` cho cái đầu. Con số này vẫn là thứ nó vẫn luôn là
+    // — SỐ LỆNH VẼ cư dân tiêu ở kỷ ấy — và lời hứa của bài này cũng giữ nguyên: **tủ đồ** không
+    // thêm khuôn nào. Khoản +1 không đến từ tủ đồ, nó đến từ cái sọ, và `drawCallBudget.test.js`
+    // canh riêng khoản ấy bằng một phép trừ có mốc ngày tháng.
+    assert.ok(dung.size <= 9,
       `kỷ ${era} dùng ${dung.size} khuôn (${[...dung].join(', ')}) — mỗi khuôn là một lệnh vẽ`);
   }
 });

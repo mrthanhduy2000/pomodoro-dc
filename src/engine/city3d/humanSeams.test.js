@@ -116,3 +116,50 @@ test('BÀN TAY: hai màu được phép, không bao giờ màu thứ ba — và 
     'không kỷ nào đeo găng ⇒ nhánh `style.gloves` trong `human.js` là mã chết và nửa trên của'
     + ' chính bài test này không kiểm được gì. Xem khối `WARDROBE` ở `humanStyle.js`.');
 });
+
+test('TRÁI PHẢI PHẢI ĐỐI XỨNG — mọi cặp `…L`/`…R` khớp nhau, chỉ lệch dấu ở trục z', () => {
+  /*
+    ⚠️ BÀI NÀY SINH RA TỪ MỘT LỖI TÔI VỪA TỰ GÂY RA TRONG CHÍNH VÒNG 58, và nó thuộc đúng cái họ
+    mà cả vòng này đang đi bắt: **một lỗi không làm gì đỏ lên và chỉ lộ ra trên ảnh** — mà lần này
+    thì còn không lộ, vì hai bên đầu hiếm khi cùng nằm trong một khung hình.
+    Khi hạ hai cái tai cho bớt vểnh, tôi gõ `H * 0.455` cho tai trái và `H * 0.425` cho tai phải.
+    Kết quả: một người có hai tai LỆCH NHAU 3% chiều cao đầu. Không khuôn nào lạ, không màu nào
+    sai, không trần nào vượt ⇒ 1.800 bài test xanh trơn.
+    ⇒ Đối xứng trái–phải là một LUẬT của cơ thể, nên nó được gác như một luật: mọi khối có hậu tố
+    `L` phải có bạn `R` cùng khuôn, cùng vai màu, cùng ba kích thước, cùng `x` và `y`, và `z` ĐỔI
+    DẤU. Rẻ, và nó bắt mọi lần gõ nhầm kiểu này về sau, ở mọi kỷ.
+    ⚠️ NGOẠI LỆ ĐƯỢC KHAI TƯỜNG MINH, KHÔNG ĐƯỢC LỜ: `carry` (đồ mang theo) cố ý chỉ có một bên —
+    nó không có hậu tố L/R nên không lọt vào phép quét này. Nếu ngày nào một thứ cố ý lệch CÓ hậu
+    tố L/R thì phải thêm nó vào `LECH_CO_CHU_Y` kèm lý do, chứ không được nới bài test.
+  */
+  const LECH_CO_CHU_Y = new Set();
+  let soCap = 0;
+  for (const era of ERAS) {
+    const body = buildHumanBody(era);
+    for (const trai of body.parts) {
+      if (!trai.id.endsWith('L') || LECH_CO_CHU_Y.has(trai.id)) continue;
+      const tenPhai = `${trai.id.slice(0, -1)}R`;
+      const phai = khoi(body, tenPhai);
+      assert.ok(phai, `kỷ ${era}: có \`${trai.id}\` mà không có \`${tenPhai}\` — một người một bên`);
+      soCap += 1;
+      assert.equal(phai.shape, trai.shape, `kỷ ${era}: \`${tenPhai}\` khác khuôn \`${trai.id}\``);
+      assert.equal(phai.role, trai.role, `kỷ ${era}: \`${tenPhai}\` khác vai màu \`${trai.id}\``);
+      for (const truc of ['w', 'h', 'd']) {
+        assert.ok(Math.abs(phai[truc] - trai[truc]) < 1e-12,
+          `kỷ ${era}: \`${tenPhai}\`.${truc} = ${phai[truc]} ≠ \`${trai.id}\`.${truc} = ${trai[truc]}`);
+      }
+      for (const truc of ['x', 'y']) {
+        assert.ok(Math.abs(phai.rest[truc] - trai.rest[truc]) < 1e-12,
+          `kỷ ${era}: \`${tenPhai}\` lệch \`${trai.id}\` ở ${truc}: ${phai.rest[truc]}`
+          + ` so với ${trai.rest[truc]}. Trái phải cùng độ cao và cùng độ nhô — chỉ z mới đổi dấu.`);
+      }
+      assert.ok(Math.abs(phai.rest.z + trai.rest.z) < 1e-12,
+        `kỷ ${era}: \`${tenPhai}\`.z = ${phai.rest.z} phải bằng −(${trai.rest.z})`);
+    }
+  }
+  assert.ok(soCap >= 15 * 10,
+    `chỉ quét được ${soCap} cặp trên 15 kỷ — dưới 10 cặp mỗi người nghĩa là phép quét đang trượt`
+    + ' (hậu tố đổi? khối bị xoá?), và một phép quét trượt thì xanh vĩnh viễn mà không canh gì.');
+  // ⚠️ ĐỎ KHI BỎ GÌ: đổi `H * 0.455` của `earR` thành `H * 0.425` → đỏ ở cả 15 kỷ. Đã thử — đó
+  //    chính là con số đã lọt qua trước khi có bài này.
+});

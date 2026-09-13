@@ -208,7 +208,23 @@ export function humanDims(style) {
     torsoD: H * 0.155 * b,
     // ⚠️ BỀ NGANG ĐẦU ĐI THEO CHIỀU CAO ĐẦU, LUÔN LUÔN — đây là gốc mà ADR-090 sửa cho `#81`,
     // và nó là lý do vòng 54 nâng được cái đầu mà không phải đụng một cái mũ nào.
+    // `headW` là bề DÀI trước–sau (trục x). Xem `headZ` ngay dưới.
     headW: H * 0.22,
+    /**
+     * BỀ RỘNG HAI BÊN (trục z) CỦA CÁI ĐẦU — round 58, Việc 3, đặc điểm 1: *"dẹt hai bên"*.
+     *
+     * ⚠️ TRƯỚC VÒNG NÀY CÁI ĐẦU LÀ MỘT QUẢ CẦU, VÀ ĐÓ LÀ MỘT SỐ ĐO ĐƯỢC, KHÔNG PHẢI MỘT CẢM GIÁC:
+     * tỉ lệ z/x đo được đúng **1,000**, còn sọ người thật là **0,78** (bề rộng hai bên chia bề dài
+     * trước–sau; đây là số nhân trắc học phổ thông, cephalic index ~78). Một quả cầu thì nhìn từ
+     * hướng nào cũng hệt nhau, nên nó KHÔNG CÓ HƯỚNG — và một cái đầu không có hướng là một phần
+     * lớn của chuyện *"nó đọc ra một con ma-nơ-canh"* (Đàm, vòng 58).
+     * ⇒ 0,80: sát số người thật, và là một PHÉP NHÂN với `headW` chứ không phải một con số rời, nên
+     * mọi lần chỉnh `headW` về sau vẫn giữ đúng tỉ lệ (cùng lý lẽ với `shoulderZ` ở dưới).
+     * ⚠️ MŨ THÌ VẪN TRÒN (khai theo `headW`): mũ thật đúng là tròn hơn sọ, và một cái vành mũ hơi
+     * dư ra hai bên là cách người ta nhận ra đó là cái mũ. Chỉ `scalp` — mũ TÓC, dính vào da đầu —
+     * mới buộc phải bóp theo `headZ`, nếu không chân tóc sẽ nằm ngoài sọ ở hai bên.
+     */
+    headZ: H * 0.22 * 0.80,
     limbW: H * 0.085 * b,
     /**
      * Khoảng cách từ trục giữa ra tâm mỗi hông / mỗi vai.
@@ -421,19 +437,61 @@ export function legLook(kind) { return LEG_LOOK[kind] ?? LEG_LOOK.none; }
  * cái mũ khai bằng hằng số đã không lớn theo cái đầu và thành ra nhỏ hơn cái sọ nó đội lên.
  * 7% của bán kính sọ ≈ 7 mm ở tỉ lệ người thật — đúng cỡ một mái tóc cắt ngắn.
  */
-const SCALP_LIFT = 1.07;
+/*
+  ⚠️ ROUND 58: 1,07 → 1,10, VÀ LÝ DO KHÔNG PHẢI "CHO CHẮC" — MỘT ĐIỀU KIỆN ĐỦ VỪA MẤT HIỆU LỰC.
+  Lời bảo đảm của vòng 56 (xem `scalpFit` ở `humanShape.js`) đứng trên một mệnh đề hình học: *"gốc
+  khớp `head` nằm ở đáy cái đầu và đường sinh của `dome` NHÌN TỪ ĐIỂM ẤY LÀ ĐƠN ĐIỆU, nên phóng to
+  đều quanh nó chắc chắn nằm ngoài — không phải hy vọng, mà là thứ bài test đo."*
+  Khuôn `skull` của vòng 58 có một chỗ **THÓT Ở THÁI DƯƠNG** (vành 0,84 kẹp giữa 0,88 và 1,00) ⇒
+  đường sinh thôi đơn điệu, và điều kiện đủ ấy KHÔNG CÒN ĐÚNG. Đo được: ở 1,07 chỗ sát nhất chỉ còn
+  hở **2,79%**, dưới sàn 3% mà chính vòng 56 đặt ra.
+  ⇒ 1,10 cho 4,0%. Nhưng điều đáng ghi không phải con số: **một chứng minh gắn với một hình dạng cụ
+  thể thì hết hiệu lực khi hình dạng ấy đổi, và không có gì tự nhắc.** Thứ bắt được là cái SÀN 3% —
+  một phép đo chạy mỗi lần test — chứ không phải câu chứng minh trong chú thích.
+*/
+const SCALP_LIFT = 1.10;
 
 function hairPieces(kind, d) {
   if (kind === 'shaved') return [];
-  const fit = scalpFit(d.headW, d.headH, SCALP_LIFT);
+  const fit = scalpFit(d.headW, d.headH, SCALP_LIFT, d.headZ);
   const parts = [piece('hair', 'hair', 'scalp', 'head', fit.size, fit.rest)];
+  /*
+    MÁI TRƯỚC — ROUND 58, VIỆC 5 (*"khối tóc: mái, tóc mai, gáy, khối đỉnh"*).
+    ⚠️ BA TRONG BỐN THỨ ĐÀM ĐẶT HÀNG ĐÃ CÓ SẴN, VÀ NÓI THẲNG LÀ TỐT HƠN DỰNG THÊM KHỐI CHO ĐỦ SỐ:
+      · **tóc mai** — đường chân tóc bậc hai của vòng 56 tự đưa tóc xuống 0,346 `headH` ở thái
+        dương, tức thấp hơn đuôi mắt. Đó ĐÚNG LÀ tóc mai, và nó không tốn khối nào.
+      · **gáy** — cũng thế: chân tóc ở gáy dừng ở 0,100 `headH`, gần chân cổ.
+      · **khối đỉnh** — `SCALP_LIFT` cho mũ tóc dày 10% quanh sọ ở mọi hướng; ở đỉnh đầu đó là một
+        lớp dày bằng 10% chiều cao đầu, đủ để đường bao trên đọc ra là TÓC chứ không phải da đầu.
+    Thứ duy nhất một mặt tròn xoay không nói được là **cái mái đổ xuống trán**: nó dày lên ở phía
+    TRƯỚC và mỏng dần ra hai bên, tức bất đối xứng trước–sau, cùng họ với `occiput` và `browRidge`.
+    ⇒ Đúng một khối, chỉ ở kỷ có tóc, dùng `dome` (kỷ nào cũng đã vẽ) ⇒ 0 lệnh vẽ thêm.
+    ⚠️ Nhô 0,53 `headW`, tức hơn mũ tóc (0,507) đúng 0,023 — một cái mái dày hơn thế thì nó thành
+    cái lưỡi trai, và dự án đã có đúng một lần như vậy (`hairTop` vòng 52 trùm kín cả khuôn mặt,
+    xem chú thích `flare` bên dưới).
+  */
+  /*
+    ⚠️ HAI CON SỐ DƯỚI ĐÂY ĐỀU DO MỘT PHÉP ĐO SỬA, KHÔNG PHẢI DO MẮT NHÌN.
+    · `x = 0,33` (bản đầu 0,30): ở 0,30 mặt trước cái mái nằm ở 0,530 `headW`, mà mũ tóc ở CÙNG độ
+      cao ấy đã ở 0,512 — chênh 0,018, tức cái mái **chìm gần hết vào trong mũ tóc** và trên ảnh
+      không thấy gì. Một khối nằm trong một khối thì không hiện ra: lần thứ ba trong dự án, sau con
+      ngươi (vòng 56) và chân tóc (vòng 56).
+    · `y = 0,80` (bản đầu 0,735): ở 0,735 cái mái trải xuống tới 0,64 `headH`, tức ĐÈ LÊN hai cái
+      lông mày (0,65 … 0,68) và cả gờ mày. Một cái mái che mất lông mày thì nó không còn là mái,
+      nó là cái lưỡi trai — dự án đã có đúng một lần như thế (`hairTop` vòng 52 trùm kín khuôn mặt).
+      Ở 0,80 nó trải 0,71 … 0,89, ngồi ĐÚNG trên đường chân tóc trước (0,723), là chỗ một cái mái
+      thật bắt đầu.
+  */
+  parts.push(piece('hairFringe', 'hair', 'dome', 'head',
+    [d.headW * 0.46, d.headH * 0.18, d.headZ * 0.74],
+    [d.headW * 0.33, d.headH * 0.80, 0]));
   switch (kind) {
     // Ôm sọ và hết — chân tóc do chính khuôn `scalp` vẽ ra, không cần khối nào nữa.
     case 'crop':
       break;
     case 'bun':
       parts.push(piece('hairTop', 'hair', 'prism', 'head',
-        [d.headW * 0.48, d.headH * 0.44, d.headW * 0.48],
+        [d.headW * 0.48, d.headH * 0.44, d.headZ * 0.48],
         [-d.headW * 0.12, d.headH * 1.06, 0]));
       break;
     // Bím buông sau gáy: hẹp theo trục đi (x) mà DÀI xuống, đặt LỆCH VỀ SAU. ⚠️ Lệch theo −x vì
@@ -441,7 +499,7 @@ function hairPieces(kind, d) {
     // hợp lệ nên không có gì đỏ lên.
     case 'braid':
       parts.push(piece('hairTop', 'hair', 'calf', 'head',
-        [d.headW * 0.34, d.headH * 1.15, d.headW * 0.34],
+        [d.headW * 0.34, d.headH * 1.15, d.headZ * 0.34],
         [-d.headW * 0.44, d.headH * 0.18, 0]));
       break;
     // Xoã ngang vai: `flare` rộng ở ĐÁY ⇒ bó ở đỉnh đầu, loạc ra hai bên má rồi xuống gáy.
@@ -451,7 +509,7 @@ function hairPieces(kind, d) {
     // Nay mũ tóc lo phần sọ, nên khối này chỉ còn là phần **xoã xuống** và phải bắt đầu từ dưới.
     case 'loose':
       parts.push(piece('hairTop', 'hair', 'flare', 'head',
-        [d.headW * 1.26, d.headH * 0.80, d.headW * 1.22],
+        [d.headW * 1.26, d.headH * 0.80, d.headZ * 1.22],
         [-d.headW * 0.04, d.headH * 0.30, 0]));
       break;
     default:
@@ -482,28 +540,122 @@ function hairPieces(kind, d) {
  * điểm ảnh và cái đầu ~7 — ở cỡ ấy hai thứ trộn lại thành một chấm xám. Đó là cái giá, và nó đổi
  * lấy một khuôn mặt đọc được ở chế độ đi bộ, nơi cùng cái đầu ấy cao ~40 điểm ảnh.
  */
+/**
+ * SỌ NGƯỜI — ROUND 58, VIỆC 3. *"Không phải thiếu chi tiết. Là thiếu HÌNH."* (Đàm)
+ *
+ * ══════════════════════════════════════════════════════════════════════════════════════════════
+ * CÁI ĐẦU CŨ LÀ MỘT QUẢ CẦU, VÀ ĐÂY LÀ SÁU CON SỐ ĐO ĐƯỢC TRƯỚC VÒNG NÀY
+ * ══════════════════════════════════════════════════════════════════════════════════════════════
+ * Đo trên kỷ 1, đơn vị `headW`, gốc tại tâm đầu, trục +x là hướng người nhìn:
+ *     mặt sọ 0,501 · mắt 0,555 · con ngươi 0,595 · lông mày 0,505 · miệng 0,495
+ * Cả khuôn mặt nằm trong một dải dày **0,10 `headW`**. Tức nó là một TẤM PHẲNG có vài chấm trên
+ * đó, không phải một cái mặt: không gờ mày, không hốc mắt, không gò má, không cằm, không gáy.
+ * Và tỉ lệ z/x đúng **1,000** (sọ người: 0,78) ⇒ quay hướng nào cũng y hệt.
+ *
+ * ⚠️ BẢY ĐẶC ĐIỂM ĐÀM ĐẶT HÀNG, VÀ CHỖ MỖI CÁI ĐƯỢC DỰNG:
+ *   1. dẹt hai bên  → `headZ = 0,80 headW` ở `humanDims` (0 khối)
+ *   2. phình gáy    → `occiput`
+ *   3. trán dốc     → KHÔNG phải một khối: nó là QUAN HỆ `gờ mày (0,580) > sọ ở tầm đỉnh (0,371)`,
+ *                     tức mái trán thụt về 0,209 `headW` trên một đoạn 0,21 `headH` ≈ 45°. Một cái
+ *                     trán dốc là một sự THỤT LÙI, và một sự thụt lùi thì không dựng bằng cách
+ *                     thêm khối — nó có sẵn ngay khi phía dưới nhô ra. `humanSkull.test.js` gác
+ *                     đúng quan hệ ấy, nên nó không thể bị "sửa" mất mà vẫn xanh.
+ *   4. gờ mày       → `browRidge`
+ *   5. hốc mắt      → cũng là QUAN HỆ: gờ mày (0,580) và gò má (0,525) đều nhô hơn mặt sọ, con mắt
+ *                     nằm giữa hai cái ⇒ ở cự ly gần, với AO, đó là một cái hốc. ⚠️ NÓI THẲNG GIỚI
+ *                     HẠN: khối ở đây không xoay được quanh trục riêng (chỉ có `size` + `rest`),
+ *                     nên KHÔNG thể khoét một hốc thật. Đây là hốc dựng bằng hai cái nhô ra, và
+ *                     nó chỉ đọc đúng khi còn hai cái ấy.
+ *   6. gò má        → `cheekL/R`
+ *   7. hàm và cằm   → `jaw` + `chin`;  tai → `earL/R`
+ *
+ * ⚠️ TÁM KHỐI, **0 KHUÔN MỚI, 0 LỆNH VẼ**: chỉ `box`, `dome`, `chest` — ba khuôn mà cả 15 kỷ đều
+ * đã vẽ. Xem chú thích ngón cái ở dưới để biết một khuôn mới đắt thế nào.
+ * ⚠️ TAI DÙNG `box` CHỨ KHÔNG `dome`, VÀ ĐÓ LÀ MỘT QUYẾT ĐỊNH VỀ TAM GIÁC: `dome` có 60 cạnh × 5
+ * vành = 600 tam giác; một cái tai cao 0,27 `headH` không dùng nổi 600 tam giác, và hai cái thì
+ * tốn bằng cả một cái đầu. `box` tốn 12.
+ * ⚠️ MỌI KHỐI KHAI `continues: 'head'` — chúng là phần nối dài của cái sọ, không phải vật riêng,
+ * nên `humanSeams.js` canh chúng: đổi vai màu một cái là test đỏ. Đó đúng là cái gác Việc 1 dựng.
+ */
+function skullPieces(d) {
+  const W = d.headW;
+  const H = d.headH;
+  const Z = d.headZ;
+  return [
+    // GÁY — sọ người phình ra phía sau ở tầm trên, chỗ xương chẩm. Đây là một trong hai đặc điểm
+    // BẤT ĐỐI XỨNG TRƯỚC–SAU, tức thứ duy nhất đường sinh `skull` không nói được. Nó cũng là thứ
+    // cho cái đầu một HƯỚNG khi nhìn từ trên hoặc từ 3/4, và ở phần lớn các kỷ nó nằm dưới mũ tóc.
+    piece('occiput', 'skin', 'dome', 'head',
+      [W * 0.50, H * 0.44, Z * 0.74], [-W * 0.290, H * 0.620, 0], 'head'),
+    /*
+      GỜ MÀY — đặc điểm bất đối xứng trước–sau thứ hai, và là khối duy nhất còn lại trên KHUÔN MẶT.
+      ⚠️ HẸP TRONG Z (0,60 `headZ`, không phải 0,88), VÀ ĐÓ LÀ ĐIỀU TẤM ẢNH DẠY. Bản trước trải
+      gần hết bề ngang đầu, nên cạnh trên của nó là một ĐƯỜNG NGANG chạy suốt mặt — đọc ra là cái
+      băng-đô, không đọc ra cái gờ xương. Gờ mày người thật chỉ chạy hết bề ngang HAI HỐC MẮT rồi
+      tan vào thái dương; đúng chỗ ấy `skull` đã có sẵn cái thót thái dương để nó tan vào.
+      Nhô tới x = 0,505, tức hơn mặt sọ ở tầm ấy chừng 0,03 `headW` (3%) — bậc của người thật. Bản
+      đầu lấy 11,5% vì tôi chọn số cho vừa một MỤC TIÊU HÌNH HỌC ("phải vượt con mắt") thay vì đo
+      xem ngoài đời nó bao nhiêu; con mắt hoạt hình vốn được cố ý cho nhô, nên ép gờ mày vượt nó là
+      ép một cái xương chạy theo một quy ước vẽ.
+    */
+    piece('browRidge', 'skin', 'dome', 'head',
+      [W * 0.52, H * 0.11, Z * 0.60], [W * 0.245, H * 0.655, 0], 'head'),
+    /*
+      TAI — NHỎ VÀ ÁP SÁT.
+      ⚠️ BẢN ĐẦU LÀ MỘT TẤM THẺ TRẮNG DÁN VÀO ĐẦU: cao 0,27 `headH`, nhô 0,055 `headZ`, mặt ngoài
+      phẳng và vuông góc với nắng ⇒ trên ảnh nó sáng hơn cả khuôn mặt. Một cái tai to bằng một phần
+      tư cái đầu thì không phải cái tai.
+      Vẫn giữ `box`: ở ảnh cận cái tai cao chừng 20 điểm ảnh, không dùng hết 600 tam giác của
+      `dome`, mà `box` chỉ tốn 12 — và ở kỷ có tóc thì hai bên đầu còn bị mũ tóc che gần hết.
+    */
+    piece('earL', 'skin', 'box', 'head',
+      [W * 0.13, H * 0.19, Z * 0.05], [-W * 0.07, H * 0.455, -Z * 0.425], 'head'),
+    piece('earR', 'skin', 'box', 'head',
+      [W * 0.13, H * 0.19, Z * 0.05], [-W * 0.07, H * 0.455, Z * 0.425], 'head'),
+  ];
+}
+
 function facePieces(d) {
   const W = d.headW;
   const H = d.headH;
+  /*
+    ⚠️ MỌI BỀ Z VÀ MỌI ĐỘ LỆCH NGANG TRÊN MẶT PHẢI TÍNH THEO `headZ`, KHÔNG THEO `headW` (round 58).
+    Từ vòng này sọ hẹp hai bên (z = 0,80 x). Giữ `headW` cho trục z thì hai con mắt trôi ra NGOÀI
+    thái dương — đúng họ lỗi "một khối nhỏ nằm trong một khối lớn thì không hiện ra", chỉ theo chiều
+    ngược lại: nó hiện ra ở chỗ không có sọ.
+  */
+  const Z = d.headZ;
   return [
     // LÒNG TRẮNG — HẸP HƠN con mắt vòng 54 (0,30 → 0,23 `headW`), và con số ấy đến từ một tấm ảnh,
     // không từ giải phẫu. Giữ nguyên cỡ cũ thì mảng SÁNG chiếm đúng chỗ mảng TỐI từng chiếm, và
     // khuôn mặt đọc ra là đang trợn mắt — đúng thứ Đàm cấm ở vòng 54 (*"đừng làm mặt tả thực — ở
     // cỡ này nó sẽ thành đáng sợ"*). Một con mắt hoạt hình hiền là **ít lòng trắng, nhiều con ngươi**.
-    piece('eyeL', 'eyeWhite', 'dome', 'head', [W * 0.23, H * 0.20, W * 0.18], [W * 0.44, H * 0.54, -W * 0.25]),
-    piece('eyeR', 'eyeWhite', 'dome', 'head', [W * 0.23, H * 0.20, W * 0.18], [W * 0.44, H * 0.54, W * 0.25]),
+    piece('eyeL', 'eyeWhite', 'dome', 'head', [W * 0.23, H * 0.20, Z * 0.22], [W * 0.44, H * 0.54, -Z * 0.31]),
+    piece('eyeR', 'eyeWhite', 'dome', 'head', [W * 0.23, H * 0.20, Z * 0.22], [W * 0.44, H * 0.54, Z * 0.31]),
     // CON NGƯƠI — ở cực trước của lòng trắng, xem khối chú thích trên. To hơn bản đầu (0,11 → 0,13)
     // để tỉ lệ ngươi/trắng nghiêng hẳn về phía ngươi.
-    piece('pupilL', 'hair', 'dome', 'head', [W * 0.13, H * 0.15, W * 0.13], [W * 0.53, H * 0.53, -W * 0.25]),
-    piece('pupilR', 'hair', 'dome', 'head', [W * 0.13, H * 0.15, W * 0.13], [W * 0.53, H * 0.53, W * 0.25]),
+    piece('pupilL', 'hair', 'dome', 'head', [W * 0.13, H * 0.15, Z * 0.16], [W * 0.53, H * 0.53, -Z * 0.31]),
+    piece('pupilR', 'hair', 'dome', 'head', [W * 0.13, H * 0.15, Z * 0.16], [W * 0.53, H * 0.53, Z * 0.31]),
     // LÔNG MÀY — ngay trên mí trên (mắt trải 0,44…0,64 `headH`), MẢNH (0,03) và NGẮN (0,20). Bản
     // đầu để 0,05 dày × 0,26 dài và ảnh cho ra một VỆT TỐI liền một dải dưới vành mũ, không ra hai
     // cái lông mày. Lông mày là thứ đọc được nhờ KHOẢNG HỞ với con mắt, không nhờ bề dày.
-    piece('browL', 'hair', 'box', 'head', [W * 0.09, H * 0.03, W * 0.20], [W * 0.46, H * 0.69, -W * 0.26]),
-    piece('browR', 'hair', 'box', 'head', [W * 0.09, H * 0.03, W * 0.20], [W * 0.46, H * 0.69, W * 0.26]),
+    /*
+      ⚠️ ROUND 58: LÔNG MÀY PHẢI NẰM **TRÊN** GỜ MÀY, KHÔNG PHẢI LƠ LỬNG TRƯỚC NÓ — ẢNH SỬA HAI LẦN.
+      Từ vòng này có một gờ mày thật, và cái gờ ấy nhô nhất ở ĐÚNG độ cao tâm nó (0,665 `headH`),
+      thu lại nhanh về hai phía (nó là `dome`, vành rộng nhất nằm giữa).
+      · Lần 1: giữ lông mày ở x = 0,46 ⇒ chìm hẳn vào trong gờ, biến mất.
+      · Lần 2: đẩy ra 0,545 mà vẫn để ở y = 0,69 ⇒ ở độ cao ấy gờ đã thu về, nên lông mày thành hai
+        **que sẫm treo lơ lửng trước trán** — thấy rất rõ trên ảnh.
+      ⇒ Toạ độ của một nét trên mặt không được chọn một mình: nó phải bám ĐỘ CAO và ĐỘ NHÔ của khối
+      mang nó. Nay x = 0,490 (gờ ở đó nhô 0,520 nên lông mày chạm mặt gờ) và y = 0,665 (đúng tâm
+      gờ). Vẫn trên mí trên của mắt (mắt hết ở 0,64) nên khoảng hở — thứ làm lông mày đọc được —
+      còn nguyên.
+    */
+    piece('browL', 'hair', 'box', 'head', [W * 0.09, H * 0.03, Z * 0.25], [W * 0.490, H * 0.665, -Z * 0.32]),
+    piece('browR', 'hair', 'box', 'head', [W * 0.09, H * 0.03, Z * 0.25], [W * 0.490, H * 0.665, Z * 0.32]),
     // MIỆNG — một nét, ở 0,30 `headH`. Cao hơn thì nó nằm ngay dưới mũi; thấp hơn thì rơi xuống cằm.
     // NGẮN (0,20 `headW`): một nét dài bằng khoảng cách hai mắt đọc ra là đang nhăn mặt.
-    piece('mouth', 'hair', 'box', 'head', [W * 0.07, H * 0.03, W * 0.20], [W * 0.46, H * 0.30, 0]),
+    piece('mouth', 'hair', 'box', 'head', [W * 0.07, H * 0.03, Z * 0.25], [W * 0.455, H * 0.29, 0]),
   ];
 }
 
@@ -788,6 +940,25 @@ export function buildHumanBody(era) {
       [d.torsoD * 0.96, d.torsoH * 0.32, d.torsoW * 0.88], [0, d.torsoH * 0.06, 0]),
     piece('torso', 'cloth', 'chest', 'torso', [d.torsoD, d.torsoH, d.torsoW], [0, d.torsoH * 0.5, 0]),
     /*
+      ⚠️ CƠ THANG — ROUND 58, VIỆC 4, VÀ NÓ SỬA MỘT KHUYẾT TẬT ĐO ĐƯỢC, KHÔNG PHẢI MỘT CẢM GIÁC.
+      Đo trên kỷ 1 trước vòng này: đáy cái đầu ở y = 0,17231, còn ĐỈNH quả cầu vai ở y = 0,17335.
+      Quả cầu vai nằm **CAO HƠN hàm 0,020 `headH`** ⇒ chiều cao cổ nhìn thấy được là một số ÂM: cái
+      cổ tồn tại trong mã mà không tồn tại trên ảnh, và hai vai là hai cục vuông nhô lên hai bên
+      hàm — đúng dáng một người đang so vai, và đúng thứ Đàm gọi là *"thiếu cổ"*.
+      Hai chuyện được sửa cùng lúc, vì chúng là MỘT chuyện:
+        · `shoulderY` ở `humanPose.js`: 0,88 → 0,74 `torsoH`. Hạ quả cầu vai xuống dưới hàm, và
+          nhân đó kéo đầu ngón tay về ĐÚNG giữa đùi — mốc giải phẫu mà `armLen` vẫn tự nhận là
+          mình đang giữ (xem chú thích `armLen`) nhưng thực ra chưa bao giờ đạt.
+        · khối này: một `chest` bẹt, rộng trong z tới quá tâm vai, thấp trong x để không phình
+          ngực. Nó bắc từ chân cổ ra hai chỏm vai, nên đường bao từ cổ ra vai là một đường XUÔI
+          thay vì một góc vuông. Vai xuôi không phải một thuộc tính của quả cầu vai — nó là cái
+          khối nằm GIỮA cổ và vai, và trước vòng này chỗ ấy trống.
+      Vai màu `cloth` và `continues: 'torso'`: nó là phần nối dài của cái thân, nên `humanSeams.js`
+      canh nó — đổi màu là test đỏ. Một cái "cổ áo" sáng quanh vai là đúng lỗi vòng 54 đã trả giá.
+    */
+    piece('trapezius', 'cloth', 'chest', 'torso',
+      [d.torsoD * 0.84, d.torsoH * 0.30, d.torsoW * 1.08], [0, d.torsoH * 0.90, 0], 'torso'),
+    /*
       ⚠️ CỔ — ROUND 54 (ADR-094), VIỆC 5. Trước vòng này cái đầu ngồi TRỰC TIẾP lên thân, và đó là
       một trong hai thứ làm cư dân đọc ra "chồng hộp" chứ không đọc ra "cơ thể" (thứ kia là khớp).
       Một cái cổ dựng thành đúng một khối `limb` mảnh, thuôn lên trên, và nó làm đúng hai việc:
@@ -800,8 +971,11 @@ export function buildHumanBody(era) {
     // đầu — đọc ra là cái cổ áo trắng, không đọc ra cái cổ. Một cái cổ thật rộng khoảng một phần ba
     // đầu. Hạ thêm xuống (−0,17 thay vì −0,13) để phần dưới khuất vào trong thân.
     piece('neck', 'skin', 'limb', 'head',
-      [d.headW * 0.38, d.headH * 0.34, d.headW * 0.38], [0, -d.headH * 0.17, 0]),
-    piece('head', 'skin', 'dome', 'head', [d.headW, d.headH, d.headW], [0, d.headH * 0.5, 0]),
+      [d.headW * 0.38, d.headH * 0.40, d.headZ * 0.38], [0, -d.headH * 0.19, 0]),
+    piece('head', 'skin', 'skull', 'head', [d.headW, d.headH, d.headZ], [0, d.headH * 0.5, 0]),
+    // ⚠️ TÁM KHỐI SỌ (round 58, Việc 3) PHẢI ĐỨNG NGAY SAU CÁI ĐẦU, TRƯỚC KHUÔN MẶT — thứ tự trong
+    // mảng không đổi hình, nhưng nó là thứ người đọc mã dùng để hiểu cái gì nằm trên cái gì.
+    ...skullPieces(d),
     /*
       ⚠️ HAI CON MẮT — VIỆC 7, VÀ ĐÂY LÀ TOÀN BỘ "KHUÔN MẶT". Đàm nói thẳng: *"kiểu hoạt hình không
       cần mặt chi tiết, nó cần MẮT. Hai chấm tròn lớn đặt đúng chỗ là đủ để một nhân vật có hồn."*

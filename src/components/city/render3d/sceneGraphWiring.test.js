@@ -664,8 +664,19 @@ test('⚠️ CƯ DÂN PHẢI ĐI QUA `humanPose` — không được có nhánh 
   // mà nếu `sceneGraph.js` không gọi nó thì cả tầng tư thế là mã chết — lint không bắt (hàm CÓ
   // được dùng, bởi chính bài test của nó), build không bắt, và trên màn hình chỉ là những viên
   // gạch trôi y như trước, không ai nhớ là đáng lẽ phải khác.
-  assert.ok(/poseAt\(body, spot\.travelled\)/.test(CALLS),
+  // ⚠️ ROUND 58: BIỂU THỨC CHÍNH QUY NỚI RA ĐỂ NHẬN THAM SỐ THỨ BA, NHƯNG VẾ NÓ CANH THÌ CHẶT THÊM.
+  // Bản cũ khoá đúng chuỗi `poseAt(body, spot.travelled)`, nên khi Việc 8 thêm dáng lệch vào làm
+  // tham số thứ ba, bài này đỏ — và nó đỏ ĐÚNG: một lời khai về chỗ gọi thì phải đỏ khi chỗ gọi
+  // đổi. Nhưng nới thành `poseAt\(` trần thì bài mất hết răng.
+  // ⇒ Vẫn đòi hai tham số đầu NGUYÊN VẸN, và đòi THÊM rằng dáng lệch đi qua `stanceOf` chứ không
+  // được tính tại chỗ — nếu không thì `humanStance.js` thành mã chết y như cái bẫy Phase 4H mà
+  // khối chú thích trên vừa kể.
+  assert.ok(/poseAt\(body, spot\.travelled[,)]/.test(CALLS),
     'Cư dân không còn hỏi `humanPose`. Cả tầng dáng đi thành mã chết mà không có gì đỏ lên.');
+  assert.ok(/poseAt\(body, spot\.travelled, stanceOf\(/.test(CALLS),
+    'Cư dân không còn nhận dáng lệch trọng tâm — `humanStance.js` thành mã chết (Việc 8, vòng 58).');
+  assert.ok(/stanceOf\(residents\[i\]\.danhTinh\)/.test(CALLS),
+    'Dáng lệch không còn suy từ DANH TÍNH cư dân. Luật ADR-007 của vòng 58: nó phải tất định.');
   assert.ok(/buildHumanBody\(layout\.era\)/.test(CALLS),
     'Cơ thể không còn dựng theo KỶ — 15 kỷ sẽ quay về cùng một hình người.');
 
@@ -844,7 +855,22 @@ test('⚠️ NGÂN SÁCH TAM GIÁC CƯ DÂN — chấm TỪNG KỶ trên cảnh 
     số khối nhân theo số chi hoặc số tầng, tức ≥ 2×"*. 40 so với 33 là 21% biên: quá hẹp cho một
     phép nhân, quá rộng cho một bản vá nhỏ. Cái cân vẫn cân; chỉ cái vạch dời.
   */
-  const MAX_PARTS = 40;
+  /*
+    ⚠️ 40 → 56 (round 58, Phần B). ĐỌC CẢ KHỐI NÀY TRƯỚC KHI COI ĐÂY LÀ LẦN NỚI THỨ NĂM.
+    Lệnh của Đàm, vòng 58, nguyên văn: *"Cư dân nay được nhìn ở 390 px thay vì 70 px — tức mọi ngân
+    sách hình học cũ đặt cho họ đã lỗi thời. Trần nào chắn thì NÂNG hoặc XOÁ."* Vòng này dựng lại
+    cái đầu cho cự ly gần: tám khối sọ (gáy · gờ mày · hai gò má · hàm · cằm · hai tai), một khối cơ
+    thang, và bốn khối khối tóc ở những kỷ để đầu trần. Kỷ dày nhất đi từ 35 lên **48**.
+    ⇒ Và cái QUAN HỆ con số này sinh ra để canh vẫn nguyên: *"một vòng lặp lồng nhầm thì số khối
+    nhân theo số chi hoặc số tầng, tức ≥ 2×"*. 2 × 48 = 96, còn trần là 56 ⇒ một phép nhân vẫn
+    không lọt. 56 so với 48 là 17% biên: đủ cho một bản vá nhỏ, không đủ cho một vòng lặp.
+    ⚠️ VÀ ĐÂY LÀ SỐ PHẢI NÓI THẲNG: **56 KHÔNG PHẢI LỆNH VẼ.** Khối/người là số ma trận ghi mỗi
+    hình; LỆNH VẼ là số KHUÔN (`humanShapesUsed`), và cả 13 khối mới của vòng 58 chỉ dùng `box`,
+    `dome`, `chest` — ba khuôn mà 15/15 kỷ đã vẽ ⇒ **+0 lệnh vẽ**, `drawCallBudget.test.js` xanh
+    không phải nhờ nới mà nhờ không tiêu. Đó là lý do một cái tai dùng `box` (12 tam giác) chứ
+    không `dome` (600).
+  */
+  const MAX_PARTS = 56;
   // ⚠️ TRẦN TỈ LỆ 6% → 11% (2026-08-24 sáng) → **30%** (2026-08-24 tối). ĐỌC TRƯỚC KHI TIN NÓ.
   //
   // Con số 6% chưa bao giờ được buộc vào một phép đo THỜI GIAN nào — nó là một trần tự đặt, và một
@@ -889,7 +915,24 @@ test('⚠️ NGÂN SÁCH TAM GIÁC CƯ DÂN — chấm TỪNG KỶ trên cảnh 
     MỘT lệnh vẽ cho cả trăm người — nên tỉ lệ TAM GIÁC ở đây không dịch thẳng ra thời gian. Muốn
     biết máy có nóng không thì đo trên máy Đàm, không đo ở đây (hộp cát là SwiftShader).
   */
-  const TRAN_TY_LE = 3.0;
+  /*
+    ⚠️ 3,0 → 4,0 (round 58, Phần B), VÀ MỘT CON SỐ PHẢI ĐỌC LÊN THÀNH LỜI: **328,69%**.
+    Đó là tỉ lệ đo được ở kỷ 1 sau khi dựng lại cái đầu — 22.754 tam giác/người × 28 người trên một
+    cảnh 193.836 tam giác. Tức **cư dân nay tốn hơn GẤP BA thành phố họ đang đứng trong đó.**
+    Thành thật về nguồn gốc con số: phần lớn KHÔNG đến từ vòng này. Trước Phần B kỷ 1 đã là 18.662
+    (≈ 270%) — 60 cạnh của vòng 55 là chỗ tiền đi. Chín khối sọ + cơ thang của vòng 58 thêm 4.092.
+    Vì sao nâng thay vì cắt: cái trần này từ vòng 54 chỉ còn làm MỘT việc — *"bắt một vòng lặp lồng
+    nhầm"* — và cư dân đi qua `InstancedMesh` (một lệnh vẽ cho cả trăm người) lại KHÔNG đổ bóng, nên
+    tỉ lệ tam giác ở đây không dịch thẳng ra mili-giây. 4,0 vẫn bắt một phép nhân (≥ 2× từ 3,29 là
+    6,6). Đàm gỡ trần tam giác bằng lời bốn vòng liên tiếp, vòng 58 nguyên văn: *"Trần nào chắn thì
+    nâng hoặc xoá."*
+    ⚠️ NHƯNG CÓ MỘT SỰ LÃNG PHÍ THẬT Ở ĐÂY, VÀ NÓ ĐƯỢC GHI THÀNH NỢ CHỨ KHÔNG ĐƯỢC IM: một gò má
+    rộng 0,30 `headW` — chừng 6 điểm ảnh ở ảnh cận — đang tiêu **716 tam giác**, đúng bằng cái đầu,
+    vì `dome` có 60 cạnh × 6 vành. Cái tai thì chỉ tiêu 12 vì nó dùng `box`. Lối ra đúng không phải
+    nới tiếp: nó là một khuôn THÔ (ít cạnh) nằm trong bộ khuôn mà cả 15 kỷ đều dùng, để chi tiết nhỏ
+    vay được nó mà không tốn thêm lệnh vẽ. Chưa làm vòng này.
+  */
+  const TRAN_TY_LE = 4.0;
   let tệNhất = null;
   for (let era = 1; era <= 15; era += 1) {
     const n = buildHumanBody(era).parts.length;
@@ -913,8 +956,8 @@ test('⚠️ NGÂN SÁCH TAM GIÁC CƯ DÂN — chấm TỪNG KỶ trên cảnh 
   // bằng đúng thứ vừa mua. Cách đúng là hỏi lại *"ngoài đời cái mũ là MẤY vật?"*: một. Gộp lại
   // thành khuôn `hat` (một mặt tròn xoay) thì kỷ 8 về 11 khối, hình học ĐÚNG HƠN, và RẺ HƠN 12
   // tam giác. ⇒ **Khi một cái cổng chặn lại, hãy để nó chỉ ra một thiết kế đúng hơn.**
-  assert.ok(MAX_PARTS <= 40,
-    `trần ${MAX_PARTS} khối/người đã bị nâng quá 40 — mỗi lần nâng phải là một lệnh tường minh của`
+  assert.ok(MAX_PARTS <= 56,
+    `trần ${MAX_PARTS} khối/người đã bị nâng quá 56 — mỗi lần nâng phải là một lệnh tường minh của`
     + ' Đàm kèm lý do, không được nâng cho vừa một bản vá');
 
   /*

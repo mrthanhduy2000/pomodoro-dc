@@ -56,6 +56,7 @@ import { buildHumanBody, buildHumanBodyLowDetail, humanRoleColors } from '../../
 import { residentBox, residentEye } from '../../../engine/city3d/residentFocus';
 import { buildHumanShapeGeometry } from './humanGeometry';
 import { poseAt } from '../../../engine/city3d/humanPose';
+import { stanceOf } from '../../../engine/city3d/humanStance';
 import { fogDensityFor, sunDirectionAt } from '../../../engine/city3d/daylight';
 import { buildMergedGeometry, partTopWorld } from './geometryFactory';
 import { createMotionUniforms, createParticles, createWaterUniforms, injectWater } from './motion';
@@ -1729,7 +1730,9 @@ export function createCityScene({
         // Ghép: T(người) · R_y(hướng đi) · [ T(gốc khớp) · R_z(góc khớp) · T(tâm hộp) · S(cỡ) ].
         // Viết bằng một `compose` duy nhất thay vì bốn phép nhân ma trận — rẻ hơn và ít chỗ sai
         // hơn, vì mọi thứ nằm trong một biểu thức đọc được một lượt.
-        const pose = poseAt(body, spot.travelled);
+        // Round 58, Việc 8: dáng lệch trọng tâm là hàm của DANH TÍNH cư dân, không của thời gian
+        // — nên nó tính một lần mỗi người mỗi khung, và cùng người thì cùng dáng ở mọi khung.
+        const pose = poseAt(body, spot.travelled, stanceOf(residents[i].danhTinh));
         heading.setFromAxisAngle(UP, -spot.angle);
         for (let k = 0; k < parts.length; k += 1) {
           const part = parts[k];

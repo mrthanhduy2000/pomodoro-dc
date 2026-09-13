@@ -12,7 +12,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 
 import { HUMAN_ROLES, buildHumanBody, humanRoleColors } from './human.js';
-import { HUMAN_SHAPES, humanShapeMesh, isValidHumanShape, shapeTriangles } from './humanShape.js';
+import { HUMAN_SHAPES, humanShapeMesh, isValidHumanShape, shapeRings, shapeTriangles } from './humanShape.js';
 
 const ERAS = Array.from({ length: 15 }, (_, i) => i + 1);
 const khoa = (x, y, z) => `${x.toFixed(6)}|${y.toFixed(6)}|${z.toFixed(6)}`;
@@ -275,8 +275,15 @@ test('MỌI BỘ PHẬN CỦA MỌI KỶ PHẢI KHAI MỘT KHUÔN HỢP LỆ', (
  * mạnh hơn "nằm ngoài mặt sọ". Lấy bán kính nội tiếp cho dễ thì bài test sẽ xanh cả với một mũ
  * tóc đang cắm vào sọ ở giữa hai đỉnh.
  */
-function matSo(y, headW, headH) {
-  const rings = [[-0.5, 0.60], [-0.28, 0.84], [-0.02, 1.00], [0.20, 0.92], [0.38, 0.74], [0.50, 0.40]];
+function matSo(y, headW, headH, khuonDau) {
+  /*
+    ⚠️ ROUND 58: ĐƯỜNG SINH ĐƯỢC **HỎI**, KHÔNG CÒN ĐƯỢC CHÉP — VÀ BẢN CHÉP ĐÃ NÓI DỐI ĐÚNG MỘT LẦN.
+    Bản cũ gõ tay bảng vành của `dome` vào đây. Vòng 58 đổi cái đầu sang khuôn `skull` (9 vành, có
+    chỗ thót ở thái dương) và bài này lập tức báo **872 đỉnh mũ tóc nằm trong sọ** — cho một mũ tóc
+    nằm hoàn toàn bên ngoài. Nó không đo cái đầu trong mã; nó đo cái đầu của vòng 56.
+    ⇒ `shapeRings(khuônĐầu)` lấy đúng đường sinh mà bộ dựng hình đang dùng. Bản chép thứ ba biến mất.
+  */
+  const rings = shapeRings(khuonDau);
   const R = 0.5 / Math.cos(Math.PI / 60);
   const u = y / headH - 0.5;
   if (u < -0.5 || u > 0.5) return null;            // ngoài khoảng cái đầu ⇒ chắc chắn không đâm vào
@@ -317,14 +324,27 @@ test('MŨ TÓC PHẢI NẰM NGOÀI CÁI SỌ — nếu không thì đường vi�
   const body = buildHumanBody(13);                 // kỷ 13: `crop`, đầu trần ⇒ mũ tóc lộ nguyên
   const scalp = body.parts.find((p) => p.shape === 'scalp');
   assert.ok(scalp, 'kỷ 13 phải dựng một mũ tóc — nếu không, bài test này đang đo cái không có');
-  const { headW, headH } = body.dims;
+  const { headW, headH, headZ } = body.dims;
+  const khuonDau = body.parts.find((p) => p.id === 'head')?.shape;
+  assert.ok(khuonDau, 'không tìm thấy khối `head` — bài này đang đo một cái đầu không tồn tại');
+
+  /*
+    ⚠️ ROUND 58: KÉO TRỤC Z VỀ ĐƠN VỊ TRỤC X TRƯỚC KHI SO — NẾU KHÔNG THÌ PHÉP ĐO NÀY NÓI DỐI.
+    Từ vòng 58 cái sọ là một hình bầu dục (`headZ = 0,80 headW`, Việc 3), và cả sọ lẫn mũ tóc đều
+    dẹt theo đúng tỉ số ấy. Nhưng `Math.hypot(x, z)` TRỘN hai trục có đơn vị khác nhau, rồi đem so
+    với `matSo()` — một bán kính tính theo trục x. Kết quả: bài này báo **660 đỉnh đâm vào sọ** cho
+    một mũ tóc đang nằm hoàn toàn bên ngoài. Lỗi ở cái THƯỚC, không ở cái đầu.
+    Nhân z với `headW / headZ` là biến hình bầu dục thành hình tròn ⇒ `hypot` lại có nghĩa, và bài
+    test vẫn hỏi đúng câu cũ. `headZ === headW` thì hệ số bằng 1 và mọi thứ y như trước.
+  */
+  const zVeX = headW / headZ;
 
   let dam = 0;
   let leMin = Infinity;
   for (const [x, y, z] of dinhTheoKhop(scalp)) {
-    const ban = Math.hypot(x, z);
+    const ban = Math.hypot(x, z * zVeX);
     if (ban < 1e-9) continue;                      // mũi nhọn bịt đáy — nằm trong sọ CÓ CHỦ Ý
-    const so = matSo(y, headW, headH);
+    const so = matSo(y, headW, headH, khuonDau);
     if (so === null) continue;                     // cao hơn đỉnh sọ ⇒ đã ở ngoài
     if (ban <= so) dam += 1;
     leMin = Math.min(leMin, ban / so);

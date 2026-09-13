@@ -108,7 +108,7 @@ import { smoothCrease } from './creaseNormals';
 // Nó ném thay vì trôi, nên mất ba mươi giây thay vì ba vòng.
 const ROUND_SIDES = 60;
 
-export const HUMAN_SHAPES = ['box', 'prism', 'limb', 'calf', 'chest', 'flare', 'cone', 'dome', 'hat', 'scalp'];
+export const HUMAN_SHAPES = ['box', 'prism', 'limb', 'calf', 'chest', 'flare', 'cone', 'dome', 'hat', 'scalp', 'skull'];
 
 /**
  * Hồ sơ từng khuôn. `sides` = số cạnh đa giác; `rings` = [y, r] từ đáy lên đỉnh.
@@ -137,6 +137,36 @@ export const HUMAN_SHAPES = ['box', 'prism', 'limb', 'calf', 'chest', 'flare', '
  * vì thế **quan trọng hơn trước**, không phải ít hơn: chúng vẫn là thứ sinh ra các dải sáng, chỉ là
  * ranh giới giữa hai dải nay chuyển mềm thay vì gãy thành một cạnh.
  */
+/**
+ * ĐƯỜNG SINH CỦA HỘP SỌ — dùng chung bởi `skull` (cái đầu) và `scalp` (mũ tóc). Round 58, Việc 3.
+ *
+ * ⚠️ MỘT HẰNG SỐ, HAI KHUÔN, VÀ ĐÓ LÀ TOÀN BỘ LÝ DO NÓ NẰM Ở ĐÂY. Mũ tóc phải là *chính cái sọ
+ * phóng to đều* — nếu hai bảng số được gõ ra hai lần thì ngày nào một bên đổi, bên kia im lặng
+ * trôi, và chân tóc rời khỏi da đầu. Chuyện ấy đã xảy ra ngay trong vòng 58 (xem chú thích `scalp`).
+ *
+ * Đọc từ CẰM (−0,50) lên CHỎM (+0,50). Năm trong bảy đặc điểm sọ mà Đàm đặt hàng nằm gọn ở đây:
+ * cằm · hàm thu · gò má · **chỗ thót ở thái dương** · trán dốc. Hai cái còn lại là bất đối xứng
+ * trước–sau nên phải là khối riêng (`occiput`, `browRidge` ở `human.js`).
+ *
+ * ⚠️ VÀNH `[−0,04, 0,84]` LÀ VÀNH ĐẮT NHẤT BẢNG: nó THÓT LẠI, kẹp giữa gò má 0,88 và xương đỉnh
+ * 1,00. Bỏ nó đi thì bán kính tăng đơn điệu từ cằm lên đỉnh — tức một QUẢ TRỨNG. Chỗ thót ấy là
+ * thứ mắt dùng để đọc ra *"có hộp sọ ở trên, có khuôn mặt ở dưới"*.
+ * ⚠️ ĐÁY 0,26 (quả cầu `dome` cũ: 0,60) LÀ CÁI CẰM. Một cái đầu thu về 0,60 ở đáy thì nó không kết
+ * thúc, nó bị CẮT NGANG — và chỗ cắt ấy chính là chỗ vòng 54 phải nhét một cái cổ rộng 0,46 vào để
+ * che, rồi nhận lại một cái "vành cổ áo trắng".
+ */
+const SKULL_RINGS = Object.freeze([
+  [-0.50, 0.26],   // cằm
+  [-0.38, 0.54],   // hàm dưới
+  [-0.26, 0.72],   // góc hàm
+  [-0.14, 0.88],   // gò má — chỗ rộng nhất của KHUÔN MẶT
+  [-0.04, 0.84],   // ⚠️ THÁI DƯƠNG: thót lại. Bỏ vành này là được một quả trứng.
+  [0.08, 0.96],
+  [0.20, 1.00],    // xương đỉnh — chỗ rộng nhất của CẢ CÁI ĐẦU
+  [0.34, 0.90],
+  [0.50, 0.44],    // chỏm
+]);
+
 const PROFILES = {
   /**
    * HỘP — giữ nguyên vẹn, và nó vẫn là câu trả lời ĐÚNG cho những thứ do bàn tay đóng ra: cái cặp,
@@ -242,6 +272,50 @@ const PROFILES = {
   },
 
   /**
+   * SỌ NGƯỜI — ROUND 58, VIỆC 3. Cái đầu, và CHỈ cái đầu, dùng khuôn này.
+   *
+   * ══════════════════════════════════════════════════════════════════════════════════════════
+   * VÌ SAO MỘT ĐƯỜNG SINH, CHỨ KHÔNG PHẢI SÁU KHỐI DÁN THÊM — MỘT TẤM ẢNH ĐÃ BÁC BẢN KIA
+   * ══════════════════════════════════════════════════════════════════════════════════════════
+   * Bản đầu của Việc 3 dựng bảy đặc điểm sọ bằng **tám khối lồi dán lên quả cầu**: gờ mày, hai gò
+   * má, hàm, cằm, gáy, hai tai. Mọi con số đo được đều đúng — gò má nhô hơn mặt sọ, cằm là điểm
+   * nhô nhất của nửa dưới, tỉ lệ z/x về 0,80. Rồi chụp ảnh chính diện ở 1170×726:
+   *   · gờ mày chạy hết bề ngang đầu ⇒ một **THANH NGANG** sáng giữa tóc và mắt, đọc ra là cái
+   *     băng-đô hoặc cặp kính bảo hộ
+   *   · hai gò má ⇒ hai **QUẢ BÓNG** dưới mắt, đọc ra là má chuột túi
+   *   · cằm ⇒ một **QUẢ BÓNG** nữa dán dưới miệng
+   *   · hàm ⇒ một **TẤM BẸT** có góc cạnh ở hai bên
+   * Cộng lại: một cái MẶT NẠ GHÉP, tệ hơn hẳn khuôn mặt nhẵn của vòng 56.
+   *
+   * ⚠️ VÌ SAO NÓ HỎNG, NÓI CHO ĐÚNG BẢN CHẤT: mỗi khối là một vật LỒI riêng, nên nó mang theo
+   * đường bao riêng và một chỗ GÃY PHÁP TUYẾN riêng ở chỗ giáp mặt sọ. Cộng nhiều vật lồi không
+   * ra một mặt cong liền — nó ra nhiều cái bướu. Đây đúng cùng một bài học dự án đã trả tiền ở
+   * cái mũ vành (2026-08-23): dựng bằng HAI khối (đĩa + chỏm) thì hỏng, hỏi lại *"ngoài đời đây
+   * là MẤY vật?"* — một — rồi gộp thành một mặt tròn xoay thì vừa đẹp hơn vừa rẻ hơn.
+   * ⇒ Cái sọ ngoài đời cũng là MỘT vật. Năm trong bảy đặc điểm Đàm đặt hàng là chuyện của MẶT CẮT
+   * NGANG theo chiều cao — thứ mà một đường sinh diễn đạt được trọn vẹn và không có chỗ gãy nào:
+   *     trán dốc · gò má · hàm thu · cằm · và chỗ THÓT Ở THÁI DƯƠNG
+   * Hai đặc điểm còn lại là bất đối xứng TRƯỚC–SAU, mà một mặt tròn xoay quanh trục đứng thì không
+   * làm được: **gáy** (`occiput`) và **gờ mày** (`browRidge`) vẫn phải là khối riêng — nhưng nay
+   * chỉ còn hai, và cả hai đều nằm ở chỗ đường bao vốn đã phải gãy.
+   *
+   * ⚠️ CHỖ THÓT Ở THÁI DƯƠNG (vành 0,84 kẹp giữa gò má 0,88 và đỉnh 1,00) LÀ ĐẶC ĐIỂM ĐẮT NHẤT
+   * Ở ĐÂY, và nó chỉ tồn tại được vì đây là một đường sinh. Không có nó thì mặt cắt ngang tăng đều
+   * từ cằm lên đỉnh — tức một quả trứng. Cái thót ấy là thứ mắt dùng để đọc ra "có hộp sọ ở trên,
+   * có khuôn mặt ở dưới".
+   * ⚠️ ĐÁY 0,26 (quả cầu cũ: 0,60): đó là cái CẰM. Một cái đầu thu về 0,60 ở đáy thì nó không kết
+   * thúc — nó bị cắt ngang, và chỗ cắt ấy chính là chỗ vòng 54 phải nhét một cái cổ rộng 0,46 vào
+   * để che, rồi nhận lại một cái "vành cổ áo trắng".
+   *
+   * ⚠️ GIÁ: +1 KHUÔN ⇒ **+1 LỆNH VẼ cho cả 15 kỷ**, và `drawCallBudget.test.js` phải được nâng
+   * từng kỷ một, có ngày tháng. Đó là một cái giá thật và nó được trả một cách tường minh: thành
+   * phố đang tiêu 18 lệnh vẽ, nên đây là +5,5% để đổi lấy hình dạng của thứ Đàm đang nhìn ở cự ly
+   * gần gấp năm. Không tránh được bằng cách sửa `dome`: `dome` còn dùng cho hai con mắt, con ngươi
+   * và sáu khớp cầu — một cái đầu gối hình đầu lâu thì tệ hơn nhiều.
+   */
+  skull: { sides: ROUND_SIDES, rings: SKULL_RINGS },
+
+  /**
    * DA ĐẦU CÓ CHÂN TÓC — round 56, Phần A, và khuôn duy nhất trong bộ có **đường viền dưới không
    * nằm trên một mặt phẳng**. Nó tồn tại vì một phép đo, không vì một ý thích.
    *
@@ -265,14 +339,17 @@ const PROFILES = {
    * trắng (vòng 54), nay là chân tóc. Cả ba đều là một RANH GIỚI MÀU đặt sai chỗ, và cả ba đều chỉ
    * bị bắt bởi một tấm ảnh soi gần — không bài test nào trong 1.779 bài thấy được.
    *
-   * `rings` đúng bằng `dome`: mũ tóc là **chính cái sọ phóng to đều**, nên nó bám sát hộp sọ ở mọi
-   * chỗ thay vì là một cái bát úp lên. Thứ duy nhất khác là `hairline`.
+   * `rings` đúng bằng **CÁI SỌ**: mũ tóc là *chính cái sọ phóng to đều*, nên nó bám sát hộp sọ ở
+   * mọi chỗ thay vì là một cái bát úp lên. Thứ duy nhất khác là `hairline`.
+   *
+   * ⚠️ VÀ TỪ ROUND 58 ĐÓ LÀ MỘT HẰNG SỐ DÙNG CHUNG (`SKULL_RINGS`), KHÔNG PHẢI MỘT BẢN CHÉP.
+   * Trước vòng 58 hai bảng `rings` được gõ ra hai lần, giống hệt nhau, kèm một câu chú thích hứa
+   * rằng chúng bằng nhau. Vòng 58 đổi cái đầu từ `dome` sang `skull` — và lời hứa ấy im lặng gãy:
+   * ở tầm xương đỉnh sọ nở ra 1,00 còn mũ tóc (vẫn theo `dome`) chỉ 0,92 × 1,07 = 0,984 ⇒ **tóc
+   * chui vào trong sọ**, và cái vạch ngang của vòng 56 quay lại y nguyên. Một lời hứa viết bằng
+   * văn xuôi thì không có răng; dùng chung một hằng số thì có. Đúng `TECH_DEBT #42`.
    */
-  scalp: {
-    sides: ROUND_SIDES,
-    rings: [[-0.5, 0.60], [-0.28, 0.84], [-0.02, 1.00], [0.20, 0.92], [0.38, 0.74], [0.50, 0.40]],
-    hairline: true,
-  },
+  scalp: { sides: ROUND_SIDES, rings: SKULL_RINGS, hairline: true },
 
   /**
    * MŨ VÀNH CỨNG — VÀNH và CHỎM trong MỘT khối, và đây là khuôn duy nhất trong bộ sinh ra vì một
@@ -357,15 +434,59 @@ const FOLD_PERIOD = FOLD_RADIUS.length;
   bề ngang một cái đỉnh tóc thật. Đây là lần thứ hai trong dự án một hàm mượt được chọn vì tên gọi
   chứ không vì đồ thị của nó (lần đầu: `cos(k·θ)` cho nếp vải, xem khối trên).
 */
-const HAIRLINE_TEMPLE = 1.462;   // p ở thái dương (θ = 90°)
-const HAIRLINE_SWING = 1.192;    // nửa quãng trán ↔ gáy
-const HAIRLINE_BULGE = 0.457;    // độ cong bậc hai, thứ kéo thái dương xuống đúng chỗ
-const HAIRLINE_PEAK = 0.45;      // hõm giữa trán, tính bằng p
+/*
+  ⚠️ ROUND 58: BỐN HẰNG SỐ NÀY ĐỔI ĐƠN VỊ TỪ **CHỈ SỐ VÀNH** SANG **CHIỀU CAO**, VÀ ĐÓ LÀ MỘT LỖI
+  THẬT ĐÃ NỔ RA CHỨ KHÔNG PHẢI MỘT LẦN DỌN DẸP.
+
+  Bản vòng 56 khai chân tóc bằng `p` — tham số chạy 0 … `rings.length − 1`, tức **một chỉ số vành**.
+  Ba con số (1,462 · 1,192 · 0,457) được giải ra cho `dome`, khuôn có ĐÚNG 6 vành. Vòng 58 cho cái
+  đầu một khuôn riêng, `skull`, có **9 vành** — và cùng một `p` lập tức rơi vào một độ cao khác:
+  chân tóc trước tụt từ 0,672 xuống **0,343** lần chiều cao đầu, tức xuống ngang tầm mắt. Bài gác
+  chân tóc của vòng 56 bắt được ngay (*"trán − gáy = 0,250, dưới 0,40 thì nó vẫn đọc ra một cái
+  vạch ngang"*), nên chuyện này tốn một lần chạy test chứ không tốn một vòng.
+
+  ⚠️ BÀI HỌC, VÀ NÓ THUỘC HỌ ĐÃ CÓ TÊN TRONG DỰ ÁN: **một con số chỉ có nghĩa cùng với hệ quy chiếu
+  nó được giải ra.** `p = 1,462` không nói "ở thái dương" — nó nói "ở 24% quãng đường giữa vành 1
+  và vành 2 CỦA MỘT KHUÔN CÓ 6 VÀNH". Đổi số vành là đổi thước đo mà mọi con số vẫn nguyên và không
+  có gì đỏ lên ở tầng dưới. Cùng họ với `cadenceOf` (`humanStyle.js`) — đúng số, sai NHÃN.
+  ⇒ Nay ba mốc khai bằng **chiều cao, đơn vị `headH`, đo từ đáy cằm** — đúng đơn vị mà chính khối
+  chú thích dưới đây vẫn dùng để MÔ TẢ chúng, và là đơn vị không đổi khi ai đó thêm một vành.
+*/
+const HAIRLINE_NAPE = 0.093;     // chân tóc ở GÁY (θ = 180°), lần chiều cao đầu
+const HAIRLINE_TEMPLE = 0.340;   // chân tóc ở THÁI DƯƠNG (θ = 90°)
+const HAIRLINE_BROW = 0.720;     // chân tóc giữa TRÁN (θ = 0°), trước khi trừ đỉnh nhọn
+const HAIRLINE_PEAK = 0.045;     // hõm/đỉnh nhọn giữa trán, cũng tính bằng chiều cao
+
+/** Chiều cao chân tóc (đơn vị `headH`, gốc ở đáy) tại phương vị có `cos(θ) = c`. */
+function hairlineHeight(c) {
+  // Bậc hai đi qua đúng ba mốc trên: gáy (c = −1) · thái dương (c = 0) · trán (c = +1).
+  const a0 = HAIRLINE_TEMPLE;
+  const a1 = (HAIRLINE_BROW - HAIRLINE_NAPE) / 2;
+  const a2 = (HAIRLINE_BROW + HAIRLINE_NAPE) / 2 - HAIRLINE_TEMPLE;
+  const peak = c > 0 ? HAIRLINE_PEAK * c ** 24 : 0;
+  return a0 + a1 * c + a2 * c * c - peak;
+}
+
+/**
+ * Tham số đường sinh `p` ứng với một CHIỀU CAO cho trước — phép đổi đơn vị mà vòng 58 thêm vào.
+ * `rings` có `y` tăng đơn điệu (mọi hồ sơ trong `PROFILES` đều vậy), nên đây là một phép nội suy
+ * tuyến tính ngược, không phải một phép dò.
+ */
+function paramAtHeight(rings, h) {
+  const y = h - 0.5;                       // `rings` đo y từ −0,5 (đáy) tới +0,5 (đỉnh)
+  const last = rings.length - 1;
+  if (y <= rings[0][0]) return 0;
+  for (let i = 0; i < last; i += 1) {
+    const [y0] = rings[i];
+    const [y1] = rings[i + 1];
+    if (y <= y1) return i + (y - y0) / (y1 - y0);
+  }
+  return last;
+}
 
 /** Tham số đường sinh của chân tóc tại phương vị có `cos(θ) = c`. Tất định, không tra bảng. */
-function hairlineParam(c) {
-  const peak = c > 0 ? HAIRLINE_PEAK * c ** 24 : 0;
-  return HAIRLINE_TEMPLE + HAIRLINE_SWING * c + HAIRLINE_BULGE * c * c - peak;
+function hairlineParam(rings, c) {
+  return paramAtHeight(rings, hairlineHeight(c));
 }
 
 /** Điểm `[y, r]` trên đường sinh tại tham số `p` liên tục (0 … rings.length − 1). */
@@ -437,7 +558,7 @@ function buildHairline(pos, nor, rings, sides, R) {
   for (let j = 0; j < sides; j += 1) {
     const ang = (j + 0.5) * ((Math.PI * 2) / sides);
     const cos = Math.cos(ang);
-    cols.push({ cos, sin: Math.sin(ang), p0: hairlineParam(cos) });
+    cols.push({ cos, sin: Math.sin(ang), p0: hairlineParam(rings, cos) });
   }
   /** Đỉnh thứ `j` của mức thứ `i`, với mức 0 = chân tóc của chính cột ấy. */
   const vert = (i, j) => {
@@ -644,6 +765,22 @@ export function shapeEndRadius(name, which = 1) {
  * ⚠️ Khác `shapeEndRadius`: `dome` phình tới r = 1,00 ở GIỮA nhưng chỉ 0,60/0,40 ở hai đầu, nên
  * hỏi nhầm hàm sẽ cho một quả cầu nhỏ hơn ý định gần một nửa.
  */
+/**
+ * ĐƯỜNG SINH của một khuôn — mảng `[y, r]`, `y` chạy −0,5 … +0,5, `r` là hệ số bề rộng.
+ *
+ * ⚠️ TỒN TẠI ĐỂ XOÁ BẢN CHÉP THỨ BA. Bảng vành của cái sọ từng được gõ ra ba nơi: `dome`, `scalp`,
+ * và một bản chép tay trong `humanShape.test.js` (hàm `matSo`). Hai bản đầu đã gộp thành
+ * `SKULL_RINGS`; bản thứ ba thì không gộp được vì nó nằm ở file test — nên thay vì chép, bài test
+ * HỎI. Vòng 58 đổi cái đầu sang `skull` và bản chép ấy lập tức báo *"872 đỉnh mũ tóc nằm trong
+ * sọ"* cho một mũ tóc hoàn toàn nằm ngoài: một phép đo dựng trên một bản chép cũ thì nó đo cái
+ * đầu CŨ, dù mã đã đổi. Đúng `TECH_DEBT #42`, và đúng luật 1 của `CLAUDE.md`.
+ */
+export function shapeRings(name) {
+  const profile = PROFILES[name];
+  if (!profile) throw new Error(`shapeRings: khuôn lạ "${name}"`);
+  return profile.rings.map((r) => [r[0], r[1]]);
+}
+
 export function shapeMaxRadius(name) {
   const profile = PROFILES[name];
   if (!profile) throw new Error(`shapeMaxRadius: khuôn lạ "${name}"`);
@@ -674,10 +811,17 @@ export function isValidHumanShape(name) {
  * ở đáy cái đầu và đường sinh của `dome` nhìn từ điểm ấy là đơn điệu, nên phóng to đều quanh nó
  * chắc chắn nằm ngoài — không phải hy vọng, mà là thứ bài test cuối `humanShape.test.js` đo.
  */
-export function scalpFit(headW, headH, lift) {
+/*
+  ⚠️ ROUND 58: THÊM THAM SỐ `headZ`, VÀ NÓ KHÔNG PHẢI MỘT TIỆN NGHI — BỎ NÓ LÀ CHÂN TÓC HỎNG LẠI.
+  Từ vòng 58 cái sọ hẹp hai bên (`headZ = 0,80 headW`, Việc 3). Mũ tóc phải là *"chính cái sọ phóng
+  to đều"* — nếu bề z của nó vẫn tính theo `headW` thì nó rộng hơn sọ 1,25 lần ở hai bên: chân tóc
+  rời khỏi da đầu ở thái dương và ta được đúng cái **vạch ngang** mà vòng 56 vừa xoá. Tham số có
+  giá trị mặc định `headW` để mọi chỗ gọi cũ giữ nguyên nghĩa cũ.
+*/
+export function scalpFit(headW, headH, lift, headZ = headW) {
   const { spanX, midX, spanZ } = humanShapeMesh('scalp').boxFit;
   return {
-    size: [lift * headW * spanX, lift * headH, lift * headW * spanZ],
+    size: [lift * headW * spanX, lift * headH, lift * headZ * spanZ],
     rest: [lift * headW * midX, lift * headH * 0.5, 0],
   };
 }

@@ -10,6 +10,41 @@
 > **Muốn hiểu VÌ SAO một quyết định được chọn** → `ARCHITECTURE_DECISIONS.md`. **Muốn biết migration
 > cụ thể nào cần chạy** → `MIGRATION.md`.
 
+## 2026-09-13 — Round 58: the first time I looked a resident in the face
+
+**Purpose** — round 57 let Đàm tap a resident and fly close. At that distance the character, built
+for a 70-pixel silhouette across nine rounds, read as a mannequin. This round rebuilds it for the
+new distance.
+
+**Scope**
+- **A guard for a defect shape seen five times** (`humanSeams.js`): white rivets on shoulders,
+  a white collar ring, a flat hairline, a helmet in cloth colour, white spheres for hands. A block
+  that is only the continuation of a limb declares `continues: '<id>'` and must carry that limb's
+  colour role. 10 declarations per person, 0 faults across 15 eras. The naive "enumerate adjacent
+  blocks of differing colour" measurement was built first and rejected: 99 pairs, most of them
+  bounding-box artefacts.
+- **Hands** are a flat block plus a thumb; skin when the sleeve is open, glove colour when gloved
+  (era 12's padded winter mitten), never a third colour. `style.gloves` was a permanently-false
+  branch and is now a real wardrobe fact.
+- **Joint balls** sized from the real lathe profiles. The minimum sealing radius turns out not to
+  depend on the bend angle at all — a rim is a circle centred ON the joint, and rotation preserves
+  distance from it — so 84° of knee bend costs nothing extra.
+- **A skull instead of a sphere** — its own lathe profile carrying chin, jaw, cheekbones, a pinch at
+  the temples and a sloping forehead; `occiput` and `browRidge` stay separate because a surface of
+  revolution cannot be asymmetric front-to-back. Costs **+1 draw call in all 15 eras**.
+- **A visible neck**: the shoulder ball's top sat ABOVE the jaw (visible neck = −0.020 head heights).
+  Shoulder line 0.88 → 0.74 `torsoH`, plus a trapezius block bridging neck to shoulder.
+- **Hair volume**: a fringe block; sideburns, nape and crown mass already came free from round 56's
+  hairline curve and `SCALP_LIFT`, and saying so beat adding blocks to make up the count.
+- **Stance** (`humanStance.js`): standing leg, hip drop, opposite shoulder tilt, head tilt, one bent
+  arm — a pure deterministic function of resident identity, applied as a constant bias on the gait.
+
+**Impact** — visual only; no state, no storage, no API. Draw calls 18 → 19 in the heaviest scene.
+Blocks per person 35 → 48 (ceiling raised 40 → 56 by Đàm's explicit order this round).
+
+**Compatibility** — no migration. `poseAt(body, travelled)` keeps its old two-argument meaning
+bit-for-bit; the stance is an optional third argument.
+
 ## 2026-09-12 — Round 57: the picture was never drawn at full size
 
 **Purpose**: find out why the city looks soft on iPhone, and fix it for every pixel of every era at

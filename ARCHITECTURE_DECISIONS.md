@@ -73,6 +73,92 @@ roughly 44%. Titles below are the lookup key; read one with
 
 ---
 
+## ADR-095 — Round 58: adding convex lumps does not make a curved surface — five of the seven skull features belong in ONE generating line
+
+**Date**: 2026-09-13 · **Order**: *"Chín vòng qua nhân vật được dựng cho một hình cao 70 px — nay tôi
+nhìn gần gấp năm lần, và ở cỡ ấy nó đọc ra là một con ma-nơ-canh… Không phải thiếu chi tiết. Là
+thiếu HÌNH."* · Branch `claude/city-skill-points-display-7k4nof`.
+
+### Context
+Round 57 gave the app tap-a-resident-to-fly-close. The first thing Đàm saw at that distance was a
+head that had been a perfect sphere for nine rounds. He listed seven skull features (flat sides,
+occipital bulge, sloping forehead, brow ridge, eye sockets, cheekbones, jaw/chin, ears), a visible
+neck with sloping shoulders, and hair with volume.
+
+### Decision
+The head gets its **own lathe profile** (`skull`, exported as the shared constant `SKULL_RINGS`)
+carrying five of the seven features — chin, jaw taper, cheekbone flare, **a pinch at the temples**,
+and the sloping forehead. Only the two features that are front-back asymmetric, which no surface of
+revolution can express, stay separate blocks: `occiput` and `browRidge`.
+
+### The rejected design, and why the photograph rejected it
+The first implementation did all seven with **eight convex blocks glued onto the sphere**, at zero
+new shapes and therefore zero extra draw calls. Every number measured correct: the cheekbone stood
+proud of the skull, the chin was the forwardmost point of the lower face, z/x fell from 1.000 to
+0.800. Then a frontal photograph at 1170×726:
+
+| block | intended | what the photo showed |
+|---|---|---|
+| `browRidge` (box, full head width) | brow ridge | a **horizontal bar** — a headband or goggles |
+| `cheekL/R` (dome) | cheekbones | two **balls** under the eyes — chipmunk |
+| `chin` (dome) | chin | a third **ball** stuck under the mouth |
+| `jaw` (chest) | jaw | a **flat slab** with hard corners at the sides |
+
+Cause, stated properly: each block is a separate CONVEX body, so it brings its own silhouette and
+its own normal discontinuity where it meets the skull. **A sum of convex bodies is not a smooth
+surface — it is a set of bumps.** The result read as an assembled mask, worse than round 56's plain
+face.
+
+This is the same lesson the project already paid for at the brimmed hat (2026-08-23): built from
+two blocks it was wrong; asking *"how many objects is this in real life?"* — one — and merging them
+into one surface of revolution was better looking AND cheaper.
+
+### Price, paid explicitly
+`skull` is a new shape ⇒ a new `InstancedMesh` ⇒ **+1 draw call in all 15 eras**, from 18 to 19 in
+the heaviest scene (+5.5%). `drawCallBudget.test.js` carries the new baseline with its date and a
+control table proving the difference is +1 everywhere — never +2. Reshaping `dome` instead was
+rejected: `dome` also draws the eyes, pupils and six joint balls, and a skull-shaped knee is worse.
+
+### Consequences, including three that only surfaced because a gate fired
+1. **`scalp` had to share the profile, not copy it.** Its comment promised *"rings exactly equal
+   `dome`"* in prose. Changing the head to `skull` broke that promise silently — at the parietal the
+   skull widened to 1.00 while the hair, still on `dome`, reached 0.92 ⇒ hair sinks INTO the skull
+   and round 56's horizontal seam returns. Now both read `SKULL_RINGS`. **A promise written in prose
+   has no teeth.**
+2. **The hairline's three calibration numbers were in RING-INDEX units.** Solved for 6-ring `dome`,
+   they meant nothing on a 9-ring `skull`: the front hairline fell from 0.672 to **0.343** of head
+   height, down to eye level. Re-expressed in HEIGHT, which no ring count can shift. *A number only
+   means something together with the frame it was solved in* — same family as the `cadenceOf` label
+   bug (`humanStyle.js`).
+3. **A geometric sufficiency proof expired.** Round 56 guaranteed the hair sits outside the skull
+   because *"the generating line of `dome` seen from the head joint is monotone"*. The temple pinch
+   destroys monotonicity; clearance fell to 2.79%, under round 56's own 3% floor. `SCALP_LIFT`
+   1.07 → 1.10. What caught it was the measured FLOOR, not the sentence in the comment.
+4. `humanShape.test.js` held a THIRD hand-copy of the ring table and reported *"872 hair vertices
+   inside the skull"* for hair that was entirely outside. It now asks `shapeRings(head.shape)`.
+
+### Also decided this round
+- **`MAX_PARTS` 40 → 56** and the resident triangle ratio ceiling 3.0 → 4.0. Residents now cost
+  **328.69%** of the city's triangles (22,754 × 28 on a 193,836-triangle scene) — most of that from
+  round 55's 60 sides, not this round. Both ceilings keep the relation they exist to guard (a
+  mis-nested loop multiplies by ≥ 2×). Recorded as a debt: a 6-pixel cheekbone was spending 716
+  triangles because `dome` has 60 sides; the fix is a COARSE shape in the common set, not another
+  raise.
+- **The shoulder line drops from 0.88 to 0.74 `torsoH`.** Measured: the shoulder ball's top was at
+  y = 0.17335 while the jaw was at 0.17231 — **the visible neck was a NEGATIVE number**. The neck
+  existed in code from round 54 and had never existed in a photograph. One number fixed two faults:
+  the fingertips now reach mid-thigh, the landmark `armLen`'s own comment always claimed to hold.
+- **Stance is a pure function of resident identity** (`humanStance.js`), added as a constant bias on
+  top of the gait rather than a separate standing pose — residents are almost always walking, so a
+  standing pose would show rarely and would fight the gait where it did. The shoulder tilts
+  OPPOSITE the hip; that one sign is the whole law, and at 3° the eye cannot name the error, it only
+  sees "something is off". A test guards the sign.
+
+### Status
+Accepted. Gates: lint · build · `npm run test:quiet`. Tests 1,797 → 1,824 pass, 0 fail, skipped 1.
+
+---
+
 ## ADR-088 — Round 48: the city becomes a place — the scenery moves, the core is flat and the wild is outside, the land grows with the player, and parts and people gain an axis
 
 **Date**: 2026-09-09 · **Order**: *"Build lớn. Chuyển động, motion, 3D chuẩn hơn. Bám sát lịch sử. Mở rộng diện tích thành phố. … thành phố đang là một tấm ảnh đẹp. Vòng này biến nó thành MỘT NƠI CÓ THẬT. … Nhìn 10 giây mà không thấy gì nhúc nhích thì vòng này chưa đạt."* · **Performance is not measured this round** (Đàm's instruction; `PHASE_RULES §2`: measure again only when he reports lag).

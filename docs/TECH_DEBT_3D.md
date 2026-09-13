@@ -15,6 +15,54 @@
 
 ---
 
+## #98 — Một khối rộng 6 điểm ảnh đang tiêu 716 tam giác, vì bộ khuôn không có cái nào THÔ
+
+**Phát hiện**: 2026-09-13, round 58 (Việc 3) · **Trạng thái**: MỞ · **Mức**: trung bình
+
+**Hiện tượng đo được.** `dome` có 60 cạnh × 6 vành ⇒ **716 tam giác/khối**, và mọi chi tiết nhỏ trên
+người đều phải mượn nó vì đó là khuôn duy nhất tròn mà 15/15 kỷ đều đã vẽ. Một cái tai dùng `box`
+tốn **12**; một cái gò má (bản đã bỏ) dùng `dome` tốn **716** — đúng bằng cả cái đầu — cho một khối
+rộng 0,30 `headW`, tức chừng **6 điểm ảnh** ở ảnh cận 1170×726.
+
+**Vì sao không sửa được bằng cách "cho nó ít cạnh hơn".** Cư dân đi qua **một `InstancedMesh` mỗi
+KHUÔN**; số khuôn một kỷ dùng CHÍNH LÀ số lệnh vẽ cư dân tiêu (`humanShapesUsed`). Thêm một biến
+thể thô của `dome` là thêm một khuôn ⇒ **+1 lệnh vẽ cho cả 15 kỷ**, đúng cái giá vừa trả cho `skull`.
+
+**Lối ra đúng (chưa làm)**: đưa MỘT khuôn THÔ (chừng 12–16 cạnh) vào bộ khuôn chung để mọi chi tiết
+nhỏ — tai, gò má, ngón cái, mũi nếu có — cùng vay nó. Một lệnh vẽ, dùng cho nhiều chỗ, và nó cũng
+mở đường cho các chi tiết nhỏ mà Phần C của vòng 58 chưa làm (viền áo, khuy, túi).
+
+**Vì sao không làm ngay**: vòng 58 đã tiêu +1 lệnh vẽ cho `skull`; tiêu tiếp một cái nữa trong cùng
+một vòng thì cái bảng mốc `drawCallBudget` phải đổi hai lần và không ai truy được khoản nào là của ai.
+
+**Số hiện tại để so về sau**: kỷ nặng nhất **23.234 tam giác/người**, kỷ 1 **22.754 × 28 người =
+328,69%** số tam giác của cảnh. Trần tỉ lệ nay 400%.
+
+---
+
+## #99 — `planResidentFocus` vẫn đưa camera vào TRONG tường ở một số cư dân
+
+**Phát hiện**: 2026-09-13, round 58 (bộ ảnh 15 kỷ) · **Trạng thái**: MỞ · **Mức**: trung bình
+
+**Hiện tượng.** `node scripts/city-preview.mjs --era 8 --nguoi 1` cho một khung hình **đặc kín mặt
+tường**: camera dừng bên trong một công trình. Kỷ 8 cư dân 2 thì đúng, nên đây là một ca lẻ chứ
+không phải hỏng hẳn.
+
+**Vì sao nó lọt qua.** Round 57 đã đổi phép đo từ `pathGuarantee` (đo CẢ ĐƯỜNG BAY — luôn sượt mái
+khi bổ xuống phố) sang `nearestBlocker(orbitPosition(to))` (đo ĐIỂM ĐẾN). Phép đo mới đúng hơn hẳn,
+nhưng nó hỏi *"điểm đến cách khối gần nhất bao xa"* — mà `city.blockers` là danh sách **hộp bao**.
+Camera có thể nằm trong một khoảng trống hình học (sân trong, hiên, khe giữa hai hộp) mà vẫn bị một
+mặt tường che kín tầm nhìn tới cư dân. Khoảng hở thì đủ; ĐƯỜNG NHÌN thì không.
+
+**Lối ra đề xuất**: sau khi chọn được chỗ đứng, bắn một tia từ camera tới `residentEye` và đòi nó
+không cắt hộp nào — tức đổi câu hỏi từ *"có chỗ đứng không"* sang *"có NHÌN THẤY không"*. Đó cũng
+đúng câu mà người dùng hỏi khi chạm vào một cư dân.
+
+**Cách tái hiện**: `node scripts/city-preview.mjs --era 8 --hour 12 --width 1170 --height 726
+--dpr 1 --nguoi 1 --nomotion` → ảnh đặc mặt tường. `--nguoi 2` cùng kỷ thì đúng.
+
+---
+
 ## #19 — Hai cặp kỷ vẫn gần như CÙNG MỘT MÀU trên màn hình, dù bảng màu gốc cách nhau rất xa
 
 > ⚠️ **HAI CON SỐ NGHIỆM THU CỦA MỤC NÀY NAY ĐÃ CŨ — ĐỪNG TRÍCH LẠI (2026-08-14, Phase 6B).**

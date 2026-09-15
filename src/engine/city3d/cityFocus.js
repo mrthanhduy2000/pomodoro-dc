@@ -110,6 +110,70 @@ export function nearestBlocker(point, blockers) {
 }
 
 /**
+ * ĐOẠN THẲNG `from → to` CÓ ĐÂM VÀO HỘP `box` KHÔNG — phép "slab" chuẩn, O(1), không căn bậc hai.
+ *
+ * ⚠️ ROUND 59, VIỆC 3: TỒN TẠI VÌ MỘT CÂU HỎI BỊ ĐẶT SAI SUỐT HAI VÒNG. Vòng 57 đã đổi phép đo
+ * cận cảnh từ `pathGuarantee` (đo CẢ ĐƯỜNG BAY — luôn sượt mái khi bổ xuống phố) sang
+ * `nearestBlocker(chỗ đứng)` (đo ĐIỂM ĐẾN). Đúng hơn hẳn, và vẫn sai một phần tư: nó hỏi *"chỗ
+ * đứng có rộng rãi không"*. Chỗ đứng rộng rãi mà vẫn có một bức tường CHẮN GIỮA camera và cư dân
+ * thì ta được một khung hình đầy mặt tường — đo được ở kỷ 8 và 13 của bảng 15 kỷ vòng 58.
+ * ⇒ Đàm viết đúng câu phải hỏi: *"câu hỏi phải đổi từ «có chỗ đứng không» sang «có NHÌN THẤY
+ * không»"*. Đây là hàm trả lời câu ấy. Khoảng hở nói về KHÔNG GIAN QUANH camera; tia nói về ĐƯỜNG
+ * NHÌN. Hai câu hỏi khác nhau, và chỉ câu thứ hai là câu người dùng đang hỏi khi chạm vào một người.
+ *
+ * ⚠️ `t` bị kẹp trong [0,1] nên đây là ĐOẠN THẲNG, không phải tia vô hạn: một hộp nằm SAU lưng
+ * camera hoặc XA hơn cư dân thì không chắn gì cả. Bỏ phép kẹp là biến mọi công trình ở bên kia
+ * thành phố thành vật cản.
+ */
+export function segmentHitsBox(from, to, box) {
+  if (!from || !to || !box) return false;
+  let t0 = 0;
+  let t1 = 1;
+  for (const [a, b, lo, hi] of [
+    [from.x, to.x, box.minX, box.maxX],
+    [from.y, to.y, box.minY, box.maxY],
+    [from.z, to.z, box.minZ, box.maxZ],
+  ]) {
+    const d = b - a;
+    if (Math.abs(d) < 1e-12) {
+      // Đoạn thẳng song song với cặp mặt này: hoặc nằm hẳn trong dải, hoặc không bao giờ đâm.
+      if (a < lo || a > hi) return false;
+      continue;
+    }
+    const ta = (lo - a) / d;
+    const tb = (hi - a) / d;
+    t0 = Math.max(t0, Math.min(ta, tb));
+    t1 = Math.min(t1, Math.max(ta, tb));
+    if (t0 > t1) return false;
+  }
+  return true;
+}
+
+/**
+ * CÓ NHÌN THẤY `to` TỪ `from` KHÔNG — không hộp nào chắn giữa.
+ *
+ * ⚠️ `bo` LÙI HAI ĐẦU ĐOẠN, và nó không phải một phép nới cho dễ xanh. Cư dân ĐỨNG TRÊN mặt đường
+ * và thường sát một bức tường, nên hộp bao của chính thứ họ đứng cạnh gần như luôn chạm vào đầu
+ * mút của đoạn nhìn. Không lùi thì mọi chỗ đứng đều "bị chắn" và phép đo vô dụng — đúng kiểu hỏng
+ * mà `pathGuarantee` đã mắc ở vòng 57, chỉ ở đầu kia của đoạn.
+ */
+export function lineOfSight(from, to, blockers, bo = 0.06) {
+  if (!from || !to) return false;
+  const dx = to.x - from.x;
+  const dy = to.y - from.y;
+  const dz = to.z - from.z;
+  const len = Math.hypot(dx, dy, dz);
+  if (!(len > 0)) return true;
+  const k = Math.min(0.45, bo / len);
+  const a = { x: from.x + dx * k, y: from.y + dy * k, z: from.z + dz * k };
+  const b = { x: to.x - dx * k, y: to.y - dy * k, z: to.z - dz * k };
+  for (const box of blockers ?? []) {
+    if (segmentHitsBox(a, b, box)) return false;
+  }
+  return true;
+}
+
+/**
  * Một chặng trên đường bay. Nội suy TUYẾN TÍNH mọi thành phần.
  *
  * ⚠️ Bên gọi được phép bôi trơn nhịp bằng hàm dịu (`t` đã qua ease) — làm vậy KHÔNG đổi tập hợp

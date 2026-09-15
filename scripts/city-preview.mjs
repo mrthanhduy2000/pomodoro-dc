@@ -348,7 +348,7 @@ import { applyPaintedLook, createCityScene, MAX_PIXEL_RATIO } from '${ROOT}/src/
 import { createPostFx, postProfileFor } from '${ROOT}/src/components/city/render3d/postFx.js';
 import { planResidentFocus } from '${ROOT}/src/engine/city3d/residentFocus.js';
 import { CITY_CAMERA_FOV, cityOrbitOptions, createOrbit, orbitPosition } from '${ROOT}/src/engine/city3d/orbit.js';
-import { boxDistance, nearestBlocker, planCityFocus } from '${ROOT}/src/engine/city3d/cityFocus.js';
+import { boxDistance, lineOfSight, nearestBlocker, planCityFocus } from '${ROOT}/src/engine/city3d/cityFocus.js';
 import { BLUEPRINT_CATALOG, ERA_METADATA } from '${ROOT}/src/engine/constants.js';
 import { Color, MeshBasicMaterial, PerspectiveCamera, WebGLRenderer } from 'three';
 
@@ -537,14 +537,29 @@ if (FOCUS > 0) {
 */
 if (NGUOI > 0 && city.residentTargets) {
   const ds = city.residentTargets(ANIM_T);
-  const ai = ds[Math.min(ds.length, Math.max(1, NGUOI)) - 1];
-  if (!ai) throw new Error('ky nay khong co cu dan nao de ngam gan');
-  const plan = planResidentFocus({
-    resident: ai,
+  /*
+    Round 59, Viec 3: chon cu dan nao THAY DUOC MAT, khong phai cu dan thu N mu quang.
+    Dam: "hoac bao thang la ky nay khong co cho dung nao va chon cu dan khac".
+    Bat dau tu nguoi thu N, roi di vong quanh danh sach — nen --nguoi N van co nghia (van uu tien
+    dung nguoi ay), chi bo qua khi nguoi ay that su khong nhin thay duoc tu bat ky cho nao.
+    (no backticks in this block: it lives INSIDE the entry template literal)
+  */
+  const keHoach = (r) => planResidentFocus({
+    resident: r,
     clearanceOf: (to) => boxDistance(orbitPosition(to), nearestBlocker(orbitPosition(to), city.blockers)),
+    seesOf: (to) => lineOfSight(orbitPosition(to), r.eye, city.blockers),
   });
+  let ai = null;
+  let plan = null;
+  let boQua = 0;
+  for (let k = 0; k < ds.length; k += 1) {
+    const r = ds[(Math.min(ds.length, Math.max(1, NGUOI)) - 1 + k) % ds.length];
+    const kh = keHoach(r);
+    if (kh && !kh.blocked) { ai = r; plan = kh; boQua = k; break; }
+  }
+  if (!ai) throw new Error('ky nay khong cu dan nao nhin thay duoc mat');
   orbit.set(plan);
-  console.log('[nguoi] cu dan ' + Math.max(1, NGUOI) + '/' + ds.length
+  console.log('[nguoi] bo qua ' + boQua + ' nguoi bi chan · cu dan ' + Math.max(1, NGUOI) + '/' + ds.length
     + ' · cao ' + ai.height.toFixed(3) + ' don vi'
     + ' · dung cach ' + plan.distance.toFixed(2)
     + ' · goc ngang ' + (plan.pitch * 180 / Math.PI).toFixed(1) + ' do'

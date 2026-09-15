@@ -25,7 +25,7 @@ import { museumWeather, weatherAt } from '../../../engine/city3d/weather';
 import { museumSeason, seasonForMonth } from '../../../engine/city3d/season';
 import { CITY_CAMERA_FOV, MIN_PITCH, cityOrbitOptions, createOrbit } from '../../../engine/city3d/orbit';
 import { STEP, WALK_FOV, WALK_NEAR, WALK_PITCH_MAX, WALK_PITCH_MIN, createWalker } from '../../../engine/city3d/walk';
-import { boxDistance, nearestBlocker, planCityFocus } from '../../../engine/city3d/cityFocus';
+import { boxDistance, lineOfSight, nearestBlocker, planCityFocus } from '../../../engine/city3d/cityFocus';
 import { createRenderLoop } from '../../../engine/city3d/renderLoop';
 import { createPostFx, postProfileFor } from './postFx';
 import { pickNearest } from '../../../engine/city3d/pick';
@@ -466,6 +466,14 @@ export default function CityScene3D({
               *"chỗ camera dừng lại có nằm trong tường không"*.
             */
             clearanceOf: (to) => boxDistance(orbitPosition(to), nearestBlocker(orbitPosition(to), city.blockers)),
+            /*
+              ⚠️ CÂU HỎI THỨ HAI, VÀ NÓ MỚI LÀ CÂU NGƯỜI DÙNG ĐANG HỎI — round 59, Việc 3.
+              Khoảng hở ở trên nói *"chỗ đứng có rộng rãi không"*. Bảng 15 kỷ của vòng 58 cho thấy
+              nó chưa đủ: kỷ 8 và 13 ra một mảng tường trắng, kỷ 9 nhìn vào đỉnh mũ — camera đứng
+              trong một khoảng trống hợp lệ mà giữa nó và cư dân vẫn có một bức tường.
+              `lineOfSight` hỏi thẳng *"có NHÌN THẤY không"*, đúng chữ Đàm dùng khi ghi nợ #99.
+            */
+            seesOf: (to) => lineOfSight(orbitPosition(to), nguoi.eye, city.blockers),
           })
           : planCityFocus({
             from: orbit.getState(),

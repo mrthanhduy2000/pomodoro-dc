@@ -141,36 +141,79 @@ export const RESIDENT_YAW_STEP = Math.PI / 9;   // 20°
  * @param {Function} arg.clearanceOf `(from, to) => số` — khoảng hở của đường bay; truyền vào để
  *   file này không phải biết gì về `blockers` (giữ nó thuần và test được bằng một hàm giả).
  */
-export function planResidentFocus({ resident, clearanceOf = null, minClearance = 0.35 } = {}) {
+/**
+ * Ba mức PITCH được thử, theo thứ tự. Round 59, Việc 3 + Việc 4.
+ *
+ * ⚠️ HẠ XUỐNG, KHÔNG PHẢI CHỈ NGẨNG LÊN — VÀ ĐÓ LÀ CẦN GẠT CHO VIỆC 4. Ở 5/15 kỷ cư dân đội mũ to
+ * (nón lá kỷ 6, mũ vành kỷ 7, khăn kỷ 15…) che kín khuôn mặt khi nhìn hơi chếch xuống. Đàm cho hai
+ * đường và bảo chọn: sửa tỉ lệ mũ, hoặc **hạ camera xuống dưới vành mũ**. Hạ camera là đường
+ * KHÔNG đụng vào lịch sử trang phục — một cái nón lá thật ĐÚNG LÀ che mặt người nhìn từ trên, và
+ * cách người ta nhìn mặt nhau dưới nón lá cũng đúng là cúi xuống một chút.
+ */
+const RESIDENT_PITCHES = [RESIDENT_PITCH, 0.02, -0.10];
+
+export function planResidentFocus({
+  resident, clearanceOf = null, seesOf = null, minClearance = 0.35,
+} = {}) {
   const eye = resident?.eye;
   if (!eye) return null;
   const distance = residentViewDistance(resident.height);
   const truoc = residentYaw(resident.angle);
 
-  const thu = (yaw) => ({ yaw, pitch: RESIDENT_PITCH, distance, target: eye });
-  if (!clearanceOf) return { ...thu(truoc), clearance: Infinity, turned: 0, backed: 0 };
+  const thu = (yaw, pitch = RESIDENT_PITCH, d = distance) => ({ yaw, pitch, distance: d, target: eye });
+  if (!clearanceOf) return { ...thu(truoc), clearance: Infinity, turned: 0, backed: 0, sees: true };
 
-  // (1) Đi vòng quanh: thẳng mặt trước, rồi lệch dần sang hai bên. Lệch ÍT NHẤT trước, và thử cả
-  // hai phía ở mỗi mức — nếu chỉ thử một phía thì ta sẽ nhận một góc lệch 140° trong khi phía kia
-  // chỉ cần 20°.
+  /*
+    ⚠️ HAI CÂU HỎI, KHÔNG PHẢI MỘT — ĐÂY LÀ CẢ VIỆC 3.
+    `clearanceOf` hỏi *"chỗ đứng có rộng rãi không"*; `seesOf` hỏi *"từ đó có NHÌN THẤY người
+    không"*. Vòng 57 chỉ hỏi câu một, và bảng 15 kỷ của vòng 58 cho thấy cái giá: kỷ 8 và 13 ra một
+    mảng tường trắng, kỷ 9 nhìn vào đỉnh mũ — **3/15 vô dụng** ở đúng tính năng Đàm dùng để chấm.
+    Camera có thể đứng giữa một cái sân trong rộng rãi mà vẫn bị một bức tường chắn tầm nhìn.
+    ⇒ Một chỗ đứng chỉ được nhận khi qua CẢ HAI. `seesOf` không truyền vào thì giữ nguyên hành vi
+    cũ (bên gọi cũ, và các bài test chỉ quan tâm khoảng hở).
+  */
+  const duoc = (to) => {
+    const gap = clearanceOf(to);
+    if (gap < minClearance) return null;
+    if (seesOf && !seesOf(to)) return null;
+    return gap;
+  };
+
+  // (1) Đi vòng quanh × ba mức pitch. Lệch ÍT NHẤT trước, và thử cả hai phía ở mỗi mức — nếu chỉ
+  // thử một phía thì ta sẽ nhận một góc lệch 140° trong khi phía kia chỉ cần 20°.
+  // ⚠️ PITCH LÀ VÒNG LẶP TRONG: thà đứng đúng trước mặt mà hơi cúi, còn hơn đứng đúng tầm mắt mà
+  // phải vòng ra sau gáy. Hướng nhìn thẳng mặt là thứ Đàm chấm; độ cao chỉ là phương tiện.
   for (let b = 0; b <= 8; b += 1) {
     for (const dau of b === 0 ? [0] : [1, -1]) {
       const yaw = truoc + dau * b * RESIDENT_YAW_STEP;
-      const to = thu(yaw);
-      const gap = clearanceOf(to);
-      if (gap >= minClearance) {
-        return { ...to, clearance: gap, turned: dau * b * RESIDENT_YAW_STEP, backed: 0 };
+      for (const pitch of RESIDENT_PITCHES) {
+        const to = thu(yaw, pitch);
+        const gap = duoc(to);
+        if (gap !== null) {
+          return {
+            ...to, clearance: gap, turned: dau * b * RESIDENT_YAW_STEP, backed: 0, sees: true,
+          };
+        }
       }
     }
   }
 
-  // (2) Chỉ khi ĐI QUANH CẢ VÒNG vẫn vướng mới lùi — người đứng trong ngõ cụt chẳng hạn.
+  // (2) Chỉ khi ĐI QUANH CẢ VÒNG ở cả ba độ cao vẫn vướng mới lùi — người đứng trong ngõ cụt chẳng hạn.
   let d = distance;
   for (let k = 0; k < 12; k += 1) {
     d += distance * 0.5;
-    const to = { ...thu(truoc), distance: d };
-    const gap = clearanceOf(to);
-    if (gap >= minClearance) return { ...to, clearance: gap, turned: 0, backed: d - distance };
+    for (const pitch of RESIDENT_PITCHES) {
+      const to = thu(truoc, pitch, d);
+      const gap = duoc(to);
+      if (gap !== null) {
+        return { ...to, clearance: gap, turned: 0, backed: d - distance, sees: true };
+      }
+    }
   }
-  return { ...thu(truoc), clearance: 0, turned: 0, backed: 0, blocked: true };
+  /*
+    ⚠️ TRẢ VỀ `blocked: true` CHỨ KHÔNG TRẢ VỀ MỘT CHỖ ĐỨNG GIẢ VỜ ỔN. Bên gọi đọc cờ này để CHỌN
+    CƯ DÂN KHÁC — đúng điều Đàm dặn: *"hoặc báo thẳng là kỷ này không có chỗ đứng nào và chọn cư
+    dân khác"*. Nuốt nó đi thì ta lại có một khung hình đầy mặt tường mà không ai biết vì sao.
+  */
+  return { ...thu(truoc), clearance: 0, turned: 0, backed: 0, blocked: true, sees: false };
 }

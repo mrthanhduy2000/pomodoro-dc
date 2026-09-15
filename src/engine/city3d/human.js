@@ -54,6 +54,7 @@
 
 import { HUMAN_BASE_HEIGHT, getHumanStyle } from './humanStyle';
 import { isValidHumanShape, scalpFit, shapeEndRadius, shapeMaxRadius, shapeTriangles } from './humanShape';
+import { gaitOf } from './humanGait';
 
 /**
  * Chiều cao cư dân cỡ chuẩn, đơn vị ô. `stature` của mỗi kỷ nhân vào con số này.
@@ -225,6 +226,21 @@ export function humanDims(style) {
      * mới buộc phải bóp theo `headZ`, nếu không chân tóc sẽ nằm ngoài sọ ở hai bên.
      */
     headZ: H * 0.22 * 0.80,
+    /**
+     * ĐỘ MỞ CỦA KHE MẮT — round 59, Việc 1, vế *"thử một dải biểu cảm nhẹ… chỉ cần khác nhau theo
+     * VAI, tất định"* (Đàm). 1,0 = mở hết; 0,65 = cụp nhất bảng.
+     *
+     * ⚠️ SUY TỪ `flex` CỦA DÁNG ĐI, KHÔNG PHẢI MỘT BẢNG THỨ HAI. `flex` là độ chùng gối lúc đứng
+     * trụ, và nó đã là thước đo MỆT/NẶNG của bảng dáng đi: `trudge` (lê vì kiệt sức) 0,12 ·
+     * `plod` (phu khuân vác) 0,10 · `march` (đi đều) 0,01. Người mệt thì mí cụp; người đi đều thì
+     * mắt mở. Một bảng `eyeOpen` riêng sẽ là **một luật hai công thức** — ngày nào ai đó đổi dáng
+     * đi cho một kỷ, đôi mắt sẽ nói một đằng còn cái chân nói một nẻo, và không có gì đỏ lên.
+     * ⚠️ NÓI THẲNG GIỚI HẠN: đây là hàm của KỶ, chưa phải của từng cư dân. Cơ thể (`buildHumanBody`)
+     * dựng một lần cho mỗi kỷ và dùng chung cho cả 28 người, nên một độ mở riêng cho từng người
+     * phải đi qua một KHỚP mới trong `humanPose` — cùng đường mà dáng lệch trọng tâm của vòng 58
+     * đã đi. Chưa làm vòng này; xem báo cáo.
+     */
+    eyeOpen: Math.max(0.65, Math.min(1, 1 - gaitOf(style.gait).flex * 2.2)),
     limbW: H * 0.085 * b,
     /**
      * Khoảng cách từ trục giữa ra tâm mỗi hông / mỗi vai.
@@ -625,20 +641,64 @@ function facePieces(d) {
     ngược lại: nó hiện ra ở chỗ không có sọ.
   */
   const Z = d.headZ;
+  /*
+    ════════════════════════════════════════════════════════════════════════════════════════════
+    ROUND 59, VIỆC 1 — "HỌ ĐANG TRỢN". VÀ LỜI CHẨN ĐOÁN CỦA ĐÀM ĐÚNG HƠN LỜI CỦA TÔI.
+    ════════════════════════════════════════════════════════════════════════════════════════════
+    Nguyên văn: *"Lộ trọn lòng trắng quanh con ngươi là biểu cảm KINH HÃI. Mắt nhân vật hoạt hình
+    to thật, nhưng mí trên luôn cắt mất một phần trên của tròng, và con ngươi chạm cả mí trên lẫn
+    mí dưới."*
+
+    ⚠️ VÀ ĐÂY LÀ CHỖ TÔI SUÝT LÀM SAI LẦN THỨ HAI. Phản xạ đầu tiên là **dán thêm hai khối mí** lên
+    trên và dưới con mắt. Dựng thử trên giấy thì nó hỏng, và nó hỏng vì đúng cái luật thứ năm mà
+    chính vòng 58 phải trả giá để học: **tổng của nhiều vật LỒI không ra một mặt cong liền.** Cụ
+    thể hơn, và đây là phần đo được: một cái mí muốn che được 30% trên của tròng thì tại MÉP DƯỚI
+    của nó, nó phải nhô hơn con mắt. Nhưng `dome` thu nhỏ dần về hai đầu — ở mép dưới bán kính chỉ
+    còn 60% ⇒ nó lùi lại SAU con mắt đúng chỗ cần che. Một cái mí dán thêm thì hoặc thành cái mái
+    hiên (nếu đủ to), hoặc không che gì (nếu đúng cỡ). Không có cỡ nào đúng cả.
+
+    ⇒ Hỏi lại đúng câu Đàm dạy: *"ngoài đời đây là MẤY vật?"* Con mắt nhìn từ trước KHÔNG phải một
+    quả cầu trắng có một chấm; nó là một **khe hình quả hạnh**, và cái khe ấy là hình dạng của
+    chính nó, không phải một quả cầu bị hai miếng dán che bớt.
+    ⇒ Nên thứ đổi là **CHÍNH CON MẮT**, không phải hai khối thêm vào:
+      1. Lòng trắng THẤP hơn (0,20 → 0,155 `headH`): nó thôi là một hình tròn và thành hình quả
+         hạnh — đúng đường viền mà hai cái mí tạo ra ngoài đời.
+      2. Con ngươi CAO ĐÚNG BẰNG lòng trắng và hẹp hơn hẳn ⇒ nhìn chính diện, lòng trắng chỉ còn
+         hai vệt lưỡi liềm ở HAI BÊN. Không còn một vòng trắng khép kín quanh con ngươi, tức không
+         còn cái tín hiệu "kinh hãi". Đây chính là *"con ngươi chạm cả mí trên lẫn mí dưới"*.
+      3. Hai NẾP MÍ (`lidUp*`, `lidLo*`) vẫn có, nhưng việc của chúng đổi hẳn: chúng KHÔNG che con
+         mắt (đã chứng minh ở trên là không che nổi) — chúng là **nếp da và cái bóng** ở trên và
+         dưới khe mắt, thứ cho mắt một cái hốc. Nên chúng nằm SÁT MÉP khe, không chồm lên nó.
+      4. Lòng trắng bớt sáng (L 0,93 → 0,85 ở `palette3d.js`): một lòng trắng thật luôn nằm trong
+         bóng hốc mắt. 0,93 trên một khuôn mặt cỡ này đọc ra là hai cái đèn.
+  */
+  const mo = d.eyeOpen;                     // độ mở của khe mắt, xem `humanDims`
+  const khe = H * 0.155 * mo;               // chiều cao khe mắt
+  const tam = H * 0.545;                    // tâm khe mắt
   return [
-    // LÒNG TRẮNG — HẸP HƠN con mắt vòng 54 (0,30 → 0,23 `headW`), và con số ấy đến từ một tấm ảnh,
-    // không từ giải phẫu. Giữ nguyên cỡ cũ thì mảng SÁNG chiếm đúng chỗ mảng TỐI từng chiếm, và
-    // khuôn mặt đọc ra là đang trợn mắt — đúng thứ Đàm cấm ở vòng 54 (*"đừng làm mặt tả thực — ở
-    // cỡ này nó sẽ thành đáng sợ"*). Một con mắt hoạt hình hiền là **ít lòng trắng, nhiều con ngươi**.
-    piece('eyeL', 'eyeWhite', 'dome', 'head', [W * 0.23, H * 0.20, Z * 0.22], [W * 0.44, H * 0.54, -Z * 0.31]),
-    piece('eyeR', 'eyeWhite', 'dome', 'head', [W * 0.23, H * 0.20, Z * 0.22], [W * 0.44, H * 0.54, Z * 0.31]),
-    // CON NGƯƠI — ở cực trước của lòng trắng, xem khối chú thích trên. To hơn bản đầu (0,11 → 0,13)
-    // để tỉ lệ ngươi/trắng nghiêng hẳn về phía ngươi.
-    piece('pupilL', 'hair', 'dome', 'head', [W * 0.13, H * 0.15, Z * 0.16], [W * 0.53, H * 0.53, -Z * 0.31]),
-    piece('pupilR', 'hair', 'dome', 'head', [W * 0.13, H * 0.15, Z * 0.16], [W * 0.53, H * 0.53, Z * 0.31]),
-    // LÔNG MÀY — ngay trên mí trên (mắt trải 0,44…0,64 `headH`), MẢNH (0,03) và NGẮN (0,20). Bản
-    // đầu để 0,05 dày × 0,26 dài và ảnh cho ra một VỆT TỐI liền một dải dưới vành mũ, không ra hai
-    // cái lông mày. Lông mày là thứ đọc được nhờ KHOẢNG HỞ với con mắt, không nhờ bề dày.
+    // LÒNG TRẮNG — một KHE hình quả hạnh, không phải một quả cầu. Bề ngang giữ nguyên 0,23 `headW`
+    // (con số ấy đến từ một tấm ảnh vòng 56); chỉ chiều cao đổi.
+    piece('eyeL', 'eyeWhite', 'dome', 'head', [W * 0.23, khe, Z * 0.22], [W * 0.44, tam, -Z * 0.31]),
+    piece('eyeR', 'eyeWhite', 'dome', 'head', [W * 0.23, khe, Z * 0.22], [W * 0.44, tam, Z * 0.31]),
+    // CON NGƯƠI — CAO ĐÚNG BẰNG khe mắt (chạm cả hai mí) và hẹp hơn hẳn (0,165 so với 0,23) ⇒
+    // lòng trắng chỉ còn hai vệt lưỡi liềm hai bên. Đây là cả phép sửa của Việc 1.
+    // ⚠️ Vẫn ở cực TRƯỚC của lòng trắng (x 0,525 so với 0,44), vì một khối nhỏ đặt đồng tâm trong
+    // một khối lớn thì đường viền ta thấy là giao tuyến hai mặt, không phải viền của nó (vòng 56).
+    piece('pupilL', 'hair', 'dome', 'head', [W * 0.165, khe, Z * 0.175], [W * 0.525, tam, -Z * 0.31]),
+    piece('pupilR', 'hair', 'dome', 'head', [W * 0.165, khe, Z * 0.175], [W * 0.525, tam, Z * 0.31]),
+    /*
+      ⚠️⚠️ KHÔNG CÓ KHỐI MÍ MẮT Ở ĐÂY, VÀ SỰ VẮNG MẶT ẤY LÀ MỘT KẾT QUẢ ĐO ĐƯỢC — ĐỪNG THÊM LẠI.
+      Bản đầu của Việc 1 có bốn khối mí (`lidUpL/R`, `lidLoL/R`): `dome` màu da, nằm sát mép trên và
+      mép dưới khe mắt, việc của chúng là cho con mắt một cái hốc bằng nếp da và bóng đổ. Trên giấy
+      hợp lý. Ảnh chính diện kỷ 13 ở 1170×726 bác thẳng: hai khối da lồi ôm quanh một khe tối đọc
+      ra là **MỘT CẶP KÍNH TRÒN**. Chúng bắt nắng nên sáng hơn cả khuôn mặt, và một vành sáng khép
+      kín quanh một vùng tối thì mắt người đọc là GỌNG KÍNH, không đọc là mí.
+      ⇒ Lần thứ hai trong hai vòng, và vẫn đúng một luật: **tổng của nhiều vật LỒI không ra một mặt
+      cong liền.** Tôi đã viết chính câu ấy trong khối chú thích ngay trên rồi vẫn dán thêm bốn
+      khối — nên nó được ghi lại ở đây, ngay chỗ có người sẽ định thêm lại.
+      ⇒ Cái hốc mắt đã có sẵn và KHÔNG tốn khối nào: gờ mày (vòng 58) ở trên, gò má trong đường sinh
+      `skull` ở dưới. Việc của Việc 1 là sửa CHÍNH CON MẮT, và nó đã xong ở bốn dòng trên.
+    */
     /*
       ⚠️ ROUND 58: LÔNG MÀY PHẢI NẰM **TRÊN** GỜ MÀY, KHÔNG PHẢI LƠ LỬNG TRƯỚC NÓ — ẢNH SỬA HAI LẦN.
       Từ vòng này có một gờ mày thật, và cái gờ ấy nhô nhất ở ĐÚNG độ cao tâm nó (0,665 `headH`),
@@ -647,13 +707,11 @@ function facePieces(d) {
       · Lần 2: đẩy ra 0,545 mà vẫn để ở y = 0,69 ⇒ ở độ cao ấy gờ đã thu về, nên lông mày thành hai
         **que sẫm treo lơ lửng trước trán** — thấy rất rõ trên ảnh.
       ⇒ Toạ độ của một nét trên mặt không được chọn một mình: nó phải bám ĐỘ CAO và ĐỘ NHÔ của khối
-      mang nó. Nay x = 0,490 (gờ ở đó nhô 0,520 nên lông mày chạm mặt gờ) và y = 0,665 (đúng tâm
-      gờ). Vẫn trên mí trên của mắt (mắt hết ở 0,64) nên khoảng hở — thứ làm lông mày đọc được —
-      còn nguyên.
+      mang nó. Vẫn trên nếp mí trên nên khoảng hở — thứ làm lông mày đọc được — còn nguyên.
     */
     piece('browL', 'hair', 'box', 'head', [W * 0.09, H * 0.03, Z * 0.25], [W * 0.490, H * 0.665, -Z * 0.32]),
     piece('browR', 'hair', 'box', 'head', [W * 0.09, H * 0.03, Z * 0.25], [W * 0.490, H * 0.665, Z * 0.32]),
-    // MIỆNG — một nét, ở 0,30 `headH`. Cao hơn thì nó nằm ngay dưới mũi; thấp hơn thì rơi xuống cằm.
+    // MIỆNG — một nét, ở 0,29 `headH`. Cao hơn thì nó nằm ngay dưới mũi; thấp hơn thì rơi xuống cằm.
     // NGẮN (0,20 `headW`): một nét dài bằng khoảng cách hai mắt đọc ra là đang nhăn mặt.
     piece('mouth', 'hair', 'box', 'head', [W * 0.07, H * 0.03, Z * 0.25], [W * 0.455, H * 0.29, 0]),
   ];
@@ -852,7 +910,24 @@ export function buildHumanBody(era) {
     ⚠️ Mép tay áo ↔ bàn tay trần LÀ một đường viền CÓ THẬT ngoài đời (cửa tay), nên nó KHÔNG nằm
     trong họ lỗi "ranh giới màu sai chỗ" — xem danh sách `VIEN_CO_THAT` ở `humanSeams.js`.
   */
-  const hand = { role: style.gloves ? sv.loRole : 'skin' };
+  /*
+    BÀN TAY: vai màu + hai bên có NẮM LẠI hay không (round 59, Việc 2).
+    ⚠️ `carryPiece` ĐƯỢC GỌI Ở ĐÂY, SỚM HƠN BẢN CŨ, VÀ ĐÓ LÀ CÓ CHỦ Ý. Bản đầu của Việc 2 đoán
+    *"kỷ nào có đồ mang theo thì tay phải nắm"* từ `style.carry`. Sai ở đúng một ca, và ca ấy có
+    thật: có một kỷ đội đồ TRÊN ĐẦU (`carryPiece` treo nó vào khớp `head`) — ở đó không bàn tay nào
+    cầm gì cả, mà bản đoán vẫn nắm tay lại.
+    ⇒ Đừng đoán, HỎI. `carryPiece` là nơi duy nhất biết đồ được treo vào đâu; hỏi chính nó rồi đọc
+    `joint`. Một phép đoán song song với một phép quyết định là "một luật hai công thức" ở dạng khó
+    thấy nhất: cả hai đều chạy, và chúng chỉ lệch nhau ở một kỷ.
+  */
+  const carry = carryPiece(style.carry, d);
+  const camTay = Boolean(carry && carry.joint.startsWith('shoulder'));
+  const hand = {
+    role: style.gloves ? sv.loRole : 'skin',
+    // Mọi đồ cầm tay đều treo vào `shoulderR` (xem `carryPiece`), nên tay PHẢI là tay nắm.
+    namL: false,
+    namR: camTay,
+  };
 
   // ⚠️ CHÂN TRƯỚC, và không phải để cho gọn: chân là khối DUY NHẤT bắt buộc phải có ở mọi kỷ để
   // phép đo "hình bóng đổi theo pha bước" còn ý nghĩa. Đặt cụm chân ở đầu danh sách thì một bài
@@ -1027,31 +1102,74 @@ export function buildHumanBody(era) {
       ⇒ Nay: một khối dẹt (dày bằng 0,46 bề ngang) + một ngón cái tách ra. Ngón cái là thứ khiến
       mắt đọc ra "bàn tay" chứ không "cái vây" — nó rẻ và nó quyết định.
     */
-    piece('handL', hand.role, 'calf', 'elbowL',
-      [d.limbW * 0.46, d.handLen * 1.18, d.limbW * 1.02],
-      [0, -d.forearmLen - d.handLen * 0.55, 0]),
-    piece('handR', hand.role, 'calf', 'elbowR',
-      [d.limbW * 0.46, d.handLen * 1.18, d.limbW * 1.02],
-      [0, -d.forearmLen - d.handLen * 0.55, 0]),
     /*
-      NGÓN CÁI — lệch về phía TRƯỚC (+x là hướng đi) và hơi vào trong, đúng chỗ ngón cái nằm khi tay
+      ══════════════════════════════════════════════════════════════════════════════════════════
+      ROUND 59, VIỆC 2 — NỬA CÒN LẠI. VÒNG 58 SỬA XONG NỬA **MÀU**; NỬA **HÌNH** THÌ CHƯA.
+      ══════════════════════════════════════════════════════════════════════════════════════════
+      Đàm, sau khi xem bốn tấm ảnh vòng 58: *"Vòng 58 sửa xong nửa MÀU (0/15 lỗi — tốt). Nhưng nửa
+      HÌNH chưa làm: ảnh 2 và 3 vẫn cho thấy hai hòn bi tròn ở cuối tay áo."*
+
+      ⚠️ VÀ NGUYÊN NHÂN LÀ MỘT CON SỐ BỊ ĐẢO TRỤC, KHÔNG PHẢI MỘT CÁI CẦU. Bản vòng 58 khai
+      `[0,46 · 1,18 · 1,02]` và chú thích tự nhận là *"một khối dẹt (dày bằng 0,46 bề ngang)"*.
+      Nó DẸT thật — nhưng dẹt **SAI CHIỀU**: mỏng theo trục **x** (trước–sau) và rộng theo trục
+      **z** (ngang). Một bàn tay buông xuôi thì lòng bàn tay úp vào đùi, nên chiều MỎNG của nó là
+      chiều ngang (z) còn chiều RỘNG là trước–sau (x). Hai con số bị đảo, và hệ quả đúng như ảnh:
+      nhìn CHÍNH DIỆN, thứ quay về phía camera là mặt rộng 1,02 `limbW` ⇒ một mảng tròn. Đảo lại
+      thì chính diện chỉ thấy bề dày 0,44 ⇒ một cái rìa mỏng, đúng như bàn tay thật nhìn từ trước.
+      Chú thích cũ mô tả đúng ý định và sai thực tế — cùng họ với `cadenceOf`: **đúng chữ, sai trục.**
+
+      ⚠️ KHUÔN ĐỔI `calf` → `chest`, VÀ ĐÓ LÀ CÁI CHO "CỔ TAY THON" MÀ KHÔNG TỐN KHỐI NÀO.
+      `calf` phình ở ĐỈNH (0,4506) và thắt ở ĐÁY (0,2203) — với một bàn tay treo xuống thì đỉnh là
+      CỔ TAY: tức bản cũ có cổ tay phình và đầu ngón thon, ngược hẳn bàn tay thật. `chest` phình ở
+      GIỮA (0,5007) và thu về hai đầu (0,3905 / 0,4005): giữa là khớp bàn–ngón, hai đầu là cổ tay
+      và đầu ngón. Đúng một khối, đúng ba đặc điểm Đàm đặt hàng.
+      ⇒ Và nó tuân luật thứ năm: hỏi *"ngoài đời đây là MẤY vật?"* Bàn tay là MỘT vật có ngón cái
+      tách ra — nên một đường sinh + một ngón cái, không phải một chồng khối lồi.
+
+      ⚠️ NẮM TAY vs BÀN TAY XOÈ, THEO VAI: tay nào đang cầm đồ (`body.carryArm`) thì nắm lại —
+      ngắn hơn, dày hơn, và KHÔNG có khối đốt ngón (nắm tay không có đốt ngón nhìn thấy). Tất định,
+      suy từ `carry` của kỷ, không phải một trường mới.
+    */
+    piece('handL', hand.role, 'chest', 'elbowL',
+      hand.namL ? [d.limbW * 0.92, d.handLen * 0.86, d.limbW * 0.62]
+        : [d.limbW * 0.98, d.handLen * 0.78, d.limbW * 0.44],
+      [0, -d.forearmLen - d.handLen * 0.40, 0]),
+    piece('handR', hand.role, 'chest', 'elbowR',
+      hand.namR ? [d.limbW * 0.92, d.handLen * 0.86, d.limbW * 0.62]
+        : [d.limbW * 0.98, d.handLen * 0.78, d.limbW * 0.44],
+      [0, -d.forearmLen - d.handLen * 0.40, 0]),
+    /*
+      KHỐI BỐN ĐỐT NGÓN — đúng thứ Đàm gọi là *"bốn ngón còn lại thành một khối"*.
+      ⚠️ NÓ ĐƯỢC PHÉP LÀ MỘT KHỐI RIÊNG, VÀ ĐÂY LÀ CHỖ RANH GIỚI CỦA LUẬT THỨ NĂM. Luật cấm cộng
+      nhiều vật LỒI để giả một mặt cong liền (gờ mày, gò má, mí mắt — tất cả đều hỏng vì thế). Chỗ
+      này khác về bản chất: hai khối **ĐỒNG TRỤC**, cùng vai màu, cái dưới hẹp hơn cái trên một
+      chút ⇒ đường bao không GÃY, nó chỉ THU LẠI một bậc. Ngoài đời chỗ ấy CÓ một bậc thật — khớp
+      bàn–ngón. Cùng cơ chế với cổ nối vào đầu, không cùng cơ chế với một miếng dán lên má.
+      ⚠️ Khai `continues: 'hand*'` nên `humanSeams.js` canh vai màu của nó.
+      Nắm tay thì KHÔNG dựng khối này: một nắm tay không có đốt ngón lộ ra.
+    */
+    ...(hand.namL ? [] : [piece('fingersL', hand.role, 'chest', 'elbowL',
+      [d.limbW * 0.86, d.handLen * 0.62, d.limbW * 0.40],
+      [d.limbW * 0.02, -d.forearmLen - d.handLen * 0.98, 0], 'handL')]),
+    ...(hand.namR ? [] : [piece('fingersR', hand.role, 'chest', 'elbowR',
+      [d.limbW * 0.86, d.handLen * 0.62, d.limbW * 0.40],
+      [d.limbW * 0.02, -d.forearmLen - d.handLen * 0.98, 0], 'handR')]),
+    /*
+      NGÓN CÁI — lệch về phía TRƯỚC (+x là hướng đi) và ra NGOÀI, đúng chỗ ngón cái nằm khi tay
       buông. Nhỏ, nhưng nó là dấu hiệu duy nhất phân biệt một bàn tay với một cái mái chèo.
 
-      ⚠️ KHUÔN PHẢI LÀ `calf`, ĐÚNG KHUÔN CỦA BÀN TAY — KHÔNG PHẢI `prism`. Bản đầu dùng `prism` vì
-      nó "trông giống một cái ngón" hơn, và `drawCallBudget.test.js` đỏ ngay: **kỷ 2 tốn 17 lệnh vẽ,
-      vượt mốc 16**. Vòng 54 (Việc 6) đã cố ý xoá `prism` khỏi kỷ 2 để lấy lại đúng một lệnh vẽ, nên
-      một cái ngón cái tưởng là miễn phí đã lặng lẽ trả lại cả phần thắng ấy. Mỗi KHUÔN mới trên
-      một `InstancedMesh` là MỘT lệnh vẽ cho toàn bộ dân số — không phải một khối.
-      ⇒ Dùng lại khuôn của bàn tay: 0 khuôn mới, 0 lệnh vẽ, ở cả 15 kỷ. Hình thì `calf` bóp nhỏ ở
-      cỡ này đọc ra đúng một cái ngón ngắn — cái mắt đọc ở đây là VỊ TRÍ TÁCH RA, không phải đường
-      sinh của một khối dài 0,004 ô.
+      ⚠️ KHUÔN PHẢI LÀ KHUÔN ĐÃ CÓ, KHÔNG PHẢI `prism`. Bản vòng 58 lần đầu dùng `prism` vì nó
+      "trông giống một cái ngón" hơn, và `drawCallBudget.test.js` đỏ ngay: **kỷ 2 tốn 17 lệnh vẽ,
+      vượt mốc 16**. Vòng 54 (Việc 6) đã cố ý xoá `prism` khỏi kỷ 2 để lấy lại đúng một lệnh vẽ,
+      nên một cái ngón cái tưởng là miễn phí đã lặng lẽ trả lại cả phần thắng ấy. Mỗi KHUÔN mới
+      trên một `InstancedMesh` là MỘT lệnh vẽ cho toàn bộ dân số — không phải một khối.
     */
-    piece('thumbL', hand.role, 'calf', 'elbowL',
-      [d.limbW * 0.30, d.handLen * 0.52, d.limbW * 0.30],
-      [d.limbW * 0.16, -d.forearmLen - d.handLen * 0.34, -d.limbW * 0.34], 'handL'),
-    piece('thumbR', hand.role, 'calf', 'elbowR',
-      [d.limbW * 0.30, d.handLen * 0.52, d.limbW * 0.30],
-      [d.limbW * 0.16, -d.forearmLen - d.handLen * 0.34, d.limbW * 0.34], 'handR'),
+    piece('thumbL', hand.role, 'chest', 'elbowL',
+      [d.limbW * 0.34, d.handLen * 0.56, d.limbW * 0.30],
+      [d.limbW * 0.30, -d.forearmLen - d.handLen * 0.30, -d.limbW * 0.22], 'handL'),
+    piece('thumbR', hand.role, 'chest', 'elbowR',
+      [d.limbW * 0.34, d.handLen * 0.56, d.limbW * 0.30],
+      [d.limbW * 0.30, -d.forearmLen - d.handLen * 0.30, d.limbW * 0.22], 'handR'),
   ];
 
   /*
@@ -1136,7 +1254,6 @@ export function buildHumanBody(era) {
   if (headgear.length === 0) {
     for (const h of hairPieces(style.hair, d)) parts.push(h);
   }
-  const carry = carryPiece(style.carry, d);
   if (carry) parts.push(carry);
 
   return {

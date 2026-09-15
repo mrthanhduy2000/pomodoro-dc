@@ -132,7 +132,15 @@ test('TRÁI PHẢI PHẢI ĐỐI XỨNG — mọi cặp `…L`/`…R` khớp nha
     nó không có hậu tố L/R nên không lọt vào phép quét này. Nếu ngày nào một thứ cố ý lệch CÓ hậu
     tố L/R thì phải thêm nó vào `LECH_CO_CHU_Y` kèm lý do, chứ không được nới bài test.
   */
-  const LECH_CO_CHU_Y = new Set();
+  /*
+    ⚠️ BA NGOẠI LỆ, KHAI TƯỜNG MINH — VÀ ĐÂY LÀ CHỖ BÀI TEST NÀY LÀM ĐÚNG VIỆC CỦA NÓ.
+    Round 59, Việc 2 cho bàn tay hai trạng thái: tay cầm đồ thì NẮM LẠI (ngắn hơn, dày hơn, không
+    có khối đốt ngón), tay kia XOÈ. Tức ở 11/15 kỷ hai bàn tay CỐ Ý khác nhau — đúng thứ Đàm đặt
+    hàng (*"nắm tay (cầm gậy, cầm giỏ) · bàn tay xoè"*), và đúng thứ bài này sẽ báo đỏ.
+    ⇒ Khai ra, kèm lý do, chứ KHÔNG nới bài test — đó là điều chính khối chú thích dưới đây dặn.
+    Mọi khối L/R khác vẫn bị soi từng con số một.
+  */
+  const LECH_CO_CHU_Y = new Set(['handL', 'fingersL']);
   let soCap = 0;
   for (const era of ERAS) {
     const body = buildHumanBody(era);

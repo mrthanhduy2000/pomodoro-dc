@@ -752,7 +752,12 @@ export function buildScenePalette({ tokens, eraColor, era: eraNumber, daylight, 
     // Round 56 (Phần A, Việc 2): lòng trắng mắt. KHÔNG phải trắng tinh — một lòng trắng thật là
     // xám ngà, và trắng tinh trên một khuôn mặt cỡ này đọc ra là hai cái đèn. Gần như hết sắc
     // (0,08) và ấm nhẹ, sáng hơn `skin` (0,78) đủ để con ngươi tối nổi lên trên nó.
-    eyeWhite: paint(38, 0.08, 0.93, 0.80),
+    // ⚠️ ROUND 59, VIỆC 1: L 0,93 → 0,85. Chú thích vòng 56 ngay trên đã nói ĐÚNG lời (*"không
+    // phải trắng tinh… trắng tinh đọc ra là hai cái đèn"*) rồi đặt SAI số: 0,93 trên thang 0…1
+    // vẫn là gần trắng, và trên ảnh chính diện vòng 58 nó đúng là hai cái đèn. Một lòng trắng
+    // thật luôn nằm trong bóng của hốc mắt. 0,85 còn cao hơn `skin` (0,78) đủ 0,07 để con ngươi
+    // tối nổi lên trên nó — vẫn là "lòng trắng", chỉ thôi phát sáng.
+    eyeWhite: paint(38, 0.09, 0.85, 0.74),
     // Ô cửa ĐANG SÁNG ĐÈN (chỉ dùng khi trời đã tối — xem `daylight.js`).
     // ⚠️ Vẽ bằng vật liệu KHÔNG nhận ánh sáng, nên màu này hiện ra Y NGUYÊN chứ không bị nhân với
     // ánh sáng cảnh. Vì vậy nó phải là màu của **ánh đèn nhìn từ xa** — vàng ấm, sáng nhưng không

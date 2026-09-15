@@ -13,9 +13,10 @@ import { orbitPosition } from './orbit.js';
 import { rayBoxDistance } from './pick.js';
 import { getHumanStyle } from './humanStyle.js';
 import {
-  RESIDENT_VIEW_FACTOR, planResidentFocus, residentBox, residentCaption, residentEye,
-  residentViewDistance,
+  RESIDENT_PITCH, RESIDENT_VIEW_FACTOR, planResidentFocus, residentBox, residentCaption,
+  residentEye, residentViewDistance, residentYaw,
 } from './residentFocus.js';
+import { lineOfSight, segmentHitsBox } from './cityFocus.js';
 
 test('HỘP CHẠM PHẢI ĐÚNG HÌNH DẠNG MÀ `pick.js` ĐỌC — nếu không, cú chạm im lặng trượt', () => {
   const box = residentBox({ x: 2, y: 0.5, z: -3 }, 0.9);
@@ -127,4 +128,83 @@ test('NHÌN GẦN NGANG TẦM MẮT, KHÔNG NHÌN TỪ TRÊN XUỐNG', () => {
   const plan = planResidentFocus({ resident: { eye: { x: 0, y: 1, z: 0 }, height: 0.9, angle: 0 } });
   assert.ok(plan.pitch <= 0.2,
     `góc ngẩng ${(plan.pitch * 180 / Math.PI).toFixed(1)}° — nhìn một người từ trên xuống là nhìn đỉnh đầu`);
+});
+
+// ── ROUND 59, VIỆC 3: "CÓ CHỖ ĐỨNG" KHÔNG PHẢI "CÓ NHÌN THẤY" ───────────────────────────────────
+
+test('MỘT BỨC TƯỜNG GIỮA CAMERA VÀ CƯ DÂN PHẢI LÀM HỎNG CHỖ ĐỨNG ẤY', () => {
+  /*
+    ⚠️ ĐÂY LÀ BÀI CANH ĐÚNG CÁI NỢ #99, VÀ NÓ ĐO THỨ MÀ PHÉP ĐO CŨ KHÔNG THỂ THẤY.
+    `clearanceOf` hỏi *"quanh camera có rộng không"*. Dựng một cảnh mà câu trả lời là CÓ ở mọi
+    hướng — không hộp nào ở gần camera — nhưng có một tấm tường mỏng dựng ngay giữa camera và cư
+    dân. Phép đo cũ nhận chỗ ấy; mắt nhìn thấy một mảng tường. Đo được trên bảng 15 kỷ vòng 58:
+    kỷ 8 và 13 ra đúng như thế.
+  */
+  const nguoi = { eye: { x: 0, y: 0.17, z: 0 }, height: 0.2, angle: 0 };
+  // Tường mỏng bao quanh cư dân ở bán kính 0,30 — xa camera (đứng ở 0,60) nên `clearanceOf` rộng
+  // rãi, mà mọi đường nhìn đều bị nó cắt.
+  const tuongKin = [{
+    minX: -0.32, maxX: 0.32, minY: 0, maxY: 0.4, minZ: -0.32, maxZ: 0.32,
+  }];
+  const thoang = () => 10;        // luôn báo "rộng rãi"
+
+  const chiHoiThoang = planResidentFocus({ resident: nguoi, clearanceOf: thoang });
+  assert.ok(!chiHoiThoang.blocked,
+    'phép đo CŨ (chỉ hỏi khoảng hở) vẫn nhận chỗ đứng này — đúng như nó vẫn làm trước vòng 59');
+
+  const hoiCaHai = planResidentFocus({
+    resident: nguoi,
+    clearanceOf: thoang,
+    seesOf: (to) => lineOfSight(orbitPosition(to), nguoi.eye, tuongKin),
+  });
+  assert.equal(hoiCaHai.blocked, true,
+    'có tường bao kín mà vẫn nhận một chỗ đứng — `seesOf` không tới được phép quyết định.'
+    + ' Đây đúng là nợ #99: "có chỗ đứng" không phải "có NHÌN THẤY".');
+  assert.equal(hoiCaHai.sees, false, 'phải nói thẳng là không thấy, để bên gọi chọn cư dân khác');
+});
+
+test('CHẮN MỘT PHÍA THÌ ĐI VÒNG SANG PHÍA KHÁC, KHÔNG BỎ CUỘC', () => {
+  /*
+    Vế ngược của bài trên — và nó giữ cho bài trên khỏi được "sửa" bằng cách trả `blocked` cho mọi
+    thứ. Một bức tường CHỈ Ở PHÍA TRƯỚC MẶT thì phải đi vòng, đúng cần gạt mà vòng 57 dựng.
+  */
+  const nguoi = { eye: { x: 0, y: 0.17, z: 0 }, height: 0.2, angle: 0 };
+  const truoc = orbitPosition({
+    yaw: residentYaw(0), pitch: RESIDENT_PITCH, distance: 0.6, target: nguoi.eye,
+  });
+  // Một tấm tường NHỎ đặt đúng ĐIỂM GIỮA đường nhìn thẳng mặt — nhỏ để nó chỉ chắn hướng ấy.
+  // ⚠️ Bản đầu dựng hộp từ 0 tới `truoc` và nó bao luôn cả cư dân ⇒ chắn mọi hướng, nên bài test
+  // đỏ vì một lý do khác hẳn lý do nó định đo. Một cái bẫy dựng sai thì không thử được cái gác.
+  const giua = { x: (truoc.x + 0) / 2, y: 0.17, z: (truoc.z + 0) / 2 };
+  const tuong = [{
+    minX: giua.x - 0.05, maxX: giua.x + 0.05,
+    minY: 0, maxY: 0.4,
+    minZ: giua.z - 0.05, maxZ: giua.z + 0.05,
+  }];
+  const ke = planResidentFocus({
+    resident: nguoi,
+    clearanceOf: () => 10,
+    seesOf: (to) => lineOfSight(orbitPosition(to), nguoi.eye, tuong),
+  });
+  assert.ok(!ke.blocked, 'chỉ vướng một phía mà đã bỏ cuộc — cần gạt "đi vòng quanh" không chạy');
+  assert.ok(Math.abs(ke.turned) > 1e-9 || Math.abs(ke.pitch - RESIDENT_PITCH) > 1e-9,
+    'nhận đúng chỗ đứng cũ trong khi nó đang bị chắn — `seesOf` đang bị bỏ qua');
+});
+
+test('ĐOẠN THẲNG, KHÔNG PHẢI TIA VÔ HẠN: hộp sau lưng camera không chắn gì', () => {
+  /*
+    ⚠️ BỎ PHÉP KẸP `t` TRONG [0,1] LÀ BIẾN MỌI CÔNG TRÌNH Ở BÊN KIA THÀNH PHỐ THÀNH VẬT CẢN, và
+    lỗi ấy sẽ hiện ra dưới dạng "không kỷ nào nhìn thấy được" — tức đúng cái triệu chứng mà Việc 3
+    sinh ra để chữa, chỉ theo chiều ngược lại.
+  */
+  const tu = { x: 0, y: 0, z: 0 };
+  const den = { x: 1, y: 0, z: 0 };
+  const sauLung = [{ minX: -3, maxX: -2, minY: -1, maxY: 1, minZ: -1, maxZ: 1 }];
+  const xaHon = [{ minX: 2, maxX: 3, minY: -1, maxY: 1, minZ: -1, maxZ: 1 }];
+  const oGiua = [{ minX: 0.4, maxX: 0.6, minY: -1, maxY: 1, minZ: -1, maxZ: 1 }];
+  assert.equal(lineOfSight(tu, den, sauLung), true, 'hộp SAU LƯNG camera không được chắn');
+  assert.equal(lineOfSight(tu, den, xaHon), true, 'hộp XA HƠN cư dân không được chắn');
+  assert.equal(lineOfSight(tu, den, oGiua), false, 'hộp NẰM GIỮA phải chắn');
+  assert.equal(segmentHitsBox(tu, den, oGiua[0]), true);
+  assert.equal(segmentHitsBox(tu, den, sauLung[0]), false);
 });

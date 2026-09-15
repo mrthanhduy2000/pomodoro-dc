@@ -348,7 +348,7 @@ import { applyPaintedLook, createCityScene, MAX_PIXEL_RATIO } from '${ROOT}/src/
 import { createPostFx, postProfileFor } from '${ROOT}/src/components/city/render3d/postFx.js';
 import { planResidentFocus } from '${ROOT}/src/engine/city3d/residentFocus.js';
 import { CITY_CAMERA_FOV, cityOrbitOptions, createOrbit, orbitPosition } from '${ROOT}/src/engine/city3d/orbit.js';
-import { boxDistance, lineOfSight, nearestBlocker, planCityFocus } from '${ROOT}/src/engine/city3d/cityFocus.js';
+import { lineOfSight, nearestBlocker, planCityFocus } from '${ROOT}/src/engine/city3d/cityFocus.js';
 import { BLUEPRINT_CATALOG, ERA_METADATA } from '${ROOT}/src/engine/constants.js';
 import { Color, MeshBasicMaterial, PerspectiveCamera, WebGLRenderer } from 'three';
 
@@ -546,7 +546,23 @@ if (NGUOI > 0 && city.residentTargets) {
   */
   const keHoach = (r) => planResidentFocus({
     resident: r,
-    clearanceOf: (to) => boxDistance(orbitPosition(to), nearestBlocker(orbitPosition(to), city.blockers)),
+    /*
+      ⚠️⚠️ ROUND 59: ĐÂY TỪNG LÀ MỘT PHÉP ĐO **NGƯỢC**, VÀ NÓ GIẢI THÍCH HAI TẤM ẢNH TƯỜNG.
+      Bản vòng 57 viết "boxDistance(chỗ-đứng, nearestBlocker(chỗ-đứng, blockers))". Nhưng
+      "nearestBlocker" ĐÃ trả về một KHOẢNG CÁCH, không phải một cái HỘP — nên nó bị đem nhét
+      vào tham số "box" của "boxDistance". Hệ quả đo được:
+          nearestBlocker = 1   ⇒ boxDistance(p, 1) = NaN        ⇒ "NaN >= 0,35" SAI ⇒ BỊ LOẠI
+          nearestBlocker = 0   ⇒ "!box" đúng ⇒ trả về Infinity  ⇒ NHẬN NGAY
+      Tức phép đo bị ĐẢO: chỗ đứng càng THOÁNG thì càng bị loại, và chỗ duy nhất được nhận là
+      chỗ camera nằm ĐÚNG TRONG một công trình (khoảng cách đúng bằng 0). Đó chính xác là hai
+      khung hình đầy mặt tường ở kỷ 8 và 13 của bảng 15 kỷ vòng 58 — không phải "phép đo còn
+      yếu", mà là "phép đo chỉ chấp nhận đúng những chỗ hỏng".
+      ⚠️ VÀ NÓ SỐNG SÓT ĐƯỢC HAI VÒNG VÌ "NaN" KHÔNG NÉM LỖI: mọi phép so với "NaN" đều trả về
+      "false", nên hàm cứ lặng lẽ đi hết mọi phương án rồi trả về phương án cuối. Không có gì
+      đỏ lên, không có gì in ra — chỉ có một tấm ảnh. Cùng họ với "bloom.resolution" (vòng 57):
+      một cái thước tự tin báo một con số vô nghĩa.
+    */
+    clearanceOf: (to) => nearestBlocker(orbitPosition(to), city.blockers),
     seesOf: (to) => lineOfSight(orbitPosition(to), r.eye, city.blockers),
   });
   let ai = null;

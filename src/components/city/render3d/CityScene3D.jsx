@@ -25,7 +25,7 @@ import { museumWeather, weatherAt } from '../../../engine/city3d/weather';
 import { museumSeason, seasonForMonth } from '../../../engine/city3d/season';
 import { CITY_CAMERA_FOV, MIN_PITCH, cityOrbitOptions, createOrbit } from '../../../engine/city3d/orbit';
 import { STEP, WALK_FOV, WALK_NEAR, WALK_PITCH_MAX, WALK_PITCH_MIN, createWalker } from '../../../engine/city3d/walk';
-import { boxDistance, lineOfSight, nearestBlocker, planCityFocus } from '../../../engine/city3d/cityFocus';
+import { lineOfSight, nearestBlocker, planCityFocus } from '../../../engine/city3d/cityFocus';
 import { createRenderLoop } from '../../../engine/city3d/renderLoop';
 import { createPostFx, postProfileFor } from './postFx';
 import { pickNearest } from '../../../engine/city3d/pick';
@@ -465,7 +465,23 @@ export default function CityScene3D({
               và cái cận cảnh lại lùi ra 3,30 đơn vị (đo được). Câu hỏi đúng với một người là
               *"chỗ camera dừng lại có nằm trong tường không"*.
             */
-            clearanceOf: (to) => boxDistance(orbitPosition(to), nearestBlocker(orbitPosition(to), city.blockers)),
+            /*
+              ⚠️⚠️ ROUND 59: ĐÂY TỪNG LÀ MỘT PHÉP ĐO **NGƯỢC**, VÀ NÓ GIẢI THÍCH HAI TẤM ẢNH TƯỜNG.
+              Bản vòng 57 viết `boxDistance(chỗ-đứng, nearestBlocker(chỗ-đứng, blockers))`. Nhưng
+              `nearestBlocker` ĐÃ trả về một KHOẢNG CÁCH, không phải một cái HỘP — nên nó bị đem nhét
+              vào tham số `box` của `boxDistance`. Hệ quả đo được:
+                  nearestBlocker = 1   ⇒ boxDistance(p, 1) = NaN        ⇒ `NaN >= 0,35` SAI ⇒ BỊ LOẠI
+                  nearestBlocker = 0   ⇒ `!box` đúng ⇒ trả về Infinity  ⇒ NHẬN NGAY
+              Tức phép đo bị ĐẢO: chỗ đứng càng THOÁNG thì càng bị loại, và chỗ duy nhất được nhận là
+              chỗ camera nằm ĐÚNG TRONG một công trình (khoảng cách đúng bằng 0). Đó chính xác là hai
+              khung hình đầy mặt tường ở kỷ 8 và 13 của bảng 15 kỷ vòng 58 — không phải "phép đo còn
+              yếu", mà là "phép đo chỉ chấp nhận đúng những chỗ hỏng".
+              ⚠️ VÀ NÓ SỐNG SÓT ĐƯỢC HAI VÒNG VÌ `NaN` KHÔNG NÉM LỖI: mọi phép so với `NaN` đều trả về
+              `false`, nên hàm cứ lặng lẽ đi hết mọi phương án rồi trả về phương án cuối. Không có gì
+              đỏ lên, không có gì in ra — chỉ có một tấm ảnh. Cùng họ với `bloom.resolution` (vòng 57):
+              một cái thước tự tin báo một con số vô nghĩa.
+            */
+            clearanceOf: (to) => nearestBlocker(orbitPosition(to), city.blockers),
             /*
               ⚠️ CÂU HỎI THỨ HAI, VÀ NÓ MỚI LÀ CÂU NGƯỜI DÙNG ĐANG HỎI — round 59, Việc 3.
               Khoảng hở ở trên nói *"chỗ đứng có rộng rãi không"*. Bảng 15 kỷ của vòng 58 cho thấy

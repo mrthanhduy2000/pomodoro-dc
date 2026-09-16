@@ -24,6 +24,8 @@
  * Cách chữa không phải vẽ thêm chi tiết — là cho Đàm tới gần.
  */
 
+import { demandBoolean, demandDistance, demandNumber, demandPoint } from './finite';
+
 /**
  * Đứng cách một cư dân bao xa, tính bằng ĐƠN VỊ Ô LƯỚI.
  *
@@ -47,7 +49,11 @@ export const RESIDENT_TOUCH_PAD = 0.22;
  * hộp GẦN NHẤT nên nới rộng không làm người ở xa cướp mất cú chạm của người ở gần.
  */
 export function residentBox({ x, y, z }, height, pad = RESIDENT_TOUCH_PAD) {
-  if (!Number.isFinite(x) || !Number.isFinite(y) || !Number.isFinite(z)) return null;
+  // ⚠️ ROUND 60, VIỆC 0(b): TOẠ ĐỘ HỎNG NAY NÉM, KHÔNG TRẢ `null`. Trả `null` nghĩa là người ấy
+  // biến mất khỏi danh sách chạm — chạm vào họ thì KHÔNG CÓ GÌ XẢY RA, và không có gì in ra để
+  // biết vì sao. `height <= 0` thì vẫn `null`, vì đó là một câu trả lời thật: không có gì để chạm.
+  demandPoint({ x, y, z }, 'residentBox(position)');
+  demandNumber(height, 'residentBox(height)');
   if (!(height > 0)) return null;
   const nua = height * 0.5 + pad;
   // ⚠️ ĐÚNG HÌNH DẠNG HỘP CỦA `pick.js` (`minX`/`maxX`… phẳng), KHÔNG PHẢI `{min:{x}}`. Bản đầu của
@@ -115,7 +121,9 @@ export function residentCaption(style, eraName = null) {
  * chỉ một tấm ảnh mới nói ra được. Đó là lý do có bài test đối chiếu thẳng với `orbitPosition`.
  */
 export function residentYaw(angle) {
-  return Math.PI / 2 - (Number.isFinite(angle) ? angle : 0);
+  // ⚠️ Một `angle` NaN từng lặng lẽ thành 0 — camera đứng ở một hướng cố định trong khi người kia
+  // quay đi chỗ khác, tức một cái cận cảnh nhìn vào gáy mà không gì báo.
+  return Math.PI / 2 - demandNumber(angle, 'residentYaw(angle)');
 }
 
 /** Camera hạ xuống gần ngang tầm mắt — nhìn một người từ trên xuống là nhìn đỉnh đầu họ. */
@@ -157,6 +165,8 @@ export function planResidentFocus({
 } = {}) {
   const eye = resident?.eye;
   if (!eye) return null;
+  demandPoint(eye, 'planResidentFocus(resident.eye)');
+  demandDistance(minClearance, 'planResidentFocus(minClearance)');
   const distance = residentViewDistance(resident.height);
   const truoc = residentYaw(resident.angle);
 
@@ -172,10 +182,16 @@ export function planResidentFocus({
     ⇒ Một chỗ đứng chỉ được nhận khi qua CẢ HAI. `seesOf` không truyền vào thì giữ nguyên hành vi
     cũ (bên gọi cũ, và các bài test chỉ quan tâm khoảng hở).
   */
+  /*
+    ⚠️ ROUND 60, VIỆC 0(b) — ĐÂY LÀ NGƯỠNG MÀ CON SỐ HỎNG CỦA ROUND 57 ĐÃ ĐI QUA. `gap` là `NaN`
+    thì `NaN < minClearance` SAI ⇒ chỗ đứng được NHẬN, và nó được nhận đúng ở những chỗ tệ nhất.
+    Nên con số phải được kiểm TRƯỚC khi gặp dấu `<`, chứ không phải viết lại dấu `<` cho khéo:
+    mọi phép so với `NaN` đều trả `false`, nên không có cách viết nào an toàn cả.
+  */
   const duoc = (to) => {
-    const gap = clearanceOf(to);
+    const gap = demandDistance(clearanceOf(to), 'planResidentFocus(clearanceOf)');
     if (gap < minClearance) return null;
-    if (seesOf && !seesOf(to)) return null;
+    if (seesOf && !demandBoolean(seesOf(to), 'planResidentFocus(seesOf)')) return null;
     return gap;
   };
 

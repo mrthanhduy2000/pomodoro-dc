@@ -16,6 +16,8 @@
  * Hộp bao thì đúng cả với nhà cao lẫn nhà thấp.
  */
 
+import { demandBox, demandPoint } from './finite';
+
 /** Đọc số an toàn — dữ liệu hình học hỏng không được biến thành `NaN` lan khắp phép so sánh. */
 const num = (value, fallback = 0) => (Number.isFinite(value) ? value : fallback);
 
@@ -88,7 +90,20 @@ export function placeBounds(local, { x = 0, z = 0, y = 0, scale = 1, pad = 0 } =
  * trường hợp `0/0 = NaN` — xảy ra khi tia song song VÀ nằm đúng trên mặt phẳng hộp.
  */
 export function rayBoxDistance(origin, direction, box) {
-  if (!box || !origin || !direction) return null;
+  // ⚠️ ROUND 60, VIỆC 0(b): `!box` LÀ ĐÚNG DÒNG ĐÃ LÀM HỎNG `boxDistance` SUỐT BA VÒNG — nó đúng
+  // cho số `0`, cho chuỗi rỗng, cho `NaN`. Ở đây "không có hộp" (`null`) vẫn là một câu trả lời
+  // thật: không có gì để trúng. Mọi thứ KHÁC không phải hộp là một lỗi lập trình và phải ném.
+  /*
+    ⚠️ RANH GIỚI Ở ĐÂY LÀ **VẮNG MẶT ≠ HỎNG**, VÀ NÓ DO MỘT BÀI TEST CHỈ RA. `pickNearest(null, …)`
+    — "tia rác" — là một câu hỏi HỢP LỆ mà câu trả lời đúng là *"không trúng gì cả"*: không có tia
+    thì không có gì để trúng, và một cú chạm hụt không được phép làm sập vòng vẽ của cả thành phố.
+    Nhưng một tham số CÓ MẶT mà không phải vật hình học (số `0`, toạ độ `NaN`, hộp lồng nhau) là
+    một lỗi lập trình, và đó đúng là họ khuyết tật đã đảo ngược phép đo cận cảnh ba vòng liền.
+  */
+  if (box == null || origin == null || direction == null) return null;
+  demandPoint(origin, 'rayBoxDistance(origin)');
+  demandPoint(direction, 'rayBoxDistance(direction)');
+  demandBox(box, 'rayBoxDistance(box)');
 
   let near = 0;
   let far = Infinity;

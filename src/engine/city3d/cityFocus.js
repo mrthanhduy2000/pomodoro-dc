@@ -44,6 +44,7 @@
  * 10 Bước 2: một cơ chế "từ chối thẳng" chỉ an toàn khi có người đếm số lần từ chối.
  */
 
+import { demandBox, demandDistance, demandPoint } from './finite';
 import { MAX_PITCH, MIN_PITCH, orbitPosition } from './orbit';
 
 /**
@@ -82,7 +83,10 @@ const num = (value, fallback = 0) => (Number.isFinite(value) ? value : fallback)
  * không cần tới nó, vì nó đã làm việc thẳng bằng khoảng cách thật.
  */
 export function focusZoom(overviewDistance, viewDistance = FOCUS_VIEW_DISTANCE) {
-  const d = num(overviewDistance, 0);
+  // ⚠️ KHÔNG `num(…, 0)` NỮA. Một khoảng cách toàn cảnh NaN từng lặng lẽ thành 0 rồi trả về mức
+  // thu phóng 1 — tức "không cần lại gần", đúng cái kết luận nguy hiểm nhất trong hai. Xem `finite.js`.
+  const d = demandDistance(overviewDistance, 'focusZoom(overviewDistance)');
+  demandDistance(viewDistance, 'focusZoom(viewDistance)');
   return d > 0 ? viewDistance / d : 1;
 }
 
@@ -92,10 +96,26 @@ export function focusZoom(overviewDistance, viewDistance = FOCUS_VIEW_DISTANCE) 
  * số âm nào đó — số âm sẽ lẫn với "cách ra một chút" khi đem so ngưỡng.
  */
 export function boxDistance(point, box) {
-  if (!point || !box) return Infinity;
+  /*
+    ⚠️ ROUND 60, VIỆC 0(b): DÒNG MỞ ĐẦU CŨ LÀ `if (!point || !box) return Infinity;` VÀ ĐÓ LÀ CẢ
+    CÁI HỎNG CỦA BA VÒNG. `!box` ĐÚNG khi `box` là số `0` — và `0` chính là thứ `nearestBlocker`
+    trả về khi camera nằm ĐÚNG TRONG một công trình. Nên chỗ hỏng nhất có thể lại được trả lời
+    "thoáng vô hạn". Cả câu chuyện nằm ở đầu `finite.js`.
+    ⇒ Nay `box == null` (thật sự KHÔNG có hộp) vẫn là `Infinity` — đó là câu trả lời đúng cho một
+    thành phố rỗng. Mọi thứ KHÁC không phải hộp đều rơi xuống phép đo bên dưới và ra `NaN`, và
+    `demandDistance` giết nó tại chỗ thay vì để nó đi thua một phép so.
+  */
+  if (box == null) return Infinity;
   const dx = Math.max(box.minX - point.x, 0, point.x - box.maxX);
   const dy = Math.max(box.minY - point.y, 0, point.y - box.maxY);
   const dz = Math.max(box.minZ - point.z, 0, point.z - box.maxZ);
+  // ⚠️ MỘT PHÉP KIỂM Ở LỐI RA, KHÔNG PHẢI SÁU PHÉP Ở LỐI VÀO. Hàm này chạy trong vòng lặp nóng
+  // nhất của cả chuỗi (48 chặng × mọi khối × tới 30 lần hoạch định lại). Mọi đầu vào hỏng — sai
+  // kiểu, thiếu trường, toạ độ NaN — đều tới đây dưới dạng `NaN`, nên một phép kiểm bắt hết.
+  if (Number.isNaN(dx + dy + dz)) {
+    demandPoint(point, 'boxDistance(point)');
+    demandBox(box, 'boxDistance(box)');
+  }
   return Math.hypot(dx, dy, dz);
 }
 
@@ -106,7 +126,9 @@ export function nearestBlocker(point, blockers) {
     const d = boxDistance(point, box);
     if (d < best) best = d;
   }
-  return best;
+  // Phố rỗng ⇒ `Infinity`, và đó là một câu trả lời HỢP LỆ chứ không phải một lỗi — `demandDistance`
+  // cho `+Infinity` đi qua, chỉ chặn `NaN` và số âm.
+  return demandDistance(best, 'nearestBlocker');
 }
 
 /**
@@ -126,7 +148,17 @@ export function nearestBlocker(point, blockers) {
  * thành phố thành vật cản.
  */
 export function segmentHitsBox(from, to, box) {
-  if (!from || !to || !box) return false;
+  /*
+    ⚠️ Ở ĐÂY CHIỀU NGUY HIỂM NGƯỢC LẠI VỚI `boxDistance`, NÊN PHẢI CANH Ở LỐI VÀO. Hàm này trả về
+    một BOOLEAN — không có con số nào ở lối ra để kiểm. Và một toạ độ `NaN` lọt vào thì `d` thành
+    `NaN`, `Math.abs(NaN) < 1e-12` SAI, `t0`/`t1` thành `NaN`, `t0 > t1` SAI trên cả ba trục ⇒ hàm
+    trả về **`true`**, tức "có đâm". Dịch ra: một đầu vào hỏng đọc thành *"mọi hướng đều bị chắn"*,
+    và `planResidentFocus` sẽ đi hết vòng tìm rồi báo `blocked: true` cho một người đứng giữa
+    đồng trống. Cùng họ khuyết tật với round 57, chỉ khác dấu.
+  */
+  demandPoint(from, 'segmentHitsBox(from)');
+  demandPoint(to, 'segmentHitsBox(to)');
+  demandBox(box, 'segmentHitsBox(box)');
   let t0 = 0;
   let t1 = 1;
   for (const [a, b, lo, hi] of [
@@ -158,7 +190,10 @@ export function segmentHitsBox(from, to, box) {
  * mà `pathGuarantee` đã mắc ở vòng 57, chỉ ở đầu kia của đoạn.
  */
 export function lineOfSight(from, to, blockers, bo = 0.06) {
-  if (!from || !to) return false;
+  // ⚠️ `return false` CŨ CÓ NGHĨA "KHÔNG NHÌN THẤY" — một đầu vào hỏng bị đọc thành một câu trả lời
+  // về thành phố. Nay nó chết ngay và nói tên tham số hỏng.
+  demandPoint(from, 'lineOfSight(from)');
+  demandPoint(to, 'lineOfSight(to)');
   const dx = to.x - from.x;
   const dy = to.y - from.y;
   const dz = to.z - from.z;
@@ -262,7 +297,13 @@ export function planCityFocus({
     distance: num(from?.distance, viewDistance),
     target: { x: num(from?.target?.x), y: num(from?.target?.y), z: num(from?.target?.z) },
   };
-  const target = { x: num(focus?.x), y: num(focus?.y), z: num(focus?.z) };
+  // ⚠️ ĐIỂM NGẮM KHÔNG ĐƯỢC PHÉP MẶC ĐỊNH VỀ GỐC TOẠ ĐỘ. `num(…, 0)` ở đây từng biến một
+  // `focus` hỏng thành "bay về giữa bản đồ" — sai chỗ, không báo gì, và chỉ một tấm ảnh nói ra được.
+  // (`from` thì vẫn được mặc định: nó là trạng thái camera của khung hình trước, và đứng ở một chỗ
+  // hợp lệ còn hơn là làm sập cả vòng vẽ.)
+  const target = demandPoint({ x: focus?.x, y: focus?.y, z: focus?.z }, 'planCityFocus(focus)');
+  demandDistance(viewDistance, 'planCityFocus(viewDistance)');
+  demandDistance(clearance, 'planCityFocus(clearance)');
 
   // ⚠️ GIỮ NGUYÊN HƯỚNG NHÌN (`yaw`). Xoay ngang trong lúc bay làm mất phương hướng — Đàm vừa chạm
   // vào một căn nhà anh đang nhìn thấy, thì lúc hạ xuống nó phải còn ở đúng phía ấy. Giữ `yaw` cố

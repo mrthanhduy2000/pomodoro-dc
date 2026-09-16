@@ -38,7 +38,10 @@ test('HỘP BAO TRỌN NGƯỜI THEO CHIỀU CAO, VÀ NỞ RA THEO CHIỀU NGANG
   assert.ok(box.maxX - box.minX > 0.3,
     'hộp bó sát vai thì ở cỡ 20 điểm ảnh gần như không chạm trúng được (xem chú thích Việc 5)');
   assert.equal(residentBox({ x: 0, y: 0, z: 0 }, 0), null, 'chiều cao 0 phải trả null, không dựng hộp rỗng');
-  assert.equal(residentBox({ x: NaN, y: 0, z: 0 }, 1), null, 'toạ độ hỏng phải trả null');
+  // ⚠️ ROUND 60, VIỆC 0(b) ĐẢO LỜI HỨA NÀY, CÓ CHỦ Ý. Trả `null` nghĩa là người ấy lặng lẽ biến
+  // mất khỏi danh sách chạm; Đàm: *"Một hàm nhận NaN phải chết ngay, không được lặng lẽ trả false."*
+  assert.throws(() => residentBox({ x: NaN, y: 0, z: 0 }, 1), /finite coordinate/,
+    'toạ độ hỏng phải NÉM, không được lặng lẽ trả null');
 });
 
 test('ĐỨNG XA THEO CHIỀU CAO NGƯỜI — không dùng lại con số của công trình', () => {

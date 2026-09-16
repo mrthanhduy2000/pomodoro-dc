@@ -127,7 +127,13 @@ test('TRẢ 0 KHỐI VÀ 0 LỆNH VẼ: tủ đồ không được làm phình c
     // (hai mắt, hai con ngươi, sáu quả cầu khớp, gờ mày). Lại một lần nữa khoản +1 KHÔNG đến từ
     // tủ đồ — nó mua lại 5.808 tam giác/người (−25,9%), và `humanCoarse.test.js` canh riêng cả
     // ngưỡng chọn khối lẫn khoản tiết kiệm. Lời hứa của bài này giữ nguyên: tủ đồ tốn 0 khuôn.
-    assert.ok(dung.size <= 10,
+    // ⚠️ 10 → 12 (round 60, Việc 2 + 3): `seam` và `cuff` — hai khuôn mang MÉP MAY. Và lần này
+    // khoản +2 ĐÚNG LÀ của tủ đồ, khác hẳn hai lần nâng trước (`skull`, `bead`) vốn là chuyện của
+    // cơ thể. Nhưng lời hứa của bài này vẫn được giữ NGUYÊN NGHĨA chứ không bị nới: nó hứa *"tủ đồ
+    // không dựng thêm KHỐI"*, và số khối vẫn y nguyên (`thuc === tran` ở trên) — cái cổ áo là một
+    // BẬC trong đường sinh của khối đã có, không phải một khối thứ hai dán quanh cổ. Đó chính là
+    // luật Đàm ra cho cả vòng 60, và đây là chỗ nó được canh.
+    assert.ok(dung.size <= 12,
       `kỷ ${era} dùng ${dung.size} khuôn (${[...dung].join(', ')}) — mỗi khuôn là một lệnh vẽ`);
   }
 });

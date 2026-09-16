@@ -403,7 +403,10 @@ const SLEEVE_LOOK = Object.freeze({
   bare:  { upRole: 'skin',  upShape: 'limb', upW: 0.90, loRole: 'skin',  loShape: 'calf',  loW: 0.78 },
   // tay ngắn: vải ôm bắp tay, cẳng tay để trần ⇒ có một ĐƯỜNG CẮT giữa vải và da ở khủyu
   short: { upRole: 'cloth', upShape: 'limb', upW: 1.06, loRole: 'skin',  loShape: 'calf',  loW: 0.78 },
-  long:  { upRole: 'cloth', upShape: 'limb', upW: 1.06, loRole: 'cloth', loShape: 'calf',  loW: 0.90 },
+  // ⚠️ ROUND 60, VIỆC 2: `calf` → `cuff`. Cùng đường sinh, thêm một BẬC ở vành cổ tay — tức
+  // **cửa tay áo**, mép quần áo đầu tiên của vòng này. Không thêm khối nào, không đổi bề ngang,
+  // không đổi vai màu: chỉ đổi khuôn, đúng cách `SLEEVE_LOOK` đã dựng tay áo từ round 52.
+  long:  { upRole: 'cloth', upShape: 'limb', upW: 1.06, loRole: 'cloth', loShape: 'cuff',  loW: 0.90 },
   // ⚠️ TAY THỤNG DÙNG KHUÔN `flare` CHO CẰNG TAY, VÀ CHIỀU CỦA KHUÔN ẤY ĐÚNG SẴN: `flare` rộng
   // nhất ở ĐÁY (1,00) và hẹp ở ĐỈNH (0,55), mà cẳng tay thì treo vào khớp khuỷu ở ĐỈNH ⇒ hẹp ở
   // khuỷu, xoè xuống cổ tay. Đó chính là cái tay áo giao l什nh Trường An, và bàn tay vẫn thò ra đáy.
@@ -428,9 +431,53 @@ const LEG_LOOK = Object.freeze({
   // áo chùng chấm đất đã nuốt hết: giữ nguyên vạch xuất phát, không ai nhìn thấy
   none:    { upRole: 'cloth2', upShape: 'limb', upW: 1.00, loRole: 'cloth2', loShape: 'calf', loW: 0.86 },
   wrap:    { upRole: 'skin',   upShape: 'limb', upW: 0.94, loRole: 'skin',   loShape: 'calf', loW: 0.80 },
-  trouser: { upRole: 'cloth2', upShape: 'limb', upW: 1.10, loRole: 'cloth2', loShape: 'calf', loW: 0.94 },
+  // ⚠️ ROUND 60, VIỆC 3: `calf` → `cuff` — **gấu quần**, phủ lên mu bàn chân. Cùng một khuôn với
+  // cửa tay áo, và đó là chủ ý: ngoài đời hai cái mép ấy được may y hệt nhau.
+  trouser: { upRole: 'cloth2', upShape: 'limb', upW: 1.10, loRole: 'cloth2', loShape: 'cuff', loW: 0.94 },
   boot:    { upRole: 'cloth2', upShape: 'limb', upW: 1.10, loRole: 'cloth2', loShape: 'limb', loW: 1.16 },
 });
+
+/**
+ * TẤM VẢI NÀY CÓ ĐƯỢC **CẮT VÀ MAY** KHÔNG — round 60, Việc 2.
+ *
+ * ⚠️ MỘT CÂU HỎI LỊCH SỬ, KHÔNG PHẢI MỘT CÔNG TẮC ĐỒ HOẠ. Cái cổ áo, cái gấu áo và cái cạp quần
+ * chỉ tồn tại ở một tấm vải đã bị CẮT rồi khâu lại. Tấm da thú Göbekli Tepe và cái khố shendyt
+ * Ai Cập là vải **QUẤN**: mép của chúng là mép cắt thô, hoặc là mép dệt sẵn của cả tấm. Cho hai
+ * kỷ ấy một cái cổ áo bẻ là bịa ra ba nghìn năm nghề may.
+ * ⇒ Hai kỷ ấy giữ khuôn `chest` và **không trả thêm một lệnh vẽ nào**. Mười ba kỷ còn lại dùng
+ * `seam` — kể cả kỷ 14, kỷ duy nhất khai `garment: 'none'`: "không áo khoác" không có nghĩa là
+ * không mặc gì, người Marina Bay mặc sơ mi, và sơ mi thì có cổ.
+ */
+const CO_DUONG_MAY = Object.freeze({
+  pelt: false,   // kỷ 1 — tấm da thú choàng, mép cắt thô
+  wrap: false,   // kỷ 2 — khố lanh shendyt, vải quấn
+  robe: true,    // kỷ 3 · 4 · 7 · 15 — áo choàng, giao lĩnh, lucco, kandura
+  coat: true,    // kỷ 5 · 9 · 11 · 12
+  tunic: true,   // kỷ 6 · 8 · 10
+  suit: true,    // kỷ 13
+  none: true,    // kỷ 14 — sơ mi, và sơ mi có cổ
+});
+
+/**
+ * KỶ NÀO THẮT LƯNG — round 60, Việc 3. Danh sách lịch sử, không phải danh sách tiện tay.
+ *
+ * ⚠️ MỘT CÁI ĐAI KHÔNG PHẢI MỘT PHỤ KIỆN TRANG TRÍ MÀ LÀ MỘT CÁCH MẶC. Áo chùng Lưỡng Hà, áo
+ * giao lĩnh có thắt đai, áo chẽn trung cổ, áo nâu sồng buộc dải, áo thuỷ thủ, áo carmagnole với
+ * dải tam tài, áo choàng thợ Manchester, áo bông Hồng quân với dải da bản to — tám kỷ ấy CÓ.
+ * Áo chùng lucco Firenze buông thẳng, áo khoác dài thời Mạ Vàng mặc cùng gi-lê, âu phục Tokyo,
+ * sơ mi Marina Bay và áo kandura Dubai thì KHÔNG — thắt đai cho chúng là mặc sai thời đại, và
+ * `humanTailoring.test.js` canh đúng con số 8 ấy để nó không lặng lẽ trôi thành 15.
+ */
+const CO_THAT_LUNG = Object.freeze(new Set([3, 4, 5, 6, 8, 9, 10, 12]));
+
+/**
+ * Khuôn của BA khối thân — một khuôn cho cả ba, nên ba nhóm dưới đây RỜI NHAU và mỗi kỷ chỉ trả
+ * đúng một lệnh vẽ cho cái thân của nó. Thắt lưng vì thế tốn **0 lệnh vẽ thêm**.
+ */
+export function bodyShape(garment, era) {
+  if (!CO_DUONG_MAY[garment]) return 'chest';
+  return CO_THAT_LUNG.has(era) ? 'belt' : 'seam';
+}
 
 /** Tra bảng, rơi về vạch xuất phát nếu tủ đồ khai một kiểu lạ — không bao giờ ném ở tầng thuần. */
 export function sleeveLook(kind) { return SLEEVE_LOOK[kind] ?? SLEEVE_LOOK.bare; }
@@ -905,6 +952,7 @@ export function buildHumanBody(era) {
   // có gì đỏ lên — đúng hình dạng "một luật hai công thức" mà `humanDims` được tách ra để tránh.
   const sv = sleeveLook(style.sleeve);
   const lg = legLook(style.leg);
+  const than = bodyShape(style.garment, era);
   /*
     ⚠️ VAI MÀU CỦA BÀN TAY — HAI TRẠNG THÁI, KHÔNG BAO GIỜ CÓ TRẠNG THÁI THỨ BA (round 58, Việc 1).
     Đàm: *"màu da khi tay áo ngắn, màu găng khi có găng — và không bao giờ là một màu thứ ba."*
@@ -1015,9 +1063,16 @@ export function buildHumanBody(era) {
     // bẹt nằm ngang bắc qua hai chỏm hông vừa bịt khe, vừa cho hình bóng một chỗ nở ra ở ngang
     // hông — thứ mà mọi hình người thật đều có.
     // Vai màu `cloth2` (cùng quần) chứ không `cloth`: ngoài đời cái quần bắt đầu từ đúng chỗ này.
-    piece('pelvis', 'cloth2', 'chest', 'pelvis',
+    // ⚠️ ROUND 60, VIỆC 2 + 3: BA KHỐI NÀY DÙNG CHUNG MỘT KHUÔN, VÀ MỖI KHỐI CHỈ ĐỂ LỘ MỘT BẬC.
+    // `than` là `seam` ở 13 kỷ có đường may, `chest` ở hai kỷ mặc vải quấn (xem `CO_DUONG_MAY`).
+    //     `pelvis`    → bậc DƯỚI lộ ra = đáy quần · bậc TRÊN = cạp quần (khuất dưới áo ở kỷ áo dài)
+    //     `torso`     → bậc DƯỚI lộ ra = **gấu áo**, đúng chỗ vai màu đổi `cloth` → `cloth2`
+    //     `trapezius` → bậc TRÊN lộ ra = **cổ áo**
+    // Ba mép, một `InstancedMesh`. Đầu còn lại của mỗi khối nằm chôn trong khối kế bên nên cái
+    // bậc ở đó không tốn gì và cũng không hiện ra — đó chính là lý do một khuôn đủ cho cả ba.
+    piece('pelvis', 'cloth2', than, 'pelvis',
       [d.torsoD * 0.96, d.torsoH * 0.32, d.torsoW * 0.88], [0, d.torsoH * 0.06, 0]),
-    piece('torso', 'cloth', 'chest', 'torso', [d.torsoD, d.torsoH, d.torsoW], [0, d.torsoH * 0.5, 0]),
+    piece('torso', 'cloth', than, 'torso', [d.torsoD, d.torsoH, d.torsoW], [0, d.torsoH * 0.5, 0]),
     /*
       ⚠️ CƠ THANG — ROUND 58, VIỆC 4, VÀ NÓ SỬA MỘT KHUYẾT TẬT ĐO ĐƯỢC, KHÔNG PHẢI MỘT CẢM GIÁC.
       Đo trên kỷ 1 trước vòng này: đáy cái đầu ở y = 0,17231, còn ĐỈNH quả cầu vai ở y = 0,17335.
@@ -1035,7 +1090,7 @@ export function buildHumanBody(era) {
       Vai màu `cloth` và `continues: 'torso'`: nó là phần nối dài của cái thân, nên `humanSeams.js`
       canh nó — đổi màu là test đỏ. Một cái "cổ áo" sáng quanh vai là đúng lỗi vòng 54 đã trả giá.
     */
-    piece('trapezius', 'cloth', 'chest', 'torso',
+    piece('trapezius', 'cloth', than, 'torso',
       [d.torsoD * 0.84, d.torsoH * 0.30, d.torsoW * 1.08], [0, d.torsoH * 0.90, 0], 'torso'),
     /*
       ⚠️ CỔ — ROUND 54 (ADR-094), VIỆC 5. Trước vòng này cái đầu ngồi TRỰC TIẾP lên thân, và đó là

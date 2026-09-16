@@ -58,7 +58,7 @@ import { BLUEPRINT_CATALOG } from '../constants.js';
 import { collectCitySpecs } from './cityParts.js';
 import { getEraStyle, ERA_STYLES } from './eraStyle.js';
 import { materialFamilyFor, MATERIAL_ORDER } from './materials.js';
-import { humanShapesUsed } from './human.js';
+import { buildHumanBody, humanShapesUsed } from './human.js';
 import { waterIsBuilt } from './setting.js';
 
 const ERAS = Object.keys(ERA_STYLES).map(Number).sort((a, b) => a - b);
@@ -156,7 +156,32 @@ function tamCoDinh(era) {
   ⚠️ HIỆU SỐ VỚI `MOC_TRUOC_KHUON_THO` PHẢI LÀ **+1 ĐỀU Ở CẢ 15 KỶ**. Một kỷ +2 nghĩa là có người
   vừa thêm một khuôn thứ hai mà không khai ở đây. Đo lại: 2026-09-16.
 */
+/*
+  ⚠️ ROUND 60, VIỆC 2 + 3: **+0 · +1 · +2 TUỲ KỶ, VÀ CHÍNH SỰ KHÔNG ĐỀU ẤY LÀ BẰNG CHỨNG.**
+  Hai khuôn mới, mỗi cái mang một BẬC trong đường sinh — đúng luật Đàm ra cho cả vòng
+  (*"mỗi mép quần áo là một BẬC TRONG ĐƯỜNG SINH, không phải một khối dán lên"*):
+      `seam` = `chest` + bậc ở HAI đầu   ⇒ cổ áo · gấu áo · cạp quần (3 khối thân dùng chung)
+      `cuff` = `calf`  + bậc ở đầu dưới  ⇒ cửa tay áo · gấu quần    (tới 4 khối chi dùng chung)
+  ⚠️ **KỶ 1 VÀ KỶ 2 TRẢ 0**, và đó không phải may mắn: tấm da Göbekli Tepe và cái khố shendyt là
+  vải QUẤN, `CO_DUONG_MAY` trả `false`, nên hai kỷ ấy giữ nguyên `chest` và `calf`. Nếu bảng này
+  có ngày nào cho kỷ 1 hoặc kỷ 2 một khoản +1 thì nghĩa là ai đó vừa cho người tiền sử một cái
+  cổ áo bẻ.
+  ⚠️ Kỷ trả **+2** (8 · 10 · 14 · 15) là kỷ dùng CẢ hai khuôn mới mà vẫn còn `calf`: tay áo ngắn
+  hoặc chân quấn để lại một đoạn chi trần, nên khuôn cũ không biến mất. Kỷ trả **+1** là kỷ mà
+  `cuff` thay THẾ CHỖ `calf` ở cả bốn đoạn chi dưới.
+  Đo lại: 2026-09-16.
+*/
 const MOC_LENH_VE = {
+  1: 16, 2: 18, 3: 21, 4: 19, 5: 20,
+  6: 21, 7: 21, 8: 23, 9: 18, 10: 22,
+  11: 18, 12: 18, 13: 18, 14: 19, 15: 19,
+};
+
+/**
+ * MỐC NGAY TRƯỚC KHI QUẦN ÁO CÓ MÉP MAY — round 60, Việc 2 + 3. Giữ lại làm ĐỐI CHỨNG, đúng luật
+ * riêng của file: *mỗi phase một mốc, mỗi mốc một phép trừ riêng*.
+ */
+const MOC_TRUOC_MEP_AO = {
   1: 16, 2: 18, 3: 20, 4: 18, 5: 19,
   6: 20, 7: 20, 8: 21, 9: 17, 10: 20,
   11: 17, 12: 17, 13: 17, 14: 17, 15: 17,
@@ -483,7 +508,15 @@ test('QUAN HỆ "lệnh vẽ = số họ + 2 + số khuôn cư dân (+1 nếu c�
     Câu lệnh đo, nguyên văn, cùng fixture của bài test này:
         node scripts/city-preview.mjs --era N --hour 12 --sessions 40 --level 1 --bench 1 --no-shadow
   */
-  const DO_CHROMIUM_2026_09_16 = { 1: 19, 8: 24, 13: 18 };
+  /*
+    ⚠️ ĐO LẠI LẦN THỨ HAI TRONG CÙNG NGÀY, SAU VIỆC 2 + 3 — và phép đo này là bằng chứng ĐỘC LẬP
+    mạnh nhất của cả vòng. Bảng `MOC_LENH_VE` dự đoán khoản lệch của từng kỷ từ `humanShapesUsed`:
+    kỷ 1 **+0** (vải quấn, không mép may) · kỷ 8 **+2** (cả `seam` lẫn `cuff`, `calf` vẫn còn vì
+    tay áo ngắn) · kỷ 13 **+1** (`cuff` thay chỗ `calf`). Chromium đo được **19 · 26 · 19**, tức
+    +0 · +2 · +1 — khớp từng kỷ một, ba con số khác nhau, không phải một hằng số cộng đều.
+    Và khoản "lệch chưa truy nguyên nhân" (3 · 3 · 1) vẫn KHÔNG nhúc nhích qua cả hai lần đo.
+  */
+  const DO_CHROMIUM_2026_09_16 = { 1: 19, 8: 26, 13: 19 };
   const HO_CHUA_TRUY_NGUYEN_NHAN = { 1: 3, 8: 3, 13: 1 };
   for (const era of [1, 8, 13]) {
     assert.equal(MOC_LENH_VE[era] + HO_CHUA_TRUY_NGUYEN_NHAN[era], DO_CHROMIUM_2026_09_16[era],
@@ -655,8 +688,25 @@ test('ADR-057: CẲNG CHÂN TÁCH RA KHỎI ĐÙI TỐN ĐÚNG **MỘT** LỆNH 
     lech.push(hieu);
     // Và cái khuôn mới ấy phải THẬT SỰ có mặt ở mọi kỷ — nếu không thì hiệu số +1 đang được trả
     // bằng một thứ khác và phép trừ trên chỉ đúng nhờ một sự trùng hợp (bẫy Phase 7D).
-    assert.ok(humanShapesUsed(era).includes('calf'),
-      `kỷ ${era}: bộ khuôn không có \`calf\` — cẳng chân chưa tách khỏi đùi`);
+    /*
+      ⚠️ ROUND 60: LỜI HỨA NÀY ĐƯỢC **PHÁT BIỂU LẠI**, KHÔNG PHẢI BỎ ĐI — và lý do đáng ghi.
+      Bản cũ hỏi `humanShapesUsed(era).includes('calf')` như một bằng chứng gián tiếp cho
+      *"cẳng chân là một khối riêng"*. Việc 2 + 3 thêm `cuff` (cùng họ đường sinh, thêm một bậc ở
+      cổ chân), nên ở 9 kỷ mặc quần thì `calf` biến mất — lời hứa vẫn đúng NGUYÊN VẸN trong khi
+      cái proxy đỏ. Và ở kỷ 12 thì `boot` cố ý cho cẳng chân dùng `limb`, tức ngay cả "phải có một
+      khuôn chi-dưới riêng" cũng không phải điều ADR-057 hứa.
+      ⇒ Hỏi thẳng thứ ADR-057 thật sự hứa: **cẳng chân là một KHỐI riêng, treo vào khớp GỐI, không
+      phải một phần của đùi.** Đó là điều không proxy nào diễn đạt được và cũng là điều duy nhất
+      đáng canh. THỬ-CHO-ĐỎ: gộp `shinL` vào `thighL` ⇒ cả 15 kỷ đỏ ngay dòng dưới.
+    */
+    const khoi = buildHumanBody(era).parts;
+    for (const ben of ['L', 'R']) {
+      const dui = khoi.find((k) => k.id === `thigh${ben}`);
+      const cang = khoi.find((k) => k.id === `shin${ben}`);
+      assert.ok(dui && cang, `kỷ ${era}: thiếu thigh${ben} hoặc shin${ben} — chân lại là một khối`);
+      assert.equal(dui.joint, `hip${ben}`, `kỷ ${era}: đùi phải treo vào khớp hông`);
+      assert.equal(cang.joint, `knee${ben}`, `kỷ ${era}: cẳng chân phải treo vào khớp GỐI`);
+    }
     assert.ok(humanShapesUsed(era).includes('limb'),
       `kỷ ${era}: bộ khuôn không có \`limb\``);
   }
@@ -728,12 +778,16 @@ test('KHUÔN THÔ TỐN ĐÚNG +1 LỆNH VẼ Ở CẢ 15 KỶ, VÀ `dome` PHẢ
     THỬ-CHO-ĐỎ (nêu TRƯỚC): đổi `occiput` và `hairFringe` sang `bead` ⇒ vế hai đỏ ở cả 15 kỷ, và
     `humanCoarse.test.js` đỏ theo ở bài "ngược".
   */
+  // ⚠️ CỘT "SAU" LÀ `MOC_TRUOC_MEP_AO`, KHÔNG PHẢI `MOC_LENH_VE` — cùng một lý do đã bắt round 54
+  // phải sửa phép trừ của nó (xem khối chú thích của `MOC_TRUOC_VAI_XOE`). Việc 2 + 3 của chính
+  // vòng này thêm `seam` và `cuff` ngay sau đó, nên đọc `MOC_LENH_VE` là trộn BA thay đổi vào một
+  // hiệu số và không ai còn đọc được vế nào tốn bao nhiêu. Mỗi phép trừ kẹp đúng MỘT thay đổi.
   for (const era of ERAS) {
     const truoc = MOC_TRUOC_KHUON_THO[era];
     assert.ok(Number.isFinite(truoc), `kỷ ${era} thiếu mốc trước-khuôn-thô`);
-    const hieu = MOC_LENH_VE[era] - truoc;
+    const hieu = MOC_TRUOC_MEP_AO[era] - truoc;
     assert.equal(hieu, 1,
-      `kỷ ${era}: mốc đi từ ${truoc} lên ${MOC_LENH_VE[era]} (lệch ${hieu}) — khuôn thô chỉ được `
+      `kỷ ${era}: mốc đi từ ${truoc} lên ${MOC_TRUOC_MEP_AO[era]} (lệch ${hieu}) — khuôn thô chỉ được `
       + 'tốn ĐÚNG một lệnh vẽ. Lệch 2 nghĩa là có khuôn thứ hai vừa vào mà không ai khai.');
     const khuon = humanShapesUsed(era);
     assert.ok(khuon.includes('bead'), `kỷ ${era}: khuôn thô VẮNG mà mốc vẫn +1 — con số đang bịa`);
@@ -741,4 +795,43 @@ test('KHUÔN THÔ TỐN ĐÚNG +1 LỆNH VẼ Ở CẢ 15 KỶ, VÀ `dome` PHẢ
       `kỷ ${era}: \`dome\` đã biến mất. Gáy và mái tóc trước trán rộng 53,1 điểm ảnh ở cận cảnh, `
       + 'quá ngưỡng nửa điểm ảnh — chúng phải ở lại khuôn mịn. Xem `humanCoarse.test.js`.');
   }
+});
+
+test('MÉP QUẦN ÁO TỐN +0 Ở KỶ MẶC VẢI QUẤN, +1 HOẶC +2 Ở KỶ CÓ MAY', () => {
+  /*
+    ⚠️ PHÉP TRỪ RIÊNG CỦA VÒNG 60, VIỆC 2 + 3 — và nó là phép trừ ĐẦU TIÊN trong file này KHÔNG
+    đòi một hiệu số đồng đều. Sự KHÔNG đều mới là thứ đáng canh: nghề may không xuất hiện cùng lúc
+    ở mười lăm thế kỷ, nên một bảng cho cả 15 kỷ cùng một khoản +1 sẽ là một bảng đang nói dối.
+        kỷ 1 · 2   → **+0**  vải QUẤN (tấm da Göbekli Tepe, khố shendyt): không có mép may nào
+        kỷ 8 · 10 · 14 · 15 → **+2**  dùng CẢ `seam` lẫn `cuff` mà `calf` vẫn còn (tay áo ngắn
+                              hoặc chân quấn để lại một đoạn chi trần)
+        chín kỷ còn lại     → **+1**  `cuff` thay THẾ CHỖ `calf` ở cả bốn đoạn chi dưới
+    THỬ-CHO-ĐỎ (nêu TRƯỚC): cho `CO_DUONG_MAY.pelt = true` ⇒ kỷ 1 nhích lên +1 và dòng dưới đỏ,
+    kèm đúng thông điệp "người tiền sử vừa được phát một cái cổ áo".
+  */
+  const VAI_QUAN = [1, 2];
+  for (const era of ERAS) {
+    const truoc = MOC_TRUOC_MEP_AO[era];
+    assert.ok(Number.isFinite(truoc), `kỷ ${era} thiếu mốc trước-mép-áo`);
+    const hieu = MOC_LENH_VE[era] - truoc;
+    const khuon = humanShapesUsed(era);
+    if (VAI_QUAN.includes(era)) {
+      assert.equal(hieu, 0,
+        `kỷ ${era} mặc vải QUẤN — nó không được trả một lệnh vẽ nào cho mép may (lệch ${hieu}).`);
+      assert.ok(!khuon.includes('seam') && !khuon.includes('belt') && !khuon.includes('cuff'),
+        `kỷ ${era}: vải quấn mà lại có khuôn có mép (${khuon.join(', ')}) — ai đó vừa phát cho `
+        + 'người tiền sử một cái cổ áo bẻ.');
+    } else {
+      assert.ok(hieu === 1 || hieu === 2,
+        `kỷ ${era}: mốc đi từ ${truoc} lên ${MOC_LENH_VE[era]} (lệch ${hieu}). Hai khuôn mới thì `
+        + 'nhiều nhất là +2; lệch hơn nghĩa là có thứ KHÁC đang đi ké dòng này.');
+      // ⚠️ `seam` HOẶC `belt` — tám kỷ thắt lưng dùng `belt` THAY CHỖ `seam`, nên khuôn thắt lưng
+      // tốn 0 lệnh vẽ thêm. Viết cứng `seam` ở đây là đòi một kỷ có thắt lưng phải trả hai lần.
+      assert.ok(khuon.includes('seam') || khuon.includes('belt'),
+        `kỷ ${era}: mốc nhích lên mà cả \`seam\` lẫn \`belt\` đều VẮNG — con số đang bịa.`);
+    }
+  }
+  // Gác chạy-rỗng: nếu mọi kỷ cùng một khoản lệch thì phép trừ trên chẳng phân biệt được gì.
+  const lech = ERAS.map((e) => MOC_LENH_VE[e] - MOC_TRUOC_MEP_AO[e]);
+  assert.equal(new Set(lech).size, 3, `phải có đúng ba mức lệch 0 · 1 · 2 — đếm được ${new Set(lech).size}`);
 });

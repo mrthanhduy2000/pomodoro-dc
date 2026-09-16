@@ -129,7 +129,7 @@ const ROUND_SIDES = 60;
  */
 const COARSE_SIDES = 16;
 
-export const HUMAN_SHAPES = ['box', 'prism', 'limb', 'calf', 'chest', 'flare', 'cone', 'dome', 'bead', 'hat', 'scalp', 'skull'];
+export const HUMAN_SHAPES = ['box', 'prism', 'limb', 'calf', 'cuff', 'chest', 'seam', 'belt', 'flare', 'cone', 'dome', 'bead', 'hat', 'scalp', 'skull'];
 
 /**
  * Hồ sơ từng khuôn. `sides` = số cạnh đa giác; `rings` = [y, r] từ đáy lên đỉnh.
@@ -250,6 +250,40 @@ const PROFILES = {
   },
 
   /**
+   * ĐOẠN CHI DƯỚI CÓ CỬA TAY — ROUND 60, VIỆC 2 + 3. **`calf` VỚI MỘT BẬC Ở ĐẦU DƯỚI.**
+   *
+   * Cùng luật với `seam`, ở nửa kia của cơ thể. Cẳng tay và cẳng chân đều treo xuống từ khớp
+   * giữa, nên đầu −1 của chúng là **cổ tay** và **cổ chân** — đúng hai chỗ Đàm gọi tên:
+   *     cẳng tay áo dài  ⇒ bậc ở vành cổ tay  = **cửa tay**
+   *     cẳng chân có quần ⇒ bậc ở vành cổ chân = **gấu quần** (phủ lên mu giày)
+   * Một khuôn, hai chỗ, một lệnh vẽ.
+   *
+   * ⚠️ ĐẦU TRÊN GIỮ NGUYÊN 0,90 CỦA `calf`, VÀ ĐÓ LÀ MỘT RÀNG BUỘC CHỨ KHÔNG PHẢI SỰ TÌNH CỜ.
+   * `shapeEndRadius(shape, +1)` chính là con số round 58 dùng để tính đường kính quả cầu khớp
+   * (Việc 2: *"quả cầu bán kính bằng đoạn dày hơn thì bịt kín ở MỌI góc gập"*). Đổi nó ở đây là
+   * làm quả cầu khuỷu và quả cầu gối sai cỡ ở đúng những kỷ mặc quần áo — một cục u, hoặc một
+   * cái khe hở, và cả hai đều chỉ hiện ra trên ảnh.
+   *
+   * ⚠️ VÀ BẬC PHẢI CÓ **BA VÀNH**, KHÔNG PHẢI HAI: mép ngoài (0,62), thân dải (0,58), rồi THU
+   * LẠI (0,54) trước khi ống tay nở về 0,63. Hai vành chỉ cho một cái loe; ba vành cho một cái
+   * DẢI có bề dày — đúng hình một cái măng-sét gập đôi, và là thứ phân biệt "có may" với "loe ra".
+   */
+  cuff: {
+    sides: ROUND_SIDES,
+    rings: [
+      [-0.500, 0.42],
+      [-0.455, 0.44],
+      [-0.430, 0.62],   // ⬅ BẬC: mép ngoài cửa tay / gấu quần
+      [-0.340, 0.58],
+      [-0.300, 0.54],   // dải thu lại — bề dày của chỗ vải gập đôi
+      [-0.220, 0.63],
+      [0.020, 1.00],
+      [0.280, 0.74],
+      [0.500, 0.90],    // ⚠️ BẰNG ĐÚNG `calf`: quả cầu khớp đo bằng con số này
+    ],
+  },
+
+  /**
    * THÂN — và cả **XƯƠNG CHẬU**, áo khoác, âu phục, vì một tấm vải CẮT MAY thì bám theo đúng cái
    * thân bên dưới. Hông (0,80) → **EO thắt** (0,72) → lồng ngực nở (0,96) → vai rộng nhất (1,00)
    * → bo vai (0,78).
@@ -261,6 +295,97 @@ const PROFILES = {
   chest: {
     sides: ROUND_SIDES,
     rings: [[-0.5, 0.80], [-0.20, 0.72], [0.10, 0.96], [0.32, 1.00], [0.50, 0.78]],
+  },
+
+  /**
+   * THÂN ÁO CÓ MAY — ROUND 60, VIỆC 2 + 3. **`chest` VỚI MỘT BẬC Ở MỖI ĐẦU ĐƯỜNG SINH.**
+   *
+   * ══════════════════════════════════════════════════════════════════════════════════════════
+   * LUẬT CỦA CẢ VÒNG (Đàm): *"mỗi mép quần áo là một BẬC TRONG ĐƯỜNG SINH, không phải một khối
+   * dán lên. Ngoại lệ, và chỉ hai: khuy và túi."*
+   * ══════════════════════════════════════════════════════════════════════════════════════════
+   * Một cái cổ áo đắp thêm là một VẬT LỒI thứ hai quanh cổ, và dự án đã trả tiền hai vòng liền
+   * để học rằng **cộng nhiều vật lồi không ra một mặt liền** — tám khối sọ của round 58 thành
+   * một cái mặt nạ ghép, bốn khối mí mắt của round 59 thành một cặp kính. Một cái cổ áo thật
+   * KHÔNG phải một vật riêng: nó là chỗ tấm vải GẤP LẠI và dày lên, tức đúng một chỗ bán kính
+   * nhảy bậc trên cùng một mặt tròn xoay. Bậc ấy `smoothCrease` giữ nguyên sắc (góc gãy ~50°,
+   * trên ngưỡng 40°), nên nó BẮT SÁNG thành một đường viền — đúng thứ mắt đọc ra là "có may".
+   *
+   * ⚠️ MỘT KHUÔN, BA CHỖ, VÌ HAI ĐẦU ĐỀU CÓ BẬC. Khối nào cũng có một đầu bị chôn:
+   *     `trapezius` đáy chôn trong thân   ⇒ chỉ thấy bậc TRÊN  = **cổ áo**
+   *     `torso`     đỉnh chôn trong vai   ⇒ chỉ thấy bậc DƯỚI  = **gấu áo**
+   *     `pelvis`    đỉnh chôn trong thân  ⇒ chỉ thấy bậc DƯỚI  = **đáy quần**, và bậc trên là
+   *                                          **cạp quần** ở những kỷ áo không trùm qua thắt lưng
+   * Nên ba mép Đàm đặt hàng — cổ áo · gấu áo · cạp quần — dùng CHUNG một `InstancedMesh`. Ba
+   * khuôn riêng là ba lệnh vẽ cho một thứ duy nhất: *"vải cắt rồi may thì mép nào cũng là mép"*.
+   *
+   * ⚠️ VÀ NÓ CHỈ ĐƯỢC DÙNG Ở KỶ CÓ MAY. Tấm da Göbekli Tepe và cái khố shendyt là vải QUẤN, mép
+   * của chúng là mép cắt thô — cho chúng một cái cổ áo là bịa lịch sử. Bảng `CO_DUONG_MAY` trong
+   * `human.js` quyết, nên hai kỷ ấy vẫn dùng `chest` và KHÔNG trả lệnh vẽ nào.
+   *
+   * Bậc dưới: 0,70 → **0,88** trên 0,038 chiều cao (mép gấu nhô ra 18% bán kính).
+   * Bậc trên: 0,82 → **0,95** trên 0,035 (cổ áo dựng lên quanh cổ rồi thu nhẹ về 0,88).
+   * ⚠️ Bản đầu lấy 0,94 trên 0,040 — tỉ số đúng **3,00**, tức bằng CHẲNG ngưỡng của bài test, và
+   * nó đỏ vì `0.12 >= 3 * 0.04` là **false** trong dấu phẩy động. Cách chữa đúng không phải nới
+   * ngưỡng xuống 2,99 mà là làm cái bậc DỐC HƠN — thứ vừa qua cổng vừa nhìn rõ hơn trên ảnh.
+   */
+  seam: {
+    sides: ROUND_SIDES,
+    rings: [
+      [-0.500, 0.70],
+      [-0.462, 0.88],   // ⬅ BẬC: mép gấu áo
+      [-0.420, 0.83],
+      [-0.200, 0.72],
+      [0.100, 0.96],
+      [0.240, 1.00],
+      [0.300, 0.82],
+      [0.335, 0.95],    // ⬅ BẬC: mép cổ áo (gờ 0,13 trên 0,035 chiều cao ⇒ tỉ số 3,71)
+      [0.500, 0.88],
+    ],
+  },
+
+  /**
+   * THÂN ÁO CÓ THẮT LƯNG — ROUND 60, VIỆC 3. **`seam` CỘNG MỘT CHỖ THẮT Ở NGANG EO.**
+   *
+   * ⚠️ NÓ TỐN **0 LỆNH VẼ**, VÀ ĐÓ KHÔNG PHẢI MAY MẮN MÀ LÀ HỆ QUẢ CỦA MỘT QUYẾT ĐỊNH.
+   * `bodyShape()` trả về ĐÚNG MỘT khuôn cho cả ba khối thân, nên một kỷ thắt lưng dùng `belt`
+   * **thay chỗ** `seam` chứ không dùng thêm. Mười lăm kỷ chia làm ba nhóm rời nhau — vải quấn
+   * (`chest`) · có may (`seam`) · có may và thắt lưng (`belt`) — và mỗi kỷ chỉ trả tiền cho nhóm
+   * của nó. Đó cũng là lý do KHÔNG dựng cái đai thành một khối riêng: một khối riêng thì đổi màu
+   * được, nhưng nó là một VẬT LỒI thứ hai quấn quanh bụng, và Đàm cấm thẳng — *"Ngoại lệ, và chỉ
+   * hai: khuy và túi"*. Ông cũng nói sẵn hình đúng: *"vành nhỏ hơn rồi nở ra"*.
+   *
+   * ⚠️ VÀNH `[-0,060; 0,80]` TỒN TẠI VÌ MỘT CÁI CỔNG, VÀ NÓ DẠY MỘT ĐIỀU VỀ CẢ BỘ KHUÔN. Bản đầu
+   * đi thẳng từ mép trên đai lên lồng ngực; bậc ấy ĐÚNG hướng và ĐÚNG tỉ lệ, nhưng góc gãy ở đầu
+   * TRÊN của nó chỉ **35,0°** — dưới ngưỡng 40° của `smoothCrease` — nên nó sẽ bị làm mềm và mép
+   * trên cái thắt lưng tan thành một chỗ phình. Mọi con số vẫn đúng; ảnh sẽ không có cái đai nào.
+   * Thêm một quãng gần thẳng đứng ngay trên đai đẩy góc ấy lên **56,6°** và cái mép sống lại.
+   * ⇒ Luật rút ra: **một cái bậc chỉ là một cái mép khi CẢ HAI đầu nó đều sắc.** Một đầu sắc, một
+   * đầu mềm thì đó là một cái gờ tan dần — và đó chính là điều bài test ở `humanTailoring.test.js`
+   * hỏi, thay vì hỏi "bán kính nhảy bao nhiêu".
+   *
+   * ⚠️ BA BẬC, VÀ CHÚNG PHẢI ĐỦ XA NHAU. Cái đai cần một mép DƯỚI và một mép TRÊN để đọc ra là
+   * một cái dải chứ không phải một chỗ thắt; cộng với gấu áo và cổ áo là năm chỗ gãy trên một
+   * đường sinh cao chưa tới một phần ba cơ thể. Đo ở cận cảnh: dải đai cao 0,075 chiều cao khối
+   * ⇒ **8,3 điểm ảnh**, đủ để có hai đường sáng riêng biệt chứ không nhoè thành một.
+   */
+  belt: {
+    sides: ROUND_SIDES,
+    rings: [
+      [-0.500, 0.70],
+      [-0.462, 0.88],   // ⬅ BẬC: mép gấu áo
+      [-0.420, 0.83],
+      [-0.270, 0.78],
+      [-0.235, 0.66],   //    thắt lại — cái đai siết vào
+      [-0.160, 0.66],   //    dải đai
+      [-0.125, 0.78],   // ⬅ BẬC: mép trên đai, áo nở ra phía trên
+      [-0.060, 0.80],   //    và đi gần như THẲNG ĐỨNG một quãng — xem chú thích dưới
+      [0.100, 0.96],
+      [0.240, 1.00],
+      [0.300, 0.82],
+      [0.335, 0.95],    // ⬅ BẬC: mép cổ áo
+      [0.500, 0.88],
+    ],
   },
 
   /**

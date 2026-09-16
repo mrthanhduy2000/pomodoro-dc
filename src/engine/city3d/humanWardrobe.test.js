@@ -123,7 +123,11 @@ test('TRẢ 0 KHỐI VÀ 0 LỆNH VẼ: tủ đồ không được làm phình c
     // — SỐ LỆNH VẼ cư dân tiêu ở kỷ ấy — và lời hứa của bài này cũng giữ nguyên: **tủ đồ** không
     // thêm khuôn nào. Khoản +1 không đến từ tủ đồ, nó đến từ cái sọ, và `drawCallBudget.test.js`
     // canh riêng khoản ấy bằng một phép trừ có mốc ngày tháng.
-    assert.ok(dung.size <= 9,
+    // ⚠️ 9 → 10 (round 60, Việc 1): khuôn THÔ `bead`, 16 cạnh, dùng chung cho mười một khối nhỏ
+    // (hai mắt, hai con ngươi, sáu quả cầu khớp, gờ mày). Lại một lần nữa khoản +1 KHÔNG đến từ
+    // tủ đồ — nó mua lại 5.808 tam giác/người (−25,9%), và `humanCoarse.test.js` canh riêng cả
+    // ngưỡng chọn khối lẫn khoản tiết kiệm. Lời hứa của bài này giữ nguyên: tủ đồ tốn 0 khuôn.
+    assert.ok(dung.size <= 10,
       `kỷ ${era} dùng ${dung.size} khuôn (${[...dung].join(', ')}) — mỗi khuôn là một lệnh vẽ`);
   }
 });

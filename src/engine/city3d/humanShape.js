@@ -108,7 +108,28 @@ import { smoothCrease } from './creaseNormals';
 // Nó ném thay vì trôi, nên mất ba mươi giây thay vì ba vòng.
 const ROUND_SIDES = 60;
 
-export const HUMAN_SHAPES = ['box', 'prism', 'limb', 'calf', 'chest', 'flare', 'cone', 'dome', 'hat', 'scalp', 'skull'];
+/**
+ * SỐ CẠNH CỦA KHUÔN THÔ (`bead`) — round 60, Việc 1, đóng `TECH_DEBT_3D #98`.
+ *
+ * ⚠️ 16 KHÔNG PHẢI MỘT SỐ CHỌN CHO NHẸ — NÓ SUY RA TỪ MỘT PHÉP ĐO VỀ SAI SỐ ĐƯỜNG BAO. Một đa
+ * giác `n` cạnh bán kính `r` hụt so với đường tròn đúng `r · (1 − cos(π/n))` ở chỗ lõm nhất, nên
+ * câu hỏi đúng không phải *"bao nhiêu cạnh là đủ"* mà *"khối này rộng mấy ĐIỂM ẢNH ở chỗ nhìn gần
+ * nhất mà app tới được"*. Ở chế độ chạm-để-nhìn-gần, thước đo được là **1.728 điểm ảnh trên một
+ * đơn vị thế giới** (cư dân cao 0,236 đơn vị ⇒ 408 điểm ảnh, ống kính 38°, khung 726 điểm ảnh) —
+ * xem `humanCoarse.test.js`, nơi con số ấy được suy lại từ `residentViewDistance` chứ không chép.
+ *   16 cạnh ⇒ 1 − cos(11,25°) = 0,0192 ⇒ sai số nửa điểm ảnh ở khối rộng **52 điểm ảnh**.
+ * Mười một trong mười ba khối `dome` của một cư dân nằm dưới ngưỡng ấy (rộng nhất: gờ mày 46,7).
+ * Hai khối còn lại — gáy và mái tóc trước trán, đều 53,1 — KHÔNG, nên chúng ở lại `dome`. Cái
+ * ngưỡng ấy là một QUAN HỆ (sai số/điểm ảnh), không phải một danh sách tên khối, nên nó vẫn đúng
+ * khi tỉ lệ cơ thể đổi — bài học "một con số tuyệt đối không diễn đạt được một luật về QUAN HỆ".
+ *
+ * ⚠️ VÀ `smoothCrease` LÀM PHẦN CÒN LẠI: hai mặt kề của khuôn 16 cạnh lệch nhau 22,5°, dưới ngưỡng
+ * 40°, nên pháp tuyến vẫn được gộp — khối vẫn *bắt sáng* như một mặt cong. Thứ duy nhất 16 cạnh
+ * đánh mất là ĐƯỜNG BAO, và đó chính là thứ vừa được đo.
+ */
+const COARSE_SIDES = 16;
+
+export const HUMAN_SHAPES = ['box', 'prism', 'limb', 'calf', 'chest', 'flare', 'cone', 'dome', 'bead', 'hat', 'scalp', 'skull'];
 
 /**
  * Hồ sơ từng khuôn. `sides` = số cạnh đa giác; `rings` = [y, r] từ đáy lên đỉnh.
@@ -165,6 +186,16 @@ const SKULL_RINGS = Object.freeze([
   [0.20, 1.00],    // xương đỉnh — chỗ rộng nhất của CẢ CÁI ĐẦU
   [0.34, 0.90],
   [0.50, 0.44],    // chỏm
+]);
+
+/**
+ * VÀNH CỦA MỘT VÒM — dùng chung giữa `dome` (60 cạnh) và `bead` (16 cạnh), round 60 Việc 1.
+ * Hàm/cằm thu lại (0,60) → gò má (0,84) → chỗ rộng nhất (1,00, hơi trên tâm) → bo dần về đỉnh.
+ * ⚠️ MỘT BẢNG, HAI KHUÔN — xem chú thích của `bead` để biết vì sao đây không phải chuyện gọn gàng
+ * mà là điều kiện để phép hoán đổi thô/mịn không âm thầm đổi hình.
+ */
+const DOME_RINGS = Object.freeze([
+  [-0.5, 0.60], [-0.28, 0.84], [-0.02, 1.00], [0.20, 0.92], [0.38, 0.74], [0.50, 0.40],
 ]);
 
 const PROFILES = {
@@ -266,10 +297,28 @@ const PROFILES = {
    * Đây là khuôn ĐẮT NHẤT bộ và nó xứng: ở góc camera 34° thì mặt trên cái đầu chiếm phần lớn số
    * điểm ảnh của cả cơ thể.
    */
-  dome: {
-    sides: ROUND_SIDES,
-    rings: [[-0.5, 0.60], [-0.28, 0.84], [-0.02, 1.00], [0.20, 0.92], [0.38, 0.74], [0.50, 0.40]],
-  },
+  dome: { sides: ROUND_SIDES, rings: DOME_RINGS },
+
+  /**
+   * HÒN — ROUND 60, VIỆC 1. **CÙNG ĐƯỜNG SINH VỚI `dome`, ÍT CẠNH HƠN GẦN BỐN LẦN.**
+   *
+   * ⚠️ NÓ DÙNG CHUNG `DOME_RINGS`, KHÔNG PHẢI MỘT BẢN CHÉP GẦN GIỐNG — và đó là điều kiện khiến
+   * phép hoán đổi CHỨNG MINH ĐƯỢC là giữ nguyên hình. Round 58 đã trả giá đúng chỗ này: `scalp`
+   * chép bảng vành của cái đầu, cái đầu đổi sang `skull`, và lời hứa "tóc ôm sát sọ" gãy trong im
+   * lặng vì hai bảng đã trôi khỏi nhau. Ở đây, sửa `DOME_RINGS` là sửa cả hai, không có đường nào
+   * để chúng lệch. Bài test đòi thẳng `shapeRings('bead') === shapeRings('dome')`.
+   *
+   * ⚠️ VÌ SAO THÊM MỘT KHUÔN LẠI LÀ TIẾT KIỆM, CHỨ KHÔNG PHẢI TIÊU THÊM. Cư dân đi qua **một
+   * `InstancedMesh` mỗi KHUÔN**, nên khuôn này tốn **+1 lệnh vẽ**. Đổi lại, đo trên một cư dân
+   * kỷ 1: 41 khối, 22.390 tam giác, trong đó **13 khối `dome` = 9.308 tam giác = 41,6% cả người**.
+   * Mười một khối trong số ấy đủ nhỏ để chuyển sang đây (xem `COARSE_SIDES`), tức
+   * **11 × (716 − 188) = 5.808 tam giác/người**, hay −25,9%. Với 28 cư dân một kỷ: −162.624 tam
+   * giác. Đàm, vòng 60: *"Tôi không quan tâm số tam giác. Tôi quan tâm ngân sách hình học đi tới
+   * chỗ tôi nhìn."* — đây đúng là phép chuyển ngân sách ấy, và nó mở chỗ cho những mép quần áo,
+   * khuy và túi mà Phần C sắp thêm vào.
+   * Đóng `TECH_DEBT_3D #98`.
+   */
+  bead: { sides: COARSE_SIDES, rings: DOME_RINGS },
 
   /**
    * SỌ NGƯỜI — ROUND 58, VIỆC 3. Cái đầu, và CHỈ cái đầu, dùng khuôn này.
@@ -779,6 +828,17 @@ export function shapeRings(name) {
   const profile = PROFILES[name];
   if (!profile) throw new Error(`shapeRings: khuôn lạ "${name}"`);
   return profile.rings.map((r) => [r[0], r[1]]);
+}
+
+/**
+ * SỐ CẠNH của một khuôn. Tồn tại để bài test sai-số-đường-bao (`humanCoarse.test.js`) tính được
+ * `1 − cos(π/n)` mà KHÔNG giữ bản chép thứ hai của bảng cạnh — đúng lý do `shapeRings` ra đời ở
+ * round 58, sau khi một bản chép thứ ba trong một file test báo ra cả một bộ số bịa.
+ */
+export function shapeSides(name) {
+  const profile = PROFILES[name];
+  if (!profile) throw new Error(`shapeSides: khuôn lạ "${name}"`);
+  return profile.sides;
 }
 
 export function shapeMaxRadius(name) {

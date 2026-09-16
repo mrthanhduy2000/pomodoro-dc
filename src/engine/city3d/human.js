@@ -614,7 +614,10 @@ function skullPieces(d) {
       xem ngoài đời nó bao nhiêu; con mắt hoạt hình vốn được cố ý cho nhô, nên ép gờ mày vượt nó là
       ép một cái xương chạy theo một quy ước vẽ.
     */
-    piece('browRidge', 'skin', 'dome', 'head',
+    // ⚠️ `bead` CHỨ KHÔNG `dome` — round 60, Việc 1. Cùng đường sinh, 16 cạnh thay vì 60. Rộng
+    // 46,7 điểm ảnh ở chỗ nhìn gần nhất ⇒ đường bao hụt 0,45 điểm ảnh, dưới ngưỡng nửa điểm ảnh
+    // mà `humanCoarse.test.js` canh. Xem `COARSE_SIDES`.
+    piece('browRidge', 'skin', 'bead', 'head',
       [W * 0.52, H * 0.11, Z * 0.60], [W * 0.245, H * 0.655, 0], 'head'),
     /*
       TAI — NHỎ VÀ ÁP SÁT.
@@ -678,14 +681,15 @@ function facePieces(d) {
   return [
     // LÒNG TRẮNG — một KHE hình quả hạnh, không phải một quả cầu. Bề ngang giữ nguyên 0,23 `headW`
     // (con số ấy đến từ một tấm ảnh vòng 56); chỉ chiều cao đổi.
-    piece('eyeL', 'eyeWhite', 'dome', 'head', [W * 0.23, khe, Z * 0.22], [W * 0.44, tam, -Z * 0.31]),
-    piece('eyeR', 'eyeWhite', 'dome', 'head', [W * 0.23, khe, Z * 0.22], [W * 0.44, tam, Z * 0.31]),
+    // ⚠️ `bead` (16 cạnh) — round 60, Việc 1: rộng 20,6 điểm ảnh ở cận cảnh, đường bao hụt 0,20.
+    piece('eyeL', 'eyeWhite', 'bead', 'head', [W * 0.23, khe, Z * 0.22], [W * 0.44, tam, -Z * 0.31]),
+    piece('eyeR', 'eyeWhite', 'bead', 'head', [W * 0.23, khe, Z * 0.22], [W * 0.44, tam, Z * 0.31]),
     // CON NGƯƠI — CAO ĐÚNG BẰNG khe mắt (chạm cả hai mí) và hẹp hơn hẳn (0,165 so với 0,23) ⇒
     // lòng trắng chỉ còn hai vệt lưỡi liềm hai bên. Đây là cả phép sửa của Việc 1.
     // ⚠️ Vẫn ở cực TRƯỚC của lòng trắng (x 0,525 so với 0,44), vì một khối nhỏ đặt đồng tâm trong
     // một khối lớn thì đường viền ta thấy là giao tuyến hai mặt, không phải viền của nó (vòng 56).
-    piece('pupilL', 'hair', 'dome', 'head', [W * 0.165, khe, Z * 0.175], [W * 0.525, tam, -Z * 0.31]),
-    piece('pupilR', 'hair', 'dome', 'head', [W * 0.165, khe, Z * 0.175], [W * 0.525, tam, Z * 0.31]),
+    piece('pupilL', 'hair', 'bead', 'head', [W * 0.165, khe, Z * 0.175], [W * 0.525, tam, -Z * 0.31]),
+    piece('pupilR', 'hair', 'bead', 'head', [W * 0.165, khe, Z * 0.175], [W * 0.525, tam, Z * 0.31]),
     /*
       ⚠️⚠️ KHÔNG CÓ KHỐI MÍ MẮT Ở ĐÂY, VÀ SỰ VẮNG MẶT ẤY LÀ MỘT KẾT QUẢ ĐO ĐƯỢC — ĐỪNG THÊM LẠI.
       Bản đầu của Việc 1 có bốn khối mí (`lidUpL/R`, `lidLoL/R`): `dome` màu da, nằm sát mép trên và
@@ -1221,10 +1225,18 @@ export function buildHumanBody(era) {
     vì nó đang đo KHÔNG KHÍ quanh cánh tay chứ không đo cái khe ở khớp. Định nghĩa đúng của "hở" là
     *đi dọc một tia từ tâm khớp, độ phủ đứt rồi nối lại*. Lại một lần dụng cụ đo nói dối trước.
   */
+  /*
+    ⚠️ QUẢ CẦU KHỚP DÙNG `bead` TỪ ROUND 60 — và phép quy đổi bán kính phải HỎI CHÍNH KHUÔN ĐANG
+    DỰNG, không được viết cứng tên `dome`. Bán kính ngoại tiếp phụ thuộc số cạnh
+    (`0,5 / cos(π/n)`: 0,5007 ở 60 cạnh, 0,5098 ở 16), nên một chỗ còn đọc `shapeMaxRadius('dome')`
+    trong khi khối đã là `bead` sẽ cho quả cầu to hơn 1,8% — đúng cái **cục u ở khớp** mà cả Việc 2
+    của round 58 dựng lên để trừ khử. Đó là lý do tên khuôn nay là một hằng số ở một chỗ.
+  */
+  const BALL_SHAPE = 'bead';
   const ball = (id, role, joint, worldRadius, continues) => {
-    // `dome` rộng nhất ở vành GIỮA (r = 1,00) ⇒ bán kính thật = shapeMaxRadius × size. Đảo lại.
-    const size = worldRadius / shapeMaxRadius('dome');
-    return piece(id, role, 'dome', joint, [size, size, size], [0, 0, 0], continues);
+    // Khuôn vòm rộng nhất ở vành GIỮA (r = 1,00) ⇒ bán kính thật = shapeMaxRadius × size. Đảo lại.
+    const size = worldRadius / shapeMaxRadius(BALL_SHAPE);
+    return piece(id, role, BALL_SHAPE, joint, [size, size, size], [0, 0, 0], continues);
   };
   /** Bán kính (đơn vị thế giới) ở đầu `which` của một đoạn chi khuôn `shape`, bề ngang `w`. */
   const endR = (shape, w, which) => shapeEndRadius(shape, which) * d.limbW * w;

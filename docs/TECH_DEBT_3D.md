@@ -1,4 +1,4 @@
-# TECH_DEBT — 3D city subsystem (43 open entries · 3 closed in round 47 · 2 in round 48 · 1 in round 49 · 3 in round 50)
+# TECH_DEBT — 3D city subsystem (41 open entries · 3 closed in round 47 · 2 in round 48 · 1 in round 49 · 3 in round 50 · 2 in round 60)
 
 > Split out of the active `TECH_DEBT.md` on 2026-09-06 (ADR-075). **These are still OPEN debts, not
 > archived history** — they were moved by SUBSYSTEM, not by status.
@@ -17,7 +17,27 @@
 
 ## #98 — Một khối rộng 6 điểm ảnh đang tiêu 716 tam giác, vì bộ khuôn không có cái nào THÔ
 
-**Phát hiện**: 2026-09-13, round 58 (Việc 3) · **Trạng thái**: MỞ · **Mức**: trung bình
+**Phát hiện**: 2026-09-13, round 58 (Việc 3) · **Trạng thái**: **ĐÓNG — round 60, Việc 1
+(2026-09-16)** · **Mức**: trung bình
+
+> **CÁCH ĐÓNG, VÀ CON SỐ THẬT.** Bộ khuôn nhận `bead`: **cùng bảng vành `DOME_RINGS` với `dome`**,
+> 16 cạnh thay vì 60, nên phép hoán đổi chứng minh được là giữ nguyên hình chứ không phải "gần
+> giống". Số cạnh suy ra từ một phép đo về SAI SỐ ĐƯỜNG BAO, không phải chọn cho nhẹ: một đa giác
+> `n` cạnh bán kính `r` hụt `r·(1 − cos(π/n))`, nên ở thước đo cận cảnh **1.728 điểm ảnh/đơn vị**
+> thì 16 cạnh giữ sai số dưới **nửa điểm ảnh** cho mọi khối rộng tới 52 điểm ảnh.
+> Mười một khối qua ngưỡng: hai lòng trắng (20,6 px) · hai con ngươi (14,8) · sáu quả cầu khớp
+> (31,5–36,2) · gờ mày (46,7). Hai khối KHÔNG qua — gáy và mái tóc trước trán, đều 53,1 — ở lại
+> `dome`, và `humanCoarse.test.js` canh cả hai chiều: khối thô phải dưới ngưỡng, khối mịn còn lại
+> phải VƯỢT ngưỡng (nếu không thì nó đang bỏ phí ngân sách).
+>
+> | | trước | sau |
+> |---|---|---|
+> | tam giác/người | 22.390 | **16.582** (−25,9%) |
+> | tam giác/cảnh (28 cư dân) | 626.920 | **464.296** (−162.624) |
+> | khuôn/kỷ ⇒ lệnh vẽ | 8–9 | 9–10 (**+1**) |
+> | Chromium, kỷ 1 · 8 · 13 | 18 · 23 · 17 | **19 · 24 · 18** (khoản lệch chưa truy 3·3·1 KHÔNG đổi) |
+>
+> Và đây là khoản chi duy nhất trong bảng `MOC_LENH_VE` tự trả lại nhiều hơn số nó tiêu.
 
 **Hiện tượng đo được.** `dome` có 60 cạnh × 6 vành ⇒ **716 tam giác/khối**, và mọi chi tiết nhỏ trên
 người đều phải mượn nó vì đó là khuôn duy nhất tròn mà 15/15 kỷ đều đã vẽ. Một cái tai dùng `box`
@@ -42,7 +62,21 @@ một vòng thì cái bảng mốc `drawCallBudget` phải đổi hai lần và 
 
 ## #99 — `planResidentFocus` vẫn đưa camera vào TRONG tường ở một số cư dân
 
-**Phát hiện**: 2026-09-13, round 58 (bộ ảnh 15 kỷ) · **Trạng thái**: MỞ · **Mức**: trung bình
+**Phát hiện**: 2026-09-13, round 58 (bộ ảnh 15 kỷ) · **Trạng thái**: **ĐÓNG — round 59 Việc 3 +
+round 60 Việc 0 (2026-09-16)** · **Mức**: trung bình
+
+> **ĐÓNG BẰNG BA LẦN SỬA, VÀ LẦN THỨ HAI MỚI LÀ LẦN THẬT.**
+> 1. Round 59 thêm `lineOfSight` — đổi câu hỏi từ *"có chỗ đứng không"* sang *"có NHÌN THẤY không"*.
+> 2. Round 60, Việc 0(b): phép đo khoảng hở **đã bị ĐẢO** từ round 57 (`boxDistance` nhận một con số
+>    thay vì một cái hộp ⇒ `NaN` ở mọi chỗ thoáng, `Infinity` ở đúng chỗ camera nằm TRONG tường).
+>    Tức mục này mô tả đúng triệu chứng nhưng đoán sai nguyên nhân: không phải "hộp bao quá thô",
+>    mà là "phép đo chỉ chấp nhận đúng những chỗ hỏng". Xem `src/engine/city3d/finite.js`.
+> 3. Round 60, Việc 0(a): với phép đo đã sửa, 15/15 kỷ tìm được chỗ đứng — nhưng **4 kỷ (3 · 4 ·
+>    13 · 14) đi vòng ra sau gáy** (140° · −140° · −160° · −120°). Thứ tự tìm đổi thành *trước mặt
+>    → lùi ra xa → mới quá 90°*, và góc lệch lớn nhất còn **80° ở đúng một kỷ**.
+>
+> Kết quả đo ngày 2026-09-16, 15 kỷ, 1170×726 DPR 1: **0/15 khung nhìn tường, 0/15 nhìn sau gáy.**
+> Giá phải trả: bốn kỷ lùi thêm 0,30–1,50 đơn vị.
 
 **Hiện tượng.** `node scripts/city-preview.mjs --era 8 --nguoi 1` cho một khung hình **đặc kín mặt
 tường**: camera dừng bên trong một công trình. Kỷ 8 cư dân 2 thì đúng, nên đây là một ca lẻ chứ

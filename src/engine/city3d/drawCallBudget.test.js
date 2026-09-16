@@ -144,7 +144,29 @@ function tamCoDinh(era) {
   ⚠️ HIỆU SỐ VỚI MỐC CŨ PHẢI LÀ **+1 ĐỀU Ở CẢ 15 KỶ** — không kỷ nào +2. Một kỷ +2 nghĩa là có
   người vừa thêm một khuôn thứ hai mà không khai ở đây. Đo lại: 2026-09-13.
 */
+/*
+  ⚠️ ROUND 60, VIỆC 1: **+1 Ở CẢ MƯỜI LĂM KỶ**, VÀ CON SỐ 1 ẤY CÓ TÊN — khuôn THÔ `bead`.
+  Mười một khối nhỏ trên mỗi cư dân (hai lòng trắng, hai con ngươi, sáu quả cầu khớp, gờ mày) thôi
+  dùng `dome` 60 cạnh và chuyển sang một khuôn 16 cạnh DÙNG CHUNG BẢNG VÀNH với nó. Đây là khoản
+  chi DUY NHẤT trong lịch sử bảng này tự trả lại nhiều hơn số nó tiêu, và con số đo được là:
+      22.390 → 16.582 tam giác/người = **−5.808 (−25,9%)**, nhân 28 cư dân = **−162.624/cảnh**
+  Đổi lại đúng một `InstancedMesh`. `dome` KHÔNG biến mất — gáy và mái tóc trước trán (đều rộng
+  53,1 điểm ảnh ở cận cảnh) vượt ngưỡng sai-số-đường-bao nửa điểm ảnh nên ở lại khuôn mịn, và
+  `humanCoarse.test.js` canh chính cái ngưỡng ấy theo cả hai chiều.
+  ⚠️ HIỆU SỐ VỚI `MOC_TRUOC_KHUON_THO` PHẢI LÀ **+1 ĐỀU Ở CẢ 15 KỶ**. Một kỷ +2 nghĩa là có người
+  vừa thêm một khuôn thứ hai mà không khai ở đây. Đo lại: 2026-09-16.
+*/
 const MOC_LENH_VE = {
+  1: 16, 2: 18, 3: 20, 4: 18, 5: 19,
+  6: 20, 7: 20, 8: 21, 9: 17, 10: 20,
+  11: 17, 12: 17, 13: 17, 14: 17, 15: 17,
+};
+
+/**
+ * MỐC NGAY TRƯỚC KHI BỘ KHUÔN CÓ MỘT CÁI THÔ — round 60, Việc 1. Giữ lại làm ĐỐI CHỨNG, đúng luật
+ * riêng của file: *mỗi phase một mốc, mỗi mốc một phép trừ riêng*. Hiệu số phải là +1 ở cả 15 kỷ.
+ */
+const MOC_TRUOC_KHUON_THO = {
   1: 15, 2: 17, 3: 19, 4: 17, 5: 18,
   6: 19, 7: 19, 8: 20, 9: 16, 10: 19,
   11: 16, 12: 16, 13: 16, 14: 16, 15: 16,
@@ -451,13 +473,23 @@ test('QUAN HỆ "lệnh vẽ = số họ + 2 + số khuôn cư dân (+1 nếu c�
     truy nguyên nhân" giữ NGUYÊN (3 · 3 · 1) — nếu nó cũng phải đổi thì thay đổi này không phải
     chỉ là +1 khuôn, và đó mới là tin đáng sợ.
   */
-  const DO_CHROMIUM_2026_09_12 = { 1: 18, 8: 23, 13: 17 };
+  /*
+    ⚠️ ROUND 60, VIỆC 1: ĐO LẠI 2026-09-16, +1 Ở CẢ BA KỶ — khuôn thô `bead`. Đây vẫn là một bảng
+    ĐO BẰNG CHROMIUM chứ không phải một bảng suy ra từ công thức, nên nó chỉ được sửa khi biết chắc
+    khoản +1 ấy là gì; ở đây biết, và bằng chứng nằm ở chỗ khoản **"lệch chưa truy nguyên nhân"
+    (3 · 3 · 1) KHÔNG nhúc nhích**. Nếu nó cũng phải đổi thì thay đổi này không phải chỉ là +1
+    khuôn, và đó mới là tin đáng sợ.
+        kỷ 1  → 18 → **19**      kỷ 8  → 23 → **24**      kỷ 13 → 17 → **18**
+    Câu lệnh đo, nguyên văn, cùng fixture của bài test này:
+        node scripts/city-preview.mjs --era N --hour 12 --sessions 40 --level 1 --bench 1 --no-shadow
+  */
+  const DO_CHROMIUM_2026_09_16 = { 1: 19, 8: 24, 13: 18 };
   const HO_CHUA_TRUY_NGUYEN_NHAN = { 1: 3, 8: 3, 13: 1 };
   for (const era of [1, 8, 13]) {
-    assert.equal(MOC_LENH_VE[era] + HO_CHUA_TRUY_NGUYEN_NHAN[era], DO_CHROMIUM_2026_09_12[era],
+    assert.equal(MOC_LENH_VE[era] + HO_CHUA_TRUY_NGUYEN_NHAN[era], DO_CHROMIUM_2026_09_16[era],
       `kỷ ${era}: công thức ra ${MOC_LENH_VE[era]} + khoản lệch chưa truy `
-      + `${HO_CHUA_TRUY_NGUYEN_NHAN[era]} phải bằng ${DO_CHROMIUM_2026_09_12[era]} lệnh vẽ THÀNH PHỐ `
-      + 'mà Chromium đo ngày 2026-09-12. Lệch đi thì hoặc công thức đổi, hoặc cảnh đổi — đo lại '
+      + `${HO_CHUA_TRUY_NGUYEN_NHAN[era]} phải bằng ${DO_CHROMIUM_2026_09_16[era]} lệnh vẽ THÀNH PHỐ `
+      + 'mà Chromium đo ngày 2026-09-16. Lệch đi thì hoặc công thức đổi, hoặc cảnh đổi — đo lại '
       + 'bằng: node scripts/city-preview.mjs --era N --hour 12 --sessions 40 --level 1 --bench 1 '
       + '--no-shadow, rồi đọc cột "thành phố" của dòng [stats] | lệnh vẽ |.');
   }
@@ -678,5 +710,35 @@ test('ROUND 56 · PHẦN A: CHÂN TÓC TỐN ĐÚNG MỘT LỆNH VẼ, VÀ CHỈ
     assert.equal(humanShapesUsed(era).includes('scalp'), DAU_TRAN.includes(era),
       `kỷ ${era}: khuôn \`scalp\` ${humanShapesUsed(era).includes('scalp') ? 'CÓ' : 'VẮNG'} mà `
       + `đáng lẽ phải ${DAU_TRAN.includes(era) ? 'CÓ' : 'VẮNG'} — con số mốc ở trên đang bịa.`);
+  }
+});
+
+test('KHUÔN THÔ TỐN ĐÚNG +1 LỆNH VẼ Ở CẢ 15 KỶ, VÀ `dome` PHẢI CÒN Ở LẠI', () => {
+  /*
+    ⚠️ PHÉP TRỪ RIÊNG CỦA VÒNG 60, VIỆC 1 — *mỗi phase một mốc, mỗi mốc một phép trừ riêng*.
+    Bộ khuôn nhận thêm `bead`: cùng bảng vành với `dome`, 16 cạnh thay vì 60, dùng chung cho mười
+    một khối nhỏ trên mỗi cư dân. Chi phí là đúng một `InstancedMesh` ở mọi kỷ.
+
+    ⚠️ VẾ THỨ HAI MỚI LÀ VẾ ĐÁNG TIỀN, và nó chính là chỗ phép trừ của vòng 56 đã dạy: nếu chỉ đòi
+    "+1 ở 15 kỷ" thì một bản vá làm số lệnh vẽ nhích lên vì lý do hoàn toàn khác vẫn xanh trơn tru.
+    Ở đây vế hai là: **`dome` KHÔNG ĐƯỢC BIẾN MẤT.** Nếu nó biến mất thì mọi khối vòm đã bị đẩy hết
+    sang khuôn thô — kể cả gáy và mái tóc trước trán, hai khối vượt ngưỡng sai-số-đường-bao — và
+    lúc ấy hiệu số vẫn là +1 (một khuôn ra, một khuôn vào là 0; nhưng cộng với `bead` thì… vẫn 1)
+    trong khi khuôn mặt Đàm nhìn đã bị làm thô. Đúng bẫy "con số khớp vì hai sai số triệt tiêu nhau".
+    THỬ-CHO-ĐỎ (nêu TRƯỚC): đổi `occiput` và `hairFringe` sang `bead` ⇒ vế hai đỏ ở cả 15 kỷ, và
+    `humanCoarse.test.js` đỏ theo ở bài "ngược".
+  */
+  for (const era of ERAS) {
+    const truoc = MOC_TRUOC_KHUON_THO[era];
+    assert.ok(Number.isFinite(truoc), `kỷ ${era} thiếu mốc trước-khuôn-thô`);
+    const hieu = MOC_LENH_VE[era] - truoc;
+    assert.equal(hieu, 1,
+      `kỷ ${era}: mốc đi từ ${truoc} lên ${MOC_LENH_VE[era]} (lệch ${hieu}) — khuôn thô chỉ được `
+      + 'tốn ĐÚNG một lệnh vẽ. Lệch 2 nghĩa là có khuôn thứ hai vừa vào mà không ai khai.');
+    const khuon = humanShapesUsed(era);
+    assert.ok(khuon.includes('bead'), `kỷ ${era}: khuôn thô VẮNG mà mốc vẫn +1 — con số đang bịa`);
+    assert.ok(khuon.includes('dome'),
+      `kỷ ${era}: \`dome\` đã biến mất. Gáy và mái tóc trước trán rộng 53,1 điểm ảnh ở cận cảnh, `
+      + 'quá ngưỡng nửa điểm ảnh — chúng phải ở lại khuôn mịn. Xem `humanCoarse.test.js`.');
   }
 });

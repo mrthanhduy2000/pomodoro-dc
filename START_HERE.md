@@ -32,7 +32,28 @@ Production branch `main` carries **both** work streams (merged 2026-08-28 on Đ�
 ⚠️ Phase 21 therefore shipped **before** Đàm reviewed its screenshots — the "waiting on Đàm's eyes"
 item below is still live, it just now reviews something already running.
 
-- **Loop — ROUND 58 (2026-09-13, LATEST): THE FIRST TIME I LOOKED A RESIDENT IN THE FACE.**
+- **Loop — ROUND 60 (2026-09-16, LATEST): THE RULER WAS READING BACKWARDS, AND THE CLOTHES HAD NO SEAMS.**
+  Detail in `BAN_GIAO.md` and ADR-096; four laws live here:
+  ⚠️ **A NaN LOSES EVERY COMPARISON, so there is no safe way to write the comparison.** `NaN < x`,
+  `NaN > x` and `NaN >= x` are all false, so a broken quantity silently picks one of the two
+  answers. Round 57's close-up gate passed a DISTANCE where a BOX was wanted; `!box` is true for the
+  number `0`, which is exactly what `nearestBlocker` answers when the camera is inside a building —
+  so the gate was **exactly inverted for three rounds** and nothing threw. Check the quantity BEFORE
+  it meets a threshold (`finite.js`), and let it die there.
+  ⚠️ **ABSENT is not MALFORMED.** No ray and no box mean "nothing was hit" — the right answer for a
+  tap on empty sky. A present-but-broken argument is a bug and must throw. Collapsing the two is how
+  `!box` swallowed a zero.
+  ⚠️ **A test can be right about the code and wrong about the world.** With the gate fixed, four
+  eras walked round BEHIND the resident and every check stayed green: the standing spot was clear
+  and the ray to the eye hit nothing. The fault was the SEARCH ORDER. *A face seen from farther away
+  is still a face; the back of a head at any distance is not* — so back off before turning past 90°.
+  ⚠️ **A STEP IS ONLY AN EDGE WHILE IT STAYS SHARP.** `smoothCrease` averages anything under 40°, so
+  a garment edge that measures right on every number can still be absent from the photograph — the
+  belt's upper edge came out at 35.0°. And the first definition of "edge" (*any crease over 40°*)
+  called a plain torso tailored, because `chest` has had a 53.6° waist since round 52. The question
+  is a DIRECTION, not a sharpness: an outward ledge, sharp at BOTH ends.
+
+- **Loop — ROUND 58 (2026-09-13): THE FIRST TIME I LOOKED A RESIDENT IN THE FACE.**
   Detail in `BAN_GIAO.md` and ADR-095; five laws live here:
   ⚠️ **A sum of CONVEX bodies is not a smooth surface — it is a set of bumps.** Seven skull features
   built as eight blocks glued on a sphere measured correct on every number and photographed as a

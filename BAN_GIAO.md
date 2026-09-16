@@ -1,4 +1,105 @@
-> Last update: **2026-09-13** — **ROUND 58: THE FIRST TIME I LOOKED A RESIDENT IN THE FACE.**
+> Last update: **2026-09-16** — **ROUND 60: THE RULER WAS READING BACKWARDS, AND THE CLOTHES HAD NO SEAMS.**
+> Order: *"Lỗi NaN đảo cổng khoảng hở sống từ vòng 57… Dựng lại hàng 15 kỷ bằng phép đo đã sửa và
+> đưa con số thật."* · *"LUẬT: mỗi mép quần áo là một BẬC TRONG ĐƯỜNG SINH, không phải một khối dán
+> lên."* Branch `claude/city-skill-points-display-7k4nof`. Full reasoning: **ADR-096**.
+>
+> ### Việc 0(b) — a NaN loses EVERY comparison, so it must never reach one
+> Round 57 wrote the close-up gate as `boxDistance(stand, nearestBlocker(stand, blockers))`: a
+> DISTANCE handed to the parameter that wants a BOX. `boxDistance` opened with
+> `if (!point || !box) return Infinity`, giving exactly two branches —
+>
+>     nearestBlocker = 1  =>  boxDistance(p, 1) = NaN   =>  `NaN >= 0.35` false =>  REJECTED
+>     nearestBlocker = 0  =>  `!0` is true => Infinity  =>  `Inf >= 0.35` true  =>  ACCEPTED
+>
+> and `nearestBlocker = 0` means the camera is INSIDE a building. The gate was inverted: the only
+> positions it ever accepted were the ones standing in a wall. Nothing threw and no test went red,
+> because NaN loses `<`, `>` and `>=` alike — there is no safe way to write the comparison.
+> New `finite.js` guards every place a geometric quantity meets a threshold, and the boundary came
+> out of `pickNearest`'s own test: **ABSENT is not MALFORMED.** No ray and no box mean "nothing was
+> hit" — the right answer for a tap on empty sky. A present-but-broken argument throws.
+>
+> ### Việc 0(a) — the rebuilt row, and the second defect it uncovered
+> With the measurement fixed, all 15 eras found a standing spot. But four chose to walk round
+> BEHIND the resident:
+>
+>     góc lệch trước:  kỷ 3 = 140°  ·  kỷ 4 = −140°  ·  kỷ 13 = −160°  ·  kỷ 14 = −120°
+>     góc lệch sau:    lớn nhất 80°, ở đúng MỘT kỷ   ·   kỷ nhìn sau gáy: 4/15 → 0/15
+>
+> The fault was the search ORDER, not either test: the old loop swept the whole circle at the near
+> distance before trying to back off, so a spot behind the head always beat a spot in front that
+> needed one step of distance. New order — **in front → back off → only then past 90°.**
+> A face seen from farther away is still a face; the back of a head at any distance is not.
+> Price: four eras back off 0.30–1.50 units. Debts **#98** and **#99** close.
+>
+> ### Việc 1 — one coarse shape, and it is the first entry in the budget table that PAYS FOR ITSELF
+> `bead` shares `DOME_RINGS` with `dome` — the same frozen table, so the swap is provably
+> shape-preserving — at 16 sides instead of 60. The side count comes from a measurement, not from
+> taste: an n-gon of radius r falls short by `r(1 − cos(π/n))`, so at the close-up scale of **1,728
+> px per world unit** (derived in the test from `residentViewDistance`, never copied) 16 sides hold
+> the error under half a pixel for anything up to 52 px wide.
+>
+>     11 khối qua ngưỡng   hai lòng trắng 20,6 px · hai con ngươi 14,8 · sáu quả cầu khớp 31,5–36,2 · gờ mày 46,7
+>     2 khối KHÔNG qua     gáy và mái tóc trước trán, đều 53,1 px ⇒ ở lại `dome`
+>     tam giác/người       22.390 → 16.582  (−5.808, −25,9%)   ·   28 cư dân: −162.624/cảnh
+>     điểm ảnh đổi         kỷ 1: 397/849.420 = 0,047%   ·   kỷ 12: 180 = 0,021%
+>
+> The guard checks BOTH directions: a coarse block over the line is red, and a fine block under it
+> is red too — it would be wasting the budget.
+>
+> ### Việc 2 + 3 — every garment edge is a step in the generating line
+> A collar stuck on is a second convex body around the neck, and this project has paid twice for
+> that shape of mistake (round 58's eight skull blocks, round 59's four eyelid blocks). A real
+> collar is where the cloth folds back and thickens — one place where the radius jumps on a single
+> surface of revolution.
+>
+>     `seam`  `chest` + a step at EACH end. One shape, three blocks: trapezius shows only the TOP
+>             step (collar), torso only the BOTTOM (hem), pelvis the bottom (trouser seat).
+>     `belt`  `seam` + a waist cinch. **0 extra draw calls** — `bodyShape()` answers ONE shape for
+>             all three torso blocks, so a belted era uses `belt` INSTEAD OF `seam`.
+>     `cuff`  `calf` + a step at the lower end ⇒ sleeve cuff AND trouser hem from one shape. Its +1
+>             end radius is identical to `calf`'s, because round 58 sizes every joint ball from it.
+>
+> Fifteen eras, three disjoint groups, decided by history: **wrapped cloth 2** (a Göbekli Tepe hide
+> and an Egyptian shendyt have no sewn edge, so eras 1 and 2 pay NOTHING) · **sewn 5** · **sewn and
+> belted 8**.
+>
+> ⚠️ **TWO MEASURING INSTRUMENTS LIED, AND BOTH ARE RECORDED WHERE THEY LIED.** The first definition
+> of "a sewn edge" was *a crease over 40°* — and the counter-test rejected it, correctly: `chest`
+> has had two such creases since round 52, **53.6° at the waist and 88° at the shoulder**. Believing
+> it would have meant raising the threshold until the test had no teeth, or declaring a plain torso
+> tailored. The right question is a DIRECTION: an outward ledge (|Δr| ≥ 3|Δy|) sharp at BOTH ends.
+> Then the belt's upper edge measured **35.0°** — under the smoothing threshold, so it would have
+> been averaged away: every number right, and no belt in the photograph. One extra near-vertical
+> ring takes it to 56.6°.
+>
+>     gờ cổ áo   4,9–7,7 điểm ảnh ở cận cảnh, 13 kỷ   ·   dải thắt lưng 8,3 điểm ảnh
+>
+> ### Việc 5 — twelve eras put shoes on
+> `shoe` is a 16-side lathe whose widest ring is the **sole welt**. The foot block is already
+> 1.70 × 1.08 in plan, so a surface of revolution stretched that way IS a shoe outline, and the one
+> step at the bottom wraps the whole edge — sole and toe in a single declaration. The side count's
+> cost is stated, not hidden: the foot is 66 px wide, so the silhouette falls short by **0.63 px**,
+> above the half-pixel ceiling `bead` must keep. That ceiling was set for blocks on the FACE.
+>
+> One guard is deliberately released and the release is declared: a bare foot IS the continuation of
+> a bare shin, so eras 1–3 keep `continues` and the skin colour; a shoe is not, and `VIEN_CO_THAT`
+> has listed "viền giày" as a real edge since round 58. **11/15 eras now wear shoes in their own
+> colour.**
+>
+> ### Gates
+>
+>     lệnh vẽ / kỷ        8 → 8–13 tuỳ kỷ    ·   kỷ 1 · 2 · 3 trả ÍT NHẤT (vải quấn, chân đất)
+>     Chromium kỷ 1·8·13  đo lại BA lần trong ngày: 19·24·18 → 19·26·19 → 19·27·20
+>                         khớp dự đoán từng kỷ cả ba lần; khoản "lệch chưa truy" 3·3·1 KHÔNG đổi
+>     tam giác/người      22.390 → 16.460…20.712 tuỳ kỷ — kết vòng THẤP HƠN lúc mở vòng
+>     khối/người          41 → 40–42 (trần 56)   ·   0 khối thêm cho cả tủ đồ lẫn giày
+>
+> Round 59's Việc 3 (`lineOfSight`) shipped to `main` in the same push; it had been finished but
+> unmerged when this round opened.
+>
+> ---
+>
+> **ROUND 58 (2026-09-13): THE FIRST TIME I LOOKED A RESIDENT IN THE FACE.**
 > Order: *"Chín vòng qua nhân vật được dựng cho một hình cao 70 px — nay tôi nhìn gần gấp năm lần,
 > và ở cỡ ấy nó đọc ra là một con ma-nơ-canh… Không phải thiếu chi tiết. Là thiếu HÌNH."* Branch
 > `claude/city-skill-points-display-7k4nof`.

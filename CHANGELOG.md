@@ -10,6 +10,39 @@
 > **Muốn hiểu VÌ SAO một quyết định được chọn** → `ARCHITECTURE_DECISIONS.md`. **Muốn biết migration
 > cụ thể nào cần chạy** → `MIGRATION.md`.
 
+## 2026-09-16 — Round 60: the ruler was reading backwards, and the clothes had no seams
+
+**Purpose** — close Phần C (clothes that look sewn), and first repair the instrument that rounds
+57–59 had been judging themselves with.
+
+**Scope** — `src/engine/city3d/finite.js` (new) · `cityFocus.js` · `residentFocus.js` · `pick.js` ·
+`humanShape.js` · `human.js` · four new test files · `drawCallBudget.test.js` baselines.
+
+**What changed**
+1. **The close-up gate had been inverted since round 57.** `boxDistance(stand, nearestBlocker(…))`
+   passed a distance where a box was wanted; `!box` is true for the number `0`, which is exactly
+   what `nearestBlocker` answers when the camera is INSIDE a building. So the only positions the
+   gate ever accepted were the broken ones. Nothing threw, because NaN loses every comparison.
+   New `finite.js` guards each point where a geometric quantity meets a threshold.
+2. **The rebuilt 15-era row then showed a second defect**: four eras walked round behind the
+   resident (140° · −140° · −160° · −120°). The search order now tries **in front → back off →
+   only then past 90°**; the largest turn is 80°, in one era.
+3. **`bead`** — one coarse shape (16 sides, same ring table as `dome`) for eleven small blocks:
+   **−25.9% of each resident's triangles for +1 draw call**, and 0.047% of the pixels change.
+4. **`seam` · `belt` · `cuff` · `shoe`** — collar, hem, waistband, belt, sleeve cuff, trouser hem
+   and sole welt, each as a STEP in a lathe profile. No block is added anywhere. Eras 1 and 2
+   (wrapped cloth) and 1–3 (barefoot) pay nothing, because they had none of these things.
+
+**Impact** — residents cost 8–13 draw calls per era instead of 8–12, and **fewer triangles than
+when the round opened** (22,390 → 16,460…20,712 per resident). Debts **#98** and **#99** close.
+
+**Compatibility** — no state, no storage, no API change. Museum invariant (ADR-007) untouched:
+nothing here depends on session count or era seal state.
+
+⚠️ **Rounds 57, 58 and 59 published close-up figures produced by the inverted planner.** Their
+pictures were real, but the sentence "15/15 eras have a usable close-up" was never measured by the
+planner it named. The figure measured with the corrected planner is in `BAN_GIAO.md`.
+
 ## 2026-09-13 — Round 58: the first time I looked a resident in the face
 
 **Purpose** — round 57 let Đàm tap a resident and fly close. At that distance the character, built

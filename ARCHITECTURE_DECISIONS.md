@@ -73,6 +73,85 @@ roughly 44%. Titles below are the lookup key; read one with
 
 ---
 
+## ADR-096 — Round 60: a NaN loses every comparison, so a geometric quantity must be checked before it meets a threshold; and every garment edge is a step in the generating line
+
+**Date**: 2026-09-16 · **Order**: *"Lỗi NaN đảo cổng khoảng hở sống từ vòng 57… Dựng lại hàng 15 kỷ
+bằng phép đo đã sửa và đưa con số thật."* and *"LUẬT: mỗi mép quần áo là một BẬC TRONG ĐƯỜNG SINH,
+không phải một khối dán lên."* · Branch `claude/city-skill-points-display-7k4nof`.
+
+### Context
+Round 57 gave the app tap-a-resident-to-fly-close. Rounds 58 and 59 rebuilt the head, the eyes and
+the hands against photographs taken through that feature, and published "15/15 eras" figures from
+it. Round 60 opened by discovering that the gate deciding where the camera may stand had been
+**exactly inverted since round 57**, so none of those photographs came from the planner they
+claimed. The round then had to finish Phần C: clothes that look sewn.
+
+### Decision — two rules, and they are the same rule twice
+
+**(1) A geometric quantity is validated BEFORE it is compared, and an invalid one throws.**
+`finite.js` holds the shared guards. `+Infinity` is a legal distance (an empty city IS infinitely
+clear) and NaN never is, so these are not one `Number.isFinite` call. The boundary that emerged
+from `pickNearest`'s own test: **ABSENT is not MALFORMED** — a missing ray or a missing box means
+"nothing was hit", which is the right answer for a tap on empty sky; a present-but-malformed
+argument is a programming error and must die.
+
+**(2) A garment edge is a STEP in a lathe profile, never a block glued on.**
+Three profiles carry every edge the round needed: `seam` (a step at each end), `belt` (`seam` plus
+a waist cinch) and `cuff` (`calf` plus a step at the wrist/ankle), plus `shoe` for the sole welt.
+A step is only an edge while it stays SHARP after `smoothCrease`, so the guard asks for an ANGLE:
+an outward ledge (|Δr| ≥ 3|Δy|) that is sharp at BOTH ends.
+
+### Why the inverted gate survived three rounds
+```
+    boxDistance(stand, nearestBlocker(stand, blockers))     <- a DISTANCE in the BOX parameter
+    nearestBlocker = 1  =>  boxDistance(p, 1) = NaN   =>  `NaN >= 0.35` false =>  REJECTED
+    nearestBlocker = 0  =>  `!0` is true => Infinity  =>  `Inf >= 0.35` true  =>  ACCEPTED
+```
+`nearestBlocker = 0` means the camera stands INSIDE a building. The only positions the gate ever
+accepted were the ones standing inside a wall. Two properties had to hold at once: a wrong TYPE
+produced NaN instead of an error, and **NaN loses every comparison** — `NaN < x`, `NaN >= x` and
+`NaN > x` are all false — so whichever way the gate is written, NaN silently picks a side. The fix
+therefore cannot be "write the comparison the other way round".
+
+### What the rebuilt row then exposed
+With the measurement corrected, 15/15 eras found a standing spot — but four of them (3 · 4 · 13 ·
+14) chose turns of 140° · −140° · −160° · −120° away from front-on. Geometrically correct, and the
+photographs are the back of a head. The fault was the SEARCH ORDER: the old loop swept the whole
+circle at the near distance before trying to back off, so a spot behind the head always beat a spot
+in front that needed one step of distance. New order, the same shape as `planCityFocus`'s "keep
+what can be seen first": **in front → back off → only then past 90°.** A face seen from farther
+away is still a face; the back of a head at any distance is not.
+
+### Alternatives rejected
+- **Write the clearance comparison the other way round.** Rejected: NaN loses both directions.
+- **One `Number.isFinite` guard everywhere.** Rejected: an empty city is legitimately `Infinity`.
+- **Validate every box field in `boxDistance`.** Rejected: it is the hottest loop of the chain
+  (48 samples × every blocker × up to 30 replans) and every bad input arrives at the exit as NaN,
+  so one exit check catches what six entry checks would.
+- **Build the collar, cuff and hem as extra blocks.** Rejected by two photographs already paid for:
+  round 58's eight skull blocks read as an assembled mask, round 59's four eyelid blocks as a pair
+  of spectacles. A sum of convex bodies is not a smooth surface.
+- **A separate shape per edge (collar, hem, waistband).** Rejected: each block has one end buried
+  in its neighbour, so ONE profile with a step at each end serves all three for one draw call.
+- **Give every era a collar.** Rejected as historically false: a Göbekli Tepe hide and an Egyptian
+  shendyt are wrapped cloth, and eras 1 and 2 accordingly pay zero draw calls this round.
+
+### Consequences
+- Rounds 57, 58 and 59 published close-up figures produced by an inverted planner. Their pictures
+  were real pictures of a real city, but the sentence "15/15 eras have a usable close-up" was never
+  measured by the planner it named. Debts **#98** and **#99** close.
+- Residents cost **+1 draw call** for the coarse shape, **+0/+1/+2** for the garment edges by era
+  and **+0/+1** for shoes — and the coarse shape returns 25.9% of each resident's triangles, so the
+  round ends BELOW where it started on geometry (22,390 → 16,460..20,712 per resident).
+- `drawCallBudget.test.js` gains three baselines and three subtractions, one per change, and the
+  Chromium anchor was re-measured three times in one day. Its per-era predictions matched the
+  browser exactly on all three occasions, including the rows that must NOT move.
+- Two measuring instruments lied during the round and both are recorded where they lied: a
+  "crease over 40°" definition that would have called a plain torso tailored, and a belt edge at
+  35.0° that every number called correct and no photograph would have shown.
+
+---
+
 ## ADR-095 — Round 58: adding convex lumps does not make a curved surface — five of the seven skull features belong in ONE generating line
 
 **Date**: 2026-09-13 · **Order**: *"Chín vòng qua nhân vật được dựng cho một hình cao 70 px — nay tôi

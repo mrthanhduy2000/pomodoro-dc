@@ -211,3 +211,41 @@ test('ĐOẠN THẲNG, KHÔNG PHẢI TIA VÔ HẠN: hộp sau lưng camera khôn
   assert.equal(segmentHitsBox(tu, den, oGiua[0]), true);
   assert.equal(segmentHitsBox(tu, den, sauLung[0]), false);
 });
+
+test('MỘT KHUÔN MẶT NHÌN TỪ XA VẪN LÀ KHUÔN MẶT — lùi ra trước, đi quá 90° sau', () => {
+  /*
+    ⚠️ ROUND 60, VIỆC 0(a). BÀI TEST NÀY SINH RA TỪ MỘT HÀNG ẢNH, KHÔNG TỪ MỘT Ý THÍCH.
+    Khi phép đo khoảng hở được sửa (Việc 0(b)), cả 15 kỷ đều tìm được chỗ đứng — nhưng bốn kỷ
+    (3 · 4 · 13 · 14) chọn góc lệch 140° · −140° · −160° · −120°, tức camera đứng SAU GÁY. Hình
+    học hợp lệ, `seesOf` xanh, và tấm ảnh vô dụng. Nguyên nhân: bản cũ đi hết cả vòng tròn ở cự ly
+    gần TRƯỚC khi thử lùi ra, nên một chỗ đứng sau gáy luôn thắng một chỗ đứng trước mặt xa hơn.
+
+    Thế giới giả ở đây dựng đúng tình huống ấy: trước mặt chỉ thoáng khi đã lùi ra, còn sau gáy
+    thì thoáng ngay. Bản cũ chọn sau gáy; bản này phải chọn trước mặt.
+    *Đỏ khi ta bỏ CÁI GÌ?* — đỏ ngay khi ai đó gộp lại thành một vòng quét duy nhất.
+  */
+  const nguoi = { eye: { x: 0, y: 1, z: 0 }, height: 0.9, angle: 0 };
+  const gan = residentViewDistance(0.9);
+  const clearanceOf = (to) => {
+    const lech = Math.abs(((to.yaw - residentYaw(0) + Math.PI) % (Math.PI * 2)) - Math.PI);
+    if (lech > Math.PI / 2) return 9;              // sau gáy: thoáng ngay, ở mọi cự ly
+    return to.distance > gan * 1.4 ? 9 : 0.01;     // trước mặt: chỉ thoáng khi đã lùi ra
+  };
+
+  const plan = planResidentFocus({ resident: nguoi, clearanceOf });
+  assert.ok(Math.abs(plan.turned) <= Math.PI / 2 + 1e-9,
+    `phải ở lại nửa mặt phẳng TRƯỚC MẶT — nhận được ${(plan.turned * 180 / Math.PI).toFixed(0)}°`);
+  assert.ok(plan.backed > 0, 'và nó phải mua chỗ ấy bằng cách LÙI RA, đúng cái giá đáng trả');
+  assert.equal(plan.blocked, undefined);
+
+  // NGƯỢC LẠI: khi trước mặt bịt kín ở MỌI cự ly thì mới được đi quá 90°. Thà một cái gáy còn hơn
+  // một mảng tường — nhưng chỉ khi hết cách, và bài này chứng minh lối thoát ấy vẫn còn.
+  const bitKin = (to) => {
+    const lech = Math.abs(((to.yaw - residentYaw(0) + Math.PI) % (Math.PI * 2)) - Math.PI);
+    return lech > Math.PI / 2 ? 9 : 0.01;
+  };
+  const cuoi = planResidentFocus({ resident: nguoi, clearanceOf: bitKin });
+  assert.ok(Math.abs(cuoi.turned) > Math.PI / 2,
+    'bịt kín cả nửa trước mà vẫn không chịu đi vòng ra sau thì ta mất luôn cú chạm');
+  assert.equal(cuoi.blocked, undefined);
+});

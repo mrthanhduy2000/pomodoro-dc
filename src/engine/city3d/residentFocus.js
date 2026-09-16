@@ -195,37 +195,62 @@ export function planResidentFocus({
     return gap;
   };
 
-  // (1) Đi vòng quanh × ba mức pitch. Lệch ÍT NHẤT trước, và thử cả hai phía ở mỗi mức — nếu chỉ
-  // thử một phía thì ta sẽ nhận một góc lệch 140° trong khi phía kia chỉ cần 20°.
-  // ⚠️ PITCH LÀ VÒNG LẶP TRONG: thà đứng đúng trước mặt mà hơi cúi, còn hơn đứng đúng tầm mắt mà
-  // phải vòng ra sau gáy. Hướng nhìn thẳng mặt là thứ Đàm chấm; độ cao chỉ là phương tiện.
-  for (let b = 0; b <= 8; b += 1) {
-    for (const dau of b === 0 ? [0] : [1, -1]) {
-      const yaw = truoc + dau * b * RESIDENT_YAW_STEP;
-      for (const pitch of RESIDENT_PITCHES) {
-        const to = thu(yaw, pitch);
-        const gap = duoc(to);
-        if (gap !== null) {
-          return {
-            ...to, clearance: gap, turned: dau * b * RESIDENT_YAW_STEP, backed: 0, sees: true,
-          };
+  /*
+    ⚠️ ROUND 60, VIỆC 0(a): THỨ TỰ TÌM KIẾM ĐỔI, VÀ NÓ ĐỔI VÌ MỘT HÀNG ẢNH 15 KỶ.
+    Khi phép đo khoảng hở đã được sửa (Việc 0(b)), cả 15 kỷ đều tìm được chỗ đứng — nhưng bốn kỷ
+    (3 · 4 · 13 · 14) chọn góc lệch **140° · −140° · −160° · −120°**, tức camera đi vòng ra SAU GÁY.
+    Không có gì sai về hình học: chỗ đứng thoáng, đường nhìn tới mắt không bị chắn — nhìn từ sau
+    thì *"nhìn thấy con mắt"* vẫn đúng theo nghĩa tia không cắt hộp nào. Sai ở chỗ CÂU HỎI: Đàm
+    chạm vào một cư dân để nhìn MẶT người ấy.
+
+    ⇒ Luật, cùng họ với thứ tự chữa của `planCityFocus` (*"giữ được thứ nhìn thấy trước"*):
+    **MỘT KHUÔN MẶT NHÌN TỪ XA VẪN LÀ KHUÔN MẶT; MỘT CÁI GÁY THÌ Ở CỰ LY NÀO CŨNG KHÔNG PHẢI.**
+    Nên lùi ra xa phải được thử TRƯỚC khi đi quá 90°, chứ không phải sau khi đã đi hết vòng.
+    Ba chặng, theo đúng thứ tự ấy:
+      (1) trong nửa mặt phẳng TRƯỚC MẶT (≤ 80°), đúng cự ly muốn có
+      (2) vẫn trước mặt, LÙI DẦN ra xa
+      (3) mới tới quá 90° — thà một cái gáy còn hơn một mảng tường, nhưng chỉ khi hết cách
+    ⚠️ `NUA_TRUOC = 4` là 4 × 20° = 80°, tức góc lớn nhất vẫn còn thấy được sống mũi và một con
+    mắt. Nó là một QUAN HỆ với `RESIDENT_YAW_STEP` chứ không phải một số độ viết cứng: đổi bước
+    xoay thì ngưỡng tự đi theo, và bài test đòi đúng điều đó.
+  */
+  const NUA_TRUOC = Math.floor((Math.PI / 2) / RESIDENT_YAW_STEP);
+
+  /** Quét các góc lệch trong khoảng `[b0, b1]` bước, ở cự ly `d`. Lệch ÍT NHẤT trước, cả hai phía. */
+  const quet = (b0, b1, d) => {
+    for (let b = b0; b <= b1; b += 1) {
+      for (const dau of b === 0 ? [0] : [1, -1]) {
+        const lech = dau * b * RESIDENT_YAW_STEP;
+        // ⚠️ PITCH LÀ VÒNG LẶP TRONG: thà đứng đúng trước mặt mà hơi cúi, còn hơn đứng đúng tầm
+        // mắt mà phải vòng ra sau gáy. Hướng nhìn thẳng mặt là thứ Đàm chấm, độ cao chỉ là phương tiện.
+        for (const pitch of RESIDENT_PITCHES) {
+          const to = thu(truoc + lech, pitch, d);
+          const gap = duoc(to);
+          if (gap !== null) {
+            return { ...to, clearance: gap, turned: lech, backed: d - distance, sees: true };
+          }
         }
       }
     }
-  }
+    return null;
+  };
 
-  // (2) Chỉ khi ĐI QUANH CẢ VÒNG ở cả ba độ cao vẫn vướng mới lùi — người đứng trong ngõ cụt chẳng hạn.
+  // (1) Trước mặt, đúng cự ly muốn có.
+  const gan = quet(0, NUA_TRUOC, distance);
+  if (gan) return gan;
+
+  // (2) Vẫn trước mặt, lùi dần. Người đứng trong ngõ cụt, hoặc sát một bức tường.
   let d = distance;
   for (let k = 0; k < 12; k += 1) {
     d += distance * 0.5;
-    for (const pitch of RESIDENT_PITCHES) {
-      const to = thu(truoc, pitch, d);
-      const gap = duoc(to);
-      if (gap !== null) {
-        return { ...to, clearance: gap, turned: 0, backed: d - distance, sees: true };
-      }
-    }
+    const xa = quet(0, NUA_TRUOC, d);
+    if (xa) return xa;
   }
+
+  // (3) Hết cách trong nửa trước ⇒ mới đi quá 90°. Một cái gáy vẫn hơn một mảng tường, nhưng nó
+  // phải là phương án CUỐI, và `turned` báo ra ngoài để bên gọi đếm được số lần phải dùng tới nó.
+  const sau = quet(NUA_TRUOC + 1, 8, distance);
+  if (sau) return sau;
   /*
     ⚠️ TRẢ VỀ `blocked: true` CHỨ KHÔNG TRẢ VỀ MỘT CHỖ ĐỨNG GIẢ VỜ ỔN. Bên gọi đọc cờ này để CHỌN
     CƯ DÂN KHÁC — đúng điều Đàm dặn: *"hoặc báo thẳng là kỷ này không có chỗ đứng nào và chọn cư

@@ -129,7 +129,7 @@ const ROUND_SIDES = 60;
  */
 const COARSE_SIDES = 16;
 
-export const HUMAN_SHAPES = ['box', 'prism', 'limb', 'calf', 'cuff', 'chest', 'seam', 'belt', 'flare', 'cone', 'dome', 'bead', 'hat', 'scalp', 'skull'];
+export const HUMAN_SHAPES = ['box', 'shoe', 'prism', 'limb', 'calf', 'cuff', 'chest', 'seam', 'belt', 'flare', 'cone', 'dome', 'bead', 'hat', 'scalp', 'skull'];
 
 /**
  * Hồ sơ từng khuôn. `sides` = số cạnh đa giác; `rings` = [y, r] từ đáy lên đỉnh.
@@ -205,6 +205,38 @@ const PROFILES = {
    * sự đơn điệu khác.
    */
   box: { sides: 4, rings: [[-0.5, 1], [0.5, 1]] },
+
+  /**
+   * GIÀY — ROUND 60, VIỆC 5. **BÀN CHÂN CÓ ĐẾ, VÀ CÁI ĐẾ LÀ MỘT BẬC.**
+   *
+   * ⚠️ HỘP 4 CẠNH LÀ CÂU TRẢ LỜI ĐÚNG CHO MỘT BÀN CHÂN TRẦN, VÀ SAI CHO MỘT CHIẾC GIÀY.
+   * Chú thích của `box` nói *"bàn chân thật thì phẳng ở đế, vuông ở gót"* — đúng, và nó vẫn đúng:
+   * ba kỷ đi chân đất giữ nguyên `box`. Nhưng một chiếc giày là một vật ĐƯỢC ĐÓNG: nó có một
+   * cái **đế nhô ra khỏi mũ giày quanh cả đường viền** (viền đế, tiếng nghề là *welt*), và cái
+   * gờ ấy chính là thứ mắt dùng để đọc ra "đi giày" chứ không phải "chân đút vào một cục".
+   * Đàm gọi đúng tên nó trong bảng của vòng: *"mũi giày = bậc ở đường sinh bàn chân"*.
+   *
+   * ⚠️ VÀ MỘT ĐƯỜNG SINH TRÒN XOAY BỊ KÉO DÀI THEO x **LÀ** HÌNH CHIẾC GIÀY. Khối bàn chân vốn
+   * đã có tỉ lệ 1,70 × 1,08 trong mặt phẳng ngang, nên một mặt tròn xoay kéo theo tỉ lệ ấy cho ra
+   * một hình bầu dục thuôn — mũi tròn ở trước, gót tròn ở sau. Cái bậc ở đáy vì thế chạy vòng
+   * quanh CẢ đường viền, tức nó vừa là viền đế vừa là mũi giày, bằng một lần khai.
+   *
+   * ⚠️ 16 CẠNH, KHÔNG PHẢI 60 — và con số sai lệch được nói thẳng. Bàn chân rộng 66 điểm ảnh ở
+   * cận cảnh ⇒ đường bao hụt `33 × 0,0192 = **0,63 điểm ảnh**`, tức trên cái ngưỡng nửa điểm ảnh
+   * mà `bead` phải giữ. Ở đây chấp nhận được và đây là lý do: ngưỡng ấy được đặt cho những khối
+   * nằm TRÊN KHUÔN MẶT, thứ Đàm soi kỹ nhất; một chiếc ủng lính ở đáy khung hình thì hai phần ba
+   * điểm ảnh không đọc ra được. Đổi lại, 60 cạnh sẽ tốn 716 tam giác mỗi bàn chân thay vì 188.
+   */
+  shoe: {
+    sides: COARSE_SIDES,
+    rings: [
+      [-0.500, 0.83],
+      [-0.455, 1.00],   // ⬅ BẬC: viền đế nhô ra quanh cả bàn chân — vừa là đế, vừa là mũi giày.
+      [-0.300, 0.98],   //    ⚠️ VÀ NÓ PHẢI LÀ VÀNH RỘNG NHẤT (= 1,00). Bản đầu lấy 0,96 và bài
+      [0.100, 0.94],    //    «MỌI KHUÔN NẰM GỌN TRONG HỘP ĐƠN VỊ» đỏ ngay — đúng việc của nó:
+      [0.500, 0.77],    //    một khối khai rộng 1,70 mà thật ra rộng 1,63 là một cái thước nói dối.
+    ],
+  },
 
   /**
    * TRỤ — thứ tròn đều và gần như thẳng: cán giáo, bó củi, búi tóc.

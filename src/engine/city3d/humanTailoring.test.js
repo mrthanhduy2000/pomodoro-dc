@@ -213,3 +213,41 @@ test('`belt` = `seam` + một chỗ thắt, BA mép may, và tốn 0 lệnh vẽ
   console.log(`[thắt lưng] vải quấn ${nhom.chest.length} kỷ · có may ${nhom.seam.length}`
     + ` · có may + thắt lưng ${nhom.belt.length} — ba nhóm rời nhau, mỗi kỷ đúng MỘT khuôn thân`);
 });
+
+test('GIÀY: viền đế là một bậc, bàn chân trần thì KHÔNG — và giày được phép mang màu riêng', () => {
+  const go = outwardLedges('shoe');
+  assert.equal(go.length, 1, `viền đế là MỘT cái mép — đếm được ${go.length}`);
+  assert.ok(go[0].y < -0.4, `viền đế phải nằm sát mặt đất — y = ${go[0].y}`);
+  assert.equal(outwardLedges('box').length, 0, 'bàn chân TRẦN không có viền đế nào');
+
+  /*
+    ⚠️ CHỖ NÀY LÀ MỘT NGOẠI LỆ ĐƯỢC KHAI RA, KHÔNG PHẢI MỘT CHỖ LỌT.
+    `humanSeams.js` cấm một khối NỐI DÀI đổi màu — và một bàn chân TRẦN đúng là phần nối dài của
+    cẳng chân, nên ba kỷ chân đất phải giữ `continues`. Một chiếc GIÀY thì khác hẳn: `VIEN_CO_THAT`
+    đã ghi sẵn *"viền giày (ống quần ↔ giày)"* là một chỗ đời thật CÓ mép, từ round 58. Nên khối
+    giày bỏ `continues` và mang màu của chính nó. Bài này khoá cả hai chiều để không ai lặng lẽ
+    cho một bàn chân trần đổi màu, cũng không ai lặng lẽ bắt một chiếc ủng mang màu ống quần.
+  */
+  const CHAN_DAT = [1, 2, 3];
+  for (const era of ERAS) {
+    const chan = buildHumanBody(era).parts.find((p) => p.id === 'footL');
+    const cang = buildHumanBody(era).parts.find((p) => p.id === 'shinL');
+    if (CHAN_DAT.includes(era)) {
+      assert.equal(chan.shape, 'box', `kỷ ${era} đi chân đất — bàn chân phải giữ khuôn \`box\``);
+      assert.equal(chan.continues, 'shinL', `kỷ ${era}: bàn chân TRẦN là phần nối dài của cẳng chân`);
+      assert.equal(chan.role, cang.role, `kỷ ${era}: bàn chân trần phải cùng màu cẳng chân`);
+    } else {
+      assert.equal(chan.shape, 'shoe', `kỷ ${era} đi giày — bàn chân phải dùng khuôn \`shoe\``);
+      assert.equal(chan.continues, undefined,
+        `kỷ ${era}: một chiếc giày KHÔNG phải phần nối dài của ống quần — bỏ \`continues\` đi`);
+    }
+  }
+  // Và ít nhất một kỷ phải thật sự dùng cái quyền ấy, nếu không thì cả đoạn trên là trang trí.
+  const doiMau = ERAS.filter((era) => {
+    const p = buildHumanBody(era).parts;
+    return p.find((k) => k.id === 'footL').role !== p.find((k) => k.id === 'shinL').role;
+  });
+  assert.ok(doiMau.length >= 8,
+    `chỉ ${doiMau.length} kỷ có giày khác màu ống quần — da, gỗ và vải đều không phải màu vải quần`);
+  console.log(`[giày] ${doiMau.length}/15 kỷ đi giày mang màu riêng · 3 kỷ chân đất giữ màu da`);
+});

@@ -459,6 +459,39 @@ const CO_DUONG_MAY = Object.freeze({
 });
 
 /**
+ * ĐI GÌ DƯỚI CHÂN — round 60, Việc 5. Mười lăm kỷ, nguyên văn danh sách Đàm đưa.
+ *
+ * ⚠️ MỘT CHIẾC GIÀY KHÔNG PHẢI MỘT KHỐI THÊM VÀO — nó là chính khối bàn chân, đổi KHUÔN (có viền
+ * đế), đổi CHIỀU CAO (giày dày hơn da) và đổi VAI MÀU (da, gỗ, vải — không phải màu ống quần).
+ * Cùng đúng cách `SLEEVE_LOOK` dựng tay áo từ round 52: **0 khối thêm**.
+ *
+ * ⚠️ VÀ ĐI CHÂN ĐẤT LÀ MỘT LỰA CHỌN CÓ THẬT, KHÔNG PHẢI "CHƯA LÀM". Ba kỷ đầu giữ nguyên `box`
+ * và giữ nguyên `continues: 'shin'` — một bàn chân trần ĐÚNG LÀ phần nối dài của cẳng chân, nên
+ * `humanSeams.js` phải tiếp tục cấm nó đổi màu. Một chiếc giày thì ngược lại: `VIEN_CO_THAT` đã
+ * ghi sẵn *"viền giày (ống quần ↔ giày)"* là một chỗ đời thật CÓ mép, nên khối giày BỎ `continues`
+ * và được phép mang màu của chính nó. Đó là lý do cái gác ấy tồn tại: để một thay đổi như thế này
+ * phải được khai ra chứ không lọt qua.
+ */
+const GIAY = Object.freeze({
+  1: null, 2: null, 3: null,                  // chân đất
+  4: { role: 'straw', day: 1.02 },            // guốc mộc Đường/Tống
+  5: { role: 'gear', day: 1.18 },             // ủng da trung cổ
+  6: { role: 'straw', day: 1.02 },            // guốc mộc Bắc Bộ
+  7: { role: 'gear', day: 1.10 },             // giày da có gót Phục Hưng
+  8: { role: 'gear', day: 1.10 },             // giày khoá bạc thời Khám phá
+  9: { role: 'gear', day: 1.10 },             // giày da có gót thời Khai sáng
+  10: { role: 'cloth2', day: 1.04 },          // giày vải thợ Manchester
+  11: { role: 'gear', day: 1.10 },            // giày tây thời Mạ Vàng
+  12: { role: 'gear', day: 1.24 },            // ủng quân đội Hồng quân
+  13: { role: 'gear', day: 1.10 },            // giày tây Tokyo
+  14: { role: 'gear', day: 1.06 },            // giày tây Marina Bay
+  15: { role: 'gear', day: 0.92 },            // dép quai Dubai — MỎNG hơn bàn chân trần
+});
+
+/** Giày của kỷ, hoặc `null` nếu kỷ ấy đi chân đất. */
+export function shoeLook(era) { return GIAY[era] ?? null; }
+
+/**
  * KỶ NÀO THẮT LƯNG — round 60, Việc 3. Danh sách lịch sử, không phải danh sách tiện tay.
  *
  * ⚠️ MỘT CÁI ĐAI KHÔNG PHẢI MỘT PHỤ KIỆN TRANG TRÍ MÀ LÀ MỘT CÁCH MẶC. Áo chùng Lưỡng Hà, áo
@@ -953,6 +986,7 @@ export function buildHumanBody(era) {
   const sv = sleeveLook(style.sleeve);
   const lg = legLook(style.leg);
   const than = bodyShape(style.garment, era);
+  const giay = shoeLook(era);
   /*
     ⚠️ VAI MÀU CỦA BÀN TAY — HAI TRẠNG THÁI, KHÔNG BAO GIỜ CÓ TRẠNG THÁI THỨ BA (round 58, Việc 1).
     Đàm: *"màu da khi tay áo ngắn, màu găng khi có găng — và không bao giờ là một màu thứ ba."*
@@ -1049,12 +1083,15 @@ export function buildHumanBody(era) {
     // cũng đi giày — sai ở 3 trong 15 kỷ, và sai ngay ở chóp múi người nhìn nhiều nhất lúc đứng gần.
     // Round 52 (ADR-092), Việc 7 *"bàn tay và bàn chân có khối"*: dày 0,62 → 0,76 và bề ngang 1,0 → 1,08.
     // Một bàn chân dẹt là một cái bóng dẹt — ở tầm mắt nó đọc ra là cái chân bàn, không phải cái giày.
-    piece('footL', lg.loRole, 'box', 'kneeL',
-      [d.limbW * 1.7, d.limbW * 0.76, d.limbW * 1.08],
-      [d.limbW * 0.42, -d.shinLen + d.limbW * 0.38, 0], 'shinL'),
-    piece('footR', lg.loRole, 'box', 'kneeR',
-      [d.limbW * 1.7, d.limbW * 0.76, d.limbW * 1.08],
-      [d.limbW * 0.42, -d.shinLen + d.limbW * 0.38, 0], 'shinR'),
+    // ⚠️ ROUND 60, VIỆC 5: BÀN CHÂN ĐI GIÀY. Khuôn `shoe` có một BẬC ở đáy — viền đế chạy vòng
+    // quanh cả đường viền, tức vừa là đế vừa là mũi giày. Chiều cao và vai màu do `GIAY` của kỷ
+    // quyết. Kỷ đi chân đất giữ nguyên `box` VÀ giữ nguyên `continues` (bàn chân trần là phần nối
+    // dài của cẳng chân, `humanSeams.js` cấm nó đổi màu); kỷ đi giày BỎ `continues`, vì viền giày
+    // là một mép ĐỜI THẬT CÓ — `VIEN_CO_THAT` đã ghi sẵn dòng ấy từ round 58.
+    ...['L', 'R'].map((ben) => piece(`foot${ben}`, giay ? giay.role : lg.loRole,
+      giay ? 'shoe' : 'box', `knee${ben}`,
+      [d.limbW * 1.7, d.limbW * 0.76 * (giay ? giay.day : 1), d.limbW * 1.08],
+      [d.limbW * 0.42, -d.shinLen + d.limbW * 0.38, 0], giay ? null : `shin${ben}`)),
 
     // ── THÂN: XƯƠNG CHẬU → LỒNG NGỰC → ĐẦU ────────────────────────────────────────────────
     // ⚠️ XƯƠNG CHẬU LÀ KHỐI MỚI, VÀ NÓ SỬA MỘT KHUYẾT TẬT CÓ TỪ ĐẦU: hai cái chân trước nay mọc

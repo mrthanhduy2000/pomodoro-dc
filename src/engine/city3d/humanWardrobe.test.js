@@ -133,7 +133,9 @@ test('TRẢ 0 KHỐI VÀ 0 LỆNH VẼ: tủ đồ không được làm phình c
     // không dựng thêm KHỐI"*, và số khối vẫn y nguyên (`thuc === tran` ở trên) — cái cổ áo là một
     // BẬC trong đường sinh của khối đã có, không phải một khối thứ hai dán quanh cổ. Đó chính là
     // luật Đàm ra cho cả vòng 60, và đây là chỗ nó được canh.
-    assert.ok(dung.size <= 12,
+    // ⚠️ 12 → 13 (round 60, Việc 5): khuôn `shoe`. Vẫn 0 khối thêm — bàn chân ĐỔI khuôn chứ
+    // không mọc thêm một chiếc giày bên ngoài, đúng cách tay áo được dựng từ round 52.
+    assert.ok(dung.size <= 13,
       `kỷ ${era} dùng ${dung.size} khuôn (${[...dung].join(', ')}) — mỗi khuôn là một lệnh vẽ`);
   }
 });

@@ -171,7 +171,23 @@ function tamCoDinh(era) {
   `cuff` thay THẾ CHỖ `calf` ở cả bốn đoạn chi dưới.
   Đo lại: 2026-09-16.
 */
+/*
+  ⚠️ ROUND 60, VIỆC 5: **+0 Ở BA KỶ ĐI CHÂN ĐẤT, +1 Ở MƯỜI HAI KỶ CÒN LẠI** — khuôn `shoe`.
+  Bàn chân đi giày đổi khuôn (`box` → `shoe`, có một BẬC ở đáy là viền đế), đổi chiều cao và đổi
+  vai màu. **0 khối thêm.** Kỷ 1 · 2 · 3 đi chân đất nên giữ `box` và trả 0 — cùng một nguyên tắc
+  đã cho kỷ 1 · 2 trả 0 ở Việc 2 + 3: *lịch sử quyết, không phải sự tiện tay quyết*.
+  Đo lại: 2026-09-16.
+*/
 const MOC_LENH_VE = {
+  1: 16, 2: 18, 3: 21, 4: 20, 5: 21,
+  6: 22, 7: 22, 8: 24, 9: 19, 10: 23,
+  11: 19, 12: 19, 13: 19, 14: 20, 15: 20,
+};
+
+/**
+ * MỐC NGAY TRƯỚC KHI BÀN CHÂN CÓ GIÀY — round 60, Việc 5. Đối chứng cho phép trừ của Việc 5.
+ */
+const MOC_TRUOC_GIAY = {
   1: 16, 2: 18, 3: 21, 4: 19, 5: 20,
   6: 21, 7: 21, 8: 23, 9: 18, 10: 22,
   11: 18, 12: 18, 13: 18, 14: 19, 15: 19,
@@ -516,7 +532,10 @@ test('QUAN HỆ "lệnh vẽ = số họ + 2 + số khuôn cư dân (+1 nếu c�
     +0 · +2 · +1 — khớp từng kỷ một, ba con số khác nhau, không phải một hằng số cộng đều.
     Và khoản "lệch chưa truy nguyên nhân" (3 · 3 · 1) vẫn KHÔNG nhúc nhích qua cả hai lần đo.
   */
-  const DO_CHROMIUM_2026_09_16 = { 1: 19, 8: 26, 13: 19 };
+  // ⚠️ ĐO LẠI LẦN THỨ BA TRONG NGÀY, SAU VIỆC 5 (giày). Dự đoán từ `humanShapesUsed`: kỷ 1 **+0**
+  // (đi chân đất) · kỷ 8 **+1** · kỷ 13 **+1**. Chromium: **19 · 27 · 20** — khớp cả ba, và khoản
+  // "lệch chưa truy nguyên nhân" (3 · 3 · 1) vẫn KHÔNG nhúc nhích qua cả BA lần đo trong vòng này.
+  const DO_CHROMIUM_2026_09_16 = { 1: 19, 8: 27, 13: 20 };
   const HO_CHUA_TRUY_NGUYEN_NHAN = { 1: 3, 8: 3, 13: 1 };
   for (const era of [1, 8, 13]) {
     assert.equal(MOC_LENH_VE[era] + HO_CHUA_TRUY_NGUYEN_NHAN[era], DO_CHROMIUM_2026_09_16[era],
@@ -813,7 +832,9 @@ test('MÉP QUẦN ÁO TỐN +0 Ở KỶ MẶC VẢI QUẤN, +1 HOẶC +2 Ở K�
   for (const era of ERAS) {
     const truoc = MOC_TRUOC_MEP_AO[era];
     assert.ok(Number.isFinite(truoc), `kỷ ${era} thiếu mốc trước-mép-áo`);
-    const hieu = MOC_LENH_VE[era] - truoc;
+    // ⚠️ CỘT "SAU" LÀ `MOC_TRUOC_GIAY`, KHÔNG PHẢI `MOC_LENH_VE` — Việc 5 của chính vòng này thêm
+    // `shoe` ngay sau đó. Mỗi phép trừ kẹp đúng MỘT thay đổi, đúng luật riêng của file.
+    const hieu = MOC_TRUOC_GIAY[era] - truoc;
     const khuon = humanShapesUsed(era);
     if (VAI_QUAN.includes(era)) {
       assert.equal(hieu, 0,
@@ -823,7 +844,7 @@ test('MÉP QUẦN ÁO TỐN +0 Ở KỶ MẶC VẢI QUẤN, +1 HOẶC +2 Ở K�
         + 'người tiền sử một cái cổ áo bẻ.');
     } else {
       assert.ok(hieu === 1 || hieu === 2,
-        `kỷ ${era}: mốc đi từ ${truoc} lên ${MOC_LENH_VE[era]} (lệch ${hieu}). Hai khuôn mới thì `
+        `kỷ ${era}: mốc đi từ ${truoc} lên ${MOC_TRUOC_GIAY[era]} (lệch ${hieu}). Hai khuôn mới thì `
         + 'nhiều nhất là +2; lệch hơn nghĩa là có thứ KHÁC đang đi ké dòng này.');
       // ⚠️ `seam` HOẶC `belt` — tám kỷ thắt lưng dùng `belt` THAY CHỖ `seam`, nên khuôn thắt lưng
       // tốn 0 lệnh vẽ thêm. Viết cứng `seam` ở đây là đòi một kỷ có thắt lưng phải trả hai lần.
@@ -832,6 +853,30 @@ test('MÉP QUẦN ÁO TỐN +0 Ở KỶ MẶC VẢI QUẤN, +1 HOẶC +2 Ở K�
     }
   }
   // Gác chạy-rỗng: nếu mọi kỷ cùng một khoản lệch thì phép trừ trên chẳng phân biệt được gì.
-  const lech = ERAS.map((e) => MOC_LENH_VE[e] - MOC_TRUOC_MEP_AO[e]);
+  const lech = ERAS.map((e) => MOC_TRUOC_GIAY[e] - MOC_TRUOC_MEP_AO[e]);
   assert.equal(new Set(lech).size, 3, `phải có đúng ba mức lệch 0 · 1 · 2 — đếm được ${new Set(lech).size}`);
+});
+
+test('GIÀY TỐN +0 Ở BA KỶ ĐI CHÂN ĐẤT, +1 Ở MƯỜI HAI KỶ CÒN LẠI', () => {
+  /*
+    ⚠️ PHÉP TRỪ RIÊNG CỦA VÒNG 60, VIỆC 5. Bàn chân ĐỔI khuôn (`box` → `shoe`), không mọc thêm
+    một chiếc giày bên ngoài — nên chi phí là đúng một `InstancedMesh` ở những kỷ có đi giày.
+    ⚠️ VẾ HAI: khuôn `shoe` phải CÓ MẶT đúng ở mười hai kỷ ấy và VẮNG ở ba kỷ chân đất. Không có
+    vế ấy thì một bản vá làm số khuôn nhích lên vì lý do khác vẫn xanh trơn tru — đúng cái bẫy mà
+    phép trừ của vòng 56 đã phải thêm vế `scalp` để tránh.
+    THỬ-CHO-ĐỎ (nêu TRƯỚC): cho `GIAY[1]` một đôi ủng ⇒ kỷ 1 lệch 1 và dòng dưới đỏ.
+  */
+  const CHAN_DAT = [1, 2, 3];
+  for (const era of ERAS) {
+    const truoc = MOC_TRUOC_GIAY[era];
+    assert.ok(Number.isFinite(truoc), `kỷ ${era} thiếu mốc trước-giày`);
+    const hieu = MOC_LENH_VE[era] - truoc;
+    const diChanDat = CHAN_DAT.includes(era);
+    assert.equal(hieu, diChanDat ? 0 : 1,
+      `kỷ ${era}: mốc đi từ ${truoc} lên ${MOC_LENH_VE[era]} (lệch ${hieu}) — kỷ đi chân đất phải `
+      + 'trả 0, kỷ đi giày phải trả đúng 1.');
+    assert.equal(humanShapesUsed(era).includes('shoe'), !diChanDat,
+      `kỷ ${era}: khuôn \`shoe\` ${humanShapesUsed(era).includes('shoe') ? 'CÓ' : 'VẮNG'} mà đáng lẽ `
+      + `phải ${diChanDat ? 'VẮNG' : 'CÓ'} — con số mốc ở trên đang bịa.`);
+  }
 });

@@ -830,3 +830,21 @@ Nothing deleted; the still-live rules stay summarised in `START_HERE.md`. Full r
   belt's upper edge came out at 35.0°. And the first definition of "edge" (*any crease over 40°*)
   called a plain torso tailored, because `chest` has had a 53.6° waist since round 52. The question
   is a DIRECTION, not a sharpness: an outward ledge, sharp at BOTH ends.
+
+
+### Rotated out of `START_HERE.md` on 2026-09-17 (round 64)
+
+- **Loop — ROUNDS 55 + 56 (2026-09-12): SHAPE BY HOW A THING IS MADE.** Branch
+  `claude/city-skill-points-display-7k4nof`. Detail in `BAN_GIAO.md`; five laws live here:
+  ⚠️ **Two coaxial lathes always meet in a HORIZONTAL circle.** Round 52's hair cap sat 36% inside
+  the skull, so the visible hairline was that intersection, not the rim drawn — identical at all 60
+  azimuths. A cap must be provably OUTSIDE the skull for its own rim to be the boundary.
+  ⚠️ **A colour boundary must not sit where real life has none** (Đàm, R56). Third instance of one
+  defect shape: joint balls as rivets · a neck as a white collar · the hairline. All three found by
+  a PHOTOGRAPH; none by any of 1,784 tests.
+  ⚠️ **Roles on a resident cost NO draw calls** — one `InstancedMesh` per SHAPE, colour per instance.
+  ⚠️ **A table has a test; the place that CONSUMES it may not.** Role `steel` reached `HUMAN_ROLES`,
+  `palette3d.js` and an exception list in `palette3d.test.js` at round 49 — and never reached
+  `sceneGraph.js`, so every helmet rendered in the era's CLOTH colour for three weeks.
+  ⚠️ **The preview tool lied twice more** (5th and 6th): it could not photograph a face at all
+  (34.4° default pitch), and above 1400 px it wrote BLACK images while reporting success.

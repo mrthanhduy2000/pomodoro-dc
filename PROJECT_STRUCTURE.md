@@ -24,6 +24,10 @@
 │   │   │   └── ActionButton.jsx   # THE button (ADR-077, TECH_DEBT #86 door): token colours only, one `sizeMap`
 │   │   │   │                     #   ⚠️ #86 GATE (ADR-078): eslint `no-restricted-syntax` rejects palette classes / hex-rgb literals on any button
 │   │   │                         #   (`default`·`compactMobile`·`compactPrimary`·`sm`·`md`), press depth = shadow depth.
+│   ├── lib/shortcuts.js   # ⭐ ADR-100 — THE ONE LIST OF KEYS. Rendered by
+│   │                     #   `focus/ShortcutSheet.jsx` (hold `?`); implemented in PomodoroEngine
+│   │                     #   (Space) and App (1–5). ⚠️ Nothing static may advertise these — round
+│   │                     #   40's law, which round 63 broke and round 64 restored.
 │   ├── lib/viewports.js   # ⭐ ADR-099 — THE FRAMES, IN ORDER. `LAPTOP` (chrome 1440×790, the
 │   │                     #   BROWSER window, not the 1470×956 display) is the reference; `PHONE`
 │   │                     #   is second, never dropped. `TWO_COLUMN_MIN` (1280) is where a laptop

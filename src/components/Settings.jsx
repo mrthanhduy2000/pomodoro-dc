@@ -300,8 +300,14 @@ export default function Settings() {
         </div>
       </div>
 
-      <div className="grid gap-4 md:grid-cols-2">
-        <Card lightTheme={lightTheme} className="md:col-span-2" title="Bộ hẹn giờ" description="Nhịp làm việc, khoảng nghỉ và cách app tự chuyển trạng thái.">
+      {/*
+        ⚠️ ROUND 64 (ADR-100): `xl:items-start` — without it every row of this grid stretches to the
+        tallest card in it, so the one open section (Bộ hẹn giờ) pads nine folded rows to its own
+        height and the screen grows instead of shrinking. Round 62 folded them; this makes the fold
+        pay on the frame that needed it.
+      */}
+      <div className="grid gap-4 md:grid-cols-2 xl:block xl:columns-2 xl:gap-4 [&>*]:xl:mb-4 [&>*]:xl:break-inside-avoid">
+        <Card lightTheme={lightTheme} className="md:col-span-2 xl:col-span-1" title="Bộ hẹn giờ" description="Nhịp làm việc, khoảng nghỉ và cách app tự chuyển trạng thái.">
           <div className="mt-4 space-y-3">
             <div className="grid grid-cols-2 gap-3">
               <NumberStepper

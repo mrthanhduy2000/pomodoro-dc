@@ -40,6 +40,9 @@ import { pickFocusMoment } from './focusMomentPick';
 
 export default function FocusMoment({
   weeklyUnseen = false, onOpenWeekly, onNavigate, sessionInProgress = false,
+  // ⚠️ ROUND 64 (ADR-100): what the postcard caption is ALREADY saying, so this slot never echoes
+  // it. Both read `describeStageCountdown`, and about 60 px apart that reads as a stutter.
+  alreadyShown = null,
 }) {
   const enterMotion = useEnterMotion();
   // Nhịp `reward` — dành riêng cho phần thưởng và cột mốc; nguồn duy nhất là `lib/motionPresets.js`.
@@ -51,7 +54,7 @@ export default function FocusMoment({
   const nextAction = useNextAction();
 
   const moment = pickFocusMoment({
-    stage, streak, weeklyUnseen, sessionInProgress, onOpenWeekly, nextAction, onNavigate,
+    stage, streak, weeklyUnseen, sessionInProgress, onOpenWeekly, nextAction, onNavigate, alreadyShown,
   });
   if (!moment) return null;
 

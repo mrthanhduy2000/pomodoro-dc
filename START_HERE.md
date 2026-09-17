@@ -32,7 +32,26 @@ Production branch `main` carries **both** work streams (merged 2026-08-28 on Đ�
 ⚠️ Phase 21 therefore shipped **before** Đàm reviewed its screenshots — the "waiting on Đàm's eyes"
 item below is still live, it just now reviews something already running.
 
-- **Loop — ROUND 63 (2026-09-17, LATEST): THE REFERENCE FRAME MOVES TO THE LAPTOP (ADR-099).**
+- **Loop — ROUND 64 (2026-09-17, LATEST): FIVE FAULTS ĐÀM COULD SEE (ADR-100).**
+  ⚠️ **NEVER PUT A STATIC HINT ON SCREEN.** Round 63 quoted round 40's law and then shipped one
+  anyway. Discovery is `focus/ShortcutSheet.jsx` — **hold `?`** — plus hover `title`s. List lives in
+  `lib/shortcuts.js`; adding a key means adding a row there or it is undiscoverable.
+  ⚠️ **ONE TRUTH ONCE, CHECKED BY VALUE.** `pickFocusMoment` takes `alreadyShown` and skips any
+  candidate whose rendered TEXT matches the postcard caption. Gating a branch fixes one instance;
+  comparing text fixes the class.
+  ⚠️ **THE WIDTH IS ONE BUDGET, AND 868 IS THE CENTRE.** 1.440 − 232 sidebar − 340 rail. A
+  `640 | rest` split leaves 196 px: round 63 shipped that and the goal card became one word wide.
+  **A number that improves while the screen gets worse is measuring the wrong thing.** Reverted.
+  ⚠️ **THE RAIL CARRIES THE DAY, NOT THE WEEK** (`section="daily"`): 1.627 → 1.033 px. The full
+  weekly card lives in Hành trang › Kỹ năng and Tiến trình — never put it back in the rail.
+  ⚠️ **Thống kê fits 790 px now** (`xl:columns-2`, 1.289 → 771). Cài đặt 1.427 → 1.058.
+  ⚠️ **While a timer runs: ONE column, wide** — postcard 1.100 px, 91 % of the width, 0 new
+  indicators/numbers/colours.
+  ⚠️ **Category hue belongs on Thống kê, not on the Focus chip** — six raw hexes in `constants.js`
+  predate the three-colour law, which never reached them.
+  ⚠️ Still measured, unfixed: Hành trang 1.566 · Thành Phố 1.060 · Focus column 1.530.
+
+- **Loop — ROUND 63 (2026-09-17): THE REFERENCE FRAME MOVES TO THE LAPTOP (ADR-099).**
   ⚠️ **`lib/viewports.js` IS THE FRAME, AND IT IS THE LAPTOP.** Every brief from round 38 to 62 said
   390px was what Đàm used most; it is **2%**, a MacBook Air M3 is **98%**. Design against
   `LAPTOP.chrome` = **1440 × 790** — the BROWSER window, not the 1470 × 956 display.
@@ -113,20 +132,8 @@ item below is still live, it just now reviews something already running.
   for). A person needs "walk around them", and the clearance question is "does the camera end up
   inside a wall", not "does the flight graze one".
 
-- **Loop — ROUNDS 55 + 56 (2026-09-12): SHAPE BY HOW A THING IS MADE.** Branch
-  `claude/city-skill-points-display-7k4nof`. Detail in `BAN_GIAO.md`; five laws live here:
-  ⚠️ **Two coaxial lathes always meet in a HORIZONTAL circle.** Round 52's hair cap sat 36% inside
-  the skull, so the visible hairline was that intersection, not the rim drawn — identical at all 60
-  azimuths. A cap must be provably OUTSIDE the skull for its own rim to be the boundary.
-  ⚠️ **A colour boundary must not sit where real life has none** (Đàm, R56). Third instance of one
-  defect shape: joint balls as rivets · a neck as a white collar · the hairline. All three found by
-  a PHOTOGRAPH; none by any of 1,784 tests.
-  ⚠️ **Roles on a resident cost NO draw calls** — one `InstancedMesh` per SHAPE, colour per instance.
-  ⚠️ **A table has a test; the place that CONSUMES it may not.** Role `steel` reached `HUMAN_ROLES`,
-  `palette3d.js` and an exception list in `palette3d.test.js` at round 49 — and never reached
-  `sceneGraph.js`, so every helmet rendered in the era's CLOTH colour for three weeks.
-  ⚠️ **The preview tool lied twice more** (5th and 6th): it could not photograph a face at all
-  (34.4° default pitch), and above 1400 px it wrote BLACK images while reporting success.
+- **Loop — ROUNDS 55 + 56 (2026-09-12): SHAPE BY HOW A THING IS MADE.** Moved verbatim to
+  `docs/archive/START_HERE_LOG_2026-09-06.md` — `grep -n 'ROUNDS 55'` there.
 
 - **Loop — ROUND 54 (ADR-094): FROM BLOCKS TO ROUND.** Archived verbatim (2026-09-12). Still-live:
   **the crease ANGLE needs no role table** (4-gon 90° sharp · 12-gon 30° smooth · side-meets-cap 90°

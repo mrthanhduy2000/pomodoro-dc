@@ -1,4 +1,64 @@
-> Last update: **2026-09-17** — **ROUND 63: THE REFERENCE FRAME MOVES TO THE LAPTOP (ADR-099).**
+> Last update: **2026-09-17** — **ROUND 64: FIVE FAULTS ĐÀM COULD SEE (ADR-100).**
+> Order: *"Lệnh vòng 63 ghi rõ: 'Không thêm thứ đứng yên trên màn hình để quảng cáo phím tắt.'…
+> nhưng cái ô này thì không."* Everything on `main`, on top of round 63.
+>
+> ### ⚠️ Vòng này mở đầu bằng việc vòng trước phá chính luật của nó
+> Vòng 63 chép nguyên luật vòng 40 vào đề bài của mình, rồi ship một dòng chữ ĐỨNG YÊN quảng cáo
+> phím tắt. **Đàm bắt được bằng ảnh chụp — vòng thứ BA liên tiếp máy ảnh thấy thứ lý lẽ bỏ sót.**
+>
+> ### Done — năm lỗi Việc 0
+> 1. **Giữ `?` thì bảng phím tắt hiện, thả ra thì biến mất** (`focus/ShortcutSheet.jsx`, danh sách ở
+>    `lib/shortcuts.js`). Cách hỏi cùng hình dạng với thứ được hỏi.
+> 2. **Một sự thật nói một lần, chặn theo GIÁ TRỊ chứ không theo nhánh.** `pickFocusMoment` nhận
+>    `alreadyShown` và bỏ qua mọi ứng viên có CHỮ trùng thứ tấm ảnh thành phố vừa nói. Gác riêng
+>    nhánh `stage` thì chữa được ca này và bỏ sót ca sau — Đàm đúng khi gọi đây là một LOẠI lỗi.
+> 3. **Viên nhãn danh mục thôi tự tô màu của chính nó.** Sáu mã màu thô trong `constants.js` có
+>    trước luật ba màu của vòng 39, và vì chúng nằm ở `constants.js` chứ không ở component nào nên
+>    luật ấy chưa bao giờ với tới. Màu giữ việc ở **Thống kê**, nơi sáu danh mục được SO SÁNH.
+> 4. **Một tiêu đề thay vì hai.** ⚠️ Bản nháp đầu XOÁ viên «Tuỳ chọn» và một bài test đỏ đúng chỗ:
+>    viên ấy là nơi DUY NHẤT màn hình nói mục tiêu không bắt buộc. Gộp chứ không xoá →
+>    «MỤC TIÊU PHIÊN · Tuỳ chọn». Một bài test bắt được một sửa đổi TRÔNG NHƯ ĐÚNG là bằng chứng rẻ
+>    nhất rằng luật "xếp lại, không cắt" đang chịu lực.
+> 5. **Ô ghi chú thôi là trình soạn thảo gắn vào đồng hồ.** Đếm được: 8 nút định dạng · 1 highlight ·
+>    5 ô màu · nút «Cách dùng» · 5 chip · bộ đếm từ. Giữ **B** + checklist, gấp phần còn lại sau một
+>    nút «⋯». ⚠️ Mọi phím tắt vẫn chạy dù nút có hiện hay không.
+>
+> ### Done — các mạch lớn
+> 6. **CỘT PHẢI: 1.627 → 1.033 px (−37%).** Phân tích chỉ đích danh: AI Coach 145 · thẻ ngày 458 ·
+>    **thẻ tuần 646**. `section="daily"` đổi thẻ tuần lấy dòng tóm tắt vòng 62 đã dựng sẵn.
+>    ⚠️ Không mất gì: thẻ tuần đầy đủ vẫn đứng ở Hành trang › Kỹ năng và tab Tiến trình.
+> 7. **Thống kê 1.289 → 771 px — dưới nếp gấp 790, KHÔNG CÒN CUỘN.** Cài đặt 1.427 → 1.058 (−26%).
+> 8. **Lúc chạy: MỘT cột và nó rộng.** Tấm ảnh thành phố 730 → **1.100 px**, thẻ đồng hồ 640 → 820,
+>    **91% bề ngang được dùng (trước 67%)**. ⚠️ 0 chỉ báo/số/màu mới — cùng phần tử, vẽ to hơn.
+>    ⚠️ Và lưới hai cột nay TẮT lúc chạy: bản dựng đầu để nó bật, ảnh chụp cho thấy đồng hồ lệch
+>    sang trái với một thanh «GHI CHÚ PHIÊN» lạc lõng bên cạnh. **Lại là máy ảnh.**
+>
+> ### ⚠️ ĐÍNH CHÍNH một con số của chính vòng 63
+> Vòng 63 báo *"thẻ kết phiên 1.666 px — 2,11 màn"*. **Sai**: đó là CỘT PHẢI đo xuyên qua lớp phủ.
+> Đo thẳng vào `[role=dialog]` vòng này: hộp thoại 1.440 × 790 và **không có gì bên trong tràn** —
+> thẻ kết phiên vốn đã vừa. Đây là bài học đo đạc #30 được ghi lại rồi lặp lại ngay trong chính cái
+> bảng ghi nó: **một con số không có ĐỊA CHỈ thì không phải phép đo**, và một con số của tôi đã
+> không có địa chỉ.
+>
+> ### ⚠️ VÀ HOÀN TÁC lưới hai cột của vòng 63
+> Cột giữa trên khung chuẩn là **868 px** (1.440 − 232 cột trái − 340 cột phải). Chia `640 | phần
+> còn lại` thì ô phải còn **196 px** — và ảnh chụp vòng này cho thấy cái giá: thẻ mục tiêu phiên
+> rộng đúng một từ, nhãn vỡ ba dòng, nút gói bốn dòng. **Vòng 63 báo đó là thắng lợi −24% chiều cao,
+> và đúng là vậy — trong khi ô nhập chính của màn hình thành không dùng được.**
+> ⚠️ **Một con số tốt lên trong khi màn hình xấu đi là một con số đo nhầm thứ.**
+> Phần thắng thật không đến từ hai cột: nó đến từ việc bỏ `xl:min-h-[88vh]` — cái đó ở lại.
+>
+> ### Kết quả đo
+> Số vùng phải cuộn ở 1.440 × 790: **6/8 → 5/8** (vòng 63 ghi 7/8; một trong tám là thẻ kết phiên,
+> mà đính chính ở trên cho thấy nó chưa bao giờ cuộn) · nhãn chữ hoa màn Tập trung **17 → 14**.
+> Còn lại, có số chứ không đoán: Hành trang 1.566 px · Thành Phố 1.060 px · cột giữa 1.530 px.
+>
+> ### Gates
+> lint ✅ · build ✅ · `npm run test:quiet` — xem lần chạy ghi kèm commit.
+
+---
+
+> Previous: **2026-09-17** — **ROUND 63: THE REFERENCE FRAME MOVES TO THE LAPTOP (ADR-099).**
 > Order: *"Tôi dùng app này 98% thời gian trên MacBook Air M3, 2% trên iPhone… Mọi prompt từ vòng 38
 > tới 62 đều ghi '390px — khung tôi dùng nhiều nhất'. Sai."* Everything on `main`, on top of round 62.
 >

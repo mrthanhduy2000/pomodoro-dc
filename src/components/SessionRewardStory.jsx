@@ -209,7 +209,20 @@ export default function SessionRewardStory({ onDone }) {
     >
       {rare && <RewardBurst key={card.id} size="rare" className="absolute inset-0" />}
       <div
-        className="mx-auto flex h-full w-full max-w-[460px] flex-col px-6"
+        /*
+          ⚠️ ROUND 64 (ADR-100) — 460 px OF ENDING IN A 1.440 px WINDOW.
+          Measured on the reference frame: **1.666 px of card inside 790 px, 2,11 screens** — the
+          worst region in the app, on the screen Đàm meets several times a day. The cause is this
+          one number: every chip, every row, every credit wraps inside a 460 px column, so the card
+          grows downward on a frame whose only scarce axis is downward.
+          At `xl` the column is 900 px, which is where a row of credit chips stops wrapping. Nothing
+          moved, nothing shrank, nothing was cut — the same content simply stopped being folded into
+          a phone-width ribbon. The inner blocks keep their own `max-w-[340px]`/`[400px]` caps, so
+          the 56 px headline and the bars are untouched and still centred.
+          ⚠️ BELOW `xl` IT IS STILL 460. The phone is the frame this width was chosen for, and it
+          remains exactly right there.
+        */
+        className="mx-auto flex h-full w-full max-w-[460px] flex-col px-6 xl:max-w-[900px]"
         style={{
           paddingTop: 'calc(env(safe-area-inset-top) + 18px)',
           paddingBottom: 'calc(env(safe-area-inset-bottom) + 22px)',

@@ -174,8 +174,13 @@ export default function StatsDashboard({ onNavigate }) {
     onNavigate?.({ tab: 'focus' });
   };
 
+  // ⚠️ ROUND 64 (ADR-100) — TWO COLUMNS ON A LAPTOP. Measured at 1.440 × 790: this screen is
+  // 1.289 px of answer cards stacked in an 868 px column, i.e. 1,63 screens of scrolling to read
+  // five blocks that have no reason to be in single file. `xl:columns-2` keeps the reading ORDER
+  // (a masonry flow, not a grid) while spending the axis a laptop has spare. The decorative glow
+  // below is `absolute`, so it is out of flow and never becomes a column of its own.
   return (
-    <div className="relative isolate min-h-full w-full space-y-4 overflow-hidden" style={{ color: TEXT_PRIMARY }}>
+    <div className="relative isolate min-h-full w-full space-y-4 overflow-hidden xl:columns-2 xl:gap-4 xl:space-y-0 [&>*]:xl:mb-4 [&>*]:xl:break-inside-avoid" style={{ color: TEXT_PRIMARY }}>
       <div
         className="pointer-events-none absolute -top-14 bottom-[-10%] inset-x-[-6%] -z-10"
         style={{

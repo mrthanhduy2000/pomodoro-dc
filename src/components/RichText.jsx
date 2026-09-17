@@ -443,6 +443,9 @@ export function RichNoteEditor({
   const lastCommittedValueRef = useRef(String(value ?? ''));
   const hasInitializedEditorRef = useRef(false);
   const [showGuide, setShowGuide] = useState(false);
+  // ⚠️ ROUND 64 (ADR-100): the advanced half of the toolbar. Closed by default — see the block
+  // comment at the toolbar for the count that made it worth folding.
+  const [showAllTools, setShowAllTools] = useState(false);
   const [isFocused, setIsFocused] = useState(false);
   const computedWordCount = useMemo(() => countRichTextWords(value), [value]);
   const visibleWordCount = Number.isFinite(wordCount) ? wordCount : computedWordCount;
@@ -816,6 +819,45 @@ export function RichNoteEditor({
 
   return (
     <div className="relative space-y-3">
+      {/*
+        ⚠️ ROUND 64 (ADR-100) — A TEXT EDITOR WAS BOLTED TO A CLOCK, AND MOST OF IT IS FOLDED NOW.
+        Counted on the note box of a finished session: **8 format buttons · 1 highlight · 5 colour
+        swatches · a "Cách dùng" button · 5 tag chips · a word counter** — for a field whose job,
+        in Đàm's words, is *"vừa xong một phiên và muốn ghi hai dòng"*. Two lines of text do not need
+        a callout block, an inline-code span and five highlight colours competing for the eye at the
+        moment the session ends.
+        ⚠️ NOTHING WAS DELETED AND THE POWER USER LOSES NOTHING. **B** and the checklist stay out —
+        the two a two-line note actually reaches for — and the other six plus the colours sit behind
+        one «⋯» toggle. Every keyboard shortcut (⌘B ⌘I ⌘U ⌘E ⌘K ⌘⇧X ⌘⇧7 ⌘⇧9 ⌘⇧H) keeps working
+        whether its button is on screen or not, so folding costs nothing at all to anyone who
+        already knows the keys.
+        ⚠️ «Cách dùng» went into the fold with them: it is help for the half that is now hidden.
+      */}
+      <div className="flex flex-wrap items-center gap-2">
+        <FormatButton label="In đậm" shortcut="Cmd/Ctrl+B" lightTheme={lightTheme} onClick={() => applyFormat('bold')}>
+          <strong>B</strong>
+        </FormatButton>
+        <FormatButton label="Checklist" shortcut="Cmd/Ctrl+Shift+7" lightTheme={lightTheme} onClick={() => applyFormat('check')}>
+          <svg aria-hidden="true" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+            <path d="M4 6h16M4 12h16M4 18h16" />
+          </svg>
+        </FormatButton>
+        <button
+          type="button"
+          onMouseDown={(event) => event.preventDefault()}
+          onClick={() => setShowAllTools((v) => !v)}
+          aria-expanded={showAllTools}
+          title={showAllTools ? 'Thu gọn công cụ' : 'Thêm công cụ định dạng'}
+          className={`flex size-8 items-center justify-center rounded-[10px] border text-[13px] font-semibold transition-colors focus-visible:outline-none focus-visible:ring-2 ${
+            lightTheme
+              ? 'border-[var(--line)] bg-[var(--card-bg-solid)] text-[var(--muted)] focus-visible:ring-[rgba(31,30,29,0.14)]'
+              : 'border-[var(--line)] bg-[var(--panel-soft)] text-[var(--muted)] focus-visible:ring-[var(--line-2)]'
+          }`}
+        >
+          {showAllTools ? '×' : '⋯'}
+        </button>
+      </div>
+      {showAllTools && (
       <div className="flex flex-wrap items-center gap-2">
         <FormatButton label="In đậm" shortcut="Cmd/Ctrl+B" lightTheme={lightTheme} onClick={() => applyFormat('bold')}>
           <strong>B</strong>
@@ -891,6 +933,7 @@ export function RichNoteEditor({
           Cách dùng
         </button>
       </div>
+      )}
 
       <div className="relative">
         <div

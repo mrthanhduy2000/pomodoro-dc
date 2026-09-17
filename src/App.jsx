@@ -20,6 +20,7 @@ import useJourney from './hooks/useJourney';
 import SessionRewardStory from './components/SessionRewardStory';
 import DayMoment from './components/focus/DayMoment';
 import SkillMoment from './components/focus/SkillMoment';
+import ShortcutSheet from './components/focus/ShortcutSheet';
 import { getEraStage } from './engine/eraStage';
 import { calculateStreakMilestoneProgress, evaluateStreakAtRisk } from './engine/gameMath';
 import FocusCoachMobile from './components/FocusCoachMobile';
@@ -1023,6 +1024,7 @@ export default function App() {
                           onOpenWeekly={openWeeklySummary}
                           onNavigate={handleNotificationNavigate}
                           sessionInProgress={anyTimerRunning}
+                          alreadyShown={railProgress.text}
                         />
                         {/* `mt-4` ở khổ điện thoại (ADR-068): khối chuỗi ở trên tiêu vào biên của nút Bắt
                             đầu, và 8px ở đây rẻ hơn bất kỳ chữ nào. */}
@@ -1096,7 +1098,23 @@ export default function App() {
                             dailyGoalSessions={dailyGoalSessions}
                             dailyGoalMinutes={dailyGoalMinutes}
                           />
-                          <DailyMissions />
+                          {/*
+                            ⚠️ ROUND 64 (ADR-100) — THE RAIL CARRIES THE DAY, NOT THE WHOLE WEEK.
+                            Measured on the reference frame: the rail is the tallest region in the
+                            app, **1.627 px inside 661 px (2,46 screens)**, and the breakdown named
+                            the culprit exactly — AI Coach 145 · daily card 458 · **weekly card 646**.
+                            The weekly card is four steps with four progress bars and a bonus header:
+                            the right thing on a screen you opened to plan a week, and 646 px of a
+                            340 px-wide rail on a screen you opened to press Start.
+                            `section="daily"` swaps it for the ONE-LINE week summary round 62 already
+                            built and tested (`weeklyGlance`, gated on `showDaily && !showWeekly`),
+                            which names the step in progress and what finishing pays.
+                            ⚠️ NOTHING IS LOST: the full weekly card still stands in Hành trang ›
+                            Kỹ năng (`SkillTree.jsx`) and on the Tiến trình tab, one click away, with
+                            room to be read. This is the same swap the phone Focus screen already
+                            makes — the rail simply had never been told.
+                          */}
+                          <DailyMissions section="daily" />
                           <RankDisplay />
                         </div>
                       ) : (
@@ -1394,6 +1412,8 @@ export default function App() {
             thứ gì nằm trong nó KHÔNG BAO GIỜ hiện trên một màn hình bình thường (bẫy đã giấu tấm
             băng-rôn của vòng 41 cho tới khi soi bằng ảnh mới thấy). */}
         <SkillMoment />
+        {/* ⚠️ ROUND 64 (ADR-100): hold `?`, the keys appear; release, they are gone. Nothing static. */}
+        <ShortcutSheet />
         <GlobalOverlays
           lootModalOpen={lootModalOpen}
           prestigeModalOpen={prestigeModalOpen}

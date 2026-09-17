@@ -1,5 +1,5 @@
 import React, { useState, useCallback, useEffect, useMemo } from 'react';
-import { CARD } from './shared/surface';
+import { CARD, EYEBROW } from './shared/surface';
 import { tomTatThietLap } from './pomodoroSetupSummary.js';
 import { AnimatePresence, motion } from 'framer-motion';
 
@@ -1428,12 +1428,11 @@ export default function PomodoroEngine({
   // exactly when Space was the least useful to know about — the interesting case is the running
   // session, where the alternative is reaching for the mouse. It stays a single muted line and it
   // still never appears on a phone (`md:flex`), where there is no keyboard to hint at.
-  const showShortcutHint = !useMinimalFocusStage && !isBreakMode;
 
   const focusSupportContent = (
     <div className={`w-full flex flex-col gap-5 md:gap-6 ${
       useImmersiveHeroLayout
-        ? `mx-auto max-w-[760px] lg:max-w-[780px] xl:max-w-none ${showShortcutHint ? 'pt-0' : 'pt-6 lg:pt-8 xl:pt-0'}`
+        ? 'mx-auto max-w-[760px] lg:max-w-[780px] xl:max-w-none pt-6 lg:pt-8 xl:pt-0'
         : ''
     }`}>
       {/*
@@ -1497,22 +1496,27 @@ export default function PomodoroEngine({
         >
           <div className="flex items-start justify-between gap-3">
             <div className="min-w-0 flex-1">
-              <div className="flex items-center gap-2">
-                <span className={`rounded-full px-2 py-1 text-[11px] font-semibold uppercase tracking-[0.14em] ${
-                  lightTheme
-                    ? 'bg-[rgba(var(--accent-rgb),0.1)] text-[var(--accent2)]'
-                    : 'bg-[var(--panel-soft)] text-[var(--accent-light)]'
-                }`}>
-                  Tuỳ chọn
-                </span>
-                <div className="flex min-w-0 flex-1 items-center justify-between gap-3">
-                  <span className={`mono text-xs font-semibold uppercase tracking-wide ${
-                    lightTheme ? 'text-[var(--accent)]' : 'text-[var(--accent-light)]'
-                  }`}>
-                    Mục tiêu phiên
-                  </span>
-                </div>
-              </div>
+              {/*
+                ⚠️ ROUND 64 (ADR-100) — ONE HEADING WHERE THERE WERE TWO, AND THEY DID NOT EVEN AGREE.
+                A pill reading «TUỲ CHỌN» sat beside a second uppercase label reading «MỤC TIÊU
+                PHIÊN»: two shouts for one section, in two different treatments, wrapping onto two
+                rows in a narrow column so neither read as a sentence. And «Tuỳ chọn» was a fact
+                about the field, not its name — the kind of word that belongs in the body if
+                anywhere, not competing with the title for the eye.
+                One eyebrow now, in the app's single label shape (`EYEBROW`, round 62). Two of the
+                fifteen uppercase labels Đàm counted on this screen become one.
+              */}
+              <span className={EYEBROW} style={{ color: lightTheme ? 'var(--accent)' : 'var(--accent-light)' }}>
+                Mục tiêu phiên
+                {/*
+                  ⚠️ «Tuỳ chọn» STAYS — it is a FACT, not a heading. The first draft of this round
+                  deleted the pill outright and `focusFoldReach.test.js` went red for the right
+                  reason: that pill was the only place the screen said the goal is optional, so
+                  dropping it dropped a fact, which this round's own rule forbids. Merging beats
+                  deleting: one label, one treatment, both things said.
+                */}
+                <span style={{ color: 'var(--muted-2)' }}> · Tuỳ chọn</span>
+              </span>
             </div>
           </div>
 
@@ -1704,19 +1708,18 @@ export default function PomodoroEngine({
     </section>
   );
 
-  const shortcutHint = showShortcutHint ? (
-    <div className="hidden w-full justify-center py-5 md:flex">
-      <p className={`mono px-1 text-center text-[10px] uppercase tracking-[0.2em] ${
-        lightTheme ? 'text-[var(--muted-2)]' : 'text-[var(--muted)]'
-      }`}>
-        {timerState === TIMER_STATES.RUNNING
-          ? 'Space tạm dừng · Shift trái + F full screen · 1–5 đổi tab'
-          : timerState === TIMER_STATES.PAUSED
-            ? 'Space tiếp tục · Shift trái + F full screen · 1–5 đổi tab'
-            : 'Space bắt đầu · Shift trái + F full screen · Shift trái + G thu/mở cột · 1–5 đổi tab'}
-      </p>
-    </div>
-  ) : null;
+  /*
+    ⚠️ ROUND 64 (ADR-100) — THE STATIC HINT IS GONE, AND IT SHOULD NEVER HAVE SHIPPED.
+    Round 63 added a permanent line of text here reading *"SPACE BẮT ĐẦU · SHIFT TRÁI + F FULL
+    SCREEN · SHIFT TRÁI + G THU/MỞ CỘT · 1–5 ĐỔI TAB"* — in the same round whose own brief quoted
+    round 40's law back at itself: *"không thêm thứ đứng yên trên màn hình để quảng cáo phím tắt."*
+    Four things Đàm learns once, occupying the middle column for every second of every session.
+    Đàm found it in the screenshot, which is the third round running that the camera caught what the
+    reasoning missed.
+    Replaced by `focus/ShortcutSheet.jsx`: **hold `?`** and the full list appears, release and it is
+    gone. The affordance has the same shape as the thing it describes, and the screen stays empty
+    when nobody is asking.
+  */
 
   if (fullScreenMode) {
     return (
@@ -1822,19 +1825,52 @@ export default function PomodoroEngine({
             ⚠️ BELOW `xl` NOTHING CHANGES. The phone and the tablet keep the vertical stack and keep
             the vh centring, so a round that re-aims at the laptop cannot cost the phone anything.
           */}
-          <div className="grid w-full grid-cols-1 items-start gap-5 xl:grid-cols-[minmax(0,640px)_minmax(0,1fr)] xl:gap-8">
+          {/*
+            ⚠️ ROUND 64 (ADR-100) — THE TWO-COLUMN GRID IS FOR IDLE ONLY, AND THE PHOTOGRAPH IS WHY.
+            Round 63 split this into clock | setup-stack at `xl`, which is right while Đàm is
+            deciding what to do. The first build of round 64 left that split ON while the timer ran,
+            and the shot showed the cost immediately: the clock pushed off-centre into the left cell
+            with a lone «GHI CHÚ PHIÊN» bar stranded in the right one and a large hole beneath it.
+            While a timer owns the screen there is one thing on it, so there is one column.
+          */}
+          {/*
+            ⚠️ ROUND 64 (ADR-100) — ROUND 63's TWO-COLUMN IDLE GRID IS REVERTED, AND THE ARITHMETIC
+            IS WHY. On the reference frame the centre column is **868 px** (1.440 − 232 sidebar −
+            340 rail). Round 63 split it `640 px clock | rest`, which leaves the right cell
+            **196 px** — and the photograph this round showed what that means: the session-goal card
+            squeezed into a sliver, its label broken across three lines («MỤC TIÊU / PHIÊN · TUỲ /
+            CHỌN»), its textarea one word wide, its button wrapped to four lines. Unusable.
+            ⚠️ THE HEIGHT WIN SURVIVES ANYWAY, because it never came from the columns: it came from
+            dropping `xl:min-h-[88vh]`, which had been reserving 695 px of a 790 px window for the
+            clock alone. That stays. 1.554 → 1.172 px is the same −24 % with the goal card intact.
+            ⚠️ THE LESSON: round 63 measured only HEIGHT and declared the layout good. A number that
+            improves while the screen becomes unusable is a number measuring the wrong thing — the
+            third time in three rounds that the camera caught what the measurement could not.
+          */}
+          <div className="flex w-full flex-col items-stretch gap-5 xl:gap-8">
+            {/*
+              ⚠️ ROUND 64 (ADR-100) — `xl:max-w-[820px]` WHILE A TIMER OWNS THE SCREEN.
+              Đàm, on the round-63 photograph: *"một cột 700px trôi giữa màn 1440px trông như app
+              chưa biết mình đang chạy trên máy nào."* He is right, and the fix is not to fill the
+              margins with content — round 39 bought that emptiness with a measured argument and the
+              veto table still forbids raising the centre's counts. It is to let the ONE thing worth
+              looking at for twenty-five minutes actually be big: the clock card and the city picture
+              above it grow from 640 to 820 px, so the void goes from a stranded column to a margin.
+              ⚠️ ZERO new indicators, numbers or colours — the same elements, drawn larger.
+              ⚠️ ONLY WHEN THE TIMER OWNS THE SCREEN. Idle keeps 640 px, because idle is the state
+              whose right-hand cell now holds the setup stack (round 63) and would be squeezed.
+            */}
             <div className={`flex w-full flex-col items-center gap-5 lg:gap-7 ${
               shouldPrioritizeSessionReview || timerOwnsScreen
                 ? 'justify-start'
                 : 'min-h-[76vh] lg:min-h-[84vh] justify-center xl:min-h-0 xl:justify-start'
             }`}>
-              <div className={`mx-auto flex w-full max-w-[640px] flex-col items-center px-5 md:px-7 ${timerCardPaddingClass}`} style={timerCardStyle}>
+              <div className={`mx-auto flex w-full max-w-[640px] flex-col items-center px-5 md:px-7 ${timerOwnsScreen ? 'xl:max-w-[820px]' : ''} ${timerCardPaddingClass}`} style={timerCardStyle}>
                 {timerStageContent}
               </div>
-              {belowTimer && <div className="mx-auto mt-4 w-full max-w-[640px] md:mt-5">{belowTimer}</div>}
+              {belowTimer && <div className={`mx-auto mt-4 w-full max-w-[640px] md:mt-5 ${timerOwnsScreen ? 'xl:max-w-[820px]' : ''}`}>{belowTimer}</div>}
             </div>
             <div className="flex w-full flex-col xl:pt-0">
-              {shortcutHint}
               {focusSupportContent}
             </div>
           </div>
@@ -1850,7 +1886,7 @@ export default function PomodoroEngine({
           Same rule as above: one column below `xl`, clock beside the setup stack at `xl`, so the
           laptop spends the axis it has (width) instead of the one it lacks (height).
         */
-        <div className="grid w-full grid-cols-1 items-start gap-5 xl:grid-cols-[minmax(0,600px)_minmax(0,1fr)] xl:gap-8">
+        <div className="flex w-full flex-col gap-5 xl:gap-8">
           <div className="flex w-full flex-col">
             <div className={`mx-auto flex w-full max-w-[640px] flex-col items-center px-5 md:px-7 ${timerCardPaddingClass}`} style={timerCardStyle}>
               {timerStageContent}
@@ -1858,7 +1894,6 @@ export default function PomodoroEngine({
             {belowTimer && <div className="mx-auto mt-4 w-full max-w-[640px] md:mt-5">{belowTimer}</div>}
           </div>
           <div className="flex w-full flex-col">
-            {shortcutHint}
             {focusSupportContent}
           </div>
         </div>

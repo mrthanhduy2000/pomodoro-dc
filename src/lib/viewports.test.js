@@ -41,15 +41,16 @@ test('every laptop re-column is gated above the phone', () => {
   // demanded `xl:` and went red on exactly such a line; a guard that fails correct code teaches
   // people to delete guards.
   const grids = [...engine.matchAll(/(\w+:)?grid-cols-\[minmax\([^\]]*\]/g)].map((m) => m[0]);
-  assert.ok(grids.length >= 3, 'the two-column focus layouts are gone — the measurement ran empty');
+  assert.ok(grids.length >= 1, 'no multi-column layout left in the Focus screen — the measurement ran empty');
   for (const g of grids) {
     assert.match(g, /^(sm|md|lg|xl|2xl):/,
       `a two-column layout with no breakpoint prefix would reach the 390 px phone: ${g}`);
   }
-  // And this round's own two — the laptop re-column — must be at `xl`, where a 1.440 px frame
-  // actually has width to spare.
-  const laptopGrids = grids.filter((g) => g.startsWith('xl:'));
-  assert.ok(laptopGrids.length >= 2, `round 63's two laptop grids are missing: ${grids.join(' · ')}`);
-  assert.match(engine, /grid-cols-1[^"'`]*xl:grid-cols-/,
-    'the single-column default must stay the default below the laptop threshold');
+  // ⚠️ ROUND 64 (ADR-100) — THIS CASE USED TO DEMAND ROUND 63's TWO `xl:` GRIDS EXIST, AND THAT WAS
+  // A TEST PINNING AN IMPLEMENTATION INSTEAD OF A RULE. Round 64 removed both with evidence: the
+  // centre column is 868 px on the reference frame, so a `640 | rest` split leaves 196 px and the
+  // session-goal card became one word wide. When the right answer turned out to be "no split", a
+  // guard written around the split went red for doing the right thing. The rule this file actually
+  // owns is the one above — a re-column must never reach the phone — so that is all it asserts now.
+  assert.ok(true);
 });

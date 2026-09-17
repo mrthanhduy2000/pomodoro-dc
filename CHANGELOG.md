@@ -10,6 +10,40 @@
 > **Muốn hiểu VÌ SAO một quyết định được chọn** → `ARCHITECTURE_DECISIONS.md`. **Muốn biết migration
 > cụ thể nào cần chạy** → `MIGRATION.md`.
 
+## 2026-09-17 — Round 64: five faults Đàm could see, and a rail carrying a whole week (ADR-100)
+
+**Purpose.** The round opens with round 63 breaking its own rule: it quoted round 40's *"no static
+thing on screen to advertise shortcuts"* and then shipped a permanent hint line. Đàm found it in a
+screenshot — the third round running in which the camera caught what the reasoning missed.
+
+**Scope.** The hint becomes **hold `?`** (`focus/ShortcutSheet.jsx`, list in `lib/shortcuts.js`).
+`pickFocusMoment` takes `alreadyShown` and skips any candidate whose rendered TEXT matches what the
+postcard caption already says, killing the *"Còn ~5 phiên nữa tới «Nhân Tiền Sử»"* stutter by value
+rather than by branch. The category chip stops painting itself `#ec4899` — the hue keeps its job on
+Thống kê where six categories are compared, not on a filter row where one bit matters. «TUỲ CHỌN» +
+«MỤC TIÊU PHIÊN» merge into one label carrying both facts. The note box keeps **B** and the checklist
+and folds the other six tools plus the colours behind one «⋯», with every keyboard shortcut still
+live. The right rail swaps its 646 px weekly card for the one-line summary round 62 already built:
+**1.627 → 1.033 px (−37 %)**, with the full card still standing in Hành trang and on Tiến trình.
+Thống kê and Cài đặt flow into two columns at `xl` — **1.289 → 771 px (no scroll at all)** and
+**1.427 → 1.058 px**. While a timer runs there is one column and it is wide: the postcard goes
+730 → 1.100 px, **91 % of the content width used (was 67 %)**.
+
+**Impact.** Regions needing a scroll at 1.440 × 790: **6/8 → 5/8**. Uppercase labels on one Focus
+screen: **17 → 14**. No economy, no balance, no new mechanic; TECH_DEBT #104 untouched; every laptop
+change gated at `xl` so the phone is unchanged (2.444 px, identical).
+
+**Also reverted.** Round 63's two-column idle Focus grid: on the reference frame the centre is 868 px,
+so a `640 | rest` split leaves 196 px and the session-goal card became one word wide. Round 63
+reported it as a −24 % height win, and it was — while the screen's main input stopped working. The
+height win came from dropping `min-h-[88vh]`, which stays.
+
+**Correction to round 63's table.** It reported the ending card at 1.666 px. That was the right rail
+measured behind the overlay; measured directly, the ending already fits 790 px and nothing inside it
+overflows.
+
+**Compatibility.** No migration, no persisted-state change.
+
 ## 2026-09-17 — Round 63: the reference frame moves to the laptop, and height becomes the scarce axis (ADR-099)
 
 **Purpose.** Every brief from round 38 to 62 named 390px as the frame Đàm used most. It is 2% of his

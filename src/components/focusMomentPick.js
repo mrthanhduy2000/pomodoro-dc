@@ -30,9 +30,23 @@
  *
  * @returns {{icon: string, text: string, strong: boolean, badge?: string|null, onClick?: Function} | null}
  */
+/**
+ * ⚠️ ROUND 64 (ADR-100) — `alreadyShown` EXISTS BECAUSE THIS LINE SAID THE SAME THING TWICE.
+ * `describeStageCountdown` has TWO readers: the postcard caption (`railProgress.text`, printed on
+ * the picture it describes) and this picker. When the countdown was the winning moment, Đàm saw
+ * *"Còn ~5 phiên nữa tới «Nhân Tiền Sử»"* twice, **about 60 px apart** — which is round 62's
+ * `38/75 còn 37` fault in a different costume, and the reason that round called this a recurring
+ * class rather than a one-off.
+ * ⚠️ IT SKIPS BY VALUE, NOT BY BRANCH. Gating only the `stage` branch would fix this instance and
+ * leave the next one; comparing the rendered TEXT catches any future source that happens to land on
+ * a sentence the screen already carries. The picker then falls through to the next candidate, so
+ * nothing is lost — the slot just stops echoing.
+ */
 export function pickFocusMoment({
   stage, streak, weeklyUnseen, sessionInProgress, onOpenWeekly, nextAction, onNavigate,
+  alreadyShown = null,
 }) {
+  const echoes = (text) => Boolean(alreadyShown) && String(text ?? '').trim() === String(alreadyShown).trim();
   // ADR-079: while a timer runs (focus or break) the line is SILENT — every branch. A countdown to
   // the next stage, a streak at risk, a milestone: all true, all a second thing to read while the
   // only question is "how long is left". They come back the moment the timer stops.
@@ -60,11 +74,11 @@ export function pickFocusMoment({
   // ⚠️ Và xét theo chính thước "nhường trước cho thứ hết hạn" ở nhánh cuối: cửa sổ tổng kết tuần
   // dài tới **7 ngày** (hết tuần mới đóng), còn "còn ~2 phiên nữa" chỉ đúng đôi ba ngày rồi thành
   // một lời chúc mừng. Thứ hết hạn SỚM HƠN phải được nói trước.
-  if (streak) {
+  if (streak && !echoes(streak.text)) {
     const strong = streak.tone === 'imminent' || streak.permanent;
     return { icon: strong ? '🔥' : '·', text: streak.text, strong };
   }
-  if (stage) {
+  if (stage && !echoes(stage.text)) {
     const imminent = stage.tone === 'imminent';
     return { icon: imminent ? '🔥' : '◈', text: stage.text, strong: imminent };
   }

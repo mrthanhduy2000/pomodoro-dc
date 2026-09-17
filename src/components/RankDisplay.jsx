@@ -108,8 +108,16 @@ export default function RankDisplay() {
           </p>
         ) : (
           <div className="mt-4 border-t pt-4" style={{ borderColor: 'var(--line)' }}>
+            {/*
+              ⚠️ ROUND 64 (ADR-100) — «BẬC KẾ TIẾP» GONE: A SECOND SHOUT INSIDE ONE SMALL CARD.
+              Đàm counted ~15 uppercase labels on one Focus screen and the principle he set decides
+              this one: *a label exists to say what the thing below it is — if the content already
+              says that, the label is spare words.* This card is already titled «BẬC KỶ NÀY», and
+              the row underneath reads «→ 🔨 Thợ Đóng Tàu · +7% XP»: an arrow into a rank name with
+              a buff is unmistakably the NEXT rank. Two labels in a 300 px card was one too many.
+            */}
             <div className="flex items-baseline justify-between gap-3">
-              <p className={eyebrowClass} style={{ color: 'var(--muted-2)' }}>Bậc kế tiếp</p>
+              <span aria-hidden="true" className="text-[13px]" style={{ color: 'var(--muted-2)' }}>→</span>
               <span className="text-[13px] font-semibold" style={{ color: 'var(--accent2)' }}>
                 {step.next.icon} {step.next.label} · {step.next.buffLabel}
               </span>

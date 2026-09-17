@@ -32,7 +32,25 @@ Production branch `main` carries **both** work streams (merged 2026-08-28 on Đ�
 ⚠️ Phase 21 therefore shipped **before** Đàm reviewed its screenshots — the "waiting on Đàm's eyes"
 item below is still live, it just now reviews something already running.
 
-- **Loop — ROUND 62 (2026-09-17, LATEST): ONE VISUAL VOCABULARY FOR EIGHT SCREENS (ADR-098).**
+- **Loop — ROUND 63 (2026-09-17, LATEST): THE REFERENCE FRAME MOVES TO THE LAPTOP (ADR-099).**
+  ⚠️ **`lib/viewports.js` IS THE FRAME, AND IT IS THE LAPTOP.** Every brief from round 38 to 62 said
+  390px was what Đàm used most; it is **2%**, a MacBook Air M3 is **98%**. Design against
+  `LAPTOP.chrome` = **1440 × 790** — the BROWSER window, not the 1470 × 956 display.
+  ⚠️ **THE SCARCE AXIS FLIPS WITH THE FRAME**: a phone lacks WIDTH, a laptop lacks HEIGHT. Fourteen
+  rounds of habits (stack it, cap the column, let it scroll) optimise the plentiful axis here. Every
+  laptop re-column is gated at `xl` (`TWO_COLUMN_MIN`), so the phone never pays for a laptop fix —
+  `viewports.test.js` fails an ungated one.
+  ⚠️ **The width is ONE budget**: sidebar 232 + centre + rail 340 share 1.440. Widening the rail to
+  400 bought 85px of rail and cost **568px** of the column beside it — measured, then reverted.
+  ⚠️ **Space means start · pause · resume** (it was idle-only for 26 rounds), **1–5 switch tabs** in
+  the sidebar's order. Both refuse under a modifier, in a text field, and mid-ending. Discovery is a
+  hover `title`, never a static banner (round 40's law).
+  ⚠️ **MEASURING LESSON #30**: `shot.mjs` prints the TALLEST scroller, which for four builds was the
+  right rail, not the content — I nearly reverted a fix that was cutting 370px. Enumerate every
+  scroller with its width and x, never read one number. **A number with no ADDRESS is not a measurement.**
+  Still measured-but-unfixed: rail 1.627px (2,46 screens) · Hành trang 1.584 · Cài đặt 1.427 · ending 1.666.
+
+- **Loop — ROUND 62 (2026-09-17): ONE VISUAL VOCABULARY FOR EIGHT SCREENS (ADR-098).**
   2D screens only — this round does not touch the 3D-city stream (rounds 47–61). Round 39's four
   numbers guarded Focus for seven rounds and guarded nothing else. The count that decided it: the
   small uppercase label had **22 size+tracking shapes over 111 uses**; the card surface had **7 local
@@ -71,26 +89,8 @@ item below is still live, it just now reviews something already running.
   stretch, back on the wide part of the rising slope. Wide and shallow clears it; narrow and deep
   does not.
 
-- **Loop — ROUND 60 (2026-09-16): THE RULER WAS READING BACKWARDS, AND THE CLOTHES HAD NO SEAMS.**
-  Detail in `BAN_GIAO.md` and ADR-096; four laws live here:
-  ⚠️ **A NaN LOSES EVERY COMPARISON, so there is no safe way to write the comparison.** `NaN < x`,
-  `NaN > x` and `NaN >= x` are all false, so a broken quantity silently picks one of the two
-  answers. Round 57's close-up gate passed a DISTANCE where a BOX was wanted; `!box` is true for the
-  number `0`, which is exactly what `nearestBlocker` answers when the camera is inside a building —
-  so the gate was **exactly inverted for three rounds** and nothing threw. Check the quantity BEFORE
-  it meets a threshold (`finite.js`), and let it die there.
-  ⚠️ **ABSENT is not MALFORMED.** No ray and no box mean "nothing was hit" — the right answer for a
-  tap on empty sky. A present-but-broken argument is a bug and must throw. Collapsing the two is how
-  `!box` swallowed a zero.
-  ⚠️ **A test can be right about the code and wrong about the world.** With the gate fixed, four
-  eras walked round BEHIND the resident and every check stayed green: the standing spot was clear
-  and the ray to the eye hit nothing. The fault was the SEARCH ORDER. *A face seen from farther away
-  is still a face; the back of a head at any distance is not* — so back off before turning past 90°.
-  ⚠️ **A STEP IS ONLY AN EDGE WHILE IT STAYS SHARP.** `smoothCrease` averages anything under 40°, so
-  a garment edge that measures right on every number can still be absent from the photograph — the
-  belt's upper edge came out at 35.0°. And the first definition of "edge" (*any crease over 40°*)
-  called a plain torso tailored, because `chest` has had a 53.6° waist since round 52. The question
-  is a DIRECTION, not a sharpness: an outward ledge, sharp at BOTH ends.
+- **Loop — ROUND 60 (2026-09-16): THE RULER WAS READING BACKWARDS.** Moved verbatim to
+  `docs/archive/START_HERE_LOG_2026-09-06.md` — `grep -n 'ROUND 60'` there.
 
 - **Loop — ROUND 58 (2026-09-13): THE FIRST TIME I LOOKED A RESIDENT IN THE FACE (ADR-095).**
   Archived verbatim. Still-live: a sum of convex bodies is not a smooth surface, only asymmetric
@@ -178,13 +178,10 @@ item below is still live, it just now reviews something already running.
   `docs/archive/START_HERE_LOG_2026-09-06.md` — `grep` it when you need that round. Its still-live
   rules live in `docs/UI_INVARIANTS.md` (static budget zero); nothing was deleted.
 
-- **Loop — ROUND 39 (2026-09-07): WHILE A TIMER RUNS, THE FOCUS SCREEN IS THE TIMER (ADR-079).**
-  Moved verbatim to `docs/archive/START_HERE_LOG_2026-09-06.md`. ⚠️ Its four numbers are STILL THE
-  LAW and round 62 extended them past the Focus screen: 1 chỉ báo · ≤2 số · ≤3 màu · **0 chữ cắt**.
+- **Loop — ROUND 39 (2026-09-07):** Moved verbatim to `docs/archive/START_HERE_LOG_2026-09-06.md`.
 
-- **Loop — ROUNDS 37 & 38 (2026-09-06/07): A SESSION ALWAYS LAYS A BRICK (ADR-077) · THE CITY IN
-  THE LOOP (ADR-078).** Moved verbatim to `docs/archive/START_HERE_LOG_2026-09-06.md` —
-  `grep -n 'ROUNDS 37'` there. Nothing deleted; still-live rules live in `docs/UI_INVARIANTS.md`.
+- **Loop — ROUNDS 37 & 38 (2026-09-06/07):** Moved verbatim to
+  `docs/archive/START_HERE_LOG_2026-09-06.md`.
 
 ## Commands
 ```

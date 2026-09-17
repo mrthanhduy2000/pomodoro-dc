@@ -244,21 +244,39 @@ export default function PomodoroEngine({
     return true;
   }, [isOnBreak, start, timerState]);
 
+  /*
+    ⚠️ ROUND 63 (ADR-099) — SPACE NOW COVERS THE WHOLE SESSION, NOT JUST ITS FIRST SECOND.
+    The shortcut existed since round 37 but was gated on `IDLE`, so it started a session and then
+    went dead for the next 25 minutes: to pause, Đàm had to leave the keyboard his hands were
+    already on and find a button with the mouse. On the reference frame (a laptop, 98% of his use)
+    that is the single most repeated piece of friction in the app.
+    ⚠️ ONE KEY, THREE MEANINGS, EACH THE ONLY SENSIBLE ONE FOR ITS STATE: idle → start ·
+    running → pause · paused → resume. It never cancels — cancelling is destructive and keeps its
+    confirm dialog.
+    ⚠️ STILL REFUSES WHEN A MODIFIER IS HELD OR A FIELD HAS FOCUS. ⌘/Ctrl/Alt combinations belong to
+    the browser and the OS, and a Space typed into the session-goal box must stay a space.
+  */
   useEffect(() => {
-    if (isOnBreak || timerState !== TIMER_STATES.IDLE) return undefined;
+    if (isOnBreak) return undefined;
 
     const handleKeyDown = (event) => {
       if (event.defaultPrevented || event.repeat || event.metaKey || event.ctrlKey || event.altKey) return;
       if (!isSpaceKeyEvent(event)) return;
       if (isEditableShortcutTarget(event.target)) return;
 
-      event.preventDefault();
-      handleStartSession();
+      if (timerState === TIMER_STATES.IDLE) {
+        event.preventDefault();
+        handleStartSession();
+        return;
+      }
+      if (timerState === TIMER_STATES.RUNNING) { event.preventDefault(); pause(); return; }
+      if (timerState === TIMER_STATES.PAUSED) { event.preventDefault(); resume(); }
     };
 
     const handleKeyUp = (event) => {
       if (!isSpaceKeyEvent(event)) return;
       if (isEditableShortcutTarget(event.target)) return;
+      // Swallow the key-up too: without it the browser scrolls the page a screen on release.
       event.preventDefault();
     };
 
@@ -268,7 +286,7 @@ export default function PomodoroEngine({
       document.removeEventListener('keydown', handleKeyDown, true);
       document.removeEventListener('keyup', handleKeyUp, true);
     };
-  }, [handleStartSession, isOnBreak, timerState]);
+  }, [handleStartSession, isOnBreak, pause, resume, timerState]);
 
   const prevIsOnBreakRef = React.useRef(isOnBreak);
   useEffect(() => {
@@ -1406,12 +1424,16 @@ export default function PomodoroEngine({
       {timerStageActions}
     </div>
   );
-  const showShortcutHint = !useMinimalFocusStage && !isBreakMode && timerState === TIMER_STATES.IDLE;
+  // ⚠️ ROUND 63 (ADR-099): the hint follows the key. It used to appear only while idle, which is
+  // exactly when Space was the least useful to know about — the interesting case is the running
+  // session, where the alternative is reaching for the mouse. It stays a single muted line and it
+  // still never appears on a phone (`md:flex`), where there is no keyboard to hint at.
+  const showShortcutHint = !useMinimalFocusStage && !isBreakMode;
 
   const focusSupportContent = (
     <div className={`w-full flex flex-col gap-5 md:gap-6 ${
       useImmersiveHeroLayout
-        ? `mx-auto max-w-[760px] lg:max-w-[780px] ${showShortcutHint ? 'pt-0' : 'pt-6 lg:pt-8'}`
+        ? `mx-auto max-w-[760px] lg:max-w-[780px] xl:max-w-none ${showShortcutHint ? 'pt-0' : 'pt-6 lg:pt-8 xl:pt-0'}`
         : ''
     }`}>
       {/*
@@ -1687,7 +1709,11 @@ export default function PomodoroEngine({
       <p className={`mono px-1 text-center text-[10px] uppercase tracking-[0.2em] ${
         lightTheme ? 'text-[var(--muted-2)]' : 'text-[var(--muted)]'
       }`}>
-        Space bắt đầu · Shift trái + F full screen · Shift trái + G thu/mở cột
+        {timerState === TIMER_STATES.RUNNING
+          ? 'Space tạm dừng · Shift trái + F full screen · 1–5 đổi tab'
+          : timerState === TIMER_STATES.PAUSED
+            ? 'Space tiếp tục · Shift trái + F full screen · 1–5 đổi tab'
+            : 'Space bắt đầu · Shift trái + F full screen · Shift trái + G thu/mở cột · 1–5 đổi tab'}
       </p>
     </div>
   ) : null;
@@ -1781,28 +1807,61 @@ export default function PomodoroEngine({
               postcard above it, which is 355 px of guaranteed scroll on a 900 px window with the
               «Tạm dừng» button in the part you cannot see. When a timer owns the screen the stack
               sizes itself instead (`ringSize` subtracts this column's reserve from `100svh`). */}
-          <div className={`w-full flex flex-col items-center gap-5 lg:gap-7 ${
-            shouldPrioritizeSessionReview || timerOwnsScreen
-              ? 'justify-start'
-              : 'min-h-[76vh] lg:min-h-[84vh] xl:min-h-[88vh] justify-center'
-          }`}>
+          {/*
+            ⚠️ ROUND 63 (ADR-099) — ON A LAPTOP THIS COLUMN BECOMES A ROW, AND THAT IS THE WHOLE FIX.
+            The reference frame changed this round: Đàm uses a MacBook Air 98% of the time, not the
+            390px phone every brief since round 38 assumed. On a laptop the scarce axis is HEIGHT,
+            and `min-h-[88vh]` — added to centre the clock on "a big empty desktop screen" — reserved
+            **695 px of a 790 px window for the clock alone**, pushing the session goal, the notes,
+            the categories and the timer setup below the fold. Measured before: **1.627 px of page in
+            a 790 px window, 2,06 screens**, on the screen he opens more than any other.
+            ⚠️ THE LAPTOP HAS THE OTHER AXIS TO SPEND. At `xl` the clock and the setup stack sit side
+            by side (640 px + the rest of 1.180 px) instead of on top of each other, so the same
+            content fits without a scroll and without a word removed — the round's own rule: re-column,
+            shrink or fold, never trim.
+            ⚠️ BELOW `xl` NOTHING CHANGES. The phone and the tablet keep the vertical stack and keep
+            the vh centring, so a round that re-aims at the laptop cannot cost the phone anything.
+          */}
+          <div className="grid w-full grid-cols-1 items-start gap-5 xl:grid-cols-[minmax(0,640px)_minmax(0,1fr)] xl:gap-8">
+            <div className={`flex w-full flex-col items-center gap-5 lg:gap-7 ${
+              shouldPrioritizeSessionReview || timerOwnsScreen
+                ? 'justify-start'
+                : 'min-h-[76vh] lg:min-h-[84vh] justify-center xl:min-h-0 xl:justify-start'
+            }`}>
+              <div className={`mx-auto flex w-full max-w-[640px] flex-col items-center px-5 md:px-7 ${timerCardPaddingClass}`} style={timerCardStyle}>
+                {timerStageContent}
+              </div>
+              {belowTimer && <div className="mx-auto mt-4 w-full max-w-[640px] md:mt-5">{belowTimer}</div>}
+            </div>
+            <div className="flex w-full flex-col xl:pt-0">
+              {shortcutHint}
+              {focusSupportContent}
+            </div>
+          </div>
+        </>
+      ) : (
+        /*
+          ⚠️ ROUND 63 (ADR-099) — AND THIS IS THE BRANCH THAT ACTUALLY RENDERS WHEN HE OPENS THE APP.
+          `prioritizeSetupCard` is true while idle, so `useImmersiveHeroLayout` is false and the
+          immersive branch above never runs on the screen Đàm sees most. The first attempt at this
+          round re-columned only that branch and the measurement did not move a pixel — 1.627 px
+          before, 1.627 px after. The camera caught it; the reasoning had been perfect and aimed at
+          the wrong half of an `if`.
+          Same rule as above: one column below `xl`, clock beside the setup stack at `xl`, so the
+          laptop spends the axis it has (width) instead of the one it lacks (height).
+        */
+        <div className="grid w-full grid-cols-1 items-start gap-5 xl:grid-cols-[minmax(0,600px)_minmax(0,1fr)] xl:gap-8">
+          <div className="flex w-full flex-col">
             <div className={`mx-auto flex w-full max-w-[640px] flex-col items-center px-5 md:px-7 ${timerCardPaddingClass}`} style={timerCardStyle}>
               {timerStageContent}
             </div>
             {belowTimer && <div className="mx-auto mt-4 w-full max-w-[640px] md:mt-5">{belowTimer}</div>}
           </div>
-          {shortcutHint}
-          {focusSupportContent}
-        </>
-      ) : (
-        <>
-          <div className={`mx-auto flex w-full max-w-[640px] flex-col items-center px-5 md:px-7 ${timerCardPaddingClass}`} style={timerCardStyle}>
-            {timerStageContent}
+          <div className="flex w-full flex-col">
+            {shortcutHint}
+            {focusSupportContent}
           </div>
-          {belowTimer && <div className="mx-auto mt-4 w-full max-w-[640px] md:mt-5">{belowTimer}</div>}
-          {shortcutHint}
-          {focusSupportContent}
-        </>
+        </div>
       )}
 
       <AnimatePresence>

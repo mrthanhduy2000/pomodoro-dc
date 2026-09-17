@@ -792,3 +792,41 @@ Nothing deleted; the still-live rules stay summarised in `START_HERE.md`. Full r
   indicators 6 → 1 · numbers 13 → 2 · colours 6 → 3 · cut texts ≥ 3 → 0. Guards: `timerRing.test.js` (one
   dashed arc · tokens · palette gate), `focusFoldReach.test.js`. Inspect the running state with a seeded
   `timerSession` fixture (ms timestamps) + `--settle 600`.
+
+
+### Rotated out of `START_HERE.md` on 2026-09-17 (round 63)
+
+- **Loop — ROUND 39 (2026-09-07): WHILE A TIMER RUNS, THE FOCUS SCREEN IS THE TIMER (ADR-079).**
+  Moved verbatim to `docs/archive/START_HERE_LOG_2026-09-06.md`. ⚠️ Its four numbers are STILL THE
+  LAW and round 62 extended them past the Focus screen: 1 chỉ báo · ≤2 số · ≤3 màu · **0 chữ cắt**.
+
+
+### Rotated out of `START_HERE.md` on 2026-09-17 (round 63)
+
+- **Loop — ROUNDS 37 & 38 (2026-09-06/07): A SESSION ALWAYS LAYS A BRICK (ADR-077) · THE CITY IN
+  THE LOOP (ADR-078).** Moved verbatim to `docs/archive/START_HERE_LOG_2026-09-06.md` —
+  `grep -n 'ROUNDS 37'` there. Nothing deleted; still-live rules live in `docs/UI_INVARIANTS.md`.
+
+
+### Rotated out of `START_HERE.md` on 2026-09-17 (round 63)
+
+- **Loop — ROUND 60 (2026-09-16): THE RULER WAS READING BACKWARDS, AND THE CLOTHES HAD NO SEAMS.**
+  Detail in `BAN_GIAO.md` and ADR-096; four laws live here:
+  ⚠️ **A NaN LOSES EVERY COMPARISON, so there is no safe way to write the comparison.** `NaN < x`,
+  `NaN > x` and `NaN >= x` are all false, so a broken quantity silently picks one of the two
+  answers. Round 57's close-up gate passed a DISTANCE where a BOX was wanted; `!box` is true for the
+  number `0`, which is exactly what `nearestBlocker` answers when the camera is inside a building —
+  so the gate was **exactly inverted for three rounds** and nothing threw. Check the quantity BEFORE
+  it meets a threshold (`finite.js`), and let it die there.
+  ⚠️ **ABSENT is not MALFORMED.** No ray and no box mean "nothing was hit" — the right answer for a
+  tap on empty sky. A present-but-broken argument is a bug and must throw. Collapsing the two is how
+  `!box` swallowed a zero.
+  ⚠️ **A test can be right about the code and wrong about the world.** With the gate fixed, four
+  eras walked round BEHIND the resident and every check stayed green: the standing spot was clear
+  and the ray to the eye hit nothing. The fault was the SEARCH ORDER. *A face seen from farther away
+  is still a face; the back of a head at any distance is not* — so back off before turning past 90°.
+  ⚠️ **A STEP IS ONLY AN EDGE WHILE IT STAYS SHARP.** `smoothCrease` averages anything under 40°, so
+  a garment edge that measures right on every number can still be absent from the photograph — the
+  belt's upper edge came out at 35.0°. And the first definition of "edge" (*any crease over 40°*)
+  called a plain torso tailored, because `chest` has had a 53.6° waist since round 52. The question
+  is a DIRECTION, not a sharpness: an outward ledge, sharp at BOTH ends.

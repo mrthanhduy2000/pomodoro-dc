@@ -10,6 +10,32 @@
 > **Muốn hiểu VÌ SAO một quyết định được chọn** → `ARCHITECTURE_DECISIONS.md`. **Muốn biết migration
 > cụ thể nào cần chạy** → `MIGRATION.md`.
 
+## 2026-09-17 — Round 63: the reference frame moves to the laptop, and height becomes the scarce axis (ADR-099)
+
+**Purpose.** Every brief from round 38 to 62 named 390px as the frame Đàm used most. It is 2% of his
+use; a MacBook Air M3 is 98%. The correction matters far beyond sizing, because **the scarce axis
+flips with the frame**: a phone is short of width, a laptop is short of height, and fourteen rounds
+of habits (stack it vertically, cap the column, let it scroll) all optimise the plentiful axis on the
+frame that counts. Measured on the real window (1.440 × 790) for the first time: the Focus screen's
+main column ran **1.554 px, 2,16 screens**, the right rail **1.627 px, 2,46 screens**, and every other
+screen scrolled too — including the ending card at 1.666 px, which he meets several times a day.
+
+**Scope.** New `lib/viewports.js` records the frame as a project constant (`LAPTOP` css 1470×956 /
+chrome 1440×790, `PHONE`, `LAPTOP_FOLD`, `TWO_COLUMN_MIN`), guarded by `viewports.test.js`. On the
+laptop the Focus screen becomes a row instead of a column — the clock beside the setup stack rather
+than above it — taking the main column **1.554 → 1.184 px (−24%)**; `min-h-[88vh]`, added in round 42
+to centre the clock, had been reserving 695 px of a 790 px window for the clock alone. Space now
+means start · pause · resume instead of only start, number keys 1–5 switch tabs in the sidebar's own
+order, and both refuse under a modifier, in a text field, or mid-ending. The shortcut hint follows the
+timer's state, and sidebar tooltips carry the key so nothing static advertises it.
+
+**Impact.** No economy, no balance, no new mechanic; TECH_DEBT #104 untouched. Every laptop
+re-column is gated at `xl`, so the phone is unchanged: 2.424 px before, 2.444 px after (+0,8%).
+Reverted after measuring: widening the rail to 400 px bought 85 px of rail height and cost 568 px of
+the column beside it.
+
+**Compatibility.** No migration, no persisted-state change.
+
 ## 2026-09-17 — Round 62: one visual vocabulary for eight screens, a shorter ending, a folded Cài đặt (ADR-098)
 
 **Purpose.** Round 39's four numbers (1 indicator · ≤2 numbers · ≤3 colours · 0 cut text) guarded the

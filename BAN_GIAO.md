@@ -1,4 +1,63 @@
-> Last update: **2026-09-17** — **ROUND 62: ONE VISUAL VOCABULARY, A SHORTER ENDING (ADR-098).**
+> Last update: **2026-09-17** — **ROUND 63: THE REFERENCE FRAME MOVES TO THE LAPTOP (ADR-099).**
+> Order: *"Tôi dùng app này 98% thời gian trên MacBook Air M3, 2% trên iPhone… Mọi prompt từ vòng 38
+> tới 62 đều ghi '390px — khung tôi dùng nhiều nhất'. Sai."* Everything on `main`, on top of round 62.
+>
+> ### The correction, and why it is bigger than a number
+> ⚠️ **TRỤC KHAN HIẾM ĐỔI CHIỀU THEO KHUNG.** Điện thoại thiếu BỀ NGANG; laptop thiếu CHIỀU CAO.
+> Mười bốn vòng thói quen — xếp dọc, kẹp cột, cho cuộn — đều là tối ưu đúng trục nhưng sai khung.
+>
+> Đo lần đầu trên khung thật (1.440 × 790):
+> | vùng, màn Tập trung chưa chạy | thấy được | thật | số màn |
+> |---|---|---|---|
+> | cột nội dung chính | 719 px | **1.554 px** | **2,16** |
+> | cột phải | 661 px | **1.627 px** | **2,46** |
+> Và mọi màn khác đều cuộn: Hành trang 1.584 · Cài đặt 1.427 · Thống kê 1.289 · Thành Phố 1.060 ·
+> **thẻ kết phiên 1.666**, thứ Đàm gặp nhiều lần mỗi ngày.
+>
+> ### Done
+> 1. **`lib/viewports.js` ghi khung chuẩn thành hằng số dự án.** ⚠️ Nếp gấp là chiều cao CỬA SỔ
+>    TRÌNH DUYỆT (790), không phải chiều cao màn hình (956) — con số quyết định bố cục là con số
+>    Đàm thật sự nhìn. `viewports.test.js` khoá cả hai điều đó và khoá luôn việc hai trục ĐẢO NHAU
+>    giữa hai khung — chính sự đảo ấy là lý do file tồn tại.
+> 2. **Màn Tập trung thành HÀNG trên laptop: 1.554 → 1.184 px (−24%).** `min-h-[88vh]` (vòng 42, để
+>    căn giữa đồng hồ trên "màn hình máy bàn trống trải") đang giữ **695 px trong 790 px chỉ cho cái
+>    đồng hồ**, đẩy mục tiêu phiên, ghi chú, danh mục và thiết lập xuống dưới nếp gấp.
+>    ⚠️ **Dưới `xl` không đổi một pixel**: điện thoại 2.424 → 2.444 px (+0,8%), tức nhiễu đo.
+> 3. **Space phủ cả phiên, không chỉ giây đầu.** Phím này có từ vòng 37 nhưng gác ở `IDLE` — bắt đầu
+>    xong là chết suốt 25 phút, muốn tạm dừng phải rời bàn phím. Nay: chưa chạy → bắt đầu · đang chạy
+>    → tạm dừng · đang dừng → tiếp tục. Không bao giờ HUỶ (huỷ là phá, giữ hộp xác nhận).
+> 4. **1–5 đổi tab**, đúng thứ tự cột trái, nên con số CHÍNH LÀ vị trí trên màn hình. Từ chối khi
+>    có phím bổ trợ (⌘1 là của trình duyệt), khi con trỏ ở ô nhập, và khi chuỗi thẻ kết đang chạy.
+> 5. **Hover mang phím tắt** (`title` trên mỗi mục cột trái) nên **không có thứ đứng yên nào** quảng
+>    cáo tính năng — luật vòng 40 còn nguyên.
+>
+> ### Thử rồi BỎ, vì phép đo nói vậy
+> Cột phải là vùng cao nhất app (1.627 px trong 661). Mọi nhãn nhiệm vụ đều xuống dòng ở 340 px, nên
+> nới lên 400 px phải làm nó thấp xuống — và đúng thế, **−85 px**. Nhưng nó **lấy mất 568 px của cột
+> bên cạnh**: cột giữa 868 → 808 px, bóp nghẹt đúng cái lưới hai cột vòng này vừa dựng, đẩy cột chính
+> 1.184 → 1.752 px. **Lỗ ròng 483 px ⇒ hoàn tác.**
+> ⚠️ Bài học là HÌNH DẠNG chứ không phải con số: trên laptop, cột trái (232) + cột giữa + cột phải
+> chia nhau MỘT bề ngang; cái nào to lên cũng là lấy của cái khác.
+>
+> ### Bài học đo đạc, lần thứ 30
+> `shot.mjs` in ra phần tử cuộn CAO NHẤT — và suốt bốn lần dựng, phần tử ấy là **cột phải**, không
+> phải nội dung. Tôi đọc "1.627 không đổi" ba lần và suýt hoàn tác một thay đổi đang cắt 370 px khỏi
+> cột ngay bên cạnh. Cách chữa: thôi đọc một con số, liệt kê MỌI vùng cuộn kèm bề ngang và toạ độ x.
+> **Một con số không có mẫu số thì không phải phép đo — một con số không có ĐỊA CHỈ cũng vậy.**
+>
+> ### Rà rồi, không sửa (Việc 5)
+> Ba trong năm mẫu điện thoại trong đề bài ĐÃ được sửa từ trước: cột trái **có nhãn** (khiếu nại vòng
+> 42, đã đóng) · **không có** thanh tab đáy trên desktop · **0** chỗ viết cứng 44px cho ngón tay.
+>
+> ### Còn lại, có số chứ không đoán
+> Cột phải 2,46 màn · Hành trang 1.584 · Cài đặt 1.427 · thẻ kết phiên 1.666 — đo xong, chưa sửa.
+>
+> ### Gates
+> lint ✅ · build ✅ · `npm run test:quiet` — xem lần chạy ghi kèm commit.
+
+---
+
+> Previous: **2026-09-17** — **ROUND 62: ONE VISUAL VOCABULARY, A SHORTER ENDING (ADR-098).**
 > Order: *"vòng này THUẦN UX/UI… mở bất kỳ màn nào trong app, nó trông như cùng một người làm ra."*
 > Everything on `main`, on top of round 61 (the 3D-city stream, which this round does not touch).
 >

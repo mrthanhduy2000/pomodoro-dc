@@ -1,4 +1,5 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState, Suspense } from 'react';
+import { isEditableShortcutTarget } from './lib/keyboard';
 import { ratio } from './components/shared/surface';
 import { TOTAL_RELICS, TOTAL_SKILLS } from './engine/journey';
 import { AnimatePresence, motion as Motion } from 'framer-motion';
@@ -57,12 +58,6 @@ function createBoundaryLogger(scope) {
   return (error, errorInfo) => {
     console.error(`[boundary:${scope}]`, error, errorInfo);
   };
-}
-
-function isEditableShortcutTarget(target) {
-  if (!(target instanceof HTMLElement)) return false;
-  if (target.isContentEditable) return true;
-  return Boolean(target.closest('input, textarea, select, [contenteditable="true"], [role="textbox"]'));
 }
 
 function formatDurationMinutes(minutes) {
@@ -650,6 +645,19 @@ export default function App() {
   // ⚠️ NGOẠI LỆ CÓ LÝ DO — cột phải THU GỌN chứ không XUẤT HIỆN. `enter` là opacity+y nên nó
   // không diễn đạt được một bề ngang đang co lại, và bề ngang ấy do chính `animate` khai (không
   // có lớp CSS nào đặt nó) ⇒ phải dùng `useSnapMotion`: bỏ hẳn thì cột bung ra chiếm cả màn hình.
+  /*
+    ⚠️ ROUND 63 (ADR-099) — THE RAIL STAYS 340 px, AND THE MEASUREMENT IS WHY, NOT TASTE.
+    The rail is the tallest scrolling region in the app on the reference frame: **1.627 px inside
+    661 px, 2,46 screens**, worse than the main column beside it. Widening it to 400 px was tried —
+    every mission label wraps at 340 px, so more width should mean fewer lines — and it did buy
+    85 px of rail height (1.627 → 1.542).
+    ⚠️ AND IT COST 568 px OF THE COLUMN NEXT TO IT. The centre fell 868 → 808 px, which squeezed this
+    round's own two-column Focus grid (600 px clock + the rest) until the right cell wrapped: the
+    main column went 1.184 → 1.752 px. Net 483 px WORSE, so it was reverted.
+    ⚠️ THE LESSON IS THE SHAPE OF THE PROBLEM, not this number: on a laptop the sidebar (232) + the
+    centre + the rail share one width, and any of the three can only grow by taking from another.
+    The rail's height is real and still unfixed — see ADR-099 §what is left.
+  */
   const supportRailMotion = useSnapMotion({
     animate: { width: supportRailOpen ? 340 : 60 },
     transition: { duration: 0.22, ease: [0.4, 0, 0.2, 1] },
@@ -727,6 +735,36 @@ export default function App() {
       setFocusFullscreen(false);
     }
   };
+
+  /*
+    ⚠️ ROUND 63 (ADR-099) — 1–5 SWITCH TABS, BECAUSE A LAPTOP HAS A KEYBOARD AND A PHONE DOES NOT.
+    The reference frame changed this round: 98% of use is a MacBook, where the hands are already on
+    the keys and reaching for the mouse to change screen is pure friction repeated all day. The
+    order is the sidebar's own order, so the number IS the position on screen — nothing to memorise
+    beyond "count down the list".
+    ⚠️ IT REFUSES IN EXACTLY THE PLACES IT MUST. A modifier held (⌘1 is the browser's own tab
+    switch, and stealing it would be unforgivable) · a text field focused (typing "3" into the
+    session goal must stay a 3) · the ending chain open (it is a story with its own tap handling,
+    and jumping tabs mid-story loses the cards that have not played).
+    ⚠️ DISCOVERABLE WITHOUT A STATIC BANNER (round 40's law): each sidebar row carries its number as
+    a `title` tooltip on hover, and the Focus screen's one muted hint line names the range. Nothing
+    new stands permanently on screen to advertise this.
+  */
+  useEffect(() => {
+    const onKey = (event) => {
+      if (event.defaultPrevented || event.repeat) return;
+      if (event.metaKey || event.ctrlKey || event.altKey) return;
+      if (lootModalOpen) return;
+      if (isEditableShortcutTarget(event.target)) return;
+      const slot = Number(event.key);
+      if (!Number.isInteger(slot) || slot < 1 || slot > DESKTOP_TABS.length) return;
+      event.preventDefault();
+      selectTab(DESKTOP_TABS[slot - 1].id);
+    };
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  });
+
   // ADR-077: the weekly report IS the Stats screen. "Seeing it" = opening Thống kê + recording seen.
   const openWeeklySummary = () => {
     markWeeklyReportSeen();
@@ -935,7 +973,10 @@ export default function App() {
                           32px khoảng trắng trên đỉnh là rẻ ở máy bàn và rất đắt ở 390px: nó nằm
                           trong đúng 774px mà thanh tab NỔI chừa lại, tức nó đang đẩy hàng nút
                           chính xuống dưới thanh tab. Cắt xuống 16px không mất một chữ nào. */}
-                      <div className="mx-auto max-w-[860px] px-5 pb-[calc(env(safe-area-inset-bottom)+7.4rem)] pt-4 md:px-8 md:pb-28 md:pt-8 lg:px-12 lg:pb-8 xl:px-16">
+                      {/* ⚠️ ROUND 63 (ADR-099): `xl:max-w-[1180px]` — on the 1.440 px reference frame an 860 px cap
+                          left ~290 px of dead margin on each side while every screen inside it scrolled.
+                          Width is what a laptop has spare; height is what it lacks. Below `xl` unchanged. */}
+                      <div className="mx-auto max-w-[860px] px-5 pb-[calc(env(safe-area-inset-bottom)+7.4rem)] pt-4 md:px-8 md:pb-28 md:pt-8 lg:px-12 lg:pb-8 xl:max-w-[1180px] xl:px-10">
                         <FocusIntro
                           greeting={greeting}
                           sessionsCompletedToday={sessionsCompletedToday}
@@ -1595,6 +1636,8 @@ function EditorialSidebar({ activeTab, attentionByTab, isOpen, onSelect, onToggl
             isOpen={isOpen}
             label={tab.label}
             onClick={() => onSelect(tab.id)}
+            // The number IS the row's position, so the list itself is the mnemonic.
+            shortcut={DESKTOP_TABS.findIndex((t) => t.id === tab.id) + 1}
           />
         ))}
         <div className="mx-1.5 my-2 h-px" style={{ background: 'rgba(255,255,255,0.07)' }} />
@@ -1604,6 +1647,7 @@ function EditorialSidebar({ activeTab, attentionByTab, isOpen, onSelect, onToggl
           isOpen={isOpen}
           label="Cài đặt"
           onClick={() => onSelect('settings')}
+          shortcut={DESKTOP_TABS.findIndex((t) => t.id === 'settings') + 1}
         />
       </nav>
 
@@ -1630,11 +1674,21 @@ function EditorialSidebar({ activeTab, attentionByTab, isOpen, onSelect, onToggl
  * @param {string|null} attention  lý do tab này đang cần chú ý, viết thành CHỮ («Có việc», «Tuần
  *   mới»). `null` = không có gì. Trước vòng 42 nó là một boolean và vẽ ra một chấm câm.
  */
-function SidebarItem({ active, attention = null, icon, isOpen, label, onClick }) {
+/*
+  ⚠️ ROUND 63 (ADR-099) — `shortcut` IS HOW 1–5 BECOMES DISCOVERABLE WITHOUT A STATIC BANNER.
+  Round 40's law forbids parking anything permanent on screen to advertise a feature, and round 63
+  needs the number keys to be findable anyway. Hover is the answer a laptop already has: the cursor
+  is a question, the tooltip is the reply, and both vanish the moment he stops asking. A phone never
+  sees it and never needs to — it has no keyboard for the tip to be about.
+  ⚠️ NOT THE ONLY PATH. The tab is still a button, still clickable, still labelled; the tooltip adds
+  a shortcut, never an instruction you must read to operate the app.
+*/
+function SidebarItem({ active, attention = null, icon, isOpen, label, onClick, shortcut = null }) {
   return (
     <button
       type="button"
       onClick={onClick}
+      title={shortcut ? `${label} — phím ${shortcut}` : label}
       className={`group flex rounded-[12px] transition-colors hover:bg-[rgba(255,255,255,0.06)] ${
         isOpen ? 'items-center gap-3 px-1.5 py-1 justify-start' : 'w-full flex-col items-center gap-1 px-0.5 py-1.5'
       }`}
@@ -1978,7 +2032,7 @@ function ShellPane({ children, subtitle, title, topRail = null }) {
           tên màn hình rồi, nên đây là chỗ nói lần thứ hai; theo luật sẵn có của dự án thì *chỗ
           nói ít hơn phải nhường*. Vẫn giữ ở màn rộng, nơi thanh bên có thể đang thu gọn.
       */}
-      <div className="mx-auto max-w-[1120px] px-5 pb-28 pt-5 md:px-8 md:pt-8 lg:px-12 lg:pb-8">
+      <div className="mx-auto max-w-[1120px] px-5 pb-28 pt-5 md:px-8 md:pt-8 lg:px-12 lg:pb-8 xl:max-w-[1320px]">
         {title ? (
           <>
             {/*

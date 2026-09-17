@@ -253,7 +253,7 @@ export default function SkillTree() {
   }, [matrix, pickedId]);
 
   return (
-    <div className="mx-auto flex w-full max-w-[1120px] flex-col gap-4">
+    <div className="mx-auto flex w-full max-w-[1120px] flex-col gap-4 xl:max-w-[1320px]">
 
       {/* ── Dải mở đầu Hành trang — xem `shared/inventoryHero.js` ────────── */}
       <InventoryHero

@@ -24,6 +24,12 @@
 │   │   │   └── ActionButton.jsx   # THE button (ADR-077, TECH_DEBT #86 door): token colours only, one `sizeMap`
 │   │   │   │                     #   ⚠️ #86 GATE (ADR-078): eslint `no-restricted-syntax` rejects palette classes / hex-rgb literals on any button
 │   │   │                         #   (`default`·`compactMobile`·`compactPrimary`·`sm`·`md`), press depth = shadow depth.
+│   ├── lib/viewports.js   # ⭐ ADR-099 — THE FRAMES, IN ORDER. `LAPTOP` (chrome 1440×790, the
+│   │                     #   BROWSER window, not the 1470×956 display) is the reference; `PHONE`
+│   │                     #   is second, never dropped. `TWO_COLUMN_MIN` (1280) is where a laptop
+│   │                     #   has width to spare after the sidebar. ⚠️ The scarce axis FLIPS with
+│   │                     #   the frame — phone lacks width, laptop lacks height — which is why
+│   │                     #   fourteen rounds of vertical-stacking habits were aimed wrong.
 │   │   ├── shared/surface.js # ⭐ ADR-086 — THE ONE VISUAL VOCABULARY. `CARD` · `CARD_INSET` ·
 │   │   │                     #   `EYEBROW` · `ratio()` · `remaining()`. Before it: the small
 │   │   │                     #   uppercase label had 22 size+tracking shapes over 111 uses and the

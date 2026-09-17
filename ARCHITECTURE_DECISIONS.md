@@ -73,6 +73,41 @@ roughly 44%. Titles below are the lookup key; read one with
 
 ---
 
+## ADR-099 — Round 63: the reference frame was wrong for fourteen rounds, and the scarce axis flips with it
+
+**Date**: 2026-09-17 · **Order**: *"Tôi dùng app này 98% thời gian trên MacBook Air M3, 2% trên iPhone… Mọi prompt từ vòng 38 tới 62 đều ghi '390px — khung tôi dùng nhiều nhất'. Sai."*
+
+**Context — a fact, not a preference, and it invalidated fourteen rounds of layout reasoning.** Every brief since round 38 named 390px as the frame Đàm used most, and every layout decision was made against it. It is 2% of his use. The correction matters far beyond "make things bigger", because **the scarce axis flips with the frame**: a phone is short of WIDTH, a laptop is short of HEIGHT. Fourteen rounds of habits — stack it vertically, cap the column, let it scroll — are all optimisations for the axis that is plentiful on the frame that counts.
+
+Measured on the reference frame for the first time (1.440 × 790, the real Chrome window on a MacBook Air M3 13,6"):
+
+| region, Focus screen idle | visible | real | screens |
+|---|---|---|---|
+| main content column | 719 px | **1.554 px** | **2,16** |
+| right rail | 661 px | **1.627 px** | **2,46** |
+
+and every other screen scrolled too: Hành trang 1.584 · Cài đặt 1.427 · Thống kê 1.289 · Thành Phố 1.060 · the ending card **1.666**, which he meets several times a day.
+
+**Decision 1 — `lib/viewports.js` records the frame as a project constant.** `LAPTOP` (css 1470×956, chrome 1440×790) · `PHONE` · `LAPTOP_FOLD` · `TWO_COLUMN_MIN`. ⚠️ The fold is the **browser** height, not the display height: the number that decides layout is the one he actually looks at. `viewports.test.js` pins that the laptop leads, that the fold is the window, and that the two axes invert between the frames — the inversion is the whole reason the file exists.
+
+**Decision 2 — on a laptop the Focus screen becomes a ROW: 1.554 → 1.184 px, −24%.** `min-h-[88vh]`, added in round 42 to centre the clock on "a big empty desktop screen", reserved **695 px of a 790 px window for the clock alone** and pushed the session goal, the notes, the categories and the timer setup below the fold. At `xl` the clock and the setup stack now sit side by side. ⚠️ **Below `xl` nothing changed at all** — the phone measured 2.424 px before and 2.444 px after (+0,8%), which is noise, not a cost.
+
+**Decision 3 — Space covers the whole session, and 1–5 switch tabs.** The Space shortcut has existed since round 37 but was gated on `IDLE`: it started a session and then went dead for 25 minutes, so pausing meant leaving the keyboard his hands were already on. It now means start · pause · resume, one meaning per state, and never cancel (cancelling is destructive and keeps its dialog). Number keys 1–5 follow the sidebar's own order, so the number IS the position on screen. ⚠️ Both refuse when a modifier is held (⌘1 belongs to the browser), when a text field has focus, and — for the numbers — while the ending chain is playing, which is a story with its own tap handling.
+
+**Decision 4 — hover carries the shortcut, so nothing static advertises it.** Round 40 forbids parking anything permanent on screen to announce a feature. A laptop already has the answer: the cursor is a question, a `title` tooltip is the reply, and both vanish when he stops asking. The one muted hint line on the Focus screen now also follows the timer's state instead of only appearing while idle — which was precisely when Space was least worth knowing about.
+
+**What was tried and REVERTED, because the measurement said so.** The rail is the tallest region in the app (1.627 px in 661 px). Every mission label wraps at 340 px, so widening it to 400 px should shorten it — and it did, by 85 px. **But it cost 568 px of the column beside it**: the centre fell 868 → 808 px, which squeezed this round's own two-column grid until the right cell wrapped, taking the main column 1.184 → 1.752 px. Net 483 px worse. ⚠️ The lesson is the shape, not the number: on a laptop the sidebar (232) + centre + rail share one width, and any of the three grows only by taking from another.
+
+**The measuring-tool lesson, the 30th (project law #1).** `shot.mjs` prints the tallest scrolling element, and for four builds in a row that element was the **right rail**, not the content. I read "1.627 unchanged" three times and nearly reverted a change that was in fact cutting 370 px off the column next to it. The fix was to stop reading one number and enumerate every scroller with its width and x-position. **A number with no denominator is not a measurement — and neither is one with no address.**
+
+**Audited, and deliberately NOT changed (Việc 5).** The phone-pattern hunt came back mostly clean, and three of the five items in the brief were already fixed: the sidebar **has labels** (round 42's complaint, closed), there is **no bottom tab bar** on desktop, and there are **zero** hardcoded 44px touch targets. What remains true is the width split above.
+
+**Consequences and what is left.** The rail's 2,46 screens is measured and unfixed; so are Hành trang (1.584), Cài đặt (1.427) and the ending card (1.666). This round moved the screen he opens most and left the rest with numbers rather than guesses — which is the honest half of "measure first".
+
+**Alternatives considered.** Putting content back into the empty margins while a timer runs (rejected: round 39 bought that emptiness with a measured argument, and the veto table still forbids raising the centre's counts — the void is now a smaller share of a re-columned screen instead). Removing the right rail on laptops to give the centre 1.208 px (rejected: it is where the missions live, and deleting a column to fix a height is trading a real loss for a measurement).
+
+---
+
 ## ADR-098 — Round 62: one visual vocabulary for eight screens, and an ending that stops saying the same thing three times
 
 **Date**: 2026-09-17 · **Order**: *"Vòng này THUẦN UX/UI… mở bất kỳ màn nào trong app, nó trông như cùng một người làm ra."* · *"Một luật tốt đang chỉ canh một màn."*

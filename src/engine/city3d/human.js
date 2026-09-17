@@ -766,17 +766,28 @@ function facePieces(d) {
   const khe = H * 0.155 * mo;               // chiều cao khe mắt
   const tam = H * 0.545;                    // tâm khe mắt
   return [
+    /*
+      ⚠️ ROUND 61, VIỆC 4 — LÙI CẢ HAI VÀO SÂU TRONG HỐC VỪA KHOÉT Ở `SKULL_RINGS`, KHÔNG ĐỔI
+      HÌNH DÁNG. Đàm: *"mắt phải nằm SÂU trong hốc"* — bản trước đặt tâm lòng trắng ở x = 0,44
+      `headW`, mà mặt sọ ở gò má (0,44) đã hẹp hơn thế; lòng trắng và con ngươi (0,525) đều thò ra
+      TRƯỚC cả gờ mày (~0,505) — đúng "hai viên bi dán trên mặt". Lùi tâm lòng trắng 0,44 → 0,316
+      (giữ nguyên bề ngang 0,23, chỉ đổi ĐỘ SÂU): mặt trước lòng trắng giờ ở 0,433 — giữa đáy hốc
+      (0,426) và gò má (0,441), sau cả hai. Con ngươi giữ đúng LOẠI lệch (poke qua mặt lòng trắng,
+      kỹ thuật đã đo từ vòng 56) nhưng ĐỘ LỆCH giảm 0,085 → 0,07 (khe hở đáy-hốc/gò-má giờ chỉ rộng
+      0,015 `headW`, hẹp hơn nhiều so với hồi con mắt còn nhô hẳn ra ngoài): tâm ở 0,386, mặt trước
+      0,470 — vẫn rõ ràng sau gờ mày. Xem `humanFace.test.js` cho phép đo đủ 15 kỷ.
+    */
     // LÒNG TRẮNG — một KHE hình quả hạnh, không phải một quả cầu. Bề ngang giữ nguyên 0,23 `headW`
     // (con số ấy đến từ một tấm ảnh vòng 56); chỉ chiều cao đổi.
     // ⚠️ `bead` (16 cạnh) — round 60, Việc 1: rộng 20,6 điểm ảnh ở cận cảnh, đường bao hụt 0,20.
-    piece('eyeL', 'eyeWhite', 'bead', 'head', [W * 0.23, khe, Z * 0.22], [W * 0.44, tam, -Z * 0.31]),
-    piece('eyeR', 'eyeWhite', 'bead', 'head', [W * 0.23, khe, Z * 0.22], [W * 0.44, tam, Z * 0.31]),
+    piece('eyeL', 'eyeWhite', 'bead', 'head', [W * 0.23, khe, Z * 0.22], [W * 0.316, tam, -Z * 0.31]),
+    piece('eyeR', 'eyeWhite', 'bead', 'head', [W * 0.23, khe, Z * 0.22], [W * 0.316, tam, Z * 0.31]),
     // CON NGƯƠI — CAO ĐÚNG BẰNG khe mắt (chạm cả hai mí) và hẹp hơn hẳn (0,165 so với 0,23) ⇒
     // lòng trắng chỉ còn hai vệt lưỡi liềm hai bên. Đây là cả phép sửa của Việc 1.
-    // ⚠️ Vẫn ở cực TRƯỚC của lòng trắng (x 0,525 so với 0,44), vì một khối nhỏ đặt đồng tâm trong
-    // một khối lớn thì đường viền ta thấy là giao tuyến hai mặt, không phải viền của nó (vòng 56).
-    piece('pupilL', 'hair', 'bead', 'head', [W * 0.165, khe, Z * 0.175], [W * 0.525, tam, -Z * 0.31]),
-    piece('pupilR', 'hair', 'bead', 'head', [W * 0.165, khe, Z * 0.175], [W * 0.525, tam, Z * 0.31]),
+    // ⚠️ Vẫn ở cực TRƯỚC của lòng trắng (lệch +0,085, như vòng 56 đã đo), vì một khối nhỏ đặt đồng
+    // tâm trong một khối lớn thì đường viền ta thấy là giao tuyến hai mặt, không phải viền của nó.
+    piece('pupilL', 'hair', 'bead', 'head', [W * 0.165, khe, Z * 0.175], [W * 0.386, tam, -Z * 0.31]),
+    piece('pupilR', 'hair', 'bead', 'head', [W * 0.165, khe, Z * 0.175], [W * 0.386, tam, Z * 0.31]),
     /*
       ⚠️⚠️ KHÔNG CÓ KHỐI MÍ MẮT Ở ĐÂY, VÀ SỰ VẮNG MẶT ẤY LÀ MỘT KẾT QUẢ ĐO ĐƯỢC — ĐỪNG THÊM LẠI.
       Bản đầu của Việc 1 có bốn khối mí (`lidUpL/R`, `lidLoL/R`): `dome` màu da, nằm sát mép trên và
@@ -787,8 +798,10 @@ function facePieces(d) {
       ⇒ Lần thứ hai trong hai vòng, và vẫn đúng một luật: **tổng của nhiều vật LỒI không ra một mặt
       cong liền.** Tôi đã viết chính câu ấy trong khối chú thích ngay trên rồi vẫn dán thêm bốn
       khối — nên nó được ghi lại ở đây, ngay chỗ có người sẽ định thêm lại.
-      ⇒ Cái hốc mắt đã có sẵn và KHÔNG tốn khối nào: gờ mày (vòng 58) ở trên, gò má trong đường sinh
-      `skull` ở dưới. Việc của Việc 1 là sửa CHÍNH CON MẮT, và nó đã xong ở bốn dòng trên.
+      ⇒ Cái hốc mắt KHÔNG tốn khối nào: gờ mày (vòng 58) ở trên, gò má trong đường sinh `skull` ở
+      dưới. Round 58→60 hốc ấy chỉ là một QUAN HỆ tình cờ (gờ mày và gò má đều nhô hơn mặt sọ
+      phẳng ở giữa); từ round 61 nó còn có một ĐÁY THẬT — vành `[0,045, 0,78]` khoét ngay ở
+      `SKULL_RINGS` — và chính con mắt được lùi vào sau vành ấy (xem khối chú thích ngay trên).
     */
     /*
       ⚠️ ROUND 58: LÔNG MÀY PHẢI NẰM **TRÊN** GỜ MÀY, KHÔNG PHẢI LƠ LỬNG TRƯỚC NÓ — ẢNH SỬA HAI LẦN.

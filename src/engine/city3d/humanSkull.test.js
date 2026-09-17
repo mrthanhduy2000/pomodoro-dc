@@ -109,14 +109,20 @@ test('TRÁN DỐC — một sự THỤT LÙI, nên nó là quan hệ giữa hai 
       + ` sọ ở tầm trán ${nhoTran.toFixed(3)}, cách nhau ${caoTran.toFixed(3)} chiều cao đầu).`
       + ' Dưới 8° là trán dựng đứng; trên 40° là trán vát ngược.');
 
-    // ⚠️ VÀ VẾ NGƯỢC LẠI, VẾ MÀ MỘT TẤM ẢNH ĐÃ PHẢI DẠY: gờ mày KHÔNG được vượt con mắt.
-    // Bản đầu cho nó nhô tới 0,580 để "kẹp con mắt vào một cái hốc" — trên ảnh nó thành một mái
-    // hiên vuông và hai con mắt biến mất dưới bóng nó. Con mắt hoạt hình vốn được CỐ Ý cho nhô
-    // (vòng 54: *"nó cần MẮT"*), nên ép một cái xương chạy theo nó là ép sai chiều.
+    /*
+      ⚠️ ROUND 61, VIỆC 4 — VẾ NGƯỢC LẠI CỦA CHÍNH DÒNG NÀY BỊ ĐẢO, VÀ ĐÓ LÀ CHỦ Ý. Round 58 từng
+      khoá "gờ mày KHÔNG được vượt con mắt" vì bản đầu PHÓNG TO gờ mày (tới 0,580) để ép ra một cái
+      hốc, và cái gờ to ấy thành mái hiên nuốt luôn con mắt trong bóng. Đàm round 61 chỉ đúng bệnh
+      khác: *"mắt phải nằm SÂU trong hốc"* — và kỹ thuật lần này KHÔNG đụng tới gờ mày (nó vẫn y
+      nguyên ~0,505 như suốt round 58→60); thứ đổi là CON MẮT được lùi vào sau một đáy hốc thật
+      (`SKULL_RINGS`), đúng công thức "sửa chính con mắt" đã dùng ở round 59. Không phóng to gờ mày
+      thì không có mái hiên, nên khuyết tật cũ không quay lại — xem `humanFace.test.js` cho phép đo
+      đầy đủ (mắt sau gờ mày VÀ sau gò má, có ảnh cận cảnh xác nhận).
+    */
     const mat = khoi(body, 'eyeL');
-    assert.ok(mat && mutTruoc(go, W) < mutTruoc(mat, W),
-      `kỷ ${era}: gờ mày (${nhoGo.toFixed(3)}) nhô hơn cả con mắt (${mutTruoc(mat, W).toFixed(3)})`
-      + ' — đó là một cái mái hiên, không phải một cái gờ xương.');
+    assert.ok(mat && mutTruoc(go, W) > mutTruoc(mat, W),
+      `kỷ ${era}: gờ mày (${nhoGo.toFixed(3)}) không còn nhô hơn con mắt (${mutTruoc(mat, W).toFixed(3)})`
+      + ' — mắt phải nằm SAU gờ mày (round 61, Việc 4), không phải trước nó.');
   }
 });
 

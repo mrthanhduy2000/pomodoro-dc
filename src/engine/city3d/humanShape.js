@@ -169,9 +169,28 @@ export const HUMAN_SHAPES = ['box', 'shoe', 'prism', 'limb', 'calf', 'cuff', 'ch
  * cằm · hàm thu · gò má · **chỗ thót ở thái dương** · trán dốc. Hai cái còn lại là bất đối xứng
  * trước–sau nên phải là khối riêng (`occiput`, `browRidge` ở `human.js`).
  *
- * ⚠️ VÀNH `[−0,04, 0,84]` LÀ VÀNH ĐẮT NHẤT BẢNG: nó THÓT LẠI, kẹp giữa gò má 0,88 và xương đỉnh
- * 1,00. Bỏ nó đi thì bán kính tăng đơn điệu từ cằm lên đỉnh — tức một QUẢ TRỨNG. Chỗ thót ấy là
- * thứ mắt dùng để đọc ra *"có hộp sọ ở trên, có khuôn mặt ở dưới"*.
+ * ⚠️ VÀNH `[0,045, 0,85]` LÀ VÀNH ĐẮT NHẤT BẢNG — ROUND 61, VIỆC 4. Trước vòng này nó nằm ở
+ * `[−0,04, 0,84]` và chỉ đọc ra "thái dương" (một chỗ thót chung chung giữa gò má và xương đỉnh),
+ * còn có một vành riêng ở `[0,08, 0,96]` lo việc "trán". Vòng 61 GỘP hai việc ấy làm một: CHUYỂN
+ * vành thót tới đúng độ cao con mắt (`y = 0,545 headH` trong `facePieces` ⇒ yFrac
+ * `(0,545−0,5) = 0,045` trong hệ toạ độ sọ này), rồi BỎ HẲN vành `[0,08,0,96]` — đường sinh đi
+ * thẳng từ đáy hốc lên xương đỉnh. Đây là khối tròn xoay: một vành hẹp ở một độ cao thì hẹp ĐỀU
+ * quanh cả vòng (trước, sau, hai bên) — nên vành này giờ làm CẢ HAI việc bằng một con số: nó vẫn
+ * là chỗ thót thái dương (Việc 5) VÀ nó là ĐÁY của hốc mắt (Việc 4), đúng như thái dương và hốc
+ * mắt thật sự nối liền nhau trên một cái sọ. Hai mí mắt (`eyeL/R`, `pupilL/R` ở `human.js`) được
+ * lùi lại để mặt trước của chúng nằm SAU vành này cộng SAU gò má — xem `humanFace.test.js`.
+ * ⚠️ VÀ SỰ THẬT KHÓ CHỊU: KHÔNG PHẢI CỨ ĐÀO SÂU LÀ ĐƯỢC. Bản đầu đào tới 0,78 và ĐÚNG toạ độ
+ * `0,045` — rồi bài «MŨ TÓC PHẢI NẰM NGOÀI CÁI SỌ» đỏ (`humanShape.test.js`): 284 đỉnh mũ tóc lọt
+ * vào trong sọ. Lý do KHÔNG phải hốc quá sâu — `scalpFit` kéo TRỤC Y của mũ tóc theo `SCALP_LIFT`
+ * quanh GỐC (chân cằm), nên một đỉnh mũ tóc ở `y = 0,045` thật ra rơi vào thế giới ở
+ * `u ≈ 0,045 + (SCALP_LIFT−1)·(0,5+0,045) ≈ 0,10` — ĐÃ TRÔI QUA khỏi hốc, sang vùng đang DỰNG LẠI
+ * (rising) của chính đường sinh này. Hốc càng HẸP (theo y) thì cái trôi 0,055 ấy càng dễ nhảy tuột
+ * từ đáy hốc sang bên kia sườn dốc — mũ tóc tưởng đã lùi ra ngoài (nhân `SCALP_LIFT`) mà thật ra
+ * đang so với một đoạn sọ đã RỘNG TRỞ LẠI. ⇒ Hốc phải RỘNG (span theo y lớn hơn hẳn độ trôi
+ * `≈ 0,055`), không được sâu tối đa: bỏ hẳn vành trung gian `[0,08,0,96]`, cho đáy hốc đi thẳng
+ * một mạch, thoai thoải, tới tận xương đỉnh (`[0,20,1,00]`) — span 0,155, gấp gần 3 lần độ trôi.
+ * ⚠️ VẪN THÓT LẠI so với gò má 0,88 và xương đỉnh 1,00. Bỏ nó đi thì bán kính tăng đơn điệu
+ * từ cằm lên đỉnh — tức một QUẢ TRỨNG.
  * ⚠️ ĐÁY 0,26 (quả cầu `dome` cũ: 0,60) LÀ CÁI CẰM. Một cái đầu thu về 0,60 ở đáy thì nó không kết
  * thúc, nó bị CẮT NGANG — và chỗ cắt ấy chính là chỗ vòng 54 phải nhét một cái cổ rộng 0,46 vào để
  * che, rồi nhận lại một cái "vành cổ áo trắng".
@@ -181,8 +200,7 @@ const SKULL_RINGS = Object.freeze([
   [-0.38, 0.54],   // hàm dưới
   [-0.26, 0.72],   // góc hàm
   [-0.14, 0.88],   // gò má — chỗ rộng nhất của KHUÔN MẶT
-  [-0.04, 0.84],   // ⚠️ THÁI DƯƠNG: thót lại. Bỏ vành này là được một quả trứng.
-  [0.08, 0.96],
+  [0.045, 0.85],   // ⚠️ ĐÁY HỐC MẮT = THÁI DƯƠNG, đúng độ cao con mắt. Bỏ vành này là được quả trứng.
   [0.20, 1.00],    // xương đỉnh — chỗ rộng nhất của CẢ CÁI ĐẦU
   [0.34, 0.90],
   [0.50, 0.44],    // chỏm

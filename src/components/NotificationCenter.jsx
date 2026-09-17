@@ -354,7 +354,7 @@ export default function NotificationCenter({ onNavigate }) {
 
                 <div className="flex items-center gap-2">
                   {notificationFeed.length > 0 && (
-                    <ActionButton size="sm" variant="soft" onClick={clearUiNotifications} className="mono uppercase tracking-[0.12em]">
+                    <ActionButton size="sm" variant="soft" onClick={clearUiNotifications} className="mono uppercase tracking-[0.2em]">
                       Xóa hết
                     </ActionButton>
                   )}
@@ -434,7 +434,7 @@ export default function NotificationCenter({ onNavigate }) {
                         </span>
 
                         <span
-                          className="mono inline-flex items-center gap-1 rounded-full px-2 py-1 text-[9px] uppercase tracking-[0.12em]"
+                          className="mono inline-flex items-center gap-1 rounded-full px-2 py-1 text-[9px] uppercase tracking-[0.2em]"
                           style={{
                             color: 'var(--accent2)',
                             background: 'rgba(var(--accent-rgb),0.1)',
@@ -478,7 +478,7 @@ export default function NotificationCenter({ onNavigate }) {
 
                   {unreadCount > 0 && (
                     <span
-                      className="mono rounded-full px-2 py-0.5 text-[9px] uppercase tracking-[0.12em]"
+                      className="mono rounded-full px-2 py-0.5 text-[9px] uppercase tracking-[0.2em]"
                       style={{
                         background: 'rgba(var(--accent-rgb),0.1)',
                         color: 'var(--accent2)',
@@ -543,7 +543,7 @@ export default function NotificationCenter({ onNavigate }) {
                                   onNavigate?.(item.action);
                                   setNotificationCenterOpen(false);
                                 }}
-                                className="mono mt-2 inline-flex items-center gap-1 rounded-full px-2 py-1 text-[9px] uppercase tracking-[0.12em]"
+                                className="mono mt-2 inline-flex items-center gap-1 rounded-full px-2 py-1 text-[9px] uppercase tracking-[0.2em]"
                                 style={{
                                   color: 'var(--accent2)',
                                   background: 'rgba(var(--accent-rgb),0.1)',

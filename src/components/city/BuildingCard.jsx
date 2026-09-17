@@ -48,7 +48,7 @@ export default function BuildingCard({ item, era, onClose }) {
           <div className="text-[13px] font-semibold leading-tight" style={{ color: 'var(--ink)' }}>
             {item.label}
           </div>
-          <div className="mono mt-0.5 text-[10px] uppercase tracking-[0.14em]" style={{ color: 'var(--muted-2)' }}>
+          <div className="mono mt-0.5 text-[10px] uppercase tracking-[0.2em]" style={{ color: 'var(--muted-2)' }}>
             {scaffold
               ? 'đang xây'
               : [

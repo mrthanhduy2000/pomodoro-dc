@@ -89,3 +89,25 @@ test('the level card states its distance in sessions, with the XP number only as
   assert.match(skills, /sessionsToNextLevel/,
     'The level line stopped asking how many sessions the next level is away.');
 });
+
+// ⚠️ ROUND 46 (ADR-086) — THE HÀNH TRANG TAB COUNT AND THE RAIL MUST BE ONE NUMBER.
+// The first draft of the sub-tab counter re-derived the building total itself and read
+// `s.activeBook` where the real path is `s.progress.activeBook`. It fell back to era 1 in silence
+// and printed «Công trình 30/75» two centimetres below a rail reading «38/75 công trình»: one
+// screen, one moment, two answers. ADR-082 already made `useJourney` the ONE seam; this is the
+// assertion that keeps a fourth derivation from being typed again.
+// THỬ-CHO-ĐỎ: đổi `journey.short` thành một phép đếm tự viết ⇒ bài này đỏ.
+test('the Hành trang building tab reads the SAME journey the rail reads', async () => {
+  const app = await readFile(new URL('../App.jsx', import.meta.url), 'utf8');
+  const block = /const tabs = useMemo\(\(\) => \{([\s\S]*?)\}, \[/.exec(app);
+  assert.ok(block, 'không còn khối dựng tab con Hành trang — phép đo chạy rỗng');
+  assert.match(
+    block[1], /collection:\s*journey\.short/,
+    'tab «Công trình» tự đếm lại thay vì đọc `useJourney().journey.short` — bản nháp đầu làm đúng '
+    + 'như vậy và in 30/75 ngay dưới một thanh đang in 38/75',
+  );
+  assert.doesNotMatch(
+    block[1], /countBuiltBuildings|TOTAL_BUILDINGS/,
+    'một cách đếm công trình thứ hai vừa quay lại trong chính khối này',
+  );
+});

@@ -1,4 +1,6 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState, Suspense } from 'react';
+import { ratio } from './components/shared/surface';
+import { TOTAL_RELICS, TOTAL_SKILLS } from './engine/journey';
 import { AnimatePresence, motion as Motion } from 'framer-motion';
 import { useEnterMotion, usePressMotion, useSnapMotion } from './lib/motionPresets';
 import { initSync } from './lib/syncService';
@@ -1813,7 +1815,10 @@ function TopRail({
             compact
             label={streakRisk?.atRisk ? 'Chuỗi ⚠' : 'Chuỗi'}
             value={streakMilestoneTarget
-              ? `${currentStreak.toLocaleString()} / ${streakMilestoneTarget}`
+              // ⚠️ ROUND 46 (ADR-086): no spaces around the slash. This cell printed `0 / 7`
+              // while the era chips a few centimetres below printed `4/5` — one relation,
+              // two punctuations, on one screen at one moment. `shared/surface.js` owns the shape.
+              ? ratio(currentStreak, streakMilestoneTarget)
               : currentStreak.toLocaleString()}
             accent
             atRisk={streakRisk?.atRisk === true}
@@ -2087,6 +2092,23 @@ function SubTabs({ items, onChange, value }) {
             }}
           >
             {tab.label}
+            {/*
+              ⚠️ ROUND 46 (ADR-086) — MỖI TAB TỰ NÓI NÓ CÓ GÌ. Đàm's brief: *"nếu giữ ba tab thì
+              phải làm cho nhìn một cái là biết tab nào có gì, đừng bắt tôi bấm thử."* Ba chữ trần
+              — Kỹ năng · Công trình · Di vật — không phân biệt được bằng mắt; con số thì có, và
+              nó là đúng con số mỗi màn đằng sau đang in ở dòng đầu tiên của nó, nên đây không
+              phải một đơn vị mới, chỉ là đưa nó lên trước cú chạm.
+              ⚠️ Cùng hình dạng `n/N` với cả app (`shared/surface.js`) — nếu không thì cái row này
+              lại thành chỗ thứ hai chấm câu một mẫu số theo kiểu riêng.
+            */}
+            {tab.count && (
+              <span
+                className="mono ml-1.5 text-[11px] tabular-nums"
+                style={{ color: active ? 'var(--accent2)' : 'var(--muted-2)' }}
+              >
+                {tab.count}
+              </span>
+            )}
           </button>
         );
       })}
@@ -2121,9 +2143,34 @@ function SubTabs({ items, onChange, value }) {
  * Nó là một cái tên trong hàng tab bắt Đàm phải đọc và loại trừ mỗi lần đi tìm thứ khác.
  */
 function InventoryView({ onChange, sub }) {
+  // ⚠️ ROUND 46 (ADR-086) — THE THREE SUB-TABS NOW SAY WHAT IS BEHIND THEM.
+  // Round 45 decided to keep all three (three verbs: spend points · choose what to build · read
+  // what is running) and that decision stands. But Đàm's follow-up was the sharper half of it:
+  // *"đừng bắt tôi bấm thử."* Three bare words are three identical-looking doors. Each number here
+  // is the SAME number the screen behind the tab already prints as its first line — no new unit,
+  // no new source of truth, just moved in front of the tap.
+  const unlockedSkills = useGameStore((s) => s.player.unlockedSkills);
+  const relics = useGameStore((s) => s.relics);
+  // ⚠️ THE BUILDING COUNT COMES THROUGH `useJourney`, NOT FROM A FOURTH DERIVATION — and the first
+  // draft of this line proved why in the most embarrassing way available: it read `s.activeBook`
+  // (the real path is `s.progress.activeBook`), silently fell back to era 1, and printed
+  // «Công trình 30/75» two centimetres under a rail reading «38/75 công trình». One screen, one
+  // moment, two different answers to one question — the exact fault this round exists to remove,
+  // committed while removing it. ADR-082 already named `hooks/useJourney.js` the ONE seam to the
+  // store for this number; a count that disagrees with the rail is worse than no count at all.
+  const { journey } = useJourney();
+  const tabs = useMemo(() => {
+    const counts = {
+      skills: ratio(Object.values(unlockedSkills ?? {}).filter(Boolean).length, TOTAL_SKILLS),
+      collection: journey.short,
+      relics: ratio(Array.isArray(relics) ? relics.length : 0, TOTAL_RELICS),
+    };
+    return INVENTORY_TABS.map((tab) => ({ ...tab, count: counts[tab.id] ?? null }));
+  }, [unlockedSkills, journey, relics]);
+
   return (
     <div>
-      <SubTabs items={INVENTORY_TABS} onChange={onChange} value={sub} />
+      <SubTabs items={tabs} onChange={onChange} value={sub} />
 
       {sub === 'skills' && (
         <DeferredTabContent>

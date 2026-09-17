@@ -310,7 +310,13 @@ export default function CityViewShell({
             // screen, so this cell does NOT switch source when Đàm browses a sealed era. That is
             // deliberate — the destination is the one thing that must not move while he looks
             // around.
-            { label: 'Thành phố', value: journey.short, hint: journey.remaining > 0 ? `còn ${journey.remaining}` : 'trọn vẹn ★' },
+            // ⚠️ ROUND 46 (ADR-086) — THE HINT WAS THE SAME FACT SUBTRACTED. `còn 37` is exactly
+            // `75 − 38`, printed beside the `38/75` it was derived from: a second number and a
+            // second colour that add nothing a reader cannot see. The ★ hint survives on the
+            // «Công trình» cell above, because `còn 1 nữa ★` is not a remainder — it names a
+            // MILESTONE one step away whose reward seals permanently (ADR-007). A remainder earns
+            // its place when it answers *when*; never when it only restates the fraction.
+            { label: 'Thành phố', value: journey.short, hint: journey.remaining > 0 ? null : 'trọn vẹn ★' },
           ].map((stat) => (
             <div key={stat.label} className="px-3 py-2.5" style={cardStyle}>
               <Stat label={stat.label} value={stat.value} hint={stat.hint ?? null} />

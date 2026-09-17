@@ -167,7 +167,7 @@ export default function CoachChat(goalProps) {
       <button
         type="button"
         onClick={() => setOpen(true)}
-        className="mt-2 flex w-full items-center justify-center gap-1.5 rounded-full py-1.5 text-[11px] font-semibold uppercase tracking-[0.15em] transition-opacity hover:opacity-80"
+        className="mt-2 flex w-full items-center justify-center gap-1.5 rounded-full py-1.5 text-[11px] font-semibold uppercase tracking-[0.14em] transition-opacity hover:opacity-80"
         style={{ border: `1px solid ${COACH_COLOR}55`, color: COACH_COLOR, background: `${COACH_COLOR}14` }}
       >
         <SparkGlyph size={12} /> Hỏi Coach
@@ -179,7 +179,7 @@ export default function CoachChat(goalProps) {
             <div className="flex items-center justify-between px-4 py-3" style={{ borderBottom: '1px solid var(--line)' }}>
               <div className="flex items-center gap-1.5" style={{ color: COACH_COLOR }}>
                 <SparkGlyph size={14} />
-                <span className="mono text-[11px] uppercase tracking-[0.2em]">Hỏi Coach</span>
+                <span className="mono text-[10px] uppercase tracking-[0.2em]">Hỏi Coach</span>
               </div>
               <div className="flex items-center gap-3">
                 {messages.length > 0 && (
@@ -223,7 +223,7 @@ export default function CoachChat(goalProps) {
 
             {chips.length > 0 && (
               <div className="px-3 pb-1">
-                <div className="mono mb-1 text-[9px] uppercase tracking-[0.18em]" style={{ color: 'var(--muted)' }}>{chipLabel}</div>
+                <div className="mono mb-1 text-[9px] uppercase tracking-[0.2em]" style={{ color: 'var(--muted)' }}>{chipLabel}</div>
                 <div className="flex flex-wrap gap-1.5">
                   {chips.map((c, i) => (
                     <button key={i} type="button" onClick={() => send(c)} disabled={busy} className="rounded-full px-2.5 py-1 text-[11px] disabled:opacity-40" style={{ border: '1px solid var(--line)', color: 'var(--ink-2,var(--ink))' }}>{c}</button>

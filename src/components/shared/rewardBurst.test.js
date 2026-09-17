@@ -42,7 +42,13 @@ test('a burst never blocks and never stays: pointer-events none, every particle 
 
 test('the ending wires the tiers: rare cards burst full-screen, the project card bursts by brick/building/lucky, new bricks DROP', () => {
   assert.match(STORY, /const rare = Boolean\(card\) && \(/, 'the rare tier is decided once, from the card id');
-  for (const id of ['level', 'era', 'rank', 'relic', 'evolve']) assert.match(STORY, new RegExp(`card\\.id === '${id}'`), `${id} must be rare`);
+  // ⚠️ ROUND 46 (ADR-086): `rank` · `relic` · `evolve` are now THREE ROWS of one «treasure» card —
+  // three renderings of one idea that used to fire back to back for 10,2 seconds. The tier they
+  // earn is unchanged, and that is the whole point of listing `treasure` here: merging three cards
+  // was allowed to cost a card, never the burst that made them feel rare.
+  for (const id of ['level', 'era', 'treasure']) assert.match(STORY, new RegExp(`card\\.id === '${id}'`), `${id} must be rare`);
+  // (that a treasure also HOLDS the screen longer is asserted behaviourally, on the real
+  //  `storyCardDurationMs`, in `sessionRewardStory.test.js` — a stronger check than a grep.)
   assert.match(STORY, /card\.id === 'streak' && card\.justHit/, 'a streak card is rare only when a milestone was just hit');
   assert.match(STORY, /\{rare && <RewardBurst key=\{card\.id\} size="rare"/, 'the rare burst is mounted behind the card, keyed by card');
   assert.match(STORY, /const burst = built \|\| card\.lucky \? 'building' : 'brick';/, 'a lucky double brick earns the building-size burst');

@@ -28,13 +28,13 @@ import {
   TAB_ACTIVE_BG, TAB_ACTIVE_BORDER, TAB_ACTIVE_SHADOW, TAB_ACTIVE_TEXT, TAB_BAR_BG,
   TAB_IDLE_BG, TAB_IDLE_BORDER, TAB_IDLE_TEXT, TEXT_MUTED, TEXT_PRIMARY, TEXT_SOFT,
 } from './statsTheme';
+import { CARD } from './shared/surface';
 
-const CARD_STYLE = {
-  background: BG_CARD,
-  border: `1px solid ${PANEL_BORDER}`,
-  borderRadius: 'var(--skin-radius-card, 18px)',
-  boxShadow: 'var(--skin-card-shadow)',
-};
+// ⚠️ ROUND 46 (ADR-086) — THIS WAS THE DRIFTED COPY. It hardcoded `1px` where the other three
+// screens read `var(--skin-card-border-width, 1px)`, so under any skin that sets that variable the
+// Thống kê cards had a different border width from every other screen in the app. Nobody could have
+// found it by reading one file, and reading one file is all anyone ever did. One source now.
+const CARD_STYLE = CARD;
 
 /** Hai cuốn sổ tra cứu. Nhãn KHÔNG được trùng mục điều hướng chính (`statsNavClarity.test.js`). */
 const LOOKUP = [
@@ -53,7 +53,7 @@ function AnswerCard({ index, question, children }) {
   const enterMotion = useEnterMotion();
   return (
     <Motion.section {...withDelay(enterMotion, index * 0.05)} className="p-5" style={CARD_STYLE} aria-label={question}>
-      <p className="text-[11px] font-semibold uppercase tracking-[0.18em]" style={{ color: TEXT_SOFT }}>{question}</p>
+      <p className="text-[10px] font-semibold uppercase tracking-[0.2em]" style={{ color: TEXT_SOFT }}>{question}</p>
       {children}
     </Motion.section>
   );
@@ -100,7 +100,7 @@ function InsightStrip({ items }) {
   return (
     <Motion.section {...withDelay(enterMotion, 0.15)} className="p-5" style={CARD_STYLE} aria-label="Điều đáng chú ý">
       <div className="flex flex-wrap items-baseline justify-between gap-x-3 gap-y-1">
-        <p className="text-[11px] font-semibold uppercase tracking-[0.18em]" style={{ color: TEXT_SOFT }}>Điều đáng chú ý</p>
+        <p className="text-[10px] font-semibold uppercase tracking-[0.2em]" style={{ color: TEXT_SOFT }}>Điều đáng chú ý</p>
         <p className="text-[11px]" style={{ color: TEXT_SOFT }}>Đọc trên toàn bộ lịch sử của bạn</p>
       </div>
       <div className="mt-4 grid gap-3 md:grid-cols-2">
@@ -110,7 +110,7 @@ function InsightStrip({ items }) {
             <div key={x.id} className="rounded-[14px] border p-3.5" style={{ background: PANEL_BG_SOFT, borderColor: PANEL_BORDER }}>
               <div className="flex items-center gap-2">
                 <span className="h-1.5 w-1.5 shrink-0 rounded-full" style={{ background: tone.dot }} />
-                <span className="text-[10px] font-semibold uppercase tracking-[0.16em]" style={{ color: TEXT_SOFT }}>{tone.label}</span>
+                <span className="text-[10px] font-semibold uppercase tracking-[0.2em]" style={{ color: TEXT_SOFT }}>{tone.label}</span>
               </div>
               <p className="mt-1.5 text-[13.5px] font-semibold leading-snug" style={{ color: TEXT_PRIMARY }}>{x.headline}</p>
               <p className="mt-1 text-[12px] leading-relaxed" style={{ color: TEXT_MUTED }}>{x.detail}</p>
@@ -218,7 +218,7 @@ export default function StatsDashboard({ onNavigate }) {
           <ul className="mt-2">
             {answers.best.filter((b) => b.ready).map((b) => (
               <li key={b.id} className="flex items-baseline justify-between gap-3 border-t py-2.5 first:border-t-0" style={{ borderColor: PANEL_BORDER }}>
-                <span className="w-[76px] shrink-0 text-[11px] font-semibold uppercase tracking-[0.14em]" style={{ color: TEXT_SOFT }}>{b.label}</span>
+                <span className="w-[76px] shrink-0 text-[10px] font-semibold uppercase tracking-[0.2em]" style={{ color: TEXT_SOFT }}>{b.label}</span>
                 <div className="min-w-0 flex-1 text-right">
                   <p className="text-[14px] font-semibold leading-snug" style={{ color: TEXT_PRIMARY }}>{b.value}</p>
                   <p className="text-[11.5px] leading-snug" style={{ color: TEXT_MUTED }}>{b.note} · trên {b.sample}</p>
@@ -254,7 +254,7 @@ export default function StatsDashboard({ onNavigate }) {
       {/* Sổ tra cứu — gấp, không giấu: hai cuốn sổ có tên và số mục ngay trên nút */}
       <section className="rounded-[24px] border p-1.5" style={{ background: TAB_BAR_BG, borderColor: PANEL_BORDER, boxShadow: '0 10px 24px rgba(31,30,29,0.05)' }} aria-label="Sổ tra cứu">
         <div className="flex items-baseline justify-between gap-3 px-2.5 pb-1.5 pt-1">
-          <span className="text-[11px] font-semibold uppercase tracking-[0.16em]" style={{ color: TEXT_SOFT }}>Sổ tra cứu</span>
+          <span className="text-[10px] font-semibold uppercase tracking-[0.2em]" style={{ color: TEXT_SOFT }}>Sổ tra cứu</span>
           <span className="text-[11px]" style={{ color: TEXT_SOFT }}>{lookup ? 'Bấm lại để gấp' : 'Gấp sẵn — mở khi cần'}</span>
         </div>
         <div className="grid grid-cols-2 gap-1.5">

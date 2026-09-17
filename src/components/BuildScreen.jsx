@@ -37,13 +37,8 @@ import {
   slotState,
 } from '../engine/buildChoices';
 import { getBuildingLevelMultiplier } from '../engine/constants';
+import { CARD } from './shared/surface';
 
-const CARD = {
-  background: 'var(--card-bg-solid)',
-  border: 'var(--skin-card-border-width,1px) solid var(--line)',
-  borderRadius: 'var(--skin-radius-card,18px)',
-  boxShadow: 'var(--skin-card-shadow)',
-};
 const eyebrowClass = 'mono text-[10px] font-semibold uppercase tracking-[0.2em]';
 /** Bao nhiêu lựa chọn mở sẵn trước khi gấp phần còn lại — ba là đủ để chọn, không đủ để phải so bảng. */
 const CHOICES_OPEN = 3;
@@ -54,7 +49,7 @@ function Glyph({ icon, label, size = 'md' }) {
   return (
     <span
       className={`mono inline-flex ${dim} shrink-0 items-center justify-center rounded-full ${
-        isIcon ? (size === 'lg' ? 'text-[24px]' : 'text-[20px]') + ' leading-none' : 'text-[9px] uppercase tracking-[0.14em]'
+        isIcon ? (size === 'lg' ? 'text-[24px]' : 'text-[20px]') + ' leading-none' : 'text-[9px] uppercase tracking-[0.2em]'
       }`}
       style={{ background: 'var(--card-bg-solid2, var(--card-bg-solid))', border: '1px solid var(--line)', color: 'var(--accent2)' }}
       aria-hidden="true"
@@ -103,7 +98,7 @@ function QueueRow({ item, onCancel }) {
               {item.label}
             </p>
             {item.restoration && (
-              <span className="mono text-[9px] uppercase tracking-[0.16em]" style={{ color: 'var(--muted-2)' }}>di sản</span>
+              <span className="mono text-[9px] uppercase tracking-[0.2em]" style={{ color: 'var(--muted-2)' }}>di sản</span>
             )}
           </div>
           <div className="mt-1.5 flex items-center gap-2">
@@ -116,7 +111,7 @@ function QueueRow({ item, onCancel }) {
         <button
           type="button"
           onClick={arm}
-          className="mono shrink-0 rounded-full px-2.5 py-1 text-[10px] font-semibold uppercase tracking-[0.12em]"
+          className="mono shrink-0 rounded-full px-2.5 py-1 text-[11px] font-semibold uppercase tracking-[0.14em]"
           style={arming
             ? { background: 'var(--accent)', color: 'var(--canvas)', border: '1px solid var(--accent)' }
             : { color: 'var(--muted-2)', border: '1px solid var(--line)' }}
@@ -157,7 +152,7 @@ function ChoiceCard({ project, canStart, blockedText, actionLabel, onStart, dela
             type="button"
             {...pressMotion}
             onClick={() => onStart(project.bpId)}
-            className="mono whitespace-nowrap rounded-full px-4 py-2 text-[12px] font-semibold uppercase tracking-[0.08em]"
+            className="mono whitespace-nowrap rounded-full px-4 py-2 text-[11px] font-semibold uppercase tracking-[0.14em]"
             style={{ background: 'var(--ink)', color: 'var(--canvas)', border: '1px solid var(--ink)', boxShadow: 'var(--skin-card-shadow)' }}
           >
             {actionLabel}
@@ -304,7 +299,7 @@ export default function BuildScreen() {
               <button
                 type="button"
                 onClick={() => setShowAll((v) => !v)}
-                className="mono w-full py-2 text-[11px] uppercase tracking-[0.16em]"
+                className="mono w-full py-2 text-[10px] uppercase tracking-[0.2em]"
                 style={{ color: 'var(--muted-2)' }}
               >
                 {showAll ? 'Thu gọn ▴' : `Còn ${hidden} công trình khác ▾`}

@@ -164,7 +164,7 @@ function RelicCard({ relic, stage, growth, factor, lightTheme }) {
       <div className="flex flex-col gap-4 lg:flex-row lg:items-start">
         <div className="flex min-w-0 flex-1 items-start gap-4">
           <div
-            className={`mono flex h-16 w-16 flex-shrink-0 items-center justify-center rounded-[var(--skin-radius-control,22px)] font-semibold ${hasGlyphIcon(relic.icon) ? 'text-[30px] leading-none' : 'text-[12px] uppercase tracking-[0.18em]'}`}
+            className={`mono flex h-16 w-16 flex-shrink-0 items-center justify-center rounded-[var(--skin-radius-control,22px)] font-semibold ${hasGlyphIcon(relic.icon) ? 'text-[30px] leading-none' : 'text-[10px] uppercase tracking-[0.2em]'}`}
             style={lightTheme ? {
               background: token.accentSoft,
               border: `1px solid ${token.accentBorder}`,

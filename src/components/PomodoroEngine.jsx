@@ -1,4 +1,5 @@
 import React, { useState, useCallback, useEffect, useMemo } from 'react';
+import { CARD } from './shared/surface';
 import { tomTatThietLap } from './pomodoroSetupSummary.js';
 import { AnimatePresence, motion } from 'framer-motion';
 
@@ -129,21 +130,12 @@ export default function PomodoroEngine({
   const setBreakProfile = useSettingsStore((s) => s.setBreakProfile);
   const uiTheme = useSettingsStore((s) => s.uiTheme);
   const lightTheme = uiTheme === 'light';
-  const paperCardStyle = lightTheme
-    ? {
-        background: 'var(--card-bg-solid)',
-        border: 'var(--skin-card-border-width, 1px) solid var(--line)',
-        borderRadius: 'var(--skin-radius-card, 18px)',
-        boxShadow: 'var(--skin-card-shadow)',
-      }
-    : undefined;
+  // ⚠️ ROUND 46 (ADR-086): both of these were hand-written copies of the same four lines that four
+  // other screens also carried. `CARD` is the one source now; the only thing this file still decides
+  // is WHEN a surface appears (paper skin only, vs. always), which is a real local decision.
+  const paperCardStyle = lightTheme ? CARD : undefined;
   // Thẻ nổi bao đồng hồ (mọi skin/theme) — để màn Focus giống mockup: đồng hồ nằm trong một thẻ.
-  const timerCardStyle = {
-    background: 'var(--card-bg-solid)',
-    border: 'var(--skin-card-border-width, 1px) solid var(--line)',
-    borderRadius: 'var(--skin-radius-card, 18px)',
-    boxShadow: 'var(--skin-card-shadow)',
-  };
+  const timerCardStyle = CARD;
   const paperInsetStyle = lightTheme
     ? {
         background: 'var(--card-bg-solid2)',
@@ -775,7 +767,7 @@ export default function PomodoroEngine({
             strict: strictMode,
           })}
         </span>
-        <span className="mono shrink-0 text-[10px] uppercase tracking-[0.18em]" style={{ color: 'var(--accent2)' }}>
+        <span className="mono shrink-0 text-[10px] uppercase tracking-[0.2em]" style={{ color: 'var(--accent2)' }}>
           {setupOpen ? 'Thu gọn ▲' : 'Đổi ▾'}
         </span>
       </button>
@@ -853,7 +845,7 @@ export default function PomodoroEngine({
                   aria-label="Nhập trực tiếp số phút tập trung"
                   className={`w-full bg-transparent text-center font-mono font-bold text-[2rem] leading-none tabular-nums outline-none touch-manipulation text-[var(--ink)] ${!isIdle || isBreakMode ? 'cursor-not-allowed' : 'cursor-text'}`}
                 />
-                <div className={`mono mt-1 text-[11px] uppercase tracking-[0.16em] ${
+                <div className={`mono mt-1 text-[10px] uppercase tracking-[0.2em] ${
                   lightTheme ? 'text-[var(--muted-2)]' : 'text-[var(--muted)]'
                 }`}>phút</div>
               </div>
@@ -895,7 +887,7 @@ export default function PomodoroEngine({
                 <span className={`block text-[13px] font-semibold text-[var(--good)]`}>
                   💡 {lengthSuggestion.bucketLabel} bạn thường hợp phiên ~{lengthSuggestion.minutes} phút
                 </span>
-                <span className={`mono mt-0.5 block text-[10px] uppercase tracking-[0.16em] text-[var(--muted)]`}>
+                <span className={`mono mt-0.5 block text-[10px] uppercase tracking-[0.2em] text-[var(--muted)]`}>
                   dựa trên {lengthSuggestion.sampleSize} phiên{lengthSuggestion.categoryScoped ? ' cùng loại' : ''}
                 </span>
               </span>
@@ -952,7 +944,7 @@ export default function PomodoroEngine({
                 </>
               )}
             </div>
-            <span className={`rounded-full px-2.5 py-1 text-[10px] font-semibold uppercase tracking-[0.18em] whitespace-nowrap ${
+            <span className={`rounded-full px-2.5 py-1 text-[11px] font-semibold uppercase tracking-[0.14em] whitespace-nowrap ${
               lightTheme
                 ? 'border border-[var(--line)] bg-[var(--card-bg-solid)] text-[var(--muted)]'
                 : 'border border-[var(--line)] bg-[var(--panel-soft)] text-[var(--good)]'
@@ -1082,7 +1074,7 @@ export default function PomodoroEngine({
                 block above `timerValueLayoutClass`. Absolute px here is how text used to end up on
                 the stroke whenever the ring changed size. */}
             <span
-              className="mono uppercase tracking-[0.22em] text-[var(--muted)]"
+              className="mono uppercase tracking-[0.2em] text-[var(--muted)]"
               style={{ fontSize: `${RING_TEXT_CQW.label}cqw` }}
             >
               {/* ADR-080: during a beat the label WHISPERS the beat (a few seconds, no digit) — the same
@@ -1484,7 +1476,7 @@ export default function PomodoroEngine({
           <div className="flex items-start justify-between gap-3">
             <div className="min-w-0 flex-1">
               <div className="flex items-center gap-2">
-                <span className={`rounded-full px-2 py-1 text-[10px] font-semibold uppercase tracking-[0.16em] ${
+                <span className={`rounded-full px-2 py-1 text-[11px] font-semibold uppercase tracking-[0.14em] ${
                   lightTheme
                     ? 'bg-[rgba(var(--accent-rgb),0.1)] text-[var(--accent2)]'
                     : 'bg-[var(--panel-soft)] text-[var(--accent-light)]'
@@ -1574,7 +1566,7 @@ export default function PomodoroEngine({
           }`}>
             Ghi chú phiên{!noteExpanded && noteWordCount > 0 ? ` · ${noteWordCount} từ` : ''}
           </span>
-          <span className={`mono text-[10px] uppercase tracking-[0.16em] text-[var(--muted)]`}>
+          <span className={`mono text-[10px] uppercase tracking-[0.2em] text-[var(--muted)]`}>
             {noteExpanded ? 'Thu gọn ▴' : 'Mở ▾'}
           </span>
         </button>
@@ -1609,7 +1601,7 @@ export default function PomodoroEngine({
       <div className="pt-1">
         <div className="flex items-center justify-between gap-3">
           <div>
-            <p className={`mono text-[10px] font-semibold uppercase tracking-[0.22em] text-[var(--muted)]`}>
+            <p className={`mono text-[10px] font-semibold uppercase tracking-[0.2em] text-[var(--muted)]`}>
               Sổ tay phiên
             </p>
             <p className={`mt-2 max-w-[34rem] text-[14px] leading-[1.7] text-[var(--muted)]`}>
@@ -1641,7 +1633,7 @@ export default function PomodoroEngine({
       <div className="border-t pt-6" style={{ borderColor: 'var(--line)' }}>
         <div className="flex flex-wrap items-start justify-between gap-3">
           <div className="min-w-0">
-            <p className={`mono text-[10px] font-semibold uppercase tracking-[0.22em] ${lightTheme ? 'text-[var(--accent)]' : 'text-[var(--accent-light)]'}`}>
+            <p className={`mono text-[10px] font-semibold uppercase tracking-[0.2em] ${lightTheme ? 'text-[var(--accent)]' : 'text-[var(--accent-light)]'}`}>
               Mục tiêu phiên
             </p>
             <p className={`mt-2 max-w-[34rem] text-[14px] leading-[1.7] text-[var(--muted)]`}>
@@ -1692,7 +1684,7 @@ export default function PomodoroEngine({
 
   const shortcutHint = showShortcutHint ? (
     <div className="hidden w-full justify-center py-5 md:flex">
-      <p className={`mono px-1 text-center text-[10px] uppercase tracking-[0.18em] ${
+      <p className={`mono px-1 text-center text-[10px] uppercase tracking-[0.2em] ${
         lightTheme ? 'text-[var(--muted-2)]' : 'text-[var(--muted)]'
       }`}>
         Space bắt đầu · Shift trái + F full screen · Shift trái + G thu/mở cột
@@ -1745,7 +1737,7 @@ export default function PomodoroEngine({
             type="button"
             onClick={() => setFullScreenNotebookOpen((open) => !open)}
             aria-expanded={fullScreenNotebookOpen}
-            className={`mono rounded-full border px-4 py-2 text-[10px] font-semibold uppercase tracking-[0.18em] transition-colors focus-visible:outline-none focus-visible:ring-2 ${
+            className={`mono rounded-full border px-4 py-2 text-[11px] font-semibold uppercase tracking-[0.14em] transition-colors focus-visible:outline-none focus-visible:ring-2 ${
               lightTheme
                 ? 'border-[var(--line)] text-[var(--muted)] hover:text-[var(--ink)] focus-visible:ring-[rgba(31,30,29,0.14)]'
                 : 'border-[var(--line)] text-[var(--muted)] hover:text-[var(--ink)] focus-visible:ring-[var(--line-2)]'

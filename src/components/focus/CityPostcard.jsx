@@ -123,7 +123,7 @@ export default function CityPostcard({
         {greeting && (
           <div className="absolute left-4 right-4 top-3" style={{ color: 'rgba(255,255,255,0.94)', textShadow: '0 1px 2px rgba(0,0,0,0.45)' }}>
             <p className="text-[13px] font-medium leading-snug">{greeting}</p>
-            {goalLine && <p className="mono mt-0.5 text-[10.5px] uppercase tracking-[0.14em] opacity-85">{goalLine}</p>}
+            {goalLine && <p className="mono mt-0.5 text-[10px] uppercase tracking-[0.2em] opacity-85">{goalLine}</p>}
           </div>
         )}
         <EraStageBar

@@ -10,6 +10,34 @@
 > **Muốn hiểu VÌ SAO một quyết định được chọn** → `ARCHITECTURE_DECISIONS.md`. **Muốn biết migration
 > cụ thể nào cần chạy** → `MIGRATION.md`.
 
+## 2026-09-17 — Round 46: one visual vocabulary for eight screens, a shorter ending, a folded Cài đặt (ADR-086)
+
+**Purpose.** Round 39's four numbers (1 indicator · ≤2 numbers · ≤3 colours · 0 cut text) guarded the
+Focus screen for seven rounds and never guarded the other seven screens — while rounds 43–45 kept
+adding text to exactly those. Counting one element at a time: the small uppercase section label
+existed in **22 size+tracking combinations over 111 uses**; the card surface had **7 local
+definitions**, one of them drifted; a number with a denominator had **4 shapes on the Thành Phố
+screen alone**; `Cài đặt` was **4.919 px ≈ 5,8 phone screens** of flat, fully-expanded scroll; and
+the luckiest session's ending ran **11 cards / 39,0 s**.
+
+**Scope.** New `components/shared/surface.js` owns `CARD` · `CARD_INSET` · `EYEBROW` · `ratio()` ·
+`remaining()`: seven card definitions became one import (fixing a Thống kê border-width drift no one
+could see without reading two files at once), and 109 eyebrow instances collapsed from 22 shapes to
+two. A number with a denominator is `n/N` everywhere, and a bare remainder never sits beside the
+fraction it came from. The ending merges what repeated — `streak`+`today` into one «Nhịp» card,
+`rank`+`relic`+`evolve` into one «Kho báu» card — taking the luckiest session to **8 cards / 29,6 s**
+and a normal one from 5 cards / 19,4 s to **4 / 16,8 s**, with zero taps added and the rare-tier
+burst untouched. `Cài đặt` folds: eleven sections, ten collapsed, none deleted. The three Hành trang
+sub-tabs now carry the count of what is behind them. Two mission labels that stated an hour goal
+while counting minutes now say minutes.
+
+**Impact.** No economy, no balance, no new mechanic: no SP rate, no 75-building destination, no skill
+percentage changed, and TECH_DEBT #104 was left untouched by design. `shared/surface.test.js` is the
+new gate — it caught three card copies the opening grep had missed.
+
+**Compatibility.** No migration and no persisted-state change. Two mission strings changed text only;
+their `goal` and `rewardXP` are identical.
+
 ## 2026-09-08 — Round 45: every bonus names itself at the ending, and opening a skill becomes a moment (ADR-085)
 
 **Purpose.** Answer the question round 44 created: *"is it worth spending points on?"*. Walking all

@@ -56,7 +56,7 @@ export default function StatsNotes({ savedNotes, sessionCategories }) {
             className="inline-flex w-fit items-center gap-2 rounded-full border px-3 py-1.5 text-[11px] font-semibold"
             style={{ background: FILTER_PILL_BG, color: FILTER_PILL_TEXT, borderColor: FILTER_PILL_BORDER }}
           >
-            <span className="font-mono text-[10px] uppercase tracking-[0.18em]" style={{ color: TEXT_SOFT }}>Lưu trữ</span>
+            <span className="font-mono text-[10px] uppercase tracking-[0.2em]" style={{ color: TEXT_SOFT }}>Lưu trữ</span>
             <span>{fmtCount(savedNotes.length)} mục</span>
           </div>
         </div>
@@ -73,7 +73,7 @@ export default function StatsNotes({ savedNotes, sessionCategories }) {
               className="rounded-[22px] px-4 py-3"
               style={{ background: PANEL_BG_SOFT, border: `1px solid ${PANEL_BORDER}` }}
             >
-              <p className="text-[10px] font-semibold uppercase tracking-[0.18em]" style={{ color: TEXT_SOFT }}>{item.label}</p>
+              <p className="text-[10px] font-semibold uppercase tracking-[0.2em]" style={{ color: TEXT_SOFT }}>{item.label}</p>
               <p className="mt-2 text-[1.35rem] font-semibold leading-none" style={{ color: TEXT_PRIMARY, fontFamily: DISPLAY_FONT }}>
                 {item.value}
               </p>
@@ -85,7 +85,7 @@ export default function StatsNotes({ savedNotes, sessionCategories }) {
 
       {/* Saved notes archive */}
       <div>
-        <p className="mb-2 px-0.5 text-[10px] font-semibold uppercase tracking-[0.24em]" style={{ color: TEXT_SOFT }}>
+        <p className="mb-2 px-0.5 text-[10px] font-semibold uppercase tracking-[0.2em]" style={{ color: TEXT_SOFT }}>
           Các bản ghi đã lưu ({savedNotes.length})
         </p>
 
@@ -94,7 +94,7 @@ export default function StatsNotes({ savedNotes, sessionCategories }) {
             className="rounded-[26px] border px-6 py-12 text-center"
             style={{ background: BG_CARD, borderColor: PANEL_BORDER }}
           >
-            <p className="text-[10px] font-semibold uppercase tracking-[0.24em]" style={{ color: TEXT_SOFT }}>
+            <p className="text-[10px] font-semibold uppercase tracking-[0.2em]" style={{ color: TEXT_SOFT }}>
               Ghi chú
             </p>
             <p className="mt-3 text-sm" style={{ color: TEXT_MUTED }}>Chưa có ghi chú nào được lưu.</p>
@@ -119,7 +119,7 @@ export default function StatsNotes({ savedNotes, sessionCategories }) {
                   <div className="flex items-start justify-between gap-3">
                     <div className="flex min-w-0 flex-1 items-start gap-3">
                       <div
-                        className={`mono flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl font-semibold ${hasGlyphIcon(cat?.icon) ? 'text-[19px] leading-none' : 'text-[8px] uppercase tracking-[0.14em]'}`}
+                        className={`mono flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl font-semibold ${hasGlyphIcon(cat?.icon) ? 'text-[19px] leading-none' : 'text-[8px] uppercase tracking-[0.2em]'}`}
                         style={{ background: `${accent}14`, color: accent, border: `1px solid ${accent}28` }}
                       >
                         {getGlyph(cat?.icon, cat?.label, 'DM')}
@@ -213,7 +213,7 @@ export default function StatsNotes({ savedNotes, sessionCategories }) {
                         className="rounded-[18px] px-3 py-2.5"
                         style={{ background: PANEL_BG_SOFT, border: `1px solid ${PANEL_BORDER}` }}
                       >
-                        <p className="text-[10px] font-semibold uppercase tracking-[0.16em]" style={{ color: TEXT_SOFT }}>
+                        <p className="text-[10px] font-semibold uppercase tracking-[0.2em]" style={{ color: TEXT_SOFT }}>
                           {item.label}
                         </p>
                         <p className="mt-2 text-[1rem] font-semibold leading-none break-words" style={{ color: TEXT_PRIMARY }}>

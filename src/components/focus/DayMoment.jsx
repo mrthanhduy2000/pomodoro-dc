@@ -178,7 +178,7 @@ export default function DayMoment({ quiet = false }) {
             {(moment.tone === 'met' || moment.tone === 'gift') && (
               <RewardBurst size="building" className="absolute inset-0" />
             )}
-            <span className="mono relative block text-[10px] uppercase tracking-[0.22em]" style={{ color: 'var(--muted)' }}>
+            <span className="mono relative block text-[10px] uppercase tracking-[0.2em]" style={{ color: 'var(--muted)' }}>
               {moment.tone === 'gift' ? '🌙' : moment.tone === 'met' ? '✓' : '·'}
             </span>
             <span className="relative mt-1 block text-[16px] font-semibold leading-snug" style={{ color: 'var(--ink)' }}>

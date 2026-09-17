@@ -25,7 +25,7 @@ export default function SessionReviewCard({ completedGoalAchieved, goalText, goa
           : 'border-[var(--line)] bg-[var(--panel-soft)] shadow-[0_18px_40px_rgba(0,0,0,0.18)] backdrop-blur-2xl'
       }`}
     >
-      <p className={`mono text-[11px] uppercase tracking-[0.22em] ${lightTheme ? 'text-[var(--muted)]' : 'text-[var(--accent2)]/90'}`}>Đánh giá phiên vừa xong</p>
+      <p className={`mono text-[10px] uppercase tracking-[0.2em] ${lightTheme ? 'text-[var(--muted)]' : 'text-[var(--accent2)]/90'}`}>Đánh giá phiên vừa xong</p>
       <p className={`mt-2 text-sm leading-relaxed ${lightTheme ? 'text-[var(--ink-2)]' : 'text-[var(--ink)]'}`}>
         {goalText
           ? <>Mục tiêu: <span className={`font-semibold text-[var(--ink)]`}>{goalText}</span></>

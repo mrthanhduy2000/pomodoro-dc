@@ -9,19 +9,14 @@
  * Thẻ AI Coach: MỌI phản hồi do Gemini (đám mây) sinh — 2 nút: Hỏi Coach + AI phân tích tổng thể.
  */
 import { motion } from 'framer-motion';
+import { CARD as cardStyle, EYEBROW as eyebrow } from './shared/surface';
 import { useEnterMotion } from '../lib/motionPresets';
 import CoachChat from './CoachChat';
 import CoachOffline from './CoachOffline';
 import CoachNudge from './CoachNudge';
 
-const cardStyle = {
-  background: 'var(--card-bg-solid)',
-  border: 'var(--skin-card-border-width,1px) solid var(--line)',
-  borderRadius: 'var(--skin-radius-card,18px)',
-  boxShadow: 'var(--skin-card-shadow)',
-};
 
-const eyebrow = 'mono text-[10px] uppercase tracking-[0.2em]';
+
 
 export default function FocusRail({
   sessionsCompletedToday = 0,

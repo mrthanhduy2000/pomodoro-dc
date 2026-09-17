@@ -70,7 +70,7 @@ export function RewardTierBadge({ tier: tierKey }) {
   if (tier.rank === 0) return null;
   return (
     <span
-      className="mono inline-flex shrink-0 items-center gap-1.5 rounded-full px-2 py-[3px] text-[10px] font-semibold uppercase tracking-[0.16em]"
+      className="mono inline-flex shrink-0 items-center gap-1.5 rounded-full px-2 py-[3px] text-[11px] font-semibold uppercase tracking-[0.14em]"
       style={{
         color: tier.colorVar,
         background: 'var(--card-bg-solid2, rgba(127,127,127,0.08))',

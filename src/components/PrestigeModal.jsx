@@ -76,7 +76,7 @@ function InventorySection({ items, title, subtitle, tone = 'neutral' }) {
             }}
           >
             <div
-              className="mono flex h-9 w-9 shrink-0 items-center justify-center border text-[10px] font-semibold uppercase tracking-[0.14em]"
+              className="mono flex h-9 w-9 shrink-0 items-center justify-center border text-[10px] font-semibold uppercase tracking-[0.2em]"
               style={{
                 borderColor: theme.chipBorder,
                 borderRadius: 'var(--skin-radius-control,14px)',

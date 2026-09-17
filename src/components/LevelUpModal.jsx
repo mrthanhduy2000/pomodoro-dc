@@ -139,7 +139,7 @@ export default function LevelUpModal({ autoDismissMs = 0 }) {
                 }}
               >
                 <div
-                  className="mono flex h-11 w-11 items-center justify-center border text-[10px] font-semibold uppercase tracking-[0.16em]"
+                  className="mono flex h-11 w-11 items-center justify-center border text-[10px] font-semibold uppercase tracking-[0.2em]"
                   style={{
                     borderColor: 'rgba(var(--accent-rgb),0.14)',
                     background: 'rgba(var(--accent-rgb),0.1)',
@@ -152,7 +152,7 @@ export default function LevelUpModal({ autoDismissMs = 0 }) {
                 </div>
                 <div className="min-w-0 flex-1">
                   <p
-                    className="text-[11px] font-semibold uppercase tracking-[0.2em]"
+                    className="text-[10px] font-semibold uppercase tracking-[0.2em]"
                     style={{ color: 'var(--muted)', fontFamily: MONO_FONT }}
                   >
                     Thưởng kỹ năng
@@ -165,7 +165,7 @@ export default function LevelUpModal({ autoDismissMs = 0 }) {
             )}
 
             <p
-              className="text-[11px] uppercase tracking-[0.18em]"
+              className="text-[10px] uppercase tracking-[0.2em]"
               style={{ color: 'var(--muted-2)', fontFamily: MONO_FONT }}
             >
               Chạm bất kỳ đâu để tiếp tục

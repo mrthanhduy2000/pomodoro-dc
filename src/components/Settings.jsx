@@ -280,7 +280,7 @@ export default function Settings() {
             {[`Giao diện ${activeThemeLabel}`, `Nền ${activeAmbient.label}`, `Gói âm ${activeSoundPack.label}`].map((item) => (
               <span
                 key={item}
-                className="mono rounded-full px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.22em]"
+                className="mono rounded-full px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.14em]"
                 style={lightTheme ? {
                   background: 'rgba(var(--accent-rgb), 0.1)',
                   border: '1px solid rgba(var(--accent-rgb), 0.18)',
@@ -299,13 +299,7 @@ export default function Settings() {
       </div>
 
       <div className="grid gap-4 md:grid-cols-2">
-        <Card lightTheme={lightTheme} className="md:col-span-2">
-          <SectionHeader
-            lightTheme={lightTheme}
-            title="Bộ hẹn giờ"
-            description="Nhịp làm việc, khoảng nghỉ và cách app tự chuyển trạng thái."
-          />
-
+        <Card lightTheme={lightTheme} className="md:col-span-2" title="Bộ hẹn giờ" description="Nhịp làm việc, khoảng nghỉ và cách app tự chuyển trạng thái.">
           <div className="mt-4 space-y-3">
             <div className="grid grid-cols-2 gap-3">
               <NumberStepper
@@ -345,7 +339,7 @@ export default function Settings() {
             <Divider lightTheme={lightTheme} />
 
             <div>
-              <p className="mono mb-2 text-[11px] font-semibold uppercase tracking-[0.22em]" style={lightTheme ? { color: 'var(--accent2, #9a5a48)' } : { color: 'var(--accent2, rgba(var(--accent-rgb), 0.8))' }}>
+              <p className="mono mb-2 text-[10px] font-semibold uppercase tracking-[0.2em]" style={lightTheme ? { color: 'var(--accent2, #9a5a48)' } : { color: 'var(--accent2, rgba(var(--accent-rgb), 0.8))' }}>
                 Mục tiêu ngày
               </p>
 
@@ -426,13 +420,7 @@ export default function Settings() {
           </div>
         </Card>
 
-        <Card lightTheme={lightTheme}>
-          <SectionHeader
-            lightTheme={lightTheme}
-            title="Âm nền tập trung"
-            description="Chọn một không khí nền vừa đủ hiện diện, không lấn vào phần chữ và nhịp đếm."
-          />
-
+        <Card lightTheme={lightTheme} title="Âm nền tập trung" description="Chọn một không khí nền vừa đủ hiện diện, không lấn vào phần chữ và nhịp đếm." foldable>
           <div className="mt-4 grid grid-cols-2 gap-2 sm:grid-cols-4">
             {AMBIENT_OPTIONS.map((opt) => {
               const active = ambientSound === opt.value;
@@ -450,7 +438,7 @@ export default function Settings() {
                         dòng dưới đã là cái tên thật. Ô này nay chỉ còn trạng thái "bật". */}
                     <span aria-hidden="true" />
                     {active && (
-                      <span className="text-[10px] font-semibold uppercase tracking-[0.14em]" style={lightTheme ? { color: '#9a5a48' } : { color: 'var(--accent-light)' }}>
+                      <span className="text-[10px] font-semibold uppercase tracking-[0.2em]" style={lightTheme ? { color: '#9a5a48' } : { color: 'var(--accent-light)' }}>
                         bật
                       </span>
                     )}
@@ -487,13 +475,7 @@ export default function Settings() {
           )}
         </Card>
 
-        <Card lightTheme={lightTheme}>
-          <SectionHeader
-            lightTheme={lightTheme}
-            title="Âm thanh hệ thống"
-            description="Tiếng báo bắt đầu, đếm ngược cuối phiên và tín hiệu hoàn tất."
-          />
-
+        <Card lightTheme={lightTheme} title="Âm thanh hệ thống" description="Tiếng báo bắt đầu, đếm ngược cuối phiên và tín hiệu hoàn tất." foldable>
           <div className="mt-4 space-y-3">
             <ToggleRow
               lightTheme={lightTheme}
@@ -549,13 +531,7 @@ export default function Settings() {
           </div>
         </Card>
 
-        <Card lightTheme={lightTheme}>
-          <SectionHeader
-            lightTheme={lightTheme}
-            title="Gói âm thanh"
-            description="Chạm để nghe thử."
-          />
-
+        <Card lightTheme={lightTheme} title="Gói âm thanh" description="Chạm để nghe thử." foldable>
           <div className="mt-4 grid grid-cols-2 gap-2">
             {SOUND_PACK_OPTIONS.map((opt) => {
               const active = soundPack === opt.value;
@@ -575,13 +551,7 @@ export default function Settings() {
           </div>
         </Card>
 
-        <Card lightTheme={lightTheme}>
-          <SectionHeader
-            lightTheme={lightTheme}
-            title="Thông báo"
-            description="Tín hiệu ngoài tab khi một phiên vừa kết thúc hoặc đã tới lúc quay lại."
-          />
-
+        <Card lightTheme={lightTheme} title="Thông báo" description="Tín hiệu ngoài tab khi một phiên vừa kết thúc hoặc đã tới lúc quay lại." foldable>
           <div className="mt-4 space-y-3">
             {notificationPermission === 'unsupported' ? (
               <p className="text-sm" style={lightTheme ? { color: '#6a6862' } : { color: 'var(--muted-2)' }}>
@@ -655,16 +625,10 @@ export default function Settings() {
           </div>
         </Card>
 
-        <Card lightTheme={lightTheme}>
-          <SectionHeader
-            lightTheme={lightTheme}
-            title="Giao diện"
-            description="Chọn bề mặt nền và chủ đề UI. Mặc định là Sân Chơi — mặt phẳng sạch, chữ sans đậm, thẻ có chân bóng đặc."
-          />
-
+        <Card lightTheme={lightTheme} title="Giao diện" description="Chọn bề mặt nền và chủ đề UI. Mặc định là Sân Chơi — mặt phẳng sạch, chữ sans đậm, thẻ có chân bóng đặc." foldable>
           <div className="mt-4 space-y-4">
             <div>
-              <p className="mono mb-2 text-[11px] font-semibold uppercase tracking-[0.22em]" style={lightTheme ? { color: 'var(--accent2, #9a5a48)' } : { color: 'var(--accent2, rgba(var(--accent-rgb), 0.8))' }}>
+              <p className="mono mb-2 text-[10px] font-semibold uppercase tracking-[0.2em]" style={lightTheme ? { color: 'var(--accent2, #9a5a48)' } : { color: 'var(--accent2, rgba(var(--accent-rgb), 0.8))' }}>
                 Không khí nền
               </p>
               <div className="grid gap-2 sm:grid-cols-2">
@@ -688,7 +652,7 @@ export default function Settings() {
             </div>
 
             <div>
-              <p className="mono mb-2 text-[11px] font-semibold uppercase tracking-[0.22em]" style={lightTheme ? { color: 'var(--accent2, #9a5a48)' } : { color: 'var(--accent2, rgba(var(--accent-rgb), 0.8))' }}>
+              <p className="mono mb-2 text-[10px] font-semibold uppercase tracking-[0.2em]" style={lightTheme ? { color: 'var(--accent2, #9a5a48)' } : { color: 'var(--accent2, rgba(var(--accent-rgb), 0.8))' }}>
                 Chủ đề UI
               </p>
               <div className="grid gap-2">
@@ -709,7 +673,7 @@ export default function Settings() {
                       </div>
                       {active && (
                         <span
-                          className="mono rounded-full px-2 py-1 text-[10px] font-semibold uppercase tracking-[0.18em]"
+                          className="mono rounded-full px-2 py-1 text-[11px] font-semibold uppercase tracking-[0.14em]"
                           style={lightTheme ? {
                             background: 'rgba(var(--accent-rgb), 0.1)',
                             color: 'var(--accent2, #9a5a48)',
@@ -730,7 +694,7 @@ export default function Settings() {
             </div>
 
             <div>
-              <p className="mono mb-2 text-[11px] font-semibold uppercase tracking-[0.22em]" style={lightTheme ? { color: 'var(--accent2, #9a5a48)' } : { color: 'var(--accent2, rgba(var(--accent-rgb), 0.8))' }}>
+              <p className="mono mb-2 text-[10px] font-semibold uppercase tracking-[0.2em]" style={lightTheme ? { color: 'var(--accent2, #9a5a48)' } : { color: 'var(--accent2, rgba(var(--accent-rgb), 0.8))' }}>
                 Bộ giao diện
               </p>
               <div className="grid gap-2 sm:grid-cols-2">
@@ -755,10 +719,10 @@ export default function Settings() {
                       <div className="flex items-center justify-between gap-2">
                         <p className="text-sm font-semibold">{opt.label}</p>
                         {active && opt.ready && (
-                          <span className="mono rounded-full px-2 py-0.5 text-[9px] font-semibold uppercase tracking-[0.16em]" style={lightTheme ? { background: 'rgba(var(--accent-rgb),0.1)', color: 'var(--accent2, #9a5a48)', border: '1px solid rgba(var(--accent-rgb),0.18)' } : { background: 'rgba(255,255,255,0.08)', color: 'var(--ink)', border: '1px solid rgba(255,255,255,0.12)' }}>đang dùng</span>
+                          <span className="mono rounded-full px-2 py-0.5 text-[9px] font-semibold uppercase tracking-[0.2em]" style={lightTheme ? { background: 'rgba(var(--accent-rgb),0.1)', color: 'var(--accent2, #9a5a48)', border: '1px solid rgba(var(--accent-rgb),0.18)' } : { background: 'rgba(255,255,255,0.08)', color: 'var(--ink)', border: '1px solid rgba(255,255,255,0.12)' }}>đang dùng</span>
                         )}
                         {!opt.ready && (
-                          <span className="mono rounded-full px-2 py-0.5 text-[9px] font-semibold uppercase tracking-[0.16em]" style={lightTheme ? { background: 'rgba(244,242,236,0.96)', color: '#9b9892', border: '1px solid #e8e6de' } : { background: 'rgba(255,255,255,0.05)', color: 'var(--muted-2)', border: '1px solid rgba(255,255,255,0.08)' }}>sắp ra</span>
+                          <span className="mono rounded-full px-2 py-0.5 text-[9px] font-semibold uppercase tracking-[0.2em]" style={lightTheme ? { background: 'rgba(244,242,236,0.96)', color: '#9b9892', border: '1px solid #e8e6de' } : { background: 'rgba(255,255,255,0.05)', color: 'var(--muted-2)', border: '1px solid rgba(255,255,255,0.08)' }}>sắp ra</span>
                         )}
                       </div>
                       <p className="mt-1 text-[11px]" style={lightTheme ? { color: '#6a6862' } : { color: 'var(--muted-2)' }}>{opt.note}</p>
@@ -769,7 +733,7 @@ export default function Settings() {
             </div>
 
             <div>
-              <p className="mono mb-2 text-[11px] font-semibold uppercase tracking-[0.22em]" style={lightTheme ? { color: 'var(--accent2, #9a5a48)' } : { color: 'var(--accent2, rgba(var(--accent-rgb), 0.8))' }}>
+              <p className="mono mb-2 text-[10px] font-semibold uppercase tracking-[0.2em]" style={lightTheme ? { color: 'var(--accent2, #9a5a48)' } : { color: 'var(--accent2, rgba(var(--accent-rgb), 0.8))' }}>
                 Thành Phố
               </p>
               <div className="grid gap-2">
@@ -790,7 +754,7 @@ export default function Settings() {
                       </div>
                       {active && (
                         <span
-                          className="mono rounded-full px-2 py-1 text-[10px] font-semibold uppercase tracking-[0.18em]"
+                          className="mono rounded-full px-2 py-1 text-[11px] font-semibold uppercase tracking-[0.14em]"
                           style={lightTheme ? {
                             background: 'rgba(var(--accent-rgb), 0.1)',
                             color: 'var(--accent2, #9a5a48)',
@@ -830,24 +794,14 @@ export default function Settings() {
           </div>
         </Card>
 
-        <Card lightTheme={lightTheme}>
-          <SectionHeader
-            lightTheme={lightTheme}
-            title="Dữ liệu"
-            description="Xuất, nhập và sao lưu toàn bộ hành trình ngay trong trình duyệt."
-          />
+        <Card lightTheme={lightTheme} title="Dữ liệu" description="Xuất, nhập và sao lưu toàn bộ hành trình ngay trong trình duyệt." foldable>
           <div className="mt-4">
             <ExportImport />
           </div>
         </Card>
 
         {totalEP >= PRESTIGE_EP_REQUIREMENT && (
-          <Card lightTheme={lightTheme} className="md:col-span-2">
-            <SectionHeader
-              lightTheme={lightTheme}
-              title="New Game+"
-              description="Bắt đầu một vòng mới với chỉ số nền tốt hơn sau khi chạm ngưỡng EP yêu cầu."
-            />
+          <Card lightTheme={lightTheme} className="md:col-span-2" title="New Game+" description="Bắt đầu một vòng mới với chỉ số nền tốt hơn sau khi chạm ngưỡng EP yêu cầu." foldable>
             <p className="my-3 text-sm leading-relaxed" style={lightTheme ? { color: '#6a6862' } : { color: 'var(--muted)' }}>
               Đạt {PRESTIGE_EP_REQUIREMENT.toLocaleString()} EP. Bắt đầu lại với +5% chỉ số vĩnh viễn.
               {prestigeCount > 0 && ` (Lần ${prestigeCount + 1})`}
@@ -859,12 +813,7 @@ export default function Settings() {
         )}
 
         {(canInstall || isInstalled) && (
-          <Card lightTheme={lightTheme}>
-            <SectionHeader
-              lightTheme={lightTheme}
-              title="Cài đặt app"
-              description="Đưa DC Pomodoro lên thiết bị để mở nhanh và chạy như một ứng dụng riêng."
-            />
+          <Card lightTheme={lightTheme} title="Cài đặt app" description="Đưa DC Pomodoro lên thiết bị để mở nhanh và chạy như một ứng dụng riêng." foldable>
             <div className="mt-4">
               {isInstalled ? (
                 <p className="text-sm" style={lightTheme ? { color: '#6f7b62' } : { color: 'var(--good)' }}>
@@ -884,12 +833,7 @@ export default function Settings() {
           </Card>
         )}
 
-        <Card lightTheme={lightTheme}>
-          <SectionHeader
-            lightTheme={lightTheme}
-            title="Giới thiệu"
-            description="Tóm tắt sản phẩm và phạm vi lưu trữ hiện tại."
-          />
+        <Card lightTheme={lightTheme} title="Giới thiệu" description="Tóm tắt sản phẩm và phạm vi lưu trữ hiện tại." foldable>
           <div className="mt-4 space-y-1 text-sm">
             <p style={lightTheme ? { color: '#1f1e1d' } : { color: 'var(--ink)' }}>
               <span className="font-semibold">DC Pomodoro</span> — Pomodoro nhập vai
@@ -910,12 +854,7 @@ export default function Settings() {
           </div>
         </Card>
 
-        <Card lightTheme={lightTheme} className="md:col-span-2">
-          <SectionHeader
-            lightTheme={lightTheme}
-            title="Vùng nguy hiểm"
-            description="Xóa vĩnh viễn toàn bộ tiến trình. Không có thao tác hoàn tác."
-          />
+        <Card lightTheme={lightTheme} className="md:col-span-2" title="Vùng nguy hiểm" description="Xóa vĩnh viễn toàn bộ tiến trình. Không có thao tác hoàn tác." foldable>
           <p className="my-3 text-sm" style={lightTheme ? { color: '#6a6862' } : { color: 'var(--muted)' }}>
             Chỉ dùng khi bạn thực sự muốn bắt đầu lại từ đầu.
           </p>
@@ -928,10 +867,52 @@ export default function Settings() {
   );
 }
 
-function Card({ children, lightTheme = false, className = '' }) {
+/**
+ * ⚠️ ROUND 46 (ADR-086) — CÀI ĐẶT WAS THE ONE SCREEN NO ROUND HAD EVER OPENED, AND IT SHOWED.
+ * Measured at 390px: **4.919px of flat scroll ≈ 5,8 phone screens**, eleven sections, every one of
+ * them expanded, all the time. Round 38's question answers it in one line: *"cái nào tôi đã bật/tắt
+ * đúng một lần rồi không bao giờ đụng nữa?"* — the sound pack, the theme, the notification
+ * permission, the export button, New Game+, the About text. All of them. What he actually changes
+ * is the timer lengths and the daily goal, and those sat on top of a five-screen wall of things he
+ * had already decided years ago.
+ *
+ * ⚠️ FOLDED, NOT DELETED. Every control is still here, one tap away, in the same order, with the
+ * same words — the round's own rule is *thu nhỏ, xếp lại, đổi chỗ đều được; xoá thì phải vì nó thật
+ * sự không đáng giữ*. A setting you change once a year is not worthless; it just should not cost
+ * you a scroll every time you come to change the one you change weekly.
+ *
+ * ⚠️ THE HEADER MOVED INSIDE `Card`. It used to be a separate `<SectionHeader>` passed as the first
+ * child, which meant a fold had to guess which child was the handle. Owning the title is what makes
+ * the whole row a reliable tap target — and it deleted eleven repeated call sites on the way.
+ */
+function Card({
+  children, lightTheme = false, className = '', title = null, description = null,
+  foldable = false, defaultOpen = false,
+}) {
+  const [open, setOpen] = useState(defaultOpen);
+  const body = <div className={title ? 'mt-4' : ''}>{children}</div>;
   return (
     <div className={`p-5 ${className}`} style={paperCardStyle(lightTheme)}>
-      {children}
+      {title && (foldable ? (
+        <button
+          type="button"
+          onClick={() => setOpen((v) => !v)}
+          aria-expanded={open}
+          className="flex w-full items-start justify-between gap-3 text-left"
+        >
+          <SectionHeader lightTheme={lightTheme} title={title} description={open ? description : null} />
+          <span
+            aria-hidden="true"
+            className="mono mt-0.5 shrink-0 text-[13px] leading-none transition-transform duration-200"
+            style={{ color: lightTheme ? '#6a6862' : 'var(--muted-2)', transform: open ? 'rotate(90deg)' : 'none' }}
+          >
+            ›
+          </span>
+        </button>
+      ) : (
+        <SectionHeader lightTheme={lightTheme} title={title} description={description} />
+      ))}
+      {(!foldable || open) && body}
     </div>
   );
 }

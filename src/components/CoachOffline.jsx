@@ -48,7 +48,7 @@ export default function CoachOffline(goalProps) {
       <button
         type="button"
         onClick={() => setOpen(true)}
-        className="mt-2 flex w-full items-center justify-center gap-1.5 rounded-full py-1.5 text-[11px] font-semibold uppercase tracking-[0.15em] transition-opacity hover:opacity-80"
+        className="mt-2 flex w-full items-center justify-center gap-1.5 rounded-full py-1.5 text-[11px] font-semibold uppercase tracking-[0.14em] transition-opacity hover:opacity-80"
         style={{ border: `1px solid ${COACH_COLOR}55`, color: COACH_COLOR, background: `${COACH_COLOR}14` }}
       >
         <SparkGlyph size={12} /> AI phân tích tổng thể
@@ -60,7 +60,7 @@ export default function CoachOffline(goalProps) {
             <div className="flex items-center justify-between px-4 py-3" style={{ borderBottom: '1px solid var(--line)' }}>
               <div className="flex items-center gap-1.5" style={{ color: COACH_COLOR }}>
                 <SparkGlyph size={14} />
-                <span className="mono text-[11px] uppercase tracking-[0.2em]">AI phân tích tổng thể</span>
+                <span className="mono text-[10px] uppercase tracking-[0.2em]">AI phân tích tổng thể</span>
               </div>
               <button type="button" onClick={() => setOpen(false)} className="text-[18px] leading-none" style={{ color: 'var(--muted)' }} aria-label="Đóng">×</button>
             </div>

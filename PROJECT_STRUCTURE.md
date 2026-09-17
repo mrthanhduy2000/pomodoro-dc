@@ -24,6 +24,15 @@
 │   │   │   └── ActionButton.jsx   # THE button (ADR-077, TECH_DEBT #86 door): token colours only, one `sizeMap`
 │   │   │   │                     #   ⚠️ #86 GATE (ADR-078): eslint `no-restricted-syntax` rejects palette classes / hex-rgb literals on any button
 │   │   │                         #   (`default`·`compactMobile`·`compactPrimary`·`sm`·`md`), press depth = shadow depth.
+│   │   ├── shared/surface.js # ⭐ ADR-086 — THE ONE VISUAL VOCABULARY. `CARD` · `CARD_INSET` ·
+│   │   │                     #   `EYEBROW` · `ratio()` · `remaining()`. Before it: the small
+│   │   │                     #   uppercase label had 22 size+tracking shapes over 111 uses and the
+│   │   │                     #   card surface had 7 local copies, one of which hardcoded `1px`
+│   │   │                     #   where the rest read the skin variable (Thống kê had a different
+│   │   │                     #   border width from the whole app for ten rounds). A number with a
+│   │   │                     #   denominator is `n/N`, never spaced, never beside its own
+│   │   │                     #   remainder. `shared/surface.test.js` is the gate — it caught three
+│   │   │                     #   card copies the opening grep missed. PURE: no React, no store.
 │   │   ├── focus/            # Leaf controls of the Focus screen, extracted from PomodoroEngine.jsx (ADR-077)
 │   │   │   ├── CityPostcard.jsx   # THE CITY ON THE FOCUS SCREEN (ADR-078): framed CityStage tenant, still in a session,
 │   │   │   │                     #   alive when idle, camera on this session's brick; caption = greeting + EraStageBar

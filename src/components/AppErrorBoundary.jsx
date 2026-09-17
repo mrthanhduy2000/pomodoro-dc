@@ -71,7 +71,7 @@ function BoundaryFallback({
               : '0 18px 42px rgba(31,30,29,0.10)',
           }}
         >
-          <div className="mono text-[11px] uppercase tracking-[0.24em]" style={{ color: 'var(--accent)' }}>
+          <div className="mono text-[10px] uppercase tracking-[0.2em]" style={{ color: 'var(--accent)' }}>
             Render recovery
           </div>
           <h1 className={`serif mt-3 tracking-[-0.03em] text-[var(--ink)] ${isRoot ? 'text-[30px] md:text-[36px]' : 'text-[24px] md:text-[28px]'}`}>
@@ -88,7 +88,7 @@ function BoundaryFallback({
               background: 'var(--panel-soft)',
             }}
           >
-            <div className="mono text-[10px] uppercase tracking-[0.18em] text-[var(--muted)]">Thông điệp lỗi</div>
+            <div className="mono text-[10px] uppercase tracking-[0.2em] text-[var(--muted)]">Thông điệp lỗi</div>
             <div className="mt-2 text-[14px] leading-[1.7] text-[var(--ink)]">
               {formatErrorMessage(error)}
             </div>
@@ -102,7 +102,7 @@ function BoundaryFallback({
                 background: 'rgba(255,255,255,0.54)',
               }}
             >
-              <summary className="mono cursor-pointer text-[10px] uppercase tracking-[0.18em] text-[var(--muted)]">
+              <summary className="mono cursor-pointer text-[10px] uppercase tracking-[0.2em] text-[var(--muted)]">
                 Chi tiết kỹ thuật
               </summary>
               <pre className="mt-3 overflow-x-auto whitespace-pre-wrap text-[12px] leading-[1.6] text-[var(--ink-2)]">

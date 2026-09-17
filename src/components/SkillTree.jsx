@@ -39,6 +39,7 @@ import { RELIC_ELITE_RESONANCE } from '../engine/constants';
 import { giaCaChuoi } from './skillChainCost';
 import { nextSkillPointETA } from '../engine/skillPointEconomy';
 import { describeProject } from '../engine/buildChoices';
+import { CARD } from './shared/surface';
 
 const NODE_STATE = {
   LOCKED:          'LOCKED',
@@ -113,12 +114,6 @@ const ACH_TIER_TINT = {
 
 
 // Thẻ chuẩn dùng chung — tự đổi theo skin (bo góc, viền, bóng)
-const CARD = {
-  background: 'var(--card-bg-solid)',
-  border: 'var(--skin-card-border-width,1px) solid var(--line)',
-  borderRadius: 'var(--skin-radius-card,18px)',
-  boxShadow: 'var(--skin-card-shadow)',
-};
 
 function getTierBadgeProps(tierStyle, lightTheme) {
   if (!lightTheme) {
@@ -283,10 +278,10 @@ export default function SkillTree() {
                 chuyện thì chỗ nói ít hơn phải nhường*. */}
             <div className="flex flex-wrap items-baseline gap-2">
               <span className="text-[1.7rem] font-semibold leading-none" style={{ fontFamily: 'var(--skin-font-display)', color: 'var(--ink)' }}>Cấp {level}</span>
-              <span className="mono text-[12px] tabular-nums" style={{ color: 'var(--muted)' }}>{currentLevelEXP.toLocaleString()} / {nextLevelEXP.toLocaleString()} XP</span>
+              <span className="mono text-[12px] tabular-nums" style={{ color: 'var(--muted)' }}>{currentLevelEXP.toLocaleString('vi-VN')}/{nextLevelEXP.toLocaleString('vi-VN')} XP</span>
             </div>
           </div>
-          <span className="mono text-[11px] uppercase tracking-[0.16em] tabular-nums" style={{ color: 'var(--muted)' }}>{unlockedCount}/{totalNodes} kỹ năng</span>
+          <span className="mono text-[10px] uppercase tracking-[0.2em] tabular-nums" style={{ color: 'var(--muted)' }}>{unlockedCount}/{totalNodes} kỹ năng</span>
         </div>
         <div className="mt-3 h-2 w-full overflow-hidden rounded-full" style={{ background: 'var(--timer-track)' }}>
           <motion.div
@@ -521,7 +516,7 @@ function ActiveAbilityBar({ lightTheme, unlockedSkills, skillActivations, onActi
           }`}
           style={getButtonStyles(sfActive ? 'active' : sfUsed ? 'disabled' : 'purple') ?? undefined}
         >
-          <span className="mono text-[10px] font-semibold uppercase tracking-[0.16em]">SF</span>
+          <span className="mono text-[10px] font-semibold uppercase tracking-[0.2em]">SF</span>
           <span>Siêu Tập Trung</span>
           {sfActive  && <span className="text-xs ml-1" style={lightTheme ? { color: 'var(--accent2)' } : undefined}>(Đang chờ phiên · {sfUsedCount}/{superFocusCap})</span>}
           {sfUsed && !sfActive && <span className="text-xs ml-1" style={lightTheme ? { color: 'var(--muted)' } : undefined}>(Đã dùng {sfUsedCount}/{superFocusCap})</span>}
@@ -548,7 +543,7 @@ function ActiveAbilityBar({ lightTheme, unlockedSkills, skillActivations, onActi
           }`}
           style={getButtonStyles(lmActive ? 'active' : lmUsed ? 'disabled' : 'amber') ?? undefined}
         >
-          <span className="mono text-[10px] font-semibold uppercase tracking-[0.16em]">SD</span>
+          <span className="mono text-[10px] font-semibold uppercase tracking-[0.2em]">SD</span>
           <span>Số Đỏ</span>
           {lmActive  && <span className="text-xs ml-1" style={lightTheme ? { color: 'var(--accent2)' } : undefined}>(Đang chờ phiên · {lmUsedCount}/{luckyModeCap})</span>}
           {lmUsed && !lmActive && <span className="text-xs ml-1" style={lightTheme ? { color: 'var(--muted)' } : undefined}>(Đã dùng {lmUsedCount}/{luckyModeCap})</span>}
@@ -609,7 +604,7 @@ function SkillDetail({ cell, branchKey, branchLabel, giaChuoi, lightTheme, onBuy
             <p className="text-[15px] font-semibold leading-tight" style={{ color: 'var(--ink)' }}>{node.label}</p>
             <span {...tierBadgeProps}>{tierStyle.label}</span>
           </div>
-          <p className="mono mt-0.5 inline-flex items-center gap-1 text-[10px] uppercase tracking-[0.16em]" style={{ color: 'var(--muted-2)' }}>
+          <p className="mono mt-0.5 inline-flex items-center gap-1 text-[10px] uppercase tracking-[0.2em]" style={{ color: 'var(--muted-2)' }}>
             <BranchGlyph branch={branchKey} size={12} />{branchLabel}
           </p>
           <p className="mt-1.5 text-[12.5px] leading-snug" style={{ color: 'var(--muted)' }}>{node.description}</p>
@@ -686,7 +681,7 @@ function SynergyPanel({ synergies, activeSynergies, branchCounts, lightTheme }) 
         style={lightTheme ? { borderBottom: '1px solid var(--line)' } : undefined}
       >
         <div className="flex items-center gap-2">
-          <span className="mono inline-flex h-7 w-7 items-center justify-center rounded-full border text-[8px] font-semibold uppercase tracking-[0.14em]" style={lightTheme ? { borderColor: 'var(--line)', background: 'rgba(255,255,255,0.74)', color: 'var(--accent2)' } : { borderColor: 'rgba(255,255,255,0.08)', background: 'rgba(255,255,255,0.04)', color: 'var(--accent-light)' }}>SG</span>
+          <span className="mono inline-flex h-7 w-7 items-center justify-center rounded-full border text-[8px] font-semibold uppercase tracking-[0.2em]" style={lightTheme ? { borderColor: 'var(--line)', background: 'rgba(255,255,255,0.74)', color: 'var(--accent2)' } : { borderColor: 'rgba(255,255,255,0.08)', background: 'rgba(255,255,255,0.04)', color: 'var(--accent-light)' }}>SG</span>
           <span className="font-bold text-sm" style={lightTheme ? { fontFamily: 'var(--skin-font-display)', fontWeight: 600, color: 'var(--ink)' } : { color: 'var(--ink)' }}>Tổ hợp kỹ năng</span>
           <span className="text-xs text-slate-500" style={lightTheme ? { color: 'var(--muted)' } : { color: 'var(--muted)' }}>({activeSynergies.length}/{synergies.length} kích hoạt)</span>
         </div>
@@ -749,7 +744,7 @@ function SynergyPanel({ synergies, activeSynergies, branchCounts, lightTheme }) 
               )}
 
               <div className="flex items-center gap-2 relative z-10">
-                <span className={`mono inline-flex h-6 w-6 items-center justify-center rounded-full border font-semibold ${hasGlyphIcon(syn.icon) ? 'text-[13px] leading-none' : 'text-[7px] uppercase tracking-[0.12em]'}`} style={lightTheme ? { borderColor: 'var(--line)', background: 'rgba(255,255,255,0.74)', color: active ? 'var(--accent2)' : 'var(--muted)' } : { borderColor: 'rgba(255,255,255,0.08)', background: 'rgba(255,255,255,0.04)', color: active ? 'var(--accent-light)' : '#94a3b8' }}>{getGlyph(syn.icon, syn.label)}</span>
+                <span className={`mono inline-flex h-6 w-6 items-center justify-center rounded-full border font-semibold ${hasGlyphIcon(syn.icon) ? 'text-[13px] leading-none' : 'text-[7px] uppercase tracking-[0.2em]'}`} style={lightTheme ? { borderColor: 'var(--line)', background: 'rgba(255,255,255,0.74)', color: active ? 'var(--accent2)' : 'var(--muted)' } : { borderColor: 'rgba(255,255,255,0.08)', background: 'rgba(255,255,255,0.04)', color: active ? 'var(--accent-light)' : '#94a3b8' }}>{getGlyph(syn.icon, syn.label)}</span>
                 {/*
                   ⚠️ TÊN HỢP LỰC ĐƯỢC XUỐNG DÒNG, KHÔNG CẮT BẰNG DẤU … — đây là TÊN RIÊNG, cắt đi
                   thì mất luôn thứ để gọi nó. Đo ở 390px (lưới 2 cột): chỗ cho tên chỉ **74px**,

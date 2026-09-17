@@ -1,4 +1,67 @@
-> Last update: **2026-09-08** — **ROUND 45: A BONUS THAT CANNOT BE SEEN IS NOT A BONUS (ADR-085).**
+> Last update: **2026-09-17** — **ROUND 46: ONE VISUAL VOCABULARY, A SHORTER ENDING (ADR-086).**
+> Order: *"vòng này THUẦN UX/UI… mở bất kỳ màn nào trong app, nó trông như cùng một người làm ra."*
+> Everything on `main`, on top of round 45.
+>
+> ### The audit that decided the round — one element at a time, across everything the app ships
+> | element | ways the app drew it |
+> |---|---|
+> | nhãn nhỏ viết hoa (eyebrow) | **22 cặp cỡ+giãn chữ trên 111 chỗ dùng** |
+> | mặt thẻ | **7 bản khai riêng**, một bản đã lệch |
+> | con số có mẫu số | **4 kiểu, chỉ riêng màn Thành Phố** |
+> | `Cài đặt` phẳng, mở hết | **4.919 px ≈ 5,8 màn điện thoại · 11 mục** |
+> | cái kết, phiên may nhất | **11 thẻ · 39,0 giây** |
+> ⚠️ Không cái nào là lỗi. Mỗi màn làm ở một vòng khác nhau, mỗi quyết định đều hợp lý hôm ấy, và
+> **chưa bao giờ có ai đặt hai màn cạnh nhau**. Đó là cách một app thành ra "vá bởi mười ba người"
+> trong khi từng commit một đều cẩn thận.
+>
+> ### Done
+> 1. **`components/shared/surface.js` — MỘT bộ từ vựng thị giác.** `CARD` · `CARD_INSET` · `EYEBROW`
+>    · `ratio()` · `remaining()`. Bảy bản khai mặt thẻ còn một; 109 chỗ eyebrow từ 22 hình dạng còn
+>    **hai** (nhãn mục 10px/0.2em · viên nhãn có nền 11px/0.14em — hai PHẦN TỬ khác nhau, không phải
+>    hai cỡ của một).
+>    ⚠️ **Bản lệch là lệch thật**: `StatsDashboard` viết cứng `1px` chỗ ba màn kia đọc
+>    `var(--skin-card-border-width, 1px)` — dưới một skin có đặt biến ấy, màn Thống kê có độ dày
+>    viền khác cả app, suốt mười vòng, vì muốn thấy phải đọc hai file cùng lúc.
+> 2. **`n/N`, không khoảng trắng, và KHÔNG có số dư đứng cạnh.** Ô «Chuỗi» in `0 / 7` trong khi tám
+>    viên nhãn ngay dưới in `4/5`. `38/75 còn 37` là `75 − 38` nói hai lần.
+>    ⚠️ `còn 1 nữa ★` ĐƯỢC GIỮ: nó không phải số dư, nó là **mốc cách một bước** mà phần thưởng niêm
+>    phong vĩnh viễn (ADR-007). Số dư đáng giữ khi nó trả lời *bao giờ*; không đáng khi nó chỉ nói
+>    lại cái phân số vừa sinh ra nó.
+> 3. **Cái kết gộp chỗ trùng: 11 thẻ → 8, 39,0 s → 29,6 s** (phiên thường 5 → 4, 19,4 s → 16,8 s).
+>    · **«Nhịp»** = `streak` + `today`: hai thẻ liền nhau, CÙNG hình dạng (số 56px + dải ngang), cùng
+>      trả lời "nhịp của tôi thế nào", khác mỗi đơn vị.
+>    · **«Kho báu»** = `rank` + `relic` + `evolve`: ba bản dựng của một bố cục, cùng nói *"bạn vừa có
+>      một buff vĩnh viễn"*, nổ liên tiếp 10,2 giây đúng lúc cái kết phải to nhất. **To không phải là
+>      dài.**
+>    ⚠️ **Ca MỘT MÓN giữ nguyên bố cục cũ** — đó là ca hay gặp nhất; xếp nó thành danh sách một dòng
+>    là đổi cái hay gặp lấy cái hiếm gặp. ⚠️ **0 cú bấm thêm, 0 sự thật mất đi**: `isMax`/`nextAt` của
+>    di vật vẫn còn (câu duy nhất biến di vật từ cúp lưu niệm thành thứ còn ở phía trước), và
+>    `treasure` vẫn là thẻ hạng hiếm, vẫn nổ toàn màn, vẫn đứng lâu hơn.
+> 4. **`Cài đặt` gấp lại: 11 mục, 10 mục thu gọn, 0 mục bị xoá.** Câu hỏi vòng 38 quyết chuyện này —
+>    gói âm thanh, giao diện, quyền thông báo, xuất dữ liệu, New Game+, Giới thiệu: bật/tắt đúng một
+>    lần rồi thôi. Thứ Đàm thật sự đổi là độ dài phiên và mục tiêu ngày, và chúng nằm trên một bức
+>    tường năm màn hình những quyết định đã chốt từ lâu.
+> 5. **Ba tab con Hành trang tự nói nó có gì**: `Kỹ năng 4/36` · `Công trình 38/75` · `Di vật 12/15` —
+>    đúng con số màn đằng sau đang in ở dòng đầu, chỉ đưa lên trước cú chạm.
+> 6. **Hai nhiệm vụ khai mục tiêu bằng GIỜ nhưng đếm bằng PHÚT** (`Chinh phục 2 giờ… 0/120`) — nay
+>    nói `120 phút`, khớp bộ đếm và khớp mười nhiệm vụ cùng loại. Không đổi `goal`, không đổi XP.
+>
+> ### Audited, and deliberately NOT changed
+> · **Thống kê** — ba câu trả lời vòng 36 vẫn đúng, không chỗ nào còn hiện hệ huy hiệu đã xoá, định
+>   dạng giờ/phần trăm/cỡ mẫu đã đi chung `formatMinutesVi`. Không có sửa nào xứng đáng.
+> · **Đơn vị** — `phiên`/`phút`/`giờ`/`ngày` sạch; mọi chỗ đổi phút ra giờ đều qua một formatter.
+> · **`ActionButton`** — còn 77 thẻ `<button>` thô, nhưng gần hết là viên nhãn tab, ô lưới, vùng chạm
+>   của thẻ. Ép chúng qua `ActionButton` sẽ làm chúng TRÔNG NHƯ NÚT, đúng chiều ngược lại.
+>
+> ### Gates
+> lint ✅ · build ✅ · `npm run test:quiet` — xem lần chạy ghi kèm commit.
+> ⚠️ `shared/surface.test.js` là cổng mới, và nó **bắt được ba bản sao mặt thẻ mà cái `grep` mở màn
+> đã bỏ sót** (`FocusRail` · `TodayHero` · `PomodoroEngine`) — đó chính là lý do phải là một bài
+> test chứ không phải một quy ước. **Một ngưỡng không có cổng là một cái phễu.**
+
+---
+
+> Previous: **2026-09-08** — **ROUND 45: A BONUS THAT CANNOT BE SEEN IS NOT A BONUS (ADR-085).**
 > Order: *"vòng 44 mở van cho tôi kiếm được điểm. Vòng này trả lời câu kế tiếp: tiêu vào đó có đáng
 > không?"* · *"tôi mở một kỹ năng, và tôi biết ngay app vừa khác đi ở chỗ nào."*
 > Everything on `main`, on top of round 44.

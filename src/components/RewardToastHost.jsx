@@ -241,7 +241,7 @@ export default function RewardToastHost({ paused = false, onNavigate, onOpenDeta
           <motion.div
             key="overflow"
             {...enterMotion}
-            className="mono pointer-events-none px-3.5 py-2 text-[11px] font-semibold uppercase tracking-[0.16em]"
+            className="mono pointer-events-none px-3.5 py-2 text-[10px] font-semibold uppercase tracking-[0.2em]"
             style={{
               background: 'var(--card-bg-solid)',
               border: 'var(--skin-card-border-width,1px) solid var(--line)',

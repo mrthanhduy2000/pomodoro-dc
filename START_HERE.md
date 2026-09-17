@@ -32,7 +32,29 @@ Production branch `main` carries **both** work streams (merged 2026-08-28 on Đ�
 ⚠️ Phase 21 therefore shipped **before** Đàm reviewed its screenshots — the "waiting on Đàm's eyes"
 item below is still live, it just now reviews something already running.
 
-- **Loop — ROUND 45 (2026-09-08, LATEST): A BONUS THAT CANNOT BE SEEN IS NOT A BONUS (ADR-085).**
+- **Loop — ROUND 46 (2026-09-17, LATEST): ONE VISUAL VOCABULARY FOR EIGHT SCREENS (ADR-086).**
+  Round 39's four numbers guarded the Focus screen for seven rounds and guarded nothing else, while
+  rounds 43–45 kept adding text to the other seven. The count that decided it: the small uppercase
+  label had **22 size+tracking shapes over 111 uses**; the card surface had **7 local definitions**.
+  ⚠️ **`components/shared/surface.js` IS THE ONE SOURCE** — `CARD` · `CARD_INSET` · `EYEBROW` ·
+  `ratio()` · `remaining()`. Never hand-write a card surface or an uppercase label again; import it.
+  `shared/surface.test.js` fails a new variant, and it already caught three card copies the opening
+  grep had missed. Exactly TWO label shapes are legal: a section eyebrow (10px/0.2em) and a badge
+  pill (11px/0.14em) — those are two ELEMENTS, not two sizes, and a third is how 22 started.
+  ⚠️ The eyebrow rule is scoped to **10–12px on purpose**: below that the app uses uppercase letters
+  as an ICON FALLBACK sized to fill an icon slot, not as a label.
+  ⚠️ **A number with a denominator is `n/N`** — no spaces, and never beside its own remainder
+  (`38/75 còn 37` is `75 − 38` said twice). `còn 1 nữa ★` SURVIVES: it names a milestone one step
+  away whose reward seals permanently, which is a different sentence from a subtraction.
+  ⚠️ **The ending merged what repeated: 11 cards → 8, 39,0 s → 29,6 s.** «Nhịp» = streak + today;
+  «Kho báu» = rank + relic + evolve. One treasure KEEPS the old big-icon layout — the common case
+  must not be made worse to improve the rare one. Zero taps added, rare-tier burst untouched.
+  ⚠️ **`Cài đặt` folds** (11 sections, 10 collapsed, 0 deleted): 5,8 phone screens → 2,5.
+  ⚠️ **The Hành trang tab count MUST come from `useJourney`.** The first draft re-derived it, read
+  `s.activeBook` instead of `s.progress.activeBook`, and printed «30/75» under a rail saying
+  «38/75». ADR-082 named that hook the one seam; `journeyWiring.test.js` now pins it.
+
+- **Loop — ROUND 45 (2026-09-08): A BONUS THAT CANNOT BE SEEN IS NOT A BONUS (ADR-085).**
   The audit that decided it: of 36 skills, **27 are a silent `+X% XP/EP`** shown on no screen ever, 6
   are genuinely felt, 3 are prestige-only. One skill is worth 3–7 XP on a 48-minute session, so round
   44's twelve taps bought twelve numbers nobody could see.
@@ -75,21 +97,6 @@ item below is still live, it just now reviews something already running.
   lower them is muting the alarm.
   ⚠️ Never put a `/* … */` comment straight after the `{` of an object literal — it makes the JSX
   comment stripper in `components/journeyWiring.test.js` eat real code in a different file.
-
-- **Loop — ROUND 43 (2026-09-08): ONE DESTINATION, AND EVERY DISTANCE IN SESSIONS (ADR-082).**
-  ⚠️ **`engine/journey.js` owns the destination and nothing else may compute it.** The city is finite —
-  15 eras x 5 blueprints = **75 buildings** — and that is the app's answer to *"đi tới đâu?"*. The
-  denominator is SUMMED from `BLUEPRINT_CATALOG`, never typed; `hooks/useJourney.js` is the only seam
-  to the store. ⚠️ **No screen prints raw EP as a distance any more.** `describeRailProgress` says the
-  distance in SESSIONS while that is honest and falls through to `38/75 công trình` when it is not —
-  and it must NEVER fall back to EP (`describeStageCountdown` has an EP branch for the no-sample case;
-  the guard that drops it is pinned by a red test). Same rule everywhere: rank card says `Đã đủ`, badge
-  thresholds say hours past 120 minutes, the level countdown HIDES past `STAGE_COUNTDOWN_MAX_SESSIONS`
-  rather than print a 155-session wall. The city's fourth stat cell is the destination, not `Cư dân`.
-  ⚠️ XP rewards for the 360 achievements were measured (126.030 XP ≈ 21 levels ≈ 42 SP over the game)
-  and REJECTED as a second faucet — that decision is still open in `TECH_DEBT.md`.
-  Also: `components/journeyWiring.test.js` reads call sites, because an engine test proves a function
-  RUNS and never that anyone CALLS it — this project has now shipped three finished-but-uncalled ones.
 
 - **Loop — ROUND 41 (2026-09-08): THE LONG RHYTHMS, AND A TOOL THAT CAN SEE (ADR-081).**
   ⚠️ **`shot.mjs --dilate <rate>` is how a transient moment is photographed now.** One framer animation

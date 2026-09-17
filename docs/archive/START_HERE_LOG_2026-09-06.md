@@ -458,3 +458,22 @@ stated twice drifts.
   ⚠️ Inspect a running/break state with a seeded `timerSession`/`breakSession` fixture (ms timestamps, **regenerate
   it right before each shot — a 25-minute session in a stale fixture has already ENDED and you photograph the
   reward card instead**) and `--settle 900`.
+
+
+## Rotated out of `START_HERE.md` on 2026-09-17 (round 46 arrived; keep the 3 most recent)
+
+- **Loop — ROUND 43 (2026-09-08): ONE DESTINATION, AND EVERY DISTANCE IN SESSIONS (ADR-082).**
+  ⚠️ **`engine/journey.js` owns the destination and nothing else may compute it.** The city is finite —
+  15 eras x 5 blueprints = **75 buildings** — and that is the app's answer to *"đi tới đâu?"*. The
+  denominator is SUMMED from `BLUEPRINT_CATALOG`, never typed; `hooks/useJourney.js` is the only seam
+  to the store. ⚠️ **No screen prints raw EP as a distance any more.** `describeRailProgress` says the
+  distance in SESSIONS while that is honest and falls through to `38/75 công trình` when it is not —
+  and it must NEVER fall back to EP (`describeStageCountdown` has an EP branch for the no-sample case;
+  the guard that drops it is pinned by a red test). Same rule everywhere: rank card says `Đã đủ`, badge
+  thresholds say hours past 120 minutes, the level countdown HIDES past `STAGE_COUNTDOWN_MAX_SESSIONS`
+  rather than print a 155-session wall. The city's fourth stat cell is the destination, not `Cư dân`.
+  ⚠️ XP rewards for the 360 achievements were measured (126.030 XP ≈ 21 levels ≈ 42 SP over the game)
+  and REJECTED as a second faucet — that decision is still open in `TECH_DEBT.md`.
+  Also: `components/journeyWiring.test.js` reads call sites, because an engine test proves a function
+  RUNS and never that anyone CALLS it — this project has now shipped three finished-but-uncalled ones.
+

@@ -13,6 +13,7 @@
  * `?dc-preview-card=<id>` nhảy thẳng tới một thẻ. Không có gì trong bản thật đọc hai tham số ấy.
  */
 import { useCallback, useEffect, useMemo, useState } from 'react';
+import { CARD_INSET, EYEBROW, ratio } from './shared/surface';
 import { AnimatePresence, motion } from 'framer-motion';
 
 import useGameStore from '../store/gameStore';
@@ -49,7 +50,7 @@ import { STORY_LAST_CARD_MS, buildRewardStoryCards, storyCardDurationMs } from '
 import RewardBurst from './shared/RewardBurst';
 
 const DISPLAY_FONT = 'var(--skin-font-display)';
-const eyebrowClass = 'mono text-[10px] uppercase tracking-[0.24em]';
+const eyebrowClass = EYEBROW;
 
 function stop(event) {
   event.stopPropagation();
@@ -158,7 +159,7 @@ export default function SessionRewardStory({ onDone }) {
   // ADR-080: the RARE tier — streak milestone · level · rank · relic · era · a finished weekly chain —
   // bursts across the whole screen behind the card. Bigger than a brick, bigger than a building.
   const rare = Boolean(card) && (
-    card.id === 'level' || card.id === 'era' || card.id === 'rank' || card.id === 'relic' || card.id === 'evolve'
+    card.id === 'level' || card.id === 'era' || card.id === 'treasure'
     || (card.id === 'streak' && card.justHit) || (card.id === 'chain' && card.finished)
   );
 
@@ -250,14 +251,11 @@ export default function SessionRewardStory({ onDone }) {
                 />
               )}
               {card.id === 'streak' && <StreakCard card={card} />}
-              {card.id === 'today' && <TodayCard card={card} />}
               {card.id === 'quests' && <QuestsCard card={card} />}
               {card.id === 'chain' && <ChainCard card={card} />}
               {card.id === 'quest' && <QuestCard card={card} />}
               {card.id === 'level' && <LevelCard card={card} picked={pickedSkill} onPick={handlePickSkill} />}
-              {card.id === 'rank' && <RankCard card={card} />}
-              {card.id === 'relic' && <RelicCard card={card} />}
-              {card.id === 'evolve' && <RelicEvolvedCard card={card} />}
+              {card.id === 'treasure' && <TreasureCard card={card} />}
               {card.id === 'era' && (
                 <EraCard card={card} onSeeCity={() => finish({ navigate: { tab: 'city' } })} />
               )}
@@ -322,7 +320,7 @@ function XpCard({ card }) {
       >
         +{xp.toLocaleString('vi-VN')}
       </motion.p>
-      <p className="mono mt-1 text-[12px] uppercase tracking-[0.28em]" style={{ color: 'var(--accent2)' }}>
+      <p className="mono mt-1 text-[10px] uppercase tracking-[0.2em]" style={{ color: 'var(--accent2)' }}>
         XP
       </p>
 
@@ -424,6 +422,14 @@ function StreakCard({ card }) {
       <motion.div {...withDelay(enterMotion, 0.2)} className="mx-auto mt-6 max-w-[340px]">
         <WeekStrip days={card.weekDays} size="lg" popToday />
       </motion.div>
+      {/*
+        ⚠️ ROUND 46 (ADR-086) — THE FORMER «NHỊP HÔM NAY» CARD, NOW THE BOTTOM HALF OF THIS ONE.
+        It used to be the very next card in the chain: same 56px number, same caption, same
+        full-width strip, 2,6 seconds later, answering the same question in a different unit. The
+        week above is days; this is today. Together they are one reading of one rhythm — which is
+        what a reader was doing anyway, across two screens, from memory.
+      */}
+      {card.today && <TodayBlock today={card.today} />}
       <p className="mt-4 text-[13px]" style={{ color: card.milestonePermanent ? 'var(--accent2)' : 'var(--muted)' }}>
         {card.milestoneText}
       </p>
@@ -431,7 +437,7 @@ function StreakCard({ card }) {
   );
 }
 
-function TodayCard({ card }) {
+function TodayBlock({ today: card }) {
   // NGOẠI LỆ (mang bố cục) — bề dài thanh CHÍNH LÀ nhịp hôm nay; nó chạy từ mức TRƯỚC phiên tới
   // mức SAU phiên, vì đó là thứ vừa xảy ra. Bật Giảm chuyển động thì nhảy thẳng tới đích.
   const barMotion = useSnapMotion({
@@ -441,21 +447,23 @@ function TodayCard({ card }) {
   });
   const rewardMotion = useRewardMotion();
   const enterMotion = useEnterMotion();
+  // ⚠️ THE HEADLINE SHRINKS FROM 56px TO 24px, AND THAT IS THE POINT OF THE MERGE. Two 56px
+  // numbers stacked on one card would be two headlines, i.e. the same competition that made these
+  // two cards feel like duplicates in the first place. The streak keeps the big number because it
+  // is the one that can BREAK; today is the supporting line, with its own bar to carry the motion.
   return (
-    <div>
-      <p className={eyebrowClass} style={{ color: 'var(--muted)' }}>Nhịp hôm nay</p>
-      <p className="mt-3 flex items-baseline justify-center gap-1.5">
+    <div className="mx-auto mt-6 max-w-[340px]">
+      <p className="flex items-baseline justify-center gap-1.5">
+        <span className={eyebrowClass} style={{ color: 'var(--muted)' }}>Hôm nay</span>
         <span
-          className="text-[56px] font-semibold leading-none tabular-nums tracking-[-0.04em]"
+          className="text-[24px] font-semibold leading-none tabular-nums tracking-[-0.02em]"
           style={{ color: 'var(--ink)', fontFamily: DISPLAY_FONT }}
         >
-          {card.currentValue}
+          {ratio(card.currentValue, card.goalValue)}
         </span>
-        <span className="text-[20px] font-medium tabular-nums" style={{ color: 'var(--muted)' }}>
-          /{card.goalValue} {card.unit}
-        </span>
+        <span className="text-[14px] font-medium" style={{ color: 'var(--muted)' }}>{card.unit}</span>
       </p>
-      <div className="mx-auto mt-5 h-3 max-w-[340px] overflow-hidden rounded-full" style={{ background: 'var(--timer-track)' }}>
+      <div className="mx-auto mt-3 h-3 max-w-[340px] overflow-hidden rounded-full" style={{ background: 'var(--timer-track)' }}>
         <motion.div
           {...barMotion}
           className="h-full rounded-full"
@@ -464,7 +472,7 @@ function TodayCard({ card }) {
       </div>
       <motion.p
         {...(card.goalMet ? withDelay(rewardMotion, 0.7) : withDelay(enterMotion, 0.6))}
-        className="mt-4 text-[15px] font-semibold"
+        className="mt-2.5 text-[13px] font-semibold"
         style={{ color: card.goalMet ? 'var(--good)' : 'var(--ink-2)' }}
       >
         {card.goalMet ? '🎯 Đủ nhịp hôm nay!' : `Còn ${card.remaining} ${card.unit} nữa là đủ nhịp`}
@@ -641,7 +649,7 @@ function ProjectCard({ card, onChoose }) {
       {card.lucky && (
         <motion.p
           {...withDelay(rewardMotion, 0.35)}
-          className="mono mt-3 inline-block rounded-full px-3 py-1.5 text-[11px] font-semibold uppercase tracking-[0.18em]"
+          className="mono mt-3 inline-block rounded-full px-3 py-1.5 text-[11px] font-semibold uppercase tracking-[0.14em]"
           style={{ background: 'rgba(var(--accent-rgb), 0.12)', color: 'var(--accent2)' }}
         >
           🍀 Gạch đôi
@@ -710,31 +718,76 @@ function ChainCard({ card }) {
 
 // ─── Thẻ di vật lên bậc (ADR-070: theo phiên, không có giá) ──────────────────
 
-function RelicEvolvedCard({ card }) {
+/**
+ * ⚠️ ROUND 46 (ADR-086) — «KHO BÁU», one card where there were three.
+ * `RankCard` · `RelicCard` · `RelicEvolvedCard` were three renderings of the same layout — 64px
+ * icon, name, buff pill, footnote — written in three different rounds, and they fired back to back
+ * on a lucky session: 10,2 seconds saying *"bạn vừa có một buff vĩnh viễn"* three times.
+ *
+ * ⚠️ THE COMMON CASE KEEPS THE OLD LAYOUT EXACTLY. One treasure is by far the usual outcome, and a
+ * one-row list would have made the frequent case worse in order to improve the rare one. Only when
+ * two or more land at once does this stack them — and then the stack IS the prize: a lucky session
+ * finally looks lucky instead of looking long.
+ */
+function TreasureCard({ card }) {
   const rewardMotion = useRewardMotion();
   const enterMotion = useEnterMotion();
-  const relic = card.relics[0];
+  const solo = card.items.length === 1;
+  const lead = card.items[0];
+
+  if (solo) {
+    return (
+      <div>
+        <p className={eyebrowClass} style={{ color: 'var(--accent2)' }}>{lead.eyebrow}</p>
+        <motion.div {...rewardMotion} className="mt-3 text-[64px] leading-none" aria-hidden="true">{lead.icon}</motion.div>
+        <p className="mt-4 text-[30px] font-semibold leading-tight tracking-[-0.03em]" style={{ color: 'var(--ink)', fontFamily: DISPLAY_FONT }}>
+          {lead.label}
+        </p>
+        {lead.detail && (
+          <motion.p
+            {...withDelay(enterMotion, 0.3)}
+            className="mono mt-3 inline-block rounded-full px-4 py-2 text-[13px] font-semibold"
+            style={{ background: 'rgba(var(--accent-rgb), 0.10)', color: 'var(--accent2)' }}
+          >
+            {lead.stageLabel ? `${lead.stageLabel} · ${lead.detail}` : lead.detail}
+          </motion.p>
+        )}
+        <motion.p {...withDelay(enterMotion, 0.5)} className="mt-3 text-[12.5px]" style={{ color: 'var(--muted)' }}>
+          {lead.note}
+        </motion.p>
+      </div>
+    );
+  }
+
   return (
     <div>
-      <p className={eyebrowClass} style={{ color: 'var(--accent2)' }}>Di vật lên bậc</p>
-      <motion.div {...rewardMotion} className="mt-3 text-[64px] leading-none" aria-hidden="true">{relic.icon}</motion.div>
-      <p className="mt-4 text-[30px] font-semibold leading-tight tracking-[-0.03em]" style={{ color: 'var(--ink)', fontFamily: DISPLAY_FONT }}>
-        {relic.label}
-      </p>
-      <motion.p
-        {...withDelay(enterMotion, 0.3)}
-        className="mono mt-3 inline-block rounded-full px-4 py-2 text-[13px] font-semibold"
-        style={{ background: 'rgba(var(--accent-rgb), 0.10)', color: 'var(--accent2)' }}
-      >
-        {relic.stageLabel}{relic.buffText ? ` · ${relic.buffText}` : ''}
-      </motion.p>
-      {card.relics.length > 1 && (
-        <p className="mt-2 text-[13px]" style={{ color: 'var(--muted)' }}>
-          +{card.relics.length - 1} di vật khác cũng lên bậc
-        </p>
-      )}
-      <motion.p {...withDelay(enterMotion, 0.5)} className="mt-3 text-[12.5px]" style={{ color: 'var(--muted)' }}>
-        {relic.isMax ? 'Đã tới bậc cao nhất.' : `Bậc kế ở mốc ${relic.nextAt} phiên kể từ khi nhận.`}
+      <p className={eyebrowClass} style={{ color: 'var(--accent2)' }}>Kho báu phiên này</p>
+      <motion.div {...rewardMotion} className="mt-2 text-[52px] leading-none" aria-hidden="true">🎁</motion.div>
+      <div className="mx-auto mt-5 flex max-w-[340px] flex-col gap-2.5">
+        {card.items.map((item, idx) => (
+          <motion.div
+            key={item.id}
+            {...withDelay(enterMotion, 0.18 + idx * 0.12)}
+            className="flex items-center gap-3 px-3.5 py-3 text-left"
+            style={CARD_INSET}
+          >
+            <span className="shrink-0 text-[30px] leading-none" aria-hidden="true">{item.icon}</span>
+            <div className="min-w-0 flex-1">
+              <p className={eyebrowClass} style={{ color: 'var(--muted)' }}>{item.eyebrow}</p>
+              <p className="mt-0.5 text-[16px] font-semibold leading-tight" style={{ color: 'var(--ink)', fontFamily: DISPLAY_FONT }}>
+                {item.label}
+              </p>
+              {item.detail && (
+                <p className="mono mt-1 text-[12px] font-semibold" style={{ color: 'var(--accent2)' }}>
+                  {item.stageLabel ? `${item.stageLabel} · ${item.detail}` : item.detail}
+                </p>
+              )}
+            </div>
+          </motion.div>
+        ))}
+      </div>
+      <motion.p {...withDelay(enterMotion, 0.2 + card.items.length * 0.12)} className="mt-4 text-[12.5px]" style={{ color: 'var(--muted)' }}>
+        Tất cả cộng dồn vĩnh viễn — không có nút, không có hạn.
       </motion.p>
     </div>
   );
@@ -865,53 +918,7 @@ function LevelCard({ card, picked, onPick }) {
 
 // ─── Thẻ lên bậc · di vật ────────────────────────────────────────────────────
 
-function RankCard({ card }) {
-  const rewardMotion = useRewardMotion();
-  const enterMotion = useEnterMotion();
-  return (
-    <div>
-      <p className={eyebrowClass} style={{ color: 'var(--muted)' }}>Thăng bậc</p>
-      <motion.div {...rewardMotion} className="mt-3 text-[64px] leading-none" aria-hidden="true">{card.icon}</motion.div>
-      <p className="mt-4 text-[34px] font-semibold leading-tight tracking-[-0.03em]" style={{ color: 'var(--ink)', fontFamily: DISPLAY_FONT }}>
-        {card.label}
-      </p>
-      {card.buffLabel && (
-        <motion.p
-          {...withDelay(enterMotion, 0.3)}
-          className="mono mt-3 inline-block rounded-full px-4 py-2 text-[13px] font-semibold"
-          style={{ background: 'rgba(var(--accent-rgb), 0.10)', color: 'var(--accent2)' }}
-        >
-          {card.buffLabel}
-        </motion.p>
-      )}
-      <motion.p {...withDelay(enterMotion, 0.5)} className="mt-3 text-[12.5px]" style={{ color: 'var(--muted)' }}>
-        Tự lên nhờ những phiên gần đây — không có nút, không có hạn.
-      </motion.p>
-    </div>
-  );
-}
 
-function RelicCard({ card }) {
-  const rewardMotion = useRewardMotion();
-  const enterMotion = useEnterMotion();
-  return (
-    <div>
-      <p className={eyebrowClass} style={{ color: 'var(--accent2)' }}>Di vật mới</p>
-      <motion.div {...rewardMotion} className="mt-3 text-[64px] leading-none" aria-hidden="true">{card.icon}</motion.div>
-      <p className="mt-4 text-[30px] font-semibold leading-tight tracking-[-0.03em]" style={{ color: 'var(--ink)', fontFamily: DISPLAY_FONT }}>
-        {card.label}
-      </p>
-      {card.description && (
-        <motion.p {...withDelay(enterMotion, 0.3)} className="mt-2 text-[13px] leading-snug" style={{ color: 'var(--muted)' }}>
-          {card.description}
-        </motion.p>
-      )}
-      <motion.p {...withDelay(enterMotion, 0.5)} className="mt-3 text-[12.5px]" style={{ color: 'var(--muted)' }}>
-        Thử thách kỷ nguyên đã qua. Di vật cộng dồn vĩnh viễn.
-      </motion.p>
-    </div>
-  );
-}
 
 function EraCard({ card, onSeeCity }) {
   const rewardMotion = useRewardMotion();
@@ -922,7 +929,7 @@ function EraCard({ card, onSeeCity }) {
       <p className={eyebrowClass} style={{ color: card.accent }}>Kỷ nguyên mới</p>
       <motion.p
         {...rewardMotion}
-        className="mono mt-4 inline-block rounded-full px-4 py-2 text-[12px] font-semibold uppercase tracking-[0.22em]"
+        className="mono mt-4 inline-block rounded-full px-4 py-2 text-[11px] font-semibold uppercase tracking-[0.14em]"
         style={{ border: `1px solid ${card.accent}`, color: 'var(--ink)' }}
       >
         Kỷ {card.newBook}

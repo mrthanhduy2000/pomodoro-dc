@@ -178,7 +178,25 @@ function tamCoDinh(era) {
   đã cho kỷ 1 · 2 trả 0 ở Việc 2 + 3: *lịch sử quyết, không phải sự tiện tay quyết*.
   Đo lại: 2026-09-16.
 */
+/*
+  ⚠️ ROUND 61, VIỆC 1: **+1 Ở BẢY KỶ, +0 Ở TÁM KỶ** — cổ thôi dùng `limb`, đổi sang `calf` (đảo
+  luật khớp; xem `humanShape.js` và `humanJoints.test.js`). `calf` không phải khuôn MỚI — nó đã
+  có mặt trong bộ từ ADR-057 — nhưng ở BẢY kỷ (5·6·7·9·11·12·13) không tay áo lẫn ống quần nào
+  của kỷ ấy còn dùng `calf` TRẦN (tay áo dài dùng `cuff`, ống quần dùng `cuff`/`limb`), nên cổ là
+  lần ĐẦU TIÊN `calf` xuất hiện trong tủ đồ của bảy kỷ ấy ⇒ +1 lệnh vẽ đúng ở đó, không hơn.
+  Tám kỷ còn lại đã có `calf` trần từ tay áo ngắn hoặc ống quần hở (1·2·3·4·8·10·14·15) nên cổ
+  không thêm gì. Đo lại: 2026-09-16.
+*/
 const MOC_LENH_VE = {
+  1: 16, 2: 18, 3: 21, 4: 20, 5: 22,
+  6: 23, 7: 23, 8: 24, 9: 20, 10: 23,
+  11: 20, 12: 20, 13: 20, 14: 20, 15: 20,
+};
+
+/**
+ * MỐC NGAY TRƯỚC KHI CỔ DÙNG LẠI `calf` — round 61, Việc 1. Đối chứng cho phép trừ của Việc 1.
+ */
+const MOC_TRUOC_CO = {
   1: 16, 2: 18, 3: 21, 4: 20, 5: 21,
   6: 22, 7: 22, 8: 24, 9: 19, 10: 23,
   11: 19, 12: 19, 13: 19, 14: 20, 15: 20,
@@ -535,7 +553,10 @@ test('QUAN HỆ "lệnh vẽ = số họ + 2 + số khuôn cư dân (+1 nếu c�
   // ⚠️ ĐO LẠI LẦN THỨ BA TRONG NGÀY, SAU VIỆC 5 (giày). Dự đoán từ `humanShapesUsed`: kỷ 1 **+0**
   // (đi chân đất) · kỷ 8 **+1** · kỷ 13 **+1**. Chromium: **19 · 27 · 20** — khớp cả ba, và khoản
   // "lệch chưa truy nguyên nhân" (3 · 3 · 1) vẫn KHÔNG nhúc nhích qua cả BA lần đo trong vòng này.
-  const DO_CHROMIUM_2026_09_16 = { 1: 19, 8: 27, 13: 20 };
+  // ⚠️ ĐO LẠI LẦN THỨ TƯ, SAU ROUND 61 VIỆC 1 (cổ → `calf`). Dự đoán từ `humanShapesUsed`: kỷ 1
+  // **+0** (đã có `calf` trần) · kỷ 8 **+0** (đã có) · kỷ 13 **+1** (chưa có, tay áo dài dùng
+  // `cuff`). Chromium: **19 · 27 · 21** — khớp cả ba, khoản lệch chưa truy (3·3·1) vẫn đứng yên.
+  const DO_CHROMIUM_2026_09_16 = { 1: 19, 8: 27, 13: 21 };
   const HO_CHUA_TRUY_NGUYEN_NHAN = { 1: 3, 8: 3, 13: 1 };
   for (const era of [1, 8, 13]) {
     assert.equal(MOC_LENH_VE[era] + HO_CHUA_TRUY_NGUYEN_NHAN[era], DO_CHROMIUM_2026_09_16[era],
@@ -866,17 +887,46 @@ test('GIÀY TỐN +0 Ở BA KỶ ĐI CHÂN ĐẤT, +1 Ở MƯỜI HAI KỶ CÒN 
     phép trừ của vòng 56 đã phải thêm vế `scalp` để tránh.
     THỬ-CHO-ĐỎ (nêu TRƯỚC): cho `GIAY[1]` một đôi ủng ⇒ kỷ 1 lệch 1 và dòng dưới đỏ.
   */
+  // ⚠️ CỘT "SAU" LÀ `MOC_TRUOC_CO`, KHÔNG PHẢI `MOC_LENH_VE` — round 61, Việc 1 thêm một thay
+  // đổi khác (cổ → `calf`) ngay sau round 60. Mỗi phép trừ kẹp đúng MỘT thay đổi.
   const CHAN_DAT = [1, 2, 3];
   for (const era of ERAS) {
     const truoc = MOC_TRUOC_GIAY[era];
     assert.ok(Number.isFinite(truoc), `kỷ ${era} thiếu mốc trước-giày`);
-    const hieu = MOC_LENH_VE[era] - truoc;
+    const hieu = MOC_TRUOC_CO[era] - truoc;
     const diChanDat = CHAN_DAT.includes(era);
     assert.equal(hieu, diChanDat ? 0 : 1,
-      `kỷ ${era}: mốc đi từ ${truoc} lên ${MOC_LENH_VE[era]} (lệch ${hieu}) — kỷ đi chân đất phải `
+      `kỷ ${era}: mốc đi từ ${truoc} lên ${MOC_TRUOC_CO[era]} (lệch ${hieu}) — kỷ đi chân đất phải `
       + 'trả 0, kỷ đi giày phải trả đúng 1.');
     assert.equal(humanShapesUsed(era).includes('shoe'), !diChanDat,
       `kỷ ${era}: khuôn \`shoe\` ${humanShapesUsed(era).includes('shoe') ? 'CÓ' : 'VẮNG'} mà đáng lẽ `
       + `phải ${diChanDat ? 'VẮNG' : 'CÓ'} — con số mốc ở trên đang bịa.`);
   }
+});
+
+test('CỔ DÙNG LẠI `calf` TỐN +1 CHỈ Ở BẢY KỶ CHƯA CÓ CALF TRẦN, +0 Ở TÁM KỶ CÒN LẠI', () => {
+  /*
+    ⚠️ PHÉP TRỪ RIÊNG CỦA VÒNG 61, VIỆC 1. Cổ đổi khuôn từ `limb` sang `calf` (đảo luật khớp — cổ
+    phải hẹp ở CẢ HAI đầu, và `calf` đã sẵn hai đầu hẹp, xem `humanJoints.test.js`). `calf` không
+    phải khuôn MỚI — nó có mặt trong bộ từ ADR-057 — nên chi phí không đều: kỷ nào tay áo/ống quần
+    ĐÃ dùng `calf` trần (tay ngắn hoặc chân hở) thì cổ không thêm gì; kỷ nào chỉ dùng `cuff`/`limb`
+    (tay dài, ống quần dài) thì cổ là lần ĐẦU TIÊN `calf` xuất hiện trong tủ đồ kỷ ấy.
+    THỬ-CHO-ĐỎ (nêu TRƯỚC): cho cổ dùng `limb` như cũ ⇒ cả bảy kỷ lệch về 0 và dòng dưới đỏ.
+  */
+  const CO_CALF_SAN = [1, 2, 3, 4, 8, 10, 14, 15]; // tay ngắn hoặc ống quần hở ⇒ đã có `calf` trần
+  for (const era of ERAS) {
+    const truoc = MOC_TRUOC_CO[era];
+    assert.ok(Number.isFinite(truoc), `kỷ ${era} thiếu mốc trước-cổ`);
+    const hieu = MOC_LENH_VE[era] - truoc;
+    const daCoCalf = CO_CALF_SAN.includes(era);
+    assert.equal(hieu, daCoCalf ? 0 : 1,
+      `kỷ ${era}: mốc đi từ ${truoc} lên ${MOC_LENH_VE[era]} (lệch ${hieu}) — kỷ đã có \`calf\` `
+      + 'trần phải trả 0, kỷ chưa có phải trả đúng 1.');
+    assert.ok(humanShapesUsed(era).includes('calf'),
+      `kỷ ${era}: khuôn \`calf\` phải CÓ MẶT — cổ luôn dùng nó, bất kể tay áo/ống quần dùng gì.`);
+  }
+  // ⚠️ GÁC CHẠY-RỖNG: nếu cả 15 kỷ đều lệch 0 (hoặc đều lệch 1) thì phép trừ trên không phân biệt
+  // được gì — phải có CẢ HAI giá trị mới chứng minh được rằng "đã có calf trần" là điều kiện thật.
+  const lech = ERAS.map((e) => MOC_LENH_VE[e] - MOC_TRUOC_CO[e]);
+  assert.equal(new Set(lech).size, 2, `phải có đúng hai mức lệch 0 và 1 — đếm được ${new Set(lech).size}`);
 });

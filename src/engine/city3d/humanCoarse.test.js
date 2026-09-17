@@ -58,18 +58,17 @@ test('`bead` là `dome` ít cạnh đi — CÙNG bảng vành, không phải m�
     `khuôn thô phải rẻ hơn ít nhất 3,5 lần — đo được ${shapeTriangles('dome')} so với ${shapeTriangles('bead')}`);
 });
 
-test('quả cầu khớp KHÔNG to ra khi đổi khuôn — bán kính ngoại tiếp phụ thuộc số cạnh', () => {
-  // ⚠️ `0,5 / cos(π/n)`: 0,5007 ở 60 cạnh, 0,5098 ở 16. Một chỗ còn hỏi `shapeMaxRadius('dome')`
-  // trong khi khối đã là `bead` cho quả cầu to hơn 1,8% — đúng cái cục u round 58 đã trừ khử.
+test('BÁN KÍNH NGOẠI TIẾP KHÔNG BẰNG NHAU GIỮA HAI KHUÔN — phụ thuộc số cạnh, không được suy nhầm', () => {
+  /*
+    ⚠️ ROUND 61: SÁU "QUẢ CẦU KHỚP" MÀ BÀI NÀY TỪNG CANH ĐÃ BỊ BỎ — Việc 1 + 3 đảo luật khớp
+    (khớp nay là chỗ HẸP NHẤT, lấp khe bằng hai đoạn chi đâm sâu qua nhau, không còn quả cầu nào
+    cả — xem `human.js` và `humanJoints.test.js`). Bài này giữ lại đúng MỘT vế còn sống: `bead` và
+    `dome` dùng chung bảng vành nhưng số cạnh khác nhau (60 ↔ 16) nên bán kính ngoại tiếp
+    (`0,5 / cos(π/n)`) khác nhau — 0,5007 so với 0,5098, lệch 1,8%. Bất kỳ chỗ nào tính bán kính
+    thật của một khối `bead` mà lỡ hỏi `shapeMaxRadius('dome')` sẽ sai đúng 1,8% ấy.
+  */
   assert.ok(shapeMaxRadius('bead') > shapeMaxRadius('dome'),
-    'nếu hai số này bằng nhau thì bài test dưới đây không chứng minh được gì');
-  const balls = blocksOf(1).filter((p) => /Ball[LR]$/.test(p.id));
-  assert.equal(balls.length, 6, 'sáu quả cầu khớp: hai vai, hai khuỷu, hai gối');
-  for (const b of balls) {
-    assert.equal(b.shape, 'bead', `${b.id} phải dùng khuôn thô`);
-    const outer = b.w * shapeMaxRadius(b.shape);
-    assert.ok(outer > 0 && Number.isFinite(outer), `${b.id}: bán kính ngoài phải là một số thật`);
-  }
+    'nếu hai số này bằng nhau thì lời cảnh báo ở trên vô nghĩa — không còn gì để suy nhầm');
 });
 
 test('mọi khối dùng khuôn thô đều nhỏ hơn ngưỡng nửa điểm ảnh, ở CẢ 15 KỶ', () => {
@@ -88,7 +87,10 @@ test('mọi khối dùng khuôn thô đều nhỏ hơn ngưỡng nửa điểm �
         + `${err.toFixed(3)} điểm ảnh, quá ngưỡng ${NGUONG_PX}. Cho nó khuôn mịn, đừng nới ngưỡng.`);
     }
   }
-  assert.ok(n >= 11 * 15, `phải có ít nhất 11 khối thô mỗi kỷ, đếm được ${n} trên 15 kỷ`);
+  // ⚠️ 11 → 5 Ở ROUND 61: sáu quả cầu khớp (vai/khuỷu/gối) từng dùng `bead` đã bị bỏ hẳn (Việc 1
+  // + 3, xem `humanJoints.test.js`). Năm khối còn lại — hai lòng trắng, hai con ngươi, gờ mày —
+  // là phần round 60 vẫn còn đúng nguyên.
+  assert.ok(n >= 5 * 15, `phải có ít nhất 5 khối thô mỗi kỷ, đếm được ${n} trên 15 kỷ`);
   assert.ok(worst.px > 0.3, `khối thô to nhất (${worst.id}, ${worst.px.toFixed(3)} px) phải SÁT ngưỡng `
     + '— nếu nó còn cách xa thì ta đang bỏ phí ngân sách, và bài test này chưa canh gì cả');
 });
@@ -107,11 +109,15 @@ test('NGƯỠC LẠI: ngưỡng thật sự loại được thứ gì đó — h
   }
 });
 
-test('phép đổi khuôn trả lại một phần tư số tam giác của mỗi cư dân', () => {
+test('phép đổi khuôn vẫn còn trả lại tam giác thật, dù sáu quả cầu khớp không còn để so', () => {
+  // ⚠️ NGƯỠNG HẠ TỪ >20% XUỐNG >10% Ở ROUND 61 — CÓ SỐ ĐO, KHÔNG PHẢI CHỌN CHO VỪA. Round 60 đổi
+  // 11 khối sang `bead` (bao gồm sáu quả cầu khớp); round 61 bỏ sáu quả cầu ấy, nên phép so
+  // "trước/sau" nay chỉ còn đo đúng 5 khối mặt (lòng trắng, con ngươi, gờ mày) — khoản tiết kiệm
+  // nhỏ lại theo đúng tỉ lệ, không phải một khoản mất đi vô cớ.
   const parts = blocksOf(1);
   const now = parts.reduce((a, p) => a + shapeTriangles(p.shape), 0);
   const before = parts.reduce((a, p) => a + shapeTriangles(p.shape === 'bead' ? 'dome' : p.shape), 0);
   const saved = (before - now) / before;
-  assert.ok(saved > 0.2,
-    `phải tiết kiệm trên 20% — đo được ${before} → ${now} tam giác/người, tức ${(saved * 100).toFixed(1)}%`);
+  assert.ok(saved > 0.1,
+    `phải tiết kiệm trên 10% — đo được ${before} → ${now} tam giác/người, tức ${(saved * 100).toFixed(1)}%`);
 });

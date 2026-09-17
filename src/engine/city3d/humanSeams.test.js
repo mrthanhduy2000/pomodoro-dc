@@ -38,15 +38,22 @@ test('CÁI GÁC CÓ CANH GÌ KHÔNG: đếm khối nối dài, để bài trên 
     ⚠️ BÀI NÀY TỒN TẠI VÌ BÀI TRÊN CÓ MỘT LỐI THOÁT ÂM THẦM: xoá hết `continues` thì `seamFaults`
     trả rỗng và bài trên xanh mãi mãi — đúng cái bẫy "mẫu số chứa/không chứa thứ ngoài câu hỏi"
     (`TECH_DEBT #22`). Nên số khối nối dài được khoá dưới dạng một SÀN, ở mọi kỷ.
+    ⚠️ SÀN HẠ TỪ 10 XUỐNG 8 Ở ROUND 61: sáu quả cầu khớp vai/khuỷu/gối bị bỏ (Việc 1 + 3 — khớp
+    lấp khe bằng đâm sâu, không còn quả cầu nào để khai `continues`). Tám khối còn lại LUÔN có ở
+    mọi kỷ: `trapezius` (vai xuôi, nối `torso`) · `occiput`/`browRidge`/`earL`/`earR` (bốn khối sọ
+    nối `head`) · `fingersL`/`thumbL` (bàn tay trái, luôn nắm hoặc luôn xoè). Bàn chân chỉ khai
+    `continues` ở kỷ đi CHÂN ĐẤT (round 60: chân trần là phần nối dài của cẳng chân, giày thì
+    không), và `fingersR`/`thumbR` chỉ ở kỷ tay phải không cầm gì — cả hai đều SỐ 0 hợp lệ ở một
+    số kỷ, nên không được tính vào sàn.
   */
   for (const era of ERAS) {
     const n = continuationCount(buildHumanBody(era));
-    assert.ok(n >= 10,
-      `kỷ ${era} chỉ khai ${n} khối nối dài. Phải có ít nhất 10 (2 bàn chân · 2 ngón cái · 6 khớp`
-      + ' cầu vai/khuỷu/đầu gối) — thiếu nghĩa là có người vừa bỏ một lời khai, và bài test trên'
-      + ' thành vô hiệu mà không đỏ lên.');
+    assert.ok(n >= 8,
+      `kỷ ${era} chỉ khai ${n} khối nối dài. Phải có ít nhất 8 (trapezius · 4 khối sọ · fingersL`
+      + ' · thumbL) — thiếu nghĩa là có người vừa bỏ một lời khai, và bài test trên thành vô hiệu'
+      + ' mà không đỏ lên.');
   }
-  // ⚠️ ĐỎ KHI BỎ GÌ: bỏ đối số thứ 7 (`'shinL'`) của `piece('footL', …)` → 9 < 10, đỏ ngay kỷ 1. Đã thử.
+  // ⚠️ ĐỎ KHI BỎ GÌ: bỏ đối số cuối (`'torso'`) của `piece('trapezius', …)` → 7 < 8, đỏ ngay kỷ 1.
 });
 
 test('PHÉP ĐO CÓ BIẾT KÊU KHÔNG: hai kiểu lỗi phải bị bắt, kể cả lỗi TRỎ SAI TÊN', () => {

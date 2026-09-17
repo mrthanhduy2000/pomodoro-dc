@@ -262,7 +262,26 @@ const PROFILES = {
    */
   limb: {
     sides: ROUND_SIDES,
-    rings: [[-0.5, 0.70], [-0.18, 0.62], [0.12, 0.92], [0.34, 1.00], [0.50, 0.88]],
+    /*
+      ⚠️ ROUND 61, VIỆC 1 + 2: LUẬT KHỚP ĐẢO NGƯỢC — "cầu khớp phải đủ to để lấp khe" (round 58)
+      dựng một cái khớp PHÌNH; Đàm gọi đúng: nó đẻ ra "xâu hạt". Luật thật, đo trên cơ thể người:
+      khớp là chỗ HẸP NHẤT nó nối, bụng cơ phình ở GIỮA ĐOẠN.
+      Đầu −1 (khuỷu/gối) = **0,30** — MỚI, và đây là số NHỎ NHẤT của cả đường sinh này: hẹp hơn
+      bụng cơ (0,95) và hẹp hơn cả đầu −1 CŨ (0,70). Nó phải khớp CHÍNH XÁC đầu +1 của `calf`
+      (cũng 0,30) — hai đường sinh gặp nhau ở khuỷu/gối và phải cùng bán kính, nếu không có một
+      bậc giả ở đúng chỗ lẽ ra phải là một đường cong liền.
+      Bụng cơ (bắp tay/đùi) phình ở **GIỮA TRÊN** (đỉnh tại y=0,10) — không phải ở hai đầu như
+      bản cũ (đỉnh cũ nằm tại y=0,34, sát đầu trên).
+      Đầu +1 (vai/hông) = 0,8632 — KHÔNG bắt buộc phải hẹp (vai, hông không nằm trong bảy chỗ
+      thắt của Đàm), nhưng vẫn thấp hơn bụng cơ một chút để không tạo một mặt phẳng đập vào mắt.
+      ⚠️ MỌI SỐ Ở ĐÂY ĐÃ NHÂN 1,0526 (= 1/0,95) SO VỚI BẢN NHÁP ĐẦU TIÊN — bài test «MỌI KHUÔN
+      NẰM GỌN TRONG HỘP ĐƠN VỊ… VÀ CHẠM ĐÚNG MÉP» đòi đỉnh cao nhất của MỖI khuôn phải bằng đúng
+      1,00 (`w`/`d` khai báo phải là bề rộng THẬT, không phải một số phóng đại). Bản nháp đặt
+      đỉnh ở 0,95 vì nghĩ theo tỉ lệ TƯƠNG ĐỐI trước, quên mất đỉnh CHÍNH LÀ đơn vị đo. Nhân đều
+      cả bảng cho một tỉ số không đổi giữa các vành — đúng bài học *"nghi cái thước trước khi
+      nghi cái máy"*, lần này cái thước là chính quy ước "1,00 = rộng nhất" của cả bộ khuôn.
+    */
+    rings: [[-0.50, 0.3158], [-0.20, 0.5789], [0.10, 1.00], [0.30, 0.9474], [0.50, 0.8632]],
   },
 
   /**
@@ -278,7 +297,19 @@ const PROFILES = {
    */
   calf: {
     sides: ROUND_SIDES,
-    rings: [[-0.5, 0.44], [-0.22, 0.63], [0.02, 1.00], [0.28, 0.74], [0.50, 0.90]],
+    /*
+      ⚠️ ROUND 61, VIỆC 1 + 2 — CÙNG LUẬT, ĐẦU KIA CỦA CHI. Bản cũ có đầu +1 (khuỷu/gối, chỗ
+      GẦN khớp nhất) rộng NHẤT đường sinh (0,90) — đúng ngược hoàn toàn: đó chính là quả cầu
+      khớp cũ bị buộc phải to theo. Nay đầu +1 = **0,30**, khớp CHÍNH XÁC với đầu −1 mới của
+      `limb` (bắt buộc — xem chú thích ở đó).
+      Bụng cơ (cẳng tay/bắp chân) phình GẦN ĐẦU TRÊN (0,95 tại y=0,15, "một phần ba trên") rồi
+      thon dần — không đối xứng, vì cẳng tay thật phình gần khuỷu chứ không phình giữa.
+      Đầu −1 (cổ tay/cổ chân) = **0,20** — HẸP NHẤT CẢ CHI (hẹp hơn cả đầu khuỷu/gối 0,30),
+      đúng bảng của Đàm: *"cổ chân hẹp nhất cả chân"*.
+      Sáu vành thay vì năm — vành 0,55 tại y=0,35 chêm giữa đỉnh bụng cơ và đầu khớp để độ dốc
+      không đổ quá gắt trong 0,20 đơn vị (0,95 → 0,30 nếu chỉ hai vành sẽ đọc ra một cái phễu).
+    */
+    rings: [[-0.50, 0.2105], [-0.30, 0.40], [-0.05, 0.6526], [0.15, 1.00], [0.35, 0.5789], [0.50, 0.3158]],
   },
 
   /**
@@ -302,16 +333,26 @@ const PROFILES = {
    */
   cuff: {
     sides: ROUND_SIDES,
+    /*
+      ⚠️ ROUND 61: DỰNG LẠI TRÊN `calf` MỚI (khuỷu/gối 0,30 → hẹp nhất 0,20), GIỮ NGUYÊN Ý
+      CỦA ROUND 60 — một bậc ở đầu dưới cho cửa tay/gấu quần. Bậc ấy nay nhô lên từ một nền đã
+      hẹp: mép ngoài cửa tay (0,52) vẫn phải RỘNG HƠN cổ tay trần (0,20, đầu mút thật của `calf`)
+      — vải có bề dày — nhưng KHÔNG được rộng bằng bụng cơ (0,95), nếu không cửa tay sẽ đọc ra
+      là chỗ TO NHẤT của cả cánh tay, sai hẳn hướng ngược của cả vòng này.
+      ⚠️ ĐẦU +1 VẪN PHẢI BẰNG ĐÚNG `calf` (0,1502) — round 58 để lại lý do (quả cầu khớp đo theo
+      con số này); round 61 bỏ quả cầu, nhưng vẫn giữ ràng buộc: `limb`, `calf` và `cuff` phải
+      cùng GIÁ TRỊ HỒ SƠ (0,30) ở khuỷu/gối, nếu không cửa tay dài sẽ tạo một bậc giả ngay tại khớp.
+    */
     rings: [
-      [-0.500, 0.42],
-      [-0.455, 0.44],
-      [-0.430, 0.62],   // ⬅ BẬC: mép ngoài cửa tay / gấu quần
-      [-0.340, 0.58],
-      [-0.300, 0.54],   // dải thu lại — bề dày của chỗ vải gập đôi
-      [-0.220, 0.63],
-      [0.020, 1.00],
-      [0.280, 0.74],
-      [0.500, 0.90],    // ⚠️ BẰNG ĐÚNG `calf`: quả cầu khớp đo bằng con số này
+      [-0.500, 0.2105],
+      [-0.455, 0.2316],
+      [-0.430, 0.5474],  // ⬅ BẬC: mép ngoài cửa tay / gấu quần — rộng hơn da trần, hẹp hơn bụng cơ
+      [-0.340, 0.4842],
+      [-0.300, 0.4211],  // dải thu lại — bề dày của chỗ vải gập đôi
+      [-0.220, 0.6526],
+      [0.150, 1.00],     // bụng cơ, cùng vị trí với `calf`
+      [0.350, 0.5789],
+      [0.500, 0.3158],   // ⚠️ BẰNG ĐÚNG `calf` (giá trị hồ sơ) — khuỷu/gối phải cùng bán kính ở cả ba khuôn
     ],
   },
 

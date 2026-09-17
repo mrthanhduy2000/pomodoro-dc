@@ -53,7 +53,7 @@
  */
 
 import { HUMAN_BASE_HEIGHT, getHumanStyle } from './humanStyle';
-import { isValidHumanShape, scalpFit, shapeEndRadius, shapeMaxRadius, shapeTriangles } from './humanShape';
+import { isValidHumanShape, scalpFit, shapeTriangles } from './humanShape';
 import { gaitOf } from './humanGait';
 
 /**
@@ -434,7 +434,14 @@ const LEG_LOOK = Object.freeze({
   // ⚠️ ROUND 60, VIỆC 3: `calf` → `cuff` — **gấu quần**, phủ lên mu bàn chân. Cùng một khuôn với
   // cửa tay áo, và đó là chủ ý: ngoài đời hai cái mép ấy được may y hệt nhau.
   trouser: { upRole: 'cloth2', upShape: 'limb', upW: 1.10, loRole: 'cloth2', loShape: 'cuff', loW: 0.94 },
-  boot:    { upRole: 'cloth2', upShape: 'limb', upW: 1.10, loRole: 'cloth2', loShape: 'limb', loW: 1.16 },
+  // ⚠️ ROUND 61: `loShape` ĐỔI TỪ `limb` SANG `calf`. Trước vòng này `limb` có hai đầu mút RỘNG
+  // (không đầu nào hẹp), nên dùng nó cho ủng là cách né cổ chân thon của `calf` — "ủng RỘNG HƠN
+  // CẢ ĐÙI" chỉ đạt được vì né mất chỗ thắt. Nay LUẬT đã đổi: `limb` tự nó cũng thắt ở đầu dưới
+  // (đúng bảy chỗ thắt của Đàm), nên dùng nó không còn né được gì — và né luật ấy cho MỘT kỷ là
+  // "một luật hai công thức" đúng nghĩa. Ủng vẫn rộng: `loW = 1,16` phóng to cả đường sinh, cổ
+  // chân vẫn hẹp hơn bụng ủng theo ĐÚNG TỈ LỆ như mọi kỷ khác — một cái ủng bó ống thật ngoài đời
+  // cũng thắt nhẹ ở mắt cá trước khi phồng lên thân ủng, không đi thẳng đứng như một cái lon.
+  boot:    { upRole: 'cloth2', upShape: 'limb', upW: 1.10, loRole: 'cloth2', loShape: 'calf', loW: 1.16 },
 });
 
 /**
@@ -987,6 +994,51 @@ export function buildHumanBody(era) {
   const lg = legLook(style.leg);
   const than = bodyShape(style.garment, era);
   const giay = shoeLook(era);
+
+  /*
+    ══════════════════════════════════════════════════════════════════════════════════════════
+    ⚠️ ROUND 61, VIỆC 3 — LẤP KHE BẰNG ĐÂM SÂU, KHÔNG BẰNG QUẢ CẦU. ĐẢO LUẬT CỦA ROUND 58.
+    ══════════════════════════════════════════════════════════════════════════════════════════
+    Round 58: quả cầu tâm-tại-khớp, bán kính = max(hai vành) — đúng toán học, sai con mắt. Vì
+    khớp nay là chỗ HẸP NHẤT (Việc 1), "max hai vành" gần như luôn là vành CỦA CHÍNH KHỚP (đã cố
+    tình thu nhỏ), nên một quả cầu bọc đúng khớp lại to hơn hẳn hai đầu vành hẹp quanh nó — tức
+    tự nó dựng lại đúng cái bướu vừa bị xoá.
+    ⇒ Đàm: *"Cho hai đoạn ĐÂM SÂU vào nhau, qua khỏi tâm khớp. Đầu đoạn trên và đầu đoạn dưới
+    cùng đi qua tâm xoay, nên ở mọi góc vẫn kín."* Mỗi đoạn dài thêm `JOINT_OVERLAP` phần trăm
+    CHÍNH chiều dài của nó, đâm về phía khớp xa của chính nó — không đổi khớp GỐC (đầu ĐANG treo
+    vẫn đúng vị trí xương thật, nên dáng đi/IK không đổi một milimét), chỉ đổi đầu KHÔNG treo.
+    ⚠️ VÌ SAO 35%, KHÔNG PHẢI MỘT SỐ TRÒN — ĐO BẰNG CHÍNH ĐƯỜNG SINH, KHÔNG ĐOÁN. Dựng lại đúng
+    hai mặt lăng trụ (dùng chính `profileAt` mà `humanShapeMesh` dùng), gập ở góc `humanGait` sinh
+    ra thật (gối ≈ 84°, khuỷu ≈ 33° — đo lại ở `humanJoints.test.js`), rồi rải 4.000 điểm quanh
+    khớp trên một mặt cầu bán kính bằng đúng bán kính khớp, đếm bao nhiêu điểm KHÔNG nằm trong cả
+    hai khối:
+        phần đâm quá    8%     14%     18%     20%     25%     30%    35%    40%    45%
+        hở ở khuỷu 33°   —       —     5,58%   4,00%   1,05%    0%     0%     0%     0%
+        hở ở gối   84°   —       —    18,22%  16,40%  11,92%   7,75%  3,92%  0,70%   0%
+    ⇒ 45% mới kín tuyệt đối ở gối, nhưng đó là gần nửa chiều dài cẳng chân đâm ngược lên đùi —
+    đủ dài để đầu nhọn của nó có nguy cơ xuyên ra khỏi mặt đùi ở phía đối diện, một khuyết tật
+    khác thay cho khe hở. Chọn **35%**: khuỷu kín tuyệt đối (0%), gối còn hở 3,92% — một dải rất
+    mỏng, chỉ xuất hiện đúng lúc gối gập hết cỡ giữa một pha bước, và ảnh chụp ở đúng góc ấy (luật
+    ảnh của vòng) là cách cuối cùng quyết định con số này có cần nhích thêm hay không.
+    ⚠️ VÀ ĐÂY LÀ LÝ DO `footContactAt` VỪA ĐỔI: cẳng chân/cẳng tay đâm quá khớp GẦN (khuỷu/gối)
+    nghĩa là `h` dài hơn xương thật, nhưng đầu XA (cổ tay/cổ chân, chỗ bàn tay/bàn chân treo vào)
+    PHẢI giữ đúng vị trí cũ — nếu không bàn chân sẽ trôi khỏi đúng chỗ IK vừa giải.
+  */
+  const JOINT_OVERLAP = 0.35;
+  /** Đoạn TREO TỪ khớp GỐC (vai/hông): đầu tại khớp giữ nguyên, đầu xa đâm quá khớp KIA. */
+  const overlapNear = (boneLen) => {
+    const h = boneLen * (1 + JOINT_OVERLAP);
+    return { h, restY: -h * 0.5 };
+  };
+  /** Đoạn TREO TỪ khớp GIỮA (khuỷu/gối): đầu xa (cổ tay/cổ chân) giữ nguyên, đầu tại khớp đâm quá KIA. */
+  const overlapFar = (boneLen) => {
+    const h = boneLen * (1 + JOINT_OVERLAP);
+    return { h, restY: h * 0.5 - boneLen };
+  };
+  const thigh = overlapNear(d.thighLen);
+  const shin = overlapFar(d.shinLen);
+  const upperArm = overlapNear(d.upperArmLen);
+  const forearm = overlapFar(d.forearmLen);
   /*
     ⚠️ VAI MÀU CỦA BÀN TAY — HAI TRẠNG THÁI, KHÔNG BAO GIỜ CÓ TRẠNG THÁI THỨ BA (round 58, Việc 1).
     Đàm: *"màu da khi tay áo ngắn, màu găng khi có găng — và không bao giờ là một màu thứ ba."*
@@ -1067,14 +1119,19 @@ export function buildHumanBody(era) {
     // ⚠️ VAI MÀU / KHUÔN / BỀ NGANG CỦA BỐN KHỐI NÀY DO TỦ ĐỒ CỦA KỶ QUYẾT (`LEG_LOOK`), không
     // phải hằng số — xem khối chú thích của `LEG_LOOK` để biết vì sao đây là cách đúng thay vì đắp
     // thêm một ống quần trùm ra ngoài. `lg.upW` = 1,00 chính là vạch xuất phát trước vòng 52.
+    // ⚠️ CHIỀU CAO VÀ `rest.y` KHÔNG CÒN LÀ `d.thighLen`/`d.shinLen` TRẦN — round 61, Việc 3.
+    // `thigh`/`shin` (tính ở trên bằng `overlapNear`/`overlapFar`) dài hơn xương thật đúng
+    // `JOINT_OVERLAP`, đâm quá khớp gối để lấp khe mà không cần quả cầu. Khớp HÔNG của đùi và
+    // khớp CỔ CHÂN của cẳng chân (hai đầu KHÔNG đổi) vẫn đúng xương thật — chỉ đầu gặp NHAU ở
+    // gối mới đâm quá.
     piece('thighL', lg.upRole, lg.upShape, 'hipL',
-      [d.limbW * lg.upW, d.thighLen, d.limbW * lg.upW], [0, -d.thighLen * 0.5, 0]),
+      [d.limbW * lg.upW, thigh.h, d.limbW * lg.upW], [0, thigh.restY, 0]),
     piece('thighR', lg.upRole, lg.upShape, 'hipR',
-      [d.limbW * lg.upW, d.thighLen, d.limbW * lg.upW], [0, -d.thighLen * 0.5, 0]),
+      [d.limbW * lg.upW, thigh.h, d.limbW * lg.upW], [0, thigh.restY, 0]),
     piece('shinL', lg.loRole, lg.loShape, 'kneeL',
-      [d.limbW * lg.loW, d.shinLen, d.limbW * lg.loW], [0, -d.shinLen * 0.5, 0]),
+      [d.limbW * lg.loW, shin.h, d.limbW * lg.loW], [0, shin.restY, 0]),
     piece('shinR', lg.loRole, lg.loShape, 'kneeR',
-      [d.limbW * lg.loW, d.shinLen, d.limbW * lg.loW], [0, -d.shinLen * 0.5, 0]),
+      [d.limbW * lg.loW, shin.h, d.limbW * lg.loW], [0, shin.restY, 0]),
     // ⚠️ BÀN CHÂN NAY TREO VÀO KHỚP GỐI, KHÔNG TREO VÀO HÔNG. Treo vào hông thì lúc gối gập, bàn
     // chân đứng nguyên chỗ cũ trong khi cẳng chân đã đi chỗ khác — một bàn chân bay lơ lửng, và
     // hình học vẫn hợp lệ nên KHÔNG có gì đỏ lên.
@@ -1141,8 +1198,17 @@ export function buildHumanBody(era) {
     // gần bằng nửa cái đầu, và từ camera chếch 34° nó hiện ra thành một VÀNH SÁNG chạy quanh chân
     // đầu — đọc ra là cái cổ áo trắng, không đọc ra cái cổ. Một cái cổ thật rộng khoảng một phần ba
     // đầu. Hạ thêm xuống (−0,17 thay vì −0,13) để phần dưới khuất vào trong thân.
-    piece('neck', 'skin', 'limb', 'head',
-      [d.headW * 0.38, d.headH * 0.40, d.headZ * 0.38], [0, -d.headH * 0.19, 0]),
+    // ⚠️ ROUND 61, VIỆC 1: KHUÔN ĐỔI TỪ `limb` SANG `calf`, DÙNG LẠI CHỨ KHÔNG DỰNG THÊM.
+    // Bảng của Đàm đòi cổ hẹp hơn CẢ HAI đầu nó nối (đầu và vai) — `limb` chỉ hẹp một đầu (đúng
+    // hình chi trên), `calf` đã hẹp CẢ HAI đầu sẵn (0,30 và 0,20, xem `humanShape.js`) vì đó
+    // đúng hình một đoạn thon hai đầu. Không có "một luật hai công thức" nào ở đây: cổ và cẳng
+    // tay/chân cùng là "đoạn hẹp hai đầu", chỉ khác tỉ lệ, nên dùng CHUNG một đường sinh.
+    // ⚠️ +15% CHIỀU CAO, GIỮ NGUYÊN TÂM: cổ không có khớp riêng để "đâm sâu" về một phía như
+    // khuỷu/gối (nó treo nguyên khối vào khớp `head` và quay theo đầu), nên cả hai đầu cùng
+    // được nới ra một chút khỏi tâm — đủ để chân cổ lún vào thân và đỉnh cổ lún vào cằm khi đầu
+    // nghiêng nhẹ, mà không cần một khớp cầu thứ bảy.
+    piece('neck', 'skin', 'calf', 'head',
+      [d.headW * 0.38, d.headH * 0.40 * 1.15, d.headZ * 0.38], [0, -d.headH * 0.19, 0]),
     piece('head', 'skin', 'skull', 'head', [d.headW, d.headH, d.headZ], [0, d.headH * 0.5, 0]),
     // ⚠️ TÁM KHỐI SỌ (round 58, Việc 3) PHẢI ĐỨNG NGAY SAU CÁI ĐẦU, TRƯỚC KHUÔN MẶT — thứ tự trong
     // mảng không đổi hình, nhưng nó là thứ người đọc mã dùng để hiểu cái gì nằm trên cái gì.
@@ -1168,14 +1234,16 @@ export function buildHumanBody(era) {
     // cánh tay luôn mang vai `skin` — vai SÁNG NHẤT bảng — ở cả 15 kỷ, kể cả kỷ mặc áo măng tô kín
     // tới cổ tay. Đứng ở tầm mắt thì đó là hai cái que trắng vung hai bên một khối vải.
     // Vai màu, khuôn và bề ngang nay do `SLEEVE_LOOK` của kỷ quyết — không thêm một khối nào.
+    // ⚠️ CÙNG PHÉP ĐÂM SÂU Ở KHUỶU — xem chú thích `thigh`/`shin` phía trên. Khớp VAI của cánh
+    // tay trên và điểm CỔ TAY của cẳng tay (`d.forearmLen`, dùng để treo bàn tay) không đổi.
     piece('upperArmL', sv.upRole, sv.upShape, 'shoulderL',
-      [d.limbW * sv.upW, d.upperArmLen, d.limbW * sv.upW], [0, -d.upperArmLen * 0.5, 0]),
+      [d.limbW * sv.upW, upperArm.h, d.limbW * sv.upW], [0, upperArm.restY, 0]),
     piece('upperArmR', sv.upRole, sv.upShape, 'shoulderR',
-      [d.limbW * sv.upW, d.upperArmLen, d.limbW * sv.upW], [0, -d.upperArmLen * 0.5, 0]),
+      [d.limbW * sv.upW, upperArm.h, d.limbW * sv.upW], [0, upperArm.restY, 0]),
     piece('forearmL', sv.loRole, sv.loShape, 'elbowL',
-      [d.limbW * sv.loW, d.forearmLen, d.limbW * sv.loW], [0, -d.forearmLen * 0.5, 0]),
+      [d.limbW * sv.loW, forearm.h, d.limbW * sv.loW], [0, forearm.restY, 0]),
     piece('forearmR', sv.loRole, sv.loShape, 'elbowR',
-      [d.limbW * sv.loW, d.forearmLen, d.limbW * sv.loW], [0, -d.forearmLen * 0.5, 0]),
+      [d.limbW * sv.loW, forearm.h, d.limbW * sv.loW], [0, forearm.restY, 0]),
     // ⚠️ BÀN TAY LUÔN LÀ DA, KỂ CẢ DƯỚI TAY ÁO THỤNG — và đó là thứ khiến cái tay thụng ĐỌC RA là
     // tay thụng chứ không phải một cái chuông: có một chấm da thò ra ở đáy cái xoè.
     // Việc 7 *"bàn tay có khối"*: 0,94 → 1,02 ngang và 0,74 → 0,86 dày — một nắm tay thật gần bằng
@@ -1269,80 +1337,16 @@ export function buildHumanBody(era) {
   ];
 
   /*
-    ⚠️ SÁU KHỚP CẦU — ROUND 54 (ADR-094), VIỆC 5: *"khuỷu và gối là khớp cầu chứ không phải hai ống
-    chạm nhau"*. Trước vòng này, chỗ hai đoạn chi gặp nhau là hai mặt cắt phẳng kề nhau: lúc đứng
-    yên trông còn được, lúc gập thì hở ra một khe hình nêm và cái chi đọc ra như hai que nối bằng
-    băng dính. Một quả cầu nhỏ đúng ở tâm khớp bịt khe ấy ở MỌI góc gập — đó là cả lý do khớp cầu
-    tồn tại trong mọi bộ máy hoạt hình, không phải để đẹp.
-    ⚠️ ĐƯỜNG KÍNH LẤY THEO BỀ NGANG ĐOẠN CHI DÀY HƠN trong hai đoạn nó nối, nhân 1,04. Nhỏ hơn thì
-    khe vẫn hở ở góc gập lớn; to hơn thì khớp phình ra thành một cái bướu. Đây là một QUAN HỆ với
-    cái chi, không phải một con số — chi đổi bề ngang theo tủ đồ của kỷ (vòng 52), nên một hằng số
-    ở đây sẽ đúng ở kỷ này và sai ở kỷ kia.
-    ⚠️ `dome` CHỨ KHÔNG PHẢI MỘT KHUÔN CẦU MỚI: `dome` kỷ nào cũng đã vẽ (cái đầu), nên sáu khớp
-    tốn **0 lệnh vẽ**. Cùng lý lẽ với hai bàn tay ở ADR-057.
+    ⚠️ ROUND 61, VIỆC 1 + 3: SÁU QUẢ CẦU KHỚP (round 54, tinh chỉnh round 58) ĐÃ BỊ BỎ.
+    Chúng đúng toán học — bán kính = max(hai vành), tâm tại khớp, phủ kín khe ở MỌI góc gập,
+    chứng minh được (`humanJoints.test.js` cũ khoá cả ba vế). Nhưng "max hai vành" chỉ vô hại khi
+    khớp KHÔNG PHẢI chỗ hẹp nhất — mà nay khớp bị buộc phải hẹp nhất (Việc 1), nên "max hai vành"
+    hầu như luôn LỚN HƠN cả hai vành nó nối, và một quả cầu đúng bằng số lớn nhất trong hai số nhỏ
+    lại tự nó phình ra thành đúng cái bướu vừa bị xoá — "xâu hạt" của Đàm.
+    ⇒ Thay bằng chính hai đoạn chi ĐÂM SÂU qua khớp (`overlapNear`/`overlapFar`, khai ở đầu hàm
+    này) — không thêm khối, không thêm lệnh vẽ, và khe được lấp bằng chính khối đã có chứ không
+    phải một vật thứ ba dán vào giữa. Xem `humanJoints.test.js` cho phép đo khe hở còn lại.
   */
-  /*
-    ⚠️ KHỚP MANG VAI MÀU CỦA ĐOẠN CHI NÓ NỐI, KHÔNG CỨNG `skin` — VÀ ĐÂY LÀ MỘT LỖI ĐÃ BỊ ẢNH BẮT.
-    Bản đầu của vòng 54 cho cả sáu quả cầu vai `skin`. Ảnh cận cảnh kỷ 12 (quân phục xanh sẫm, tay
-    áo dài) cho ra **sáu chấm sáng trắng nằm trên tay áo** — mắt đọc ra sáu cái đinh tán, không đọc
-    ra cái khớp. Đúng khuyết tật *"hai cái que trắng vung hai bên một khối vải"* mà `SLEEVE_LOOK`
-    sinh ra ở vòng 52 để chữa, chỉ là lần này nó quay lại ở chỗ cái khớp.
-    ⇒ Luật đã có sẵn trong chính file này, ở ngay bàn chân: **một khối phụ mang vai màu của khối
-    chính mà nó dính vào.** Vai (`shoulder`) lấy màu cánh tay TRÊN, khuỷu lấy màu CẲNG TAY, gối lấy
-    màu CẲNG CHÂN. Ở kỷ tay áo ngắn, khuỷu chính là đường cắt giữa vải và da — lấy màu cẳng tay là
-    lấy đúng phía DA, tức cái khớp nằm đúng bên dưới mép tay áo, y như ngoài đời.
-    ⚠️ VÀ NÓ KHÔNG TỐN THÊM GÌ: mọi vai màu dùng ở đây đều đã có mặt trên chính cái chi ấy.
-  */
-  /*
-    ══════════════════════════════════════════════════════════════════════════════════════════════
-    ⚠️ ĐƯỜNG KÍNH KHỚP CẦU — ROUND 58, VIỆC 2. ĐO ĐƯỢC, KHÔNG CÒN LÀ MỘT HỆ SỐ ĐOÁN.
-    ══════════════════════════════════════════════════════════════════════════════════════════════
-    Bản vòng 54 lấy `bề ngang chi × 1,04`, tức GIẢ ĐỊNH rằng đoạn chi dày đúng bằng bề ngang khai
-    báo của nó. Sai: `limb` thu về **0,3505** ở đầu dưới, `calf` nở tới **0,4506** ở đầu trên (đơn
-    vị hộp — hỏi `shapeEndRadius`). Ở tay áo dài, quả cầu ra bán kính 0,4686 `limbW` trong khi chỗ
-    dày nhất nó nối chỉ 0,4055 ⇒ **to hơn 15,6%**, và ở 390 điểm ảnh nó đọc ra là một cục u.
-
-    ⚠️ BÁN KÍNH ĐÚNG BẰNG BÁN KÍNH CHI, VÀ **GÓC GẬP KHÔNG DỰ PHẦN** — đây là kết quả đáng nhớ.
-    Trực giác nói "gập càng nhiều thì khe càng to, cầu phải to theo". Đo thì không: vành mép của cả
-    hai đoạn chi đều nằm ĐÚNG trên mặt cầu bán kính r (mọi điểm của vành cách tâm khớp đúng r), nên
-    một quả cầu bán kính r căng kín cái nêm giữa hai vành ở MỌI góc. Đo bằng `ball2.mjs` (đi dọc
-    từng tia, tìm chỗ độ phủ ĐỨT rồi NỐI LẠI):
-
-        R = 1,00·r → khe 0,000 ở 20° · 40° · 60° · 80° · 100°
-        R = 0,95·r → khe 0,030 ở 40°        R = 0,70·r → khe 0,160 ở 40°
-
-    ⇒ Lấy đúng bán kính lớn hơn trong hai đoạn, không nhân thêm gì. Một hệ số an toàn ở đây chính
-    là cái đã đẻ ra cục u.
-    ⚠️ Và phép đo ĐẦU TIÊN của tôi sai: nó quét cả mặt phẳng rồi báo "hở 1,900" ở mọi cấu hình —
-    vì nó đang đo KHÔNG KHÍ quanh cánh tay chứ không đo cái khe ở khớp. Định nghĩa đúng của "hở" là
-    *đi dọc một tia từ tâm khớp, độ phủ đứt rồi nối lại*. Lại một lần dụng cụ đo nói dối trước.
-  */
-  /*
-    ⚠️ QUẢ CẦU KHỚP DÙNG `bead` TỪ ROUND 60 — và phép quy đổi bán kính phải HỎI CHÍNH KHUÔN ĐANG
-    DỰNG, không được viết cứng tên `dome`. Bán kính ngoại tiếp phụ thuộc số cạnh
-    (`0,5 / cos(π/n)`: 0,5007 ở 60 cạnh, 0,5098 ở 16), nên một chỗ còn đọc `shapeMaxRadius('dome')`
-    trong khi khối đã là `bead` sẽ cho quả cầu to hơn 1,8% — đúng cái **cục u ở khớp** mà cả Việc 2
-    của round 58 dựng lên để trừ khử. Đó là lý do tên khuôn nay là một hằng số ở một chỗ.
-  */
-  const BALL_SHAPE = 'bead';
-  const ball = (id, role, joint, worldRadius, continues) => {
-    // Khuôn vòm rộng nhất ở vành GIỮA (r = 1,00) ⇒ bán kính thật = shapeMaxRadius × size. Đảo lại.
-    const size = worldRadius / shapeMaxRadius(BALL_SHAPE);
-    return piece(id, role, BALL_SHAPE, joint, [size, size, size], [0, 0, 0], continues);
-  };
-  /** Bán kính (đơn vị thế giới) ở đầu `which` của một đoạn chi khuôn `shape`, bề ngang `w`. */
-  const endR = (shape, w, which) => shapeEndRadius(shape, which) * d.limbW * w;
-  for (const side of ['L', 'R']) {
-    // Vai: đầu TRÊN của cánh tay trên (nó treo xuống từ khớp vai).
-    parts.push(ball(`shoulderBall${side}`, sv.upRole, `shoulder${side}`,
-      endR(sv.upShape, sv.upW, 1), `upperArm${side}`));
-    // Khuỷu: đầu DƯỚI của cánh tay trên gặp đầu TRÊN của cẳng tay.
-    parts.push(ball(`elbowBall${side}`, sv.loRole, `elbow${side}`,
-      Math.max(endR(sv.upShape, sv.upW, -1), endR(sv.loShape, sv.loW, 1)), `forearm${side}`));
-    parts.push(ball(`kneeBall${side}`, lg.loRole, `knee${side}`,
-      Math.max(endR(lg.upShape, lg.upW, -1), endR(lg.loShape, lg.loW, 1)), `shin${side}`));
-  }
-
   const garment = garmentPiece(style.garment, d);
   if (garment) parts.push(garment);
   // ⚠️ ĐỘI ĐẦU TRẢ VỀ MỘT MẢNG, không phải một khối — vì một cái mũ ngoài đời có thể là một vật

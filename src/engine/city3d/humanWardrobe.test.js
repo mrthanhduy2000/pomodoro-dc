@@ -59,8 +59,17 @@ test('ỦNG LẬT NGƯỢC QUAN HỆ GIẢI PHẪU: cẳng chân dày hơn đùi
   const boot = legLook('boot');
   assert.ok(boot.loW > boot.upW,
     `ủng: cẳng chân ${boot.loW} phải DÀY HƠN đùi ${boot.upW} — đó là toàn bộ cách mắt đọc ra "ủng"`);
-  assert.equal(boot.loShape, 'limb',
-    'ủng phải bỏ khuôn `calf` (đáy 0,44 = cổ chân thắt) — một cái ủng không có cổ chân thắt');
+  /*
+    ⚠️ ROUND 61: ĐẢO LẠI CHÍNH LỜI HỨA CỦA BÀI NÀY, VÀ ĐÓ LÀ CÓ CHỦ Ý. Trước vòng này `calf` có
+    cổ chân thắt (0,22) trong khi `limb` không thắt đầu nào — nên né `calf` là cách duy nhất có
+    một cái ủng KHÔNG thắt. Nay luật khớp đã đổi (`humanJoints.test.js`): `limb` cũng thắt ở đầu
+    dưới, đúng bảy chỗ thắt của Đàm — né nó không còn né được gì, chỉ còn phá luật cho một kỷ.
+    Ủng vẫn "rộng hơn cả đùi" — `loW = 1,16` phóng to cả đường sinh `calf`, cổ chân vẫn hẹp hơn
+    bụng ủng theo ĐÚNG TỈ LỆ, như một cái ủng bó ống thật ngoài đời cũng hơi thắt ở mắt cá.
+  */
+  assert.equal(boot.loShape, 'calf',
+    'ủng phải DÙNG `calf` như mọi kỷ khác — cổ chân thắt là luật chung, "rộng hơn đùi" đến từ '
+    + '`loW`, không đến từ việc né mất chỗ thắt.');
 
   // ⚠️ `wrap` KHÔNG ĐƯỢC DÀY HƠN VẠCH XUẤT PHÁT: chân trần thì mảnh hơn chân mặc quần, không dày
   // hơn. Nếu vế này đỏ thì có người vừa "sửa" `wrap` thành một cái váy đắp thêm — xem `LEG_LOOK`.

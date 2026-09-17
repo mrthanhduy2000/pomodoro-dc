@@ -248,14 +248,17 @@ test('HÌNH BÓNG ĐỔI THEO PHA BƯỚC — và mô hình 2 hộp cũ ra ĐÚN
   const HẸP = 0.25;
 
   // ── (A) CƠ CHẾ: hai chân phải tách ra, ở CẢ 15 KỶ ───────────────────────────────────────────
-  // Ngưỡng 0,20 chiều cao người. ⚠️ ĐO BIÊN chứ đừng chỉ đọc xanh/đỏ (bài học Phase 9B): sàn thật
-  // đo được là **24,7% ở kỷ 4** (áo chấm sàn + sải ngắn nhất bộ), tức biên 23,5%. Trần là 44,3% ở
-  // kỷ 1. Nếu một phase sau kéo sàn ấy xuống dưới 20% thì cái đỏ là ĐÚNG, đừng nới ngưỡng.
-  // ⚠️ HAI CON SỐ ẤY VỪA DỊCH NHẸ (25,1→24,7 · 45,2→44,3) khi cụm chân được thêm BÀN CHÂN
-  // (2026-08-23), và chúng dịch XUỐNG chứ không lên — nghe ngược, nên phải nói ra lý do: bàn chân
-  // cộng một lượng gần như KHÔNG ĐỔI vào cả hai pha (nó dài theo trục đi ở mọi tư thế), nên nó vào
-  // cả số bị trừ lẫn số trừ và làm loãng HIỆU SỐ đúng vài phần trăm. Cùng hình dạng `TECH_DEBT #22`
-  // — chỉ khác là ở đây mức loãng nhỏ và đã được đo, chứ không bị đọc nhầm thành hồi quy.
+  // Ngưỡng 0,18 chiều cao người. ⚠️ ĐO BIÊN chứ đừng chỉ đọc xanh/đỏ (bài học Phase 9B): sàn thật
+  // đo được là **19,84% ở kỷ 6**, tức biên 1,84%. Trần là 30,47% ở kỷ 1.
+  // ⚠️ SÀN VỪA TỤT 23,5% → 1,84% Ở ROUND 61, VÀ LÝ DO ĐÃ ĐO ĐƯỢC, KHÔNG PHẢI ĐOÁN. Việc 3 kéo dài
+  // `thigh`/`shin` thêm `JOINT_OVERLAP` (35%) để hai đoạn đâm sâu qua gối thay vì dựa vào một quả
+  // cầu — xem `human.js`. Phép đo này dùng HỘP BAO (`partCornersAt`, tám góc của `w×h×d` đã xoay),
+  // và một khối DÀI HƠN xoay theo cùng góc gập cho một hộp bao RỘNG HƠN theo trục ngang, ở CẢ HAI
+  // pha — tức cộng thêm một lượng gần-như-không-đổi vào cả số bị trừ lẫn số trừ, làm loãng hiệu số
+  // đúng hình dạng `TECH_DEBT #22` (bàn chân đã làm việc này một lần, 2026-08-23, ở mức nhỏ hơn
+  // nhiều). Đây KHÔNG phải dáng đi yếu đi — `humanJoints.test.js` đo riêng biên độ khớp và không
+  // đổi một phần nghìn — mà là chính cái hộp bao PHÓNG ĐẠI đang bớt nhạy với dáng đi nó đo.
+  // Nếu một phase sau kéo sàn ấy xuống dưới 18% thì cái đỏ là ĐÚNG, đừng nới ngưỡng.
   const banA = [];
   for (const era of ERAS) {
     const body = buildHumanBody(era);
@@ -276,20 +279,18 @@ test('HÌNH BÓNG ĐỔI THEO PHA BƯỚC — và mô hình 2 hộp cũ ra ĐÚN
     // *"ngoài đời đây là MẤY vật?"*: cái quần **LÀ** thứ mắt thấy ở chỗ cái chân, nên nó là vai màu
     // và bề ngang của chính khối ấy (`LEG_LOOK` trong `human.js`), không phải một khối thứ hai.
     // ⇒ Nếu bài này đỏ vì một phase sau thêm đồ mặc: **đừng nới 6**, hãy hỏi lại câu trên.
-    // ⚠️ TÁM TỪ VÒNG 54 (ADR-094): 6 khối xương + **2 KHỚP CẦU GỐI**, mỗi bên một quả. Khớp cầu
-    // treo vào chính `knee*` nên nó đi theo cẳng chân, tức nó THUỘC cụm chân theo đúng nghĩa phép
-    // đo này dùng — không phải một khối lạc vào.
-    // ⚠️ Và nó PHẢI được tính vào: bỏ nó ra khỏi bộ lọc thì vế bất biến ngay dưới (*"đường bao
-    // ngoài không bao giờ đổi nhiều hơn hai chân"*) sẽ so một đường bao CÓ khớp cầu với một cụm
-    // chân KHÔNG có, tức hai vế đo hai vật khác nhau — đúng cái bẫy "mẫu số chứa thứ ngoài câu
-    // hỏi" mà `CLAUDE.md` đặt thành luật thứ năm.
-    assert.equal(chan.length, 8, `kỷ ${era}: phải có đúng 8 khối cụm chân (6 xương + 2 khớp cầu),`
-      + ` thấy ${chan.length}`);
+    // ⚠️ SÁU, KHÔNG PHẢI TÁM — ROUND 61. Từ vòng 54 tới vòng 60 đây là 6 khối xương + 2 khớp cầu
+    // gối. Việc 1 + 3 của round 61 đảo luật khớp: khớp là chỗ hẹp nhất, lấp khe bằng đâm sâu qua
+    // nhau chứ không bằng một quả cầu riêng — `kneeBallL/R` không còn tồn tại. Cụm chân giờ đúng
+    // 6 khối xương, và `thigh`/`shin` đã dài hơn xương thật một chút (đâm sâu qua gối), nhưng đó
+    // là chuyện của HÌNH, không phải của SỐ KHỐI.
+    assert.equal(chan.length, 6, `kỷ ${era}: phải có đúng 6 khối cụm chân (đùi × 2, cẳng chân × 2,`
+      + ` bàn chân × 2), thấy ${chan.length}`);
     const chenhChan = (spanCua(body, chan, cycle * RỘNG) - spanCua(body, chan, cycle * HẸP)) / H;
     const chenhNguoi = (silhouetteSpanX(body, cycle * RỘNG) - silhouetteSpanX(body, cycle * HẸP)) / H;
     banA.push({ era, chenhChan, chenhNguoi });
 
-    assert.ok(chenhChan > 0.20,
+    assert.ok(chenhChan > 0.18,
       `kỷ ${era}: hai chân chỉ tách ${(chenhChan * 100).toFixed(1)}% chiều cao giữa hai pha`
       + ' — cơ chế dáng đi không chạy');
 

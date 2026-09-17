@@ -13,7 +13,7 @@ import assert from 'node:assert/strict';
 
 import { buildHumanBody } from './human.js';
 import { poseAt } from './humanPose.js';
-import { shapeMaxRadius, shapeRings } from './humanShape.js';
+import { shapeEndRadius, shapeMaxRadius, shapeRings } from './humanShape.js';
 
 const ERAS = Array.from({ length: 15 }, (_, i) => i + 1);
 const khoi = (body, id) => body.parts.find((p) => p.id === id);
@@ -127,18 +127,28 @@ test('CỔ PHẢI NHÌN THẤY ĐƯỢC: đỉnh quả cầu vai nằm DƯỚI h
     hai quả cầu vai nhô cao hơn hàm, tức dáng một người đang so vai vĩnh viễn.
     ⇒ Bài này KHÔNG khoá `shoulderY = 0,74 torsoH`. Nâng đầu, hạ vai, thu quả cầu — cách nào cũng
     được, miễn còn nhìn thấy cái cổ. Một con số khoá lại thì nó cấm luôn cả ba cách.
+
+    ⚠️ ROUND 61: "ĐỈNH QUẢ CẦU VAI" ĐỔI THÀNH "ĐỈNH ĐẦU TRÊN CỦA CÁNH TAY TRÊN". `shoulderBallL`
+    không còn tồn tại (Việc 1 + 3 bỏ sáu quả cầu khớp, thay bằng hai đoạn chi đâm sâu qua khớp —
+    xem `human.js`). Điểm cao nhất mắt còn thấy ở vai nay là đầu +1 của chính `upperArmL`, và vì
+    đoạn ấy giờ đã ĐÂM QUA khớp vai một đoạn `JOINT_OVERLAP`, đỉnh của nó không còn nằm đúng tại
+    `shoulderL` nữa — nó nhô lên cao hơn khớp một chút, đúng hướng làm bài test này NGHIÊM khắc
+    hơn (nếu cổ vẫn qua được cổng thì nó qua vì thật sự nhìn thấy được, không phải vì phép đo
+    lười tính phần đâm quá).
   */
   for (const era of ERAS) {
     const body = buildHumanBody(era);
     const pose = poseAt(body, 0);
     const dau = khoi(body, 'head');
-    const cau = khoi(body, 'shoulderBallL');
+    const canhTay = khoi(body, 'upperArmL');
     const dayDau = pose.joints.head.y + dau.rest.y - dau.h / 2;
-    const dinhCau = pose.joints.shoulderL.y + shapeMaxRadius(cau.shape) * cau.w;
-    const co = (dayDau - dinhCau) / body.dims.headH;
+    // Đỉnh cánh tay trên = khớp vai + phần nhô lên do đâm quá (rest.y + h/2) + bán kính đầu +1.
+    const dinhTay = pose.joints.shoulderL.y + (canhTay.rest.y + canhTay.h / 2)
+      + shapeEndRadius(canhTay.shape, 1) * canhTay.w;
+    const co = (dayDau - dinhTay) / body.dims.headH;
     assert.ok(co > 0.08,
       `kỷ ${era}: cổ nhìn thấy được chỉ ${co.toFixed(3)} lần chiều cao đầu`
-      + `${co < 0 ? ' — ÂM, tức quả cầu vai nằm CAO HƠN hàm' : ''}. Dưới 0,08 thì ở ảnh cận nó là`
+      + `${co < 0 ? ' — ÂM, tức cánh tay trên nhô CAO HƠN hàm' : ''}. Dưới 0,08 thì ở ảnh cận nó là`
       + ' một cái đầu đặt thẳng lên hai cái vai.');
   }
   // ⚠️ ĐỎ KHI BỎ GÌ: trả `shoulderY` về `d.torsoH * 0.88` → đỏ cả 15 kỷ (cổ = −0,020). Đã thử.

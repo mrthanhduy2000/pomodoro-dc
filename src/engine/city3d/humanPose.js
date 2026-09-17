@@ -487,6 +487,14 @@ export function silhouetteSpanX(body, travelled) {
 export function footContactAt(part, pose) {
   const j = pose?.joints?.[part.joint];
   if (!j) return null;
-  const v = rotateByJoint(j.a, j.b ?? 0, { x: 0, y: -part.h, z: 0 });
+  /*
+    ⚠️ ROUND 61, VIỆC 3: ĐỌC TỪ `rest.y − h/2`, KHÔNG CÒN HẰNG SỐ `-h`. Trước vòng này mọi khối chi
+    treo đúng nửa dưới của mình (`rest.y = -h/2`), nên `rest.y − h/2 = -h` và hằng số cũ tình cờ
+    đúng. Từ Việc 3, cẳng chân/cẳng tay ĐÂM QUA khớp để lấp khe (xem `human.js`, `overlapFar`) nên
+    `h` dài hơn xương thật và `rest.y ≠ -h/2` nữa — hằng số cũ sẽ đặt điểm chạm đất SÂU HƠN mắt cá
+    thật đúng bằng phần đâm quá ấy, và chân sẽ trượt trên mặt đất mỗi bước. Đọc `rest.y` thay vì
+    đoán nó luôn là `-h/2` là cách duy nhất công thức này còn đúng khi khối không còn đối xứng.
+  */
+  const v = rotateByJoint(j.a, j.b ?? 0, { x: 0, y: part.rest.y - part.h / 2, z: 0 });
   return { x: j.x + v.x, y: j.y + v.y, z: j.z + v.z };
 }

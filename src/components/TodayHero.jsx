@@ -12,6 +12,7 @@
  * Luật tính ở `todayHero.js`; file này chỉ vẽ.
  */
 import { useMemo } from 'react';
+import { CARD as cardStyle } from './shared/surface';
 import { motion } from 'framer-motion';
 
 import useGameStore from '../store/gameStore';
@@ -20,12 +21,6 @@ import { FlameGlyph, ShieldGlyph } from './icons/Glyph';
 import WeekStrip from './WeekStrip';
 import { buildWeekStrip, describeStreakTarget, streakBonusPercent } from './todayHero';
 
-const cardStyle = {
-  background: 'var(--card-bg-solid)',
-  border: 'var(--skin-card-border-width,1px) solid var(--line)',
-  borderRadius: 'var(--skin-radius-card,18px)',
-  boxShadow: 'var(--skin-card-shadow)',
-};
 
 export default function TodayHero({
   title,

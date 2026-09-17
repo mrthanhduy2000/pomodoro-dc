@@ -41,7 +41,7 @@ export function TypeBadge({ type, typeStyle, lightTheme = false, variant = 'skin
     }
     return (
       <span
-        className="mono rounded-full px-2 py-1 text-[10px] font-semibold uppercase tracking-[0.16em]"
+        className="mono rounded-full px-2 py-1 text-[11px] font-semibold uppercase tracking-[0.14em]"
         style={{
           background: 'var(--card-bg-solid2)',
           border: 'var(--skin-card-border-width,1px) solid var(--line)',
@@ -76,7 +76,7 @@ export function RarityBadge({ rarity, lightTheme = false, variant = 'skin' }) {
     }
     return (
       <span
-        className="mono rounded-full px-2 py-1 text-[10px] font-semibold uppercase tracking-[0.16em]"
+        className="mono rounded-full px-2 py-1 text-[11px] font-semibold uppercase tracking-[0.14em]"
         style={{
           background: 'rgba(31, 30, 29, 0.04)',
           border: 'var(--skin-card-border-width,1px) solid var(--line)',
@@ -105,7 +105,7 @@ export function PerkSummary({ perk, lightTheme = false, variant = 'skin' }) {
           ? { background: 'rgba(31, 30, 29, 0.04)', border: '1px solid rgba(31, 30, 29, 0.08)' }
           : { background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.08)' }}
       >
-        <p className="text-[11px] font-semibold uppercase tracking-[0.16em]" style={lightTheme ? { color: '#9a5a48' } : { color: '#f8d6a2' }}>
+        <p className="text-[10px] font-semibold uppercase tracking-[0.2em]" style={lightTheme ? { color: '#9a5a48' } : { color: '#f8d6a2' }}>
           {perk.family}
         </p>
         <p className="mt-0.5 text-xs font-semibold" style={lightTheme ? { color: '#1f1e1d' } : { color: '#f8fafc' }}>

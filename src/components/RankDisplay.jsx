@@ -22,13 +22,8 @@ import useGameStore from '../store/gameStore';
 import { RANK_SYSTEM } from '../engine/constants';
 import { describeCrisisQuest, describeRankStep } from '../engine/rankLadder';
 import { medianSessionEP, sessionsToStageEnd } from '../engine/eraStage';
+import { CARD } from './shared/surface';
 
-const CARD = {
-  background: 'var(--card-bg-solid)',
-  border: 'var(--skin-card-border-width,1px) solid var(--line)',
-  borderRadius: 'var(--skin-radius-card,18px)',
-  boxShadow: 'var(--skin-card-shadow)',
-};
 const eyebrowClass = 'mono text-[10px] uppercase tracking-[0.2em]';
 
 function Bar({ pct, accent = false }) {

@@ -38,7 +38,7 @@ export default function WeekStrip({ days = [], size = 'sm', popToday = false }) 
         return (
           <div key={day.key} role="listitem" className="flex flex-col items-center gap-1.5">
             <span
-              className="mono text-[10px] uppercase leading-none tracking-[0.08em]"
+              className="mono text-[10px] uppercase leading-none tracking-[0.2em]"
               style={{ color: day.isToday ? 'var(--accent2)' : 'var(--muted-2)', fontWeight: day.isToday ? 700 : 500 }}
             >
               {day.label}

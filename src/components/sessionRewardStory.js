@@ -111,15 +111,31 @@ function buildXpCard(reward) {
   };
 }
 
-function buildStreakCard(streak, weekDays) {
+/**
+ * ⚠️ ROUND 62 (ADR-098) — THE «NHỊP» CARD: THE STREAK AND TODAY WERE ONE FACT SHOWN TWICE.
+ * These were two consecutive cards, 2,6 seconds apart, built in different rounds and never seen
+ * side by side. They had the SAME SHAPE — a 56px number, a caption, a full-width strip under it —
+ * and they answered the SAME question: *"nhịp của tôi đang thế nào?"*. One said it in days, the
+ * other in sessions. Two cards, one thought.
+ * Now one card carries both: the streak is the headline (it is the thing that can BREAK, so it
+ * earns the big number), the week strip is the middle, and today's goal is the bar underneath.
+ * ⚠️ NOTHING WAS DELETED. Every number the two cards printed is still on screen — `today` simply
+ * became a field of this card instead of a card of its own.
+ * ⚠️ AND IT STILL APPEARS WHEN THERE IS NO STREAK. A first day has `days === 0` but may well have a
+ * goal in progress; gating on the streak alone would have silently dropped today's bar for exactly
+ * the person who most needs to see it.
+ */
+function buildStreakCard(streak, weekDays, todayGoal, delta) {
   const days = Math.max(0, Math.floor(toNumber(streak?.currentStreak)));
-  if (days < 1) return null;
+  const today = buildTodayBlock(todayGoal, delta);
+  if (days < 1 && !today) return null;
   const hit = STREAK_MILESTONES.find((m) => m.days === days) ?? null;
   const target = describeStreakTarget(days);
   const { nextMilestone } = calculateStreakMilestoneProgress(days);
   return {
     id: 'streak',
     days,
+    today,
     weekDays: weekDays ?? [],
     justHit: Boolean(hit),
     justHitLabel: hit ? (hit.permanent ? hit.label : `mốc ${hit.days} ngày`) : null,
@@ -129,13 +145,13 @@ function buildStreakCard(streak, weekDays) {
   };
 }
 
-function buildTodayCard(todayGoal, delta) {
+/** The former «Nhịp hôm nay» card, now a block inside «streak». Same arithmetic, no `id`. */
+function buildTodayBlock(todayGoal, delta) {
   if (!todayGoal?.hasGoal) return null;
   const current = toNumber(todayGoal.currentValue);
   const goal = Math.max(1, toNumber(todayGoal.goalValue, 1));
   const before = Math.max(0, current - Math.max(0, toNumber(delta)));
   return {
-    id: 'today',
     currentValue: current,
     goalValue: goal,
     unit: todayGoal.unit,
@@ -249,17 +265,65 @@ function buildLevelCard(reward, skills) {
   };
 }
 
-function buildRankCard(reward) {
-  const r = reward.rankUp;
-  if (!r?.label) return null;
-  return { id: 'rank', label: r.label, icon: r.icon ?? '🏅', buffLabel: r.buffLabel ?? '' };
+/**
+ * ⚠️ ROUND 62 (ADR-098) — «KHO BÁU»: THREE CARDS THAT ALL SAID *"bạn vừa có một buff vĩnh viễn"*.
+ * `rank` (thăng bậc) · `relic` (di vật mới) · `evolve` (di vật lên bậc) were written in three
+ * different rounds, and side by side they turned out to be the same card three times: a 64px icon,
+ * a name, a buff chip, a reassuring footnote. On the luckiest session they fired back to back —
+ * 10,2 seconds of one idea told three ways, at the exact moment the ending should be at its
+ * loudest. Loud is not the same as long.
+ *
+ * ⚠️ ONE ITEM STILL READS AS ONE PRIZE, NOT A LIST OF ONE. The common case by far is a single
+ * treasure, and a list with one row would have made the frequent case worse to buy a better rare
+ * case. So the renderer keeps the big-icon layout at `items.length === 1` and only stacks when
+ * there is genuinely more than one thing to show.
+ *
+ * ⚠️ NOTHING WAS DELETED: every name, buff line and description the three cards printed is carried
+ * here as a row. `sessionRewardStory.test.js` fails if any of the three stops arriving.
+ */
+function buildTreasureCard(reward) {
+  const items = [];
+
+  const rank = reward.rankUp;
+  if (rank?.label) {
+    items.push({
+      kind: 'rank', id: `rank:${rank.label}`, icon: rank.icon ?? '🏅', eyebrow: 'Thăng bậc',
+      label: rank.label, detail: rank.buffLabel ?? '',
+      note: 'Tự lên nhờ những phiên gần đây — không có nút, không có hạn.',
+    });
+  }
+
+  const relic = reward.relicEarned;
+  if (relic?.label) {
+    items.push({
+      kind: 'relic', id: `relic:${relic.label}`, icon: relic.icon ?? '✨', eyebrow: 'Di vật mới',
+      label: relic.label, detail: relic.description ?? '',
+      note: 'Thử thách kỷ nguyên đã qua. Di vật cộng dồn vĩnh viễn.',
+    });
+  }
+
+  for (const r of Array.isArray(reward.relicsEvolved) ? reward.relicsEvolved : []) {
+    const stage = toNumber(r.stage);
+    const maxStage = (RELIC_EVOLUTION[r.id]?.stages.length ?? 1) - 1;
+    // ⚠️ `isMax` / `nextAt` SURVIVE THE MERGE. The old card's footnote was not decoration — it named
+    // the next milestone in sessions (*"Bậc kế ở mốc 50 phiên kể từ khi nhận"*), the one sentence
+    // that turns a relic from a trophy into something still ahead of him. Merging three cards is
+    // allowed to cost a card; it is not allowed to cost a fact.
+    const isMax = stage >= maxStage;
+    const nextAt = isMax ? null : toNumber(RELIC_EVOLVE_SESSIONS[stage + 1]);
+    items.push({
+      kind: 'evolve', id: `evolve:${r.id}`, icon: r.icon ?? '✨', eyebrow: 'Di vật lên bậc',
+      label: r.label ?? r.id, detail: describeBuff(r.buff),
+      stageLabel: r.stageLabel ?? '', stage, maxStage, isMax, nextAt,
+      note: isMax ? 'Đã tới bậc cao nhất.' : `Bậc kế ở mốc ${nextAt} phiên kể từ khi nhận.`,
+    });
+  }
+
+  if (items.length === 0) return null;
+  return { id: 'treasure', items };
 }
 
-function buildRelicCard(reward) {
-  const r = reward.relicEarned;
-  if (!r?.label) return null;
-  return { id: 'relic', label: r.label, icon: r.icon ?? '✨', description: r.description ?? '' };
-}
+
 
 /**
  * Thẻ BƯỚC TUẦN (ADR-070): phiên này vừa tự chốt một hay nhiều bước của chuỗi tuần. `reward.weeklySteps`
@@ -282,29 +346,6 @@ function buildChainCard(reward) {
   };
 }
 
-/**
- * Thẻ DI VẬT LÊN BẬC (ADR-070): số phiên ≥25′ kể từ lúc nhận vừa chạm mốc. `reward.relicsEvolved` do
- * store kể ({ id, label, icon, stage, stageLabel, buff }); rỗng thì không có thẻ.
- */
-function buildRelicEvolvedCard(reward) {
-  const list = Array.isArray(reward.relicsEvolved) ? reward.relicsEvolved : [];
-  if (list.length === 0) return null;
-  const relics = list.map((r) => {
-    const stage = toNumber(r.stage);
-    const maxStage = (RELIC_EVOLUTION[r.id]?.stages.length ?? 1) - 1;
-    return {
-      id: r.id,
-      label: r.label ?? r.id,
-      icon: r.icon ?? '✨',
-      stage,
-      stageLabel: r.stageLabel ?? '',
-      buffText: describeBuff(r.buff),
-      isMax: stage >= maxStage,
-      nextAt: stage < maxStage ? toNumber(RELIC_EVOLVE_SESSIONS[stage + 1]) : null,
-    };
-  });
-  return { id: 'evolve', relics };
-}
 
 /**
  * Thẻ THỬ THÁCH KỶ NGUYÊN (nhiệm vụ mềm): chỉ chen vào khi nó VỪA MỞ hoặc phiên này VỪA ĐƯỢC TÍNH
@@ -378,11 +419,8 @@ export function buildRewardStoryCards({
   const skillCard = buildLevelCard(reward, skills);
   if (skillCard && skillCard.source === 'city') cards.push(skillCard);
 
-  const streakCard = buildStreakCard(streak, weekDays);
+  const streakCard = buildStreakCard(streak, weekDays, todayGoal, todayDelta);
   if (streakCard) cards.push(streakCard);
-
-  const todayCard = buildTodayCard(todayGoal, todayDelta);
-  if (todayCard) cards.push(todayCard);
 
   const questsCard = buildQuestsCard({ missions, completedMissionIds, missionXp, bonusXP, bonusEarnedXP: reward.dailyBonusXP });
   if (questsCard) cards.push(questsCard);
@@ -395,14 +433,8 @@ export function buildRewardStoryCards({
 
   if (skillCard && skillCard.source === 'level') cards.push(skillCard);
 
-  const rankCard = buildRankCard(reward);
-  if (rankCard) cards.push(rankCard);
-
-  const relicCard = buildRelicCard(reward);
-  if (relicCard) cards.push(relicCard);
-
-  const evolvedCard = buildRelicEvolvedCard(reward);
-  if (evolvedCard) cards.push(evolvedCard);
+  const treasureCard = buildTreasureCard(reward);
+  if (treasureCard) cards.push(treasureCard);
 
   if (reward.eraChanged) {
     const meta = ERA_METADATA[reward.newBook] ?? null;
@@ -422,6 +454,6 @@ export function buildRewardStoryCards({
 export function storyCardDurationMs(card, isLast) {
   if (card?.hold) return STORY_HOLD;
   if (isLast) return STORY_LAST_CARD_MS;
-  if (['level', 'era', 'rank', 'relic', 'chain', 'evolve'].includes(card?.id)) return STORY_BIG_CARD_MS;
+  if (['level', 'era', 'treasure', 'chain'].includes(card?.id)) return STORY_BIG_CARD_MS;
   return STORY_CARD_MS;
 }

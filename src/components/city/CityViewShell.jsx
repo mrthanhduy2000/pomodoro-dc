@@ -11,7 +11,7 @@
  * là chuyện của DỮ LIỆU, không phải chuyện của cách vẽ.
  *
  * ══════════════════════════════════════════════════════════════════════════════════════════════
- * ROUND 46 (ADR-086) — THE SCREEN CATCHES UP WITH THE CITY'S THREE ROLES
+ * ROUND 62 (ADR-098) — THE SCREEN CATCHES UP WITH THE CITY'S THREE ROLES
  * Round 43 made the city the destination (75 buildings); round 44 made it the bank (1 building =
  * 1 SP); ADR-007 makes it the one thing that can never be revised. Measured 2026-09-08 on an iPhone
  * (390×844, 12 eras): the picture was 201 px = 23,8 % of the screen and started at y = 494; the tab
@@ -260,7 +260,7 @@ export default function CityViewShell({
                 ? 'còn 1 nữa ★'
                 : null,
             },
-            // ⚠️ Ô NÀY TỪNG LÀ «PHIÊN TRONG KỶ» (round 46, ADR-086). It failed the test round 43
+            // ⚠️ Ô NÀY TỪNG LÀ «PHIÊN TRONG KỶ» (round 62, ADR-098). It failed the test round 43
             // used to retire «Cư dân» — *what can Đàm DO with this number?* — nothing: it only
             // grows, cannot be spent, aimed at or finished. The count itself is kept, as the plaque
             // in the caption above. What takes the cell is the number this tab had never printed
@@ -283,7 +283,7 @@ export default function CityViewShell({
             // DUY NHẤT trong app không sửa lại được nữa, và là chỗ duy nhất gộp những ngôi sao ★
             // rải trên thanh chuyển kỷ thành một con số.
             //
-            // ⚠️ ROUND 46: the sealed-era variant «EP lúc niêm phong: 5006» is GONE. Raw EP, no
+            // ⚠️ ROUND 62: the sealed-era variant «EP lúc niêm phong: 5006» is GONE. Raw EP, no
             // separator, and nothing Đàm could do with it — it failed the same question as
             // «Cư dân» and broke the round-43 rule that no screen prints raw EP. The museum score
             // is the same number whichever era he is looking at, like the destination cell: the
@@ -302,8 +302,16 @@ export default function CityViewShell({
             // answer to "where am I going?". Numerator = `museum.builtTotal`, the same bricks the
             // SP cell just priced; denominator from the catalog, never typed.
             // ⚠️ Sống ở kỷ nào cũng ĐÚNG SỐ ẤY: the journey is the whole city, not the era on
-            // screen, so this cell does NOT switch source when Đàm browses a sealed era.
-            { label: 'Thành phố', value: journey.short, hint: journey.remaining > 0 ? `còn ${journey.remaining}` : 'trọn vẹn ★' },
+            // screen, so this cell does NOT switch source when Đàm browses a sealed era. That is
+            // deliberate — the destination is the one thing that must not move while he looks
+            // around.
+            // ⚠️ ROUND 62 (ADR-098) — THE HINT WAS THE SAME FACT SUBTRACTED. `còn 37` is exactly
+            // `75 − 38`, printed beside the `38/75` it was derived from: a second number and a
+            // second colour that add nothing a reader cannot see. The ★ hint survives on the
+            // «Công trình» cell above, because `còn 1 nữa ★` is not a remainder — it names a
+            // MILESTONE one step away whose reward seals permanently (ADR-007). A remainder earns
+            // its place when it answers *when*; never when it only restates the fraction.
+            { label: 'Thành phố', value: journey.short, hint: journey.remaining > 0 ? null : 'trọn vẹn ★' },
           ].map((stat) => (
             <div key={stat.label} className="px-3 py-2.5" style={cardStyle}>
               <Stat label={stat.label} value={stat.value} hint={stat.hint ?? null} />
@@ -322,7 +330,7 @@ export default function CityViewShell({
         ⚠️ KHÔNG gác `isCurrent` (đổi Phase 4D): kỷ đã niêm phong cũng có thể đang trùng tu một
         "di sản"; cảnh 3D bên trên đã dựng giàn giáo cho nó, nên giấu bảng này đi thì Đàm thấy giàn
         giáo mà không có chỗ nào nói còn mấy phiên nữa.
-        ⚠️ ROUND 46: the card's header names the PAY — «xong là +1 SP» — from the economy, not a
+        ⚠️ ROUND 62: the card's header names the PAY — «xong là +1 SP» — from the economy, not a
         typed number. A building finishing is the most expensive event in the game and this list is
         where it is approached one session at a time; it must say what waits at the end.
       */}

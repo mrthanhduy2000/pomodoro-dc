@@ -82,7 +82,7 @@ export default function CoachNudge(goalProps) {
 
   return (
     <div className="mt-2 rounded-xl px-3 py-2 text-[12.5px] leading-relaxed" style={{ border: `1px solid ${COACH_COLOR}44`, background: 'rgba(217,164,65,0.07)', color: 'var(--ink)' }}>
-      <div className="mono mb-0.5 flex items-center gap-1 text-[9px] uppercase tracking-[0.18em]" style={{ color: COACH_COLOR }}>
+      <div className="mono mb-0.5 flex items-center gap-1 text-[9px] uppercase tracking-[0.2em]" style={{ color: COACH_COLOR }}>
         <SparkGlyph size={11} /> Coach vừa nhận xét
       </div>
       {loading && !text ? (

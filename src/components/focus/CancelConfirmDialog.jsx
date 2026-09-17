@@ -53,7 +53,7 @@ export default function CancelConfirmDialog({ onAbort, onConfirm, progressPct, r
       >
         <p
           id="cancel-session-dialog-title"
-          className={`mono text-[11px] uppercase tracking-[0.22em] text-[var(--accent2)]`}
+          className={`mono text-[10px] uppercase tracking-[0.2em] text-[var(--accent2)]`}
         >
           Xác nhận hủy phiên
         </p>

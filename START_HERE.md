@@ -32,7 +32,29 @@ Production branch `main` carries **both** work streams (merged 2026-08-28 on Đ�
 ⚠️ Phase 21 therefore shipped **before** Đàm reviewed its screenshots — the "waiting on Đàm's eyes"
 item below is still live, it just now reviews something already running.
 
-- **Loop — ROUND 61 (2026-09-17, LATEST): LÕM, AND CHỖ THẮT.**
+- **Loop — ROUND 62 (2026-09-17, LATEST): ONE VISUAL VOCABULARY FOR EIGHT SCREENS (ADR-098).**
+  2D screens only — this round does not touch the 3D-city stream (rounds 47–61). Round 39's four
+  numbers guarded Focus for seven rounds and guarded nothing else. The count that decided it: the
+  small uppercase label had **22 size+tracking shapes over 111 uses**; the card surface had **7 local
+  definitions**, one of them drifted.
+  ⚠️ **`components/shared/surface.js` IS THE ONE SOURCE** — `CARD` · `CARD_INSET` · `EYEBROW` ·
+  `ratio()` · `remaining()`. Never hand-write a card surface or an uppercase label again; import it.
+  `shared/surface.test.js` fails a new variant, and it already caught three card copies the opening
+  grep had missed. Exactly TWO label shapes are legal: a section eyebrow (10px/0.2em) and a badge
+  pill (11px/0.14em) — two ELEMENTS, not two sizes, and a third is how 22 started. The rule is scoped
+  to 10–12px because below that the app uses uppercase letters as an ICON FALLBACK.
+  ⚠️ **A number with a denominator is `n/N`** — no spaces, and never beside its own remainder
+  (`38/75 còn 37` is `75 − 38` said twice). `còn 1 nữa ★` SURVIVES: it names a milestone one step
+  away whose reward seals permanently, which is a different sentence from a subtraction.
+  ⚠️ **The ending merged what repeated: 11 cards → 8, 39,0 s → 29,6 s.** «Nhịp» = streak + today;
+  «Kho báu» = rank + relic + evolve. One treasure KEEPS the old big-icon layout — the common case is
+  never made worse to improve the rare one. Zero taps added, rare-tier burst untouched.
+  ⚠️ **`Cài đặt` folds** (11 sections, 10 collapsed, 0 deleted): 5,8 phone screens → 2,5.
+  ⚠️ **The Hành trang tab count MUST come from `useJourney`.** The first draft re-derived it, read
+  `s.activeBook` instead of `s.progress.activeBook`, and printed «30/75» under a rail saying «38/75».
+  ADR-082 named that hook the one seam; `journeyWiring.test.js` now pins it.
+
+- **Loop — ROUND 61 (2026-09-17): LÕM, AND CHỖ THẮT.**
   Detail in `BAN_GIAO.md` and ADR-097; three laws live here:
   ⚠️ **Adding a convex block never creates a hollow — only carving the generating line does.**
   Three straight rounds (skull, eyelids, joint balls) only ever added lumps: joints read as a
@@ -157,35 +179,12 @@ item below is still live, it just now reviews something already running.
   rules live in `docs/UI_INVARIANTS.md` (static budget zero); nothing was deleted.
 
 - **Loop — ROUND 39 (2026-09-07): WHILE A TIMER RUNS, THE FOCUS SCREEN IS THE TIMER (ADR-079).**
-  Order: *"Dọn giao diện màn Tập trung — không thêm tính năng."* One indicator while running (daily-goal
-  ring deleted, brick strip = one headline, postcard `quiet`, no pill, voice line silent); one line under
-  the clock on every device (`describeClockSubline`: «Phiên thứ N hôm nay»; the goal fraction lives on the
-  idle postcard caption); goal/break line UNDER the ring; three colours (`--accent` focusing · `--good`
-  break; palette classes gone from `PomodoroEngine.jsx` + `focus/*`, Coach gold → accent); quiet chrome for
-  focus AND break (`anyTimerRunning`); 20 `truncate` sites → wrap (tab bar keeps 3). Counts while running:
-  indicators 6 → 1 · numbers 13 → 2 · colours 6 → 3 · cut texts ≥ 3 → 0. Guards: `timerRing.test.js` (one
-  dashed arc · tokens · palette gate), `focusFoldReach.test.js`. Inspect the running state with a seeded
-  `timerSession` fixture (ms timestamps) + `--settle 600`.
-- **Loop — ROUNDS 37 & 38 (2026-09-06/07): A SESSION ALWAYS LAYS A BRICK (ADR-077) · THE CITY
-  BECAME THE REWARD.** Moved verbatim to `docs/archive/START_HERE_LOG_2026-09-06.md` on 2026-09-12
-  — it was the oldest and by far the largest entry here (7.042 chars), and round 57 pushed the file
-  past its 16.000 guard. Nothing deleted; `grep` the archive for the full text.
+  Moved verbatim to `docs/archive/START_HERE_LOG_2026-09-06.md`. ⚠️ Its four numbers are STILL THE
+  LAW and round 62 extended them past the Focus screen: 1 chỉ báo · ≤2 số · ≤3 màu · **0 chữ cắt**.
 
-### D. Known blind spots in the tooling (not "not done" — "cannot be seen")
-- **3D in the sandbox lives ~3 s** — SwiftShader is slow, the FPS watchdog (`renderLoop.js`) gives up
-  after three slow samples and BOTH the City tab and the Focus postcard fall back to the 2D drawing.
-  That is the tool, not the app: pass `--settle 600` to `shot.mjs` to catch the 3D frame (ADR-078).
-- ✅ **Solved 2026-09-02** — `src/dev/previewStage.js` + `shot.mjs --preview <scene>` (`loot` ·
-  `loot-max` · `era` · `level` · `toasts`); round 33 added `dc-preview-card=<card>`. Why it was
-  needed: `ui` is not in the store's `partialize`, so it cannot be seeded via `--fixture`/`--ls`, and
-  the store is not exposed on `window`, so `--probe` cannot open dialogs either. **Never click Start
-  on dev.** This blind spot had blocked a REAL fix (`TECH_DEBT #94`, since closed), not just convenience.
-- **Treasure › Relics tab** — the fixture never seeds `relics`/`research`, so it always shows 0/15 and
-  15 "??? KHOÁ" rows. That emptiness belongs to the TOOL, not the app. Seed `relics` in
-  `scripts/make-fixture.mjs` first.
-- **`refinedEarned` / `jackpot` are always 0 in fixtures** — `make-fixture.mjs` does not replay those
-  two fields, so never infer frequency from them. Ask the formula directly:
-  `minutes >= T2_DROP_THRESHOLD_MIN` (45′) and `>= DEEP_SESSION_THRESHOLD` (60′).
+- **Loop — ROUNDS 37 & 38 (2026-09-06/07): A SESSION ALWAYS LAYS A BRICK (ADR-077) · THE CITY IN
+  THE LOOP (ADR-078).** Moved verbatim to `docs/archive/START_HERE_LOG_2026-09-06.md` —
+  `grep -n 'ROUNDS 37'` there. Nothing deleted; still-live rules live in `docs/UI_INVARIANTS.md`.
 
 ## Commands
 ```

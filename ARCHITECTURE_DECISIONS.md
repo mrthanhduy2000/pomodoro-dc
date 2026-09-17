@@ -73,6 +73,51 @@ roughly 44%. Titles below are the lookup key; read one with
 
 ---
 
+## ADR-098 — Round 62: one visual vocabulary for eight screens, and an ending that stops saying the same thing three times
+
+**Date**: 2026-09-17 · **Order**: *"Vòng này THUẦN UX/UI… mở bất kỳ màn nào trong app, nó trông như cùng một người làm ra."* · *"Một luật tốt đang chỉ canh một màn."*
+
+**Context — round 39's four numbers were right, and they only ever guarded one screen in eight.** Focus has been held to *1 chỉ báo · ≤2 số · ≤3 màu · 0 chữ cắt* for seven rounds. Nothing guarded the other seven screens, and rounds 43–45 kept adding text to exactly those. Counting one visual element at a time across everything the app ships:
+
+| one element | how many ways the app drew it |
+|---|---|
+| the small uppercase section label ("eyebrow") | **22 size+tracking combinations over 111 uses** |
+| the card surface | **7 local definitions**, one of which had drifted |
+| a number with a denominator | **4 shapes on the Thành Phố screen alone** |
+| `Cài đặt`, flat and fully expanded | **4.919 px ≈ 5,8 phone screens, 11 sections** |
+| the ending, luckiest session | **11 cards · 39,0 s** |
+
+None of these was a bug and none was lazy: each screen was built in a different round, each decision was reasonable on the day, and nothing ever compared two of them side by side. That is how an app comes to look *"vá bởi mười ba người"* while every individual commit looks careful.
+
+**Decision 1 — `components/shared/surface.js` is the one visual vocabulary.** `CARD` · `CARD_INSET` · `EYEBROW` · `ratio()` · `remaining()`. Seven card definitions became one import; 109 eyebrow instances collapsed from 22 shapes to **two** — a section label (10px/0.2em) and a badge pill (11px/0.14em), which are genuinely two elements rather than two sizes of one.
+
+⚠️ **The card drift was real, not cosmetic.** `BuildScreen` · `RankDisplay` · `SkillTree` carried three byte-identical copies; `StatsDashboard` carried a fourth that hardcoded `1px` where the others read `var(--skin-card-border-width, 1px)`. Under any skin that sets that variable, Thống kê had a different border width from the entire rest of the app — invisible for ten rounds, because finding it required reading two files at once and nobody ever did. Three more copies (`FocusRail`, `TodayHero`, `PomodoroEngine`) were found by the guard, not by the grep that started the round.
+
+⚠️ **One eyebrow size, not two.** The 22 variants did not come from a design intent with tiers; they came from nobody having a name to reuse. A second size is a second place to drift, and the round after that makes it three.
+
+**Decision 2 — a number with a denominator is `n/N`, and a remainder never sits beside it.** The header printed `0 / 7` while eight era chips below printed `4/5`: one relation, two punctuations, one screen, one moment. And `38/75 còn 37` is `75 − 38` said twice, costing a second number and a second colour to add nothing. ⚠️ The `còn 1 nữa ★` hint SURVIVES, because it is not a remainder — it names a milestone one step away whose reward seals permanently (ADR-007). A remainder earns its place when it answers *when*; never when it restates the fraction it came from.
+
+**Decision 3 — the ending merges what repeats: 11 cards → 8, 39,0 s → 29,6 s (normal 5 → 4, 19,4 s → 16,8 s).** Two merges, both found by asking Đàm's question — *what does this card say that no other card says?*
+- **«Nhịp»** — `streak` and `today` were consecutive cards with the SAME SHAPE (a 56px number, a caption, a full-width strip) answering the SAME question in different units. One card now: streak is the headline (it is the thing that can break), the week strip is the middle, today's bar is underneath at 24px.
+- **«Kho báu»** — `rank` · `relic` · `evolve` were three renderings of one layout saying *"bạn vừa có một buff vĩnh viễn"*, firing back to back for 10,2 seconds at the loudest moment of the ending. Loud is not the same as long.
+
+⚠️ **THE COMMON CASE KEEPS THE OLD LAYOUT EXACTLY.** One treasure is by far the usual outcome; a one-row list would have made the frequent case worse to improve the rare one. The renderer stacks only when two or more actually land.
+⚠️ **Zero taps added, nothing deleted, the burst kept its tier.** `treasure` is still a rare-tier card with the full-screen burst and the longer hold. `isMax`/`nextAt` survive as a per-row note — that sentence is the one thing that turns a relic from a trophy into something still ahead of him, and merging three cards is allowed to cost a card, never a fact.
+
+**Decision 4 — `Cài đặt` folds: eleven sections, ten of them collapsed.** Round 38's question decides it — *"cái nào tôi đã bật/tắt đúng một lần rồi không bao giờ đụng nữa?"* The sound pack, the theme, the notification permission, the export, New Game+, the About text: all of them. What he changes is the timer lengths and the daily goal, and those sat on top of a five-screen wall of decisions he made years ago. ⚠️ **Folded, not deleted** — every control is one tap away, same order, same words. The header moved inside `Card`, which both makes the whole row a reliable tap target and deleted eleven repeated `<SectionHeader>` call sites.
+
+**Decision 5 — the three Hành trang sub-tabs say what is behind them.** Round 45 kept all three (three verbs); Đàm's follow-up was the sharper half: *"đừng bắt tôi bấm thử."* Three bare words are three identical doors, so each now carries the same `n/N` the screen behind it already prints as its first line — `Kỹ năng 4/36` · `Công trình 38/75` · `Di vật 12/15`. No new unit, no second source of truth, just moved in front of the tap. `TOTAL_SKILLS` and `TOTAL_RELICS` joined `TOTAL_BUILDINGS` in `engine/journey.js` rather than becoming a third private derivation.
+
+**Decision 6 — two missions stated their goal in an hour and counted it in minutes.** `Chinh phục 2 giờ tập trung  0/120` and `Vượt 2.5 giờ tập trung trong ngày  0/150` — the other ten `focusMinutes` missions say minutes and match their counter. Labels now say `120 phút` / `150 phút`. No goal, no XP, no weight changed; only the unit in the sentence.
+
+**Consequences.**
+- `shared/surface.test.js` is the gate: it fails a new eyebrow variant, a new card definition, a spaced slash, or `ratio()` losing its clamps. It caught three card copies the opening grep had missed — which is the argument for the test rather than the convention. **A threshold with no guard is a funnel**, the doc-budget lesson applied to pixels.
+- The eyebrow rule is scoped to 10–12px on purpose: below that the app uses uppercase letters as an ICON FALLBACK sized to fill an icon slot, not as a label.
+- Six card types shrank to four in the ending, so `previewStage` scenes and four tests moved with them; `rewardBurst.test.js` now asserts the tier on `treasure`, and the behavioural hold assertion lives in `sessionRewardStory.test.js` where it can check the real function instead of grepping for a literal.
+
+**Audited and deliberately NOT changed.** **Thống kê** (Việc 4): the three round-36 answers still hold, nothing on the screen references the deleted badge system, and the hour/percentage/sample formatting is already consistent through `formatMinutesVi` — no change earned its place. **Units** (Việc 2): `phiên` · `phút` · `giờ` · `ngày` came back clean; every place that turns minutes into hours goes through one formatter, and the only two offenders were the mission labels fixed above. **`ActionButton`**: 77 raw `<button>` tags remain, but nearly all are tab chips, grid cells and card tap targets rather than buttons — forcing them through `ActionButton` would make them look like buttons, which is the opposite of the goal. The #86 lint gate already forbids the drift that matters (palette colours and hex literals inside a `<button>`).
+
+**Alternatives considered.** Keeping a "small" and a "large" eyebrow (rejected: two names is how 22 started). Deleting the rarely-used Cài đặt sections outright (rejected: a setting changed once a year is not worthless, it just should not cost a scroll). Merging `quests` and `chain` in the ending too (rejected: one is today and one is this week, and unlike streak/today they do not share a shape — that would have been merging by category rather than by duplication).
 ## ADR-097 — Round 61: a joint is the narrowest point of a limb, not the widest, and a hollow only ever comes from carving the generating line
 
 **Date**: 2026-09-17 · **Order**: *"Cận cảnh cư dân vẫn là một con ma-nơ-canh mắt lồi với những khối

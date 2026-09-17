@@ -26,7 +26,7 @@ import BrickRow from './BrickRow';
 function ProjectGlyph({ icon, label }) {
   if (!icon) return null;
   return (
-    <span aria-hidden="true" className={hasGlyphIcon(icon) ? 'text-[15px] leading-none' : 'mono text-[10px] uppercase tracking-[0.16em]'}>
+    <span aria-hidden="true" className={hasGlyphIcon(icon) ? 'text-[15px] leading-none' : 'mono text-[10px] uppercase tracking-[0.2em]'}>
       {getGlyph(icon, label ?? '', 'BP')}
     </span>
   );

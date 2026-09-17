@@ -164,7 +164,7 @@ function SessionReviewControls({ achieved, onPick }) {
             type="button"
             aria-pressed={isActive}
             onClick={() => onPick(option.value)}
-            className="rounded-full border px-3 py-2 text-[11px] font-semibold uppercase tracking-[0.12em] transition-[background-color,color,border-color,box-shadow,transform] duration-200 hover:-translate-y-px focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[rgba(var(--accent-rgb),0.28)] focus-visible:ring-offset-2"
+            className="rounded-full border px-3 py-2 text-[11px] font-semibold uppercase tracking-[0.14em] transition-[background-color,color,border-color,box-shadow,transform] duration-200 hover:-translate-y-px focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[rgba(var(--accent-rgb),0.28)] focus-visible:ring-offset-2"
             style={isActive ? option.activeStyle : option.idleStyle}
           >
             {option.label}
@@ -257,7 +257,7 @@ export default function StatsJournal({ history, sessionCategories }) {
         className="rounded-[28px] border px-6 py-12 text-center"
         style={{ background: BG_CARD, borderColor: PANEL_BORDER }}
       >
-        <p className="text-[10px] font-semibold uppercase tracking-[0.26em]" style={{ color: TEXT_SOFT }}>
+        <p className="text-[10px] font-semibold uppercase tracking-[0.2em]" style={{ color: TEXT_SOFT }}>
           Nhật ký
         </p>
         <h3 className="mt-3 text-[1.9rem] font-semibold leading-tight" style={{ color: TEXT_PRIMARY, fontFamily: DISPLAY_FONT }}>
@@ -295,7 +295,7 @@ export default function StatsJournal({ history, sessionCategories }) {
             className="inline-flex w-fit items-center gap-2 rounded-full border px-3 py-1.5 text-[11px] font-semibold"
             style={{ background: FILTER_PILL_BG, color: FILTER_PILL_TEXT, borderColor: FILTER_PILL_BORDER }}
           >
-            <span className="font-mono text-[10px] uppercase tracking-[0.18em]" style={{ color: TEXT_SOFT }}>Đang xem</span>
+            <span className="font-mono text-[10px] uppercase tracking-[0.2em]" style={{ color: TEXT_SOFT }}>Đang xem</span>
             <span>{activeFilterLabel}</span>
           </div>
         </div>
@@ -312,7 +312,7 @@ export default function StatsJournal({ history, sessionCategories }) {
               className="rounded-[22px] px-4 py-3"
               style={{ background: PANEL_BG_SOFT, border: `1px solid ${PANEL_BORDER}` }}
             >
-              <p className="text-[10px] font-semibold uppercase tracking-[0.18em]" style={{ color: TEXT_SOFT }}>{item.label}</p>
+              <p className="text-[10px] font-semibold uppercase tracking-[0.2em]" style={{ color: TEXT_SOFT }}>{item.label}</p>
               <p className="mt-2 text-[1.35rem] font-semibold leading-none" style={{ color: TEXT_PRIMARY, fontFamily: DISPLAY_FONT }}>
                 {item.value}
               </p>
@@ -420,7 +420,7 @@ export default function StatsJournal({ history, sessionCategories }) {
                 <div className="flex items-start justify-between gap-3">
                   <div className="flex min-w-0 flex-1 items-start gap-3">
                     <div
-                      className={`mono flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl font-semibold ${hasGlyphIcon(cat?.icon) ? 'text-[19px] leading-none' : 'text-[8px] uppercase tracking-[0.14em]'}`}
+                      className={`mono flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl font-semibold ${hasGlyphIcon(cat?.icon) ? 'text-[19px] leading-none' : 'text-[8px] uppercase tracking-[0.2em]'}`}
                       style={{ background: `${cat?.color ?? '#475569'}14`, color: cat?.color ?? '#475569', border: `1px solid ${(cat?.color ?? '#475569')}28` }}
                     >
                       {getGlyph(cat?.icon, cat?.label, 'DM')}
@@ -506,7 +506,7 @@ export default function StatsJournal({ history, sessionCategories }) {
                     className="rounded-[18px] px-3 py-2.5"
                     style={{ background: PANEL_BG_SOFT, border: `1px solid ${PANEL_BORDER}` }}
                   >
-                    <p className="text-[10px] font-semibold uppercase tracking-[0.16em]" style={{ color: TEXT_SOFT }}>XP</p>
+                    <p className="text-[10px] font-semibold uppercase tracking-[0.2em]" style={{ color: TEXT_SOFT }}>XP</p>
                     <p className="mt-2 text-[1rem] font-semibold font-mono leading-none" style={{ color: ACCENT2 }}>
                       {isCancelled ? 'Không thưởng' : `+${(h.xpEarned ?? 0).toLocaleString()}`}
                     </p>
@@ -515,7 +515,7 @@ export default function StatsJournal({ history, sessionCategories }) {
                     className="rounded-[18px] px-3 py-2.5"
                     style={{ background: PANEL_BG_SOFT, border: `1px solid ${PANEL_BORDER}` }}
                   >
-                    <p className="text-[10px] font-semibold uppercase tracking-[0.16em]" style={{ color: TEXT_SOFT }}>Sự kiện</p>
+                    <p className="text-[10px] font-semibold uppercase tracking-[0.2em]" style={{ color: TEXT_SOFT }}>Sự kiện</p>
                     <div className="mt-2 flex flex-wrap gap-1.5">
                       {h.jackpot && <span className="rounded-full px-2 py-0.5 text-[10px] font-semibold" style={{ background: 'rgba(var(--accent-rgb),0.12)', color: ACCENT2 }}>Thưởng lớn</span>}
                       {!isCancelled && (h.minutes ?? 0) >= 45 && <span className="rounded-full px-2 py-0.5 text-[10px] font-semibold" style={{ background: 'rgba(148,163,184,0.18)', color: TEXT_MUTED }}>Phiên sâu</span>}
@@ -535,7 +535,7 @@ export default function StatsJournal({ history, sessionCategories }) {
                     className="rounded-[18px] px-3 py-2.5"
                     style={{ background: PANEL_BG_SOFT, border: `1px solid ${PANEL_BORDER}` }}
                   >
-                    <p className="text-[10px] font-semibold uppercase tracking-[0.16em]" style={{ color: TEXT_SOFT }}>Nhịp thực tế</p>
+                    <p className="text-[10px] font-semibold uppercase tracking-[0.2em]" style={{ color: TEXT_SOFT }}>Nhịp thực tế</p>
                     <p className="mt-2 text-[11px] leading-5" style={{ color: TEXT_MUTED }}>
                       {wallClockDurationMs !== null ? formatPreciseDuration(wallClockDurationMs) : 'Không có'}
                     </p>
@@ -544,7 +544,7 @@ export default function StatsJournal({ history, sessionCategories }) {
                     className="rounded-[18px] px-3 py-2.5"
                     style={{ background: PANEL_BG_SOFT, border: `1px solid ${PANEL_BORDER}` }}
                   >
-                    <p className="text-[10px] font-semibold uppercase tracking-[0.16em]" style={{ color: TEXT_SOFT }}>Tạm dừng</p>
+                    <p className="text-[10px] font-semibold uppercase tracking-[0.2em]" style={{ color: TEXT_SOFT }}>Tạm dừng</p>
                     <p className="mt-2 text-[11px] leading-5" style={{ color: TEXT_MUTED }}>
                       {pauseCount > 0 ? `${pauseCount} lần • ${formatPreciseDuration(pausedTotalMs)}` : 'Không có'}
                     </p>
@@ -846,7 +846,7 @@ export default function StatsJournal({ history, sessionCategories }) {
           className="rounded-[24px] border px-6 py-10 text-center"
           style={{ background: BG_CARD, borderColor: PANEL_BORDER }}
         >
-          <p className="text-[10px] font-semibold uppercase tracking-[0.24em]" style={{ color: TEXT_SOFT }}>
+          <p className="text-[10px] font-semibold uppercase tracking-[0.2em]" style={{ color: TEXT_SOFT }}>
             Bộ lọc hiện tại
           </p>
           <p className="mt-2 text-sm" style={{ color: TEXT_MUTED }}>Không có phiên nào khớp với lựa chọn này.</p>

@@ -54,7 +54,7 @@ test('ca đỉnh: EP đứng ĐẦU, KHÔNG còn chip Rương Lớn lẫn tinh l
   assert.equal(xp.event.bonus, REWARD_MAX.positiveEventBonus);
 });
 
-test('thứ tự câu chuyện: xp → chuỗi → hôm nay → nhiệm vụ → lên cấp → kỷ mới', () => {
+test('thứ tự câu chuyện: xp → NHỊP (chuỗi + hôm nay) → nhiệm vụ → lên cấp → kỷ mới', () => {
   // `REWARD_ERA` kế thừa ca đỉnh (có bậc + di vật + bước tuần + di vật lên bậc); tắt bốn tin ấy để
   // bài này chỉ đo bộ khung cũ.
   const cards = buildRewardStoryCards({
@@ -63,7 +63,11 @@ test('thứ tự câu chuyện: xp → chuỗi → hôm nay → nhiệm vụ →
     todayGoal: todayGoal(2),
     missions: missions([{ id: 'm1', label: 'A', progress: 1, goal: 3, rewardXP: 10 }]),
   });
-  assert.deepEqual(cards.map((c) => c.id), ['xp', 'streak', 'today', 'quests', 'level', 'era']);
+  // ⚠️ ROUND 62 (ADR-098): «hôm nay» không còn là một thẻ riêng — nó là nửa dưới của thẻ «chuỗi».
+  // Hai thẻ ấy cùng hình dạng (số 56px + dải ngang) và cùng trả lời "nhịp của tôi thế nào", cách
+  // nhau 2,6 giây. Bài này nay canh CẢ HAI: đúng thứ tự, VÀ hôm nay vẫn còn trên màn hình.
+  assert.deepEqual(cards.map((c) => c.id), ['xp', 'streak', 'quests', 'level', 'era']);
+  assert.ok(cards.find((c) => c.id === 'streak').today, 'gộp thẻ mà đánh rơi luôn nhịp hôm nay');
 });
 
 test('chuỗi 0 thì KHÔNG có thẻ chuỗi; chạm đúng mốc thì thẻ chuỗi ăn mừng', () => {
@@ -78,29 +82,37 @@ test('chuỗi 0 thì KHÔNG có thẻ chuỗi; chạm đúng mốc thì thẻ ch
   assert.equal(khongMoc.justHit, false);
 });
 
-test('thẻ hôm nay: chạy từ mức TRƯỚC phiên tới mức SAU phiên, và biết khi nào đủ nhịp', () => {
-  const [, today] = buildRewardStoryCards({ reward: REWARD, todayGoal: todayGoal(3, 5) });
-  assert.equal(today.id, 'today');
+// ⚠️ ROUND 62: cùng phép tính ấy, nay đọc ở `streak.today`. Gộp thẻ KHÔNG được đổi một con số nào —
+// đó là ranh giới giữa "xếp lại" và "xoá bớt", và bài này là chỗ ranh giới ấy được canh.
+const nhipHomNay = (cards) => cards.find((c) => c.id === 'streak')?.today ?? null;
+
+test('nhịp hôm nay: chạy từ mức TRƯỚC phiên tới mức SAU phiên, và biết khi nào đủ nhịp', () => {
+  const today = nhipHomNay(buildRewardStoryCards({ reward: REWARD, todayGoal: todayGoal(3, 5) }));
+  assert.ok(today, 'nhịp hôm nay biến mất khỏi cái kết');
   assert.equal(today.pctBefore, 40);
   assert.equal(today.pct, 60);
   assert.equal(today.remaining, 2);
   assert.equal(today.goalMet, false);
 
-  const [, du] = buildRewardStoryCards({ reward: REWARD, todayGoal: todayGoal(6, 5) });
+  const du = nhipHomNay(buildRewardStoryCards({ reward: REWARD, todayGoal: todayGoal(6, 5) }));
   assert.equal(du.goalMet, true);
   assert.equal(du.pct, 100, 'thanh không được tràn quá 100%');
   assert.equal(du.remaining, 0);
 
   // Mục tiêu theo PHÚT: delta là số phút của phiên, không phải 1.
-  const [, phut] = buildRewardStoryCards({
+  const phut = nhipHomNay(buildRewardStoryCards({
     reward: REWARD,
     todayGoal: { hasGoal: true, currentValue: 50, goalValue: 100, unit: 'phút', useMinutes: true },
     todayDelta: 25,
-  });
+  }));
   assert.equal(phut.pctBefore, 25);
   assert.equal(phut.pct, 50);
 
-  assert.ok(!buildRewardStoryCards({ reward: REWARD, todayGoal: { hasGoal: false } }).some((c) => c.id === 'today'));
+  assert.equal(nhipHomNay(buildRewardStoryCards({ reward: REWARD, todayGoal: { hasGoal: false } })), null);
+  // ⚠️ VÀ NGƯỢC LẠI: ngày đầu tiên chưa có chuỗi nhưng đã có mục tiêu — gộp mà gác theo chuỗi thì
+  // đúng người cần thấy thanh nhịp nhất lại là người bị mất nó.
+  const ngayDau = buildRewardStoryCards({ reward: REWARD, streak: { currentStreak: 0 }, todayGoal: todayGoal(1, 5) });
+  assert.ok(nhipHomNay(ngayDau), 'chuỗi 0 mà có mục tiêu thì thẻ nhịp vẫn phải hiện');
 });
 
 test('thẻ nhiệm vụ: chỉ hiện khi có gì nhúc nhích; đánh dấu đúng nhiệm vụ VỪA xong; thưởng trọn ngày KỂ chứ không mời bấm (ADR-070)', () => {
@@ -165,7 +177,7 @@ test('nhịp lật: thẻ thường ngắn, thẻ cuối đứng lâu hơn để
 
 // ─── ADR-069: bốn thẻ mới ────────────────────────────────────────────────────
 
-test('thứ tự đầy đủ: xp → công trình → chuỗi → hôm nay → nhiệm vụ → BƯỚC TUẦN → thử thách → lên cấp → bậc → di vật → LÊN BẬC → kỷ', () => {
+test('thứ tự đầy đủ: xp → công trình → NHỊP → nhiệm vụ → BƯỚC TUẦN → thử thách → lên cấp → bậc → di vật → LÊN BẬC → kỷ', () => {
   const cards = buildRewardStoryCards({
     reward: { ...REWARD_ERA, levelsGained: 1, rankUp: { label: 'Thủy Thủ', icon: '⚓', buffLabel: '+12%' }, relicEarned: { label: 'La Bàn', icon: '🧭' }, crisisOpened: { name: 'Bão', icon: '🌊' } },
     streak: { currentStreak: 4 },
@@ -175,7 +187,17 @@ test('thứ tự đầy đủ: xp → công trình → chuỗi → hôm nay → 
     crisisQuest: { name: 'Bão', icon: '🌊', sessionsDone: 1, sessionsRequired: 3, minMinutes: 45, windowHours: 48, passed: false, countedThisSession: true, relic: { label: 'La Bàn' } },
   });
   // `REWARD_ERA` (kế thừa ca đỉnh) mang sẵn một bước tuần vừa chốt và một di vật vừa lên bậc (ADR-070).
-  assert.deepEqual(cards.map((c) => c.id), ['xp', 'project', 'streak', 'today', 'quests', 'chain', 'quest', 'level', 'rank', 'relic', 'evolve', 'era']);
+  // ⚠️ ROUND 62 (ADR-098): `today` là nửa dưới của «streak»; `rank`+`relic`+`evolve` là ba HÀNG
+  // trong «treasure». Mười hai thẻ còn tám, và không mất một con số nào — bài dưới canh chuyện đó.
+  assert.deepEqual(cards.map((c) => c.id), ['xp', 'project', 'streak', 'quests', 'chain', 'quest', 'level', 'treasure', 'era']);
+  const kho = cards.find((c) => c.id === 'treasure');
+  assert.deepEqual(kho.items.map((i) => i.kind), ['rank', 'relic', 'evolve'],
+    'gộp ba thẻ mà đánh rơi một loại — thứ mất đi sẽ không ai thấy, vì nó chỉ nổ vào phiên may nhất');
+  for (const item of kho.items) {
+    assert.ok(item.label, `hàng «${item.kind}» không có tên`);
+    assert.ok(item.eyebrow, `hàng «${item.kind}» không nói nó là loại gì`);
+    assert.ok(item.note, `hàng «${item.kind}» mất câu trấn an "cộng dồn vĩnh viễn"`);
+  }
 });
 
 // ─── ADR-070: hai thẻ tự-vào ─────────────────────────────────────────────────
@@ -211,22 +233,31 @@ test('thẻ bước tuần: chỉ khi store vừa chốt bước; kể đủ bư
   assert.equal(het.bonusSP, 1);
 });
 
-test('thẻ di vật lên bậc: chỉ khi store vừa nâng bậc; dịch buff ra chữ; biết bậc cao nhất và mốc kế', () => {
-  assert.ok(!buildRewardStoryCards({ reward: { ...REWARD, relicsEvolved: [] } }).some((c) => c.id === 'evolve'));
-  const evolve = buildRewardStoryCards({ reward: REWARD_MAX }).find((c) => c.id === 'evolve');
-  const r = evolve.relics[0];
-  assert.equal(r.id, REWARD_MAX.relicsEvolved[0].id);
+// ⚠️ ROUND 62: nay là một HÀNG trong «treasure». Ba thẻ gộp làm một được phép tốn một cái thẻ —
+// không được phép tốn một sự thật, và `isMax`/`nextAt` chính là sự thật dễ rơi nhất: nó là câu duy
+// nhất biến di vật từ cúp lưu niệm thành thứ còn ở phía trước.
+const khoBau = (cards) => cards.find((c) => c.id === 'treasure') ?? null;
+const hangLoai = (cards, kind) => khoBau(cards)?.items.find((i) => i.kind === kind) ?? null;
+
+test('hàng di vật lên bậc: chỉ khi store vừa nâng bậc; dịch buff ra chữ; biết bậc cao nhất và mốc kế', () => {
+  assert.equal(hangLoai(buildRewardStoryCards({ reward: { ...REWARD, relicsEvolved: [], rankUp: null, relicEarned: null } }), 'evolve'), null);
+  const cardsMax = buildRewardStoryCards({ reward: REWARD_MAX });
+  const evolve = khoBau(cardsMax);
+  const r = hangLoai(cardsMax, 'evolve');
+  assert.equal(r.id, `evolve:${REWARD_MAX.relicsEvolved[0].id}`);
   assert.equal(r.stageLabel, 'Tiến Hóa');
-  assert.match(r.buffText, /% EP/, 'buff phải được dịch ra chữ người đọc được');
+  assert.match(r.detail, /% EP/, 'buff phải được dịch ra chữ người đọc được');
   assert.equal(r.isMax, false);
   assert.equal(r.nextAt, 50, 'bậc kế ở mốc phiên thứ hai của bảng');
-  assert.ok(storyCardDurationMs(evolve, false) > STORY_CARD_MS);
+  assert.match(r.note, /50 phiên/, 'mốc kế phải còn nằm trong câu người đọc thấy, không chỉ trong dữ liệu');
+  assert.ok(storyCardDurationMs(evolve, false) > STORY_CARD_MS, 'kho báu vẫn là tin lớn, đứng lâu hơn thẻ thường');
 
-  const max = buildRewardStoryCards({
+  const max = hangLoai(buildRewardStoryCards({
     reward: { ...REWARD, relicsEvolved: [{ id: 'mam_song_bat_diet', label: 'M', icon: '🌱', stage: 2, stageLabel: 'Huyền Thoại', buff: { epBonus: 0.15, xpSeal: 0.02 } }] },
-  }).find((c) => c.id === 'evolve');
-  assert.equal(max.relics[0].isMax, true);
-  assert.equal(max.relics[0].nextAt, null);
+  }), 'evolve');
+  assert.equal(max.isMax, true);
+  assert.equal(max.nextAt, null);
+  assert.match(max.note, /cao nhất/);
 });
 
 test('project card (ADR-077): carries the brick row from the engine, clamps done ≤ total, built ⇒ status built', () => {
@@ -273,15 +304,23 @@ test('thẻ lên cấp: có kỹ năng mở được ⇒ ĐỨNG YÊN chờ ch�
   assert.equal(khong.nextSkill, null);
 });
 
-test('thẻ bậc và thẻ di vật chỉ có khi phần thưởng nói có', () => {
-  assert.ok(!buildRewardStoryCards({ reward: REWARD }).some((c) => c.id === 'rank' || c.id === 'relic'));
+test('hàng bậc và hàng di vật chỉ có khi phần thưởng nói có; một mình thì vẫn là một phần thưởng', () => {
+  assert.ok(!buildRewardStoryCards({ reward: REWARD }).some((c) => c.id === 'treasure'),
+    'không có gì thì đừng dựng cái thẻ kho báu rỗng');
   const cards = buildRewardStoryCards({ reward: REWARD_MAX });
-  const rank = cards.find((c) => c.id === 'rank');
+  const rank = hangLoai(cards, 'rank');
   assert.equal(rank.label, REWARD_MAX.rankUp.label);
-  assert.equal(rank.buffLabel, REWARD_MAX.rankUp.buffLabel);
-  const relic = cards.find((c) => c.id === 'relic');
-  assert.equal(relic.label, REWARD_MAX.relicEarned.label);
-  assert.ok(storyCardDurationMs(rank, false) > STORY_CARD_MS, 'tin hiếm đứng lâu hơn thẻ thường');
+  assert.equal(rank.detail, REWARD_MAX.rankUp.buffLabel);
+  assert.equal(hangLoai(cards, 'relic').label, REWARD_MAX.relicEarned.label);
+  assert.ok(storyCardDurationMs(khoBau(cards), false) > STORY_CARD_MS, 'tin hiếm đứng lâu hơn thẻ thường');
+
+  // ⚠️ CA THƯỜNG GẶP NHẤT LÀ MỘT MÓN. Gộp ba thẻ để phiên may nhất gọn hơn mà làm ca một-món dở đi
+  // thì là đổi cái hay gặp lấy cái hiếm gặp — đúng chiều sai.
+  const motMon = khoBau(buildRewardStoryCards({
+    reward: { ...REWARD, rankUp: REWARD_MAX.rankUp, relicEarned: null, relicsEvolved: [] },
+  }));
+  assert.equal(motMon.items.length, 1);
+  assert.equal(motMon.items[0].eyebrow, 'Thăng bậc', 'một món phải tự xưng nó là loại gì, không thành "kho báu" chung chung');
 });
 
 test('thẻ thử thách kỷ nguyên: chỉ khi vừa mở hoặc phiên này vừa được tính; qua rồi thì nhường thẻ di vật', () => {

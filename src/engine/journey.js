@@ -35,7 +35,7 @@
  */
 import { listVisitableEras } from './cityArchive';
 import { summarizeMuseum, withEraCompletion } from './cityCompletion';
-import { BLUEPRINT_CATALOG } from './constants';
+import { BLUEPRINT_CATALOG, ERA_CRISES, SKILL_TREE } from './constants';
 import { describeStageCountdown } from './eraStage';
 
 /** How many eras the game has, and how many buildings each holds. Read from the catalog, never
@@ -43,6 +43,17 @@ import { describeStageCountdown } from './eraStage';
 export const TOTAL_ERAS = Object.keys(BLUEPRINT_CATALOG).length;
 export const TOTAL_BUILDINGS = Object.values(BLUEPRINT_CATALOG)
   .reduce((sum, list) => sum + (Array.isArray(list) ? list.length : 0), 0);
+
+/**
+ * ⚠️ ROUND 62 (ADR-098) — THE OTHER TWO "HOW MANY EXIST" NUMBERS MOVE HERE TOO.
+ * `SkillTree` derived 36 from `SKILL_TREE` and `RelicInventory` derived 15 from `ERA_CRISES`, each
+ * privately, each correct. The Hành trang tab row needs both to say what is behind each door, and
+ * a third derivation would have been the third copy — the exact shape of drift this round exists
+ * to end. Same rule as `TOTAL_BUILDINGS`: summed from the catalog, never typed.
+ */
+export const TOTAL_SKILLS = Object.values(SKILL_TREE)
+  .reduce((sum, branch) => sum + (branch?.nodes?.length ?? 0), 0);
+export const TOTAL_RELICS = Object.keys(ERA_CRISES).length;
 
 /**
  * The journey so far, as one object every screen can read.

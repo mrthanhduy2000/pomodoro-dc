@@ -569,6 +569,8 @@ stated twice drifts.
 
 ## Rotated out of `START_HERE.md` on 2026-09-08 (round 46 arrived; keep the 3 most recent)
 
+## Rotated out of `START_HERE.md` on 2026-09-17 (round 46 arrived; keep the 3 most recent)
+
 - **Loop — ROUND 43 (2026-09-08): ONE DESTINATION, AND EVERY DISTANCE IN SESSIONS (ADR-082).**
   ⚠️ **`engine/journey.js` owns the destination and nothing else may compute it.** The city is finite —
   15 eras x 5 blueprints = **75 buildings** — and that is the app's answer to *"đi tới đâu?"*. The
@@ -724,3 +726,69 @@ Nothing deleted; the still-live rules stay summarised in `START_HERE.md`. Full r
   build cost 8 parts per resident to hide parts it just made. Ask *"how many OBJECTS is this?"*
   ⚠️ `city-preview.mjs` needs **`preserveDrawingBuffer`** (screenshots tore into four pieces) and
   **`still: true`** so grain matches across capture strips. Full detail: ADR-092.
+
+
+## Rotated out of `START_HERE.md` on 2026-09-17 (round 62 arrived)
+
+- **Loop — ROUND 45 (2026-09-08): A BONUS THAT CANNOT BE SEEN IS NOT A BONUS (ADR-085).**
+  The audit that decided it: of 36 skills, **27 are a silent `+X% XP/EP`** shown on no screen ever, 6
+  are genuinely felt, 3 are prestige-only. One skill is worth 3–7 XP on a 48-minute session, so round
+  44's twelve taps bought twelve numbers nobody could see.
+  ⚠️ **`engine/sessionCredits.js` is a PASSENGER, never a driver.** It collects one line per bonus as
+  `gameMath.js` adds it (25 sites) and reads the formula's locals without ever feeding one back — so a
+  bug there can make the ENDING CARD wrong and never the PAYOUT. Keep it that way. At
+  `XP_FACTOR_HARD_CAP` the credits are rescaled, or the chips would sum to more than the headline.
+  `challengeEngine`/`wonderEffects` must return `sources` alongside their percentages: a test fails any
+  buff that moves `expBonus`/`epBonus` without merging its names.
+  ⚠️ **`engine/skillPreview.js` MEASURES, it does not look up.** It runs the real `calculateRewards`
+  twice, with and without the skill, at the player's median session length. Never replace it with a
+  table — that is 36 formulas copied. Dice skills (`VAN_MAY`) are REFUSED, not averaged.
+  ⚠️ **Two banners share the 96px slot.** `SkillMoment` (a direct answer to a tap) outranks
+  `DayMoment` (an ambient greeting) via App's `quiet` prop; both are mounted OUTSIDE `GlobalOverlays`,
+  which early-returns null on exactly the quiet screens they are for.
+  ⚠️ **The 1 SP/building rate did NOT change and must not.** Đàm's felt "5,6 sessions per point" is
+  the city tap alone; all three taps are ~139 SP over ~420 build-sessions ≈ **3 sessions per point**.
+  The fix was a sentence: `nextSkillPointETA` prints the nearer of the two taps countable in sessions,
+  because the header previously printed NOTHING whenever the next level was past
+  `STAGE_COUNTDOWN_MAX_SESSIONS` (~155 sessions on a real save). The week is excluded on purpose — a
+  chain closes on a calendar, so "~N phiên" would be invented.
+  ⚠️ **Hành trang keeps all three sub-tabs.** «Đã xây» is not a copy of the Thành Phố tab: it is the
+  only place that names what a built building's perk does.
+
+
+## Rotated out of `START_HERE.md` on 2026-09-17 (round 62 arrived; oldest block first)
+
+- **Loop — ROUNDS 37 & 38 (2026-09-06/07): A SESSION ALWAYS LAYS A BRICK (ADR-077) · THE CITY
+  BECAME THE REWARD.** Moved verbatim to `docs/archive/START_HERE_LOG_2026-09-06.md` on 2026-09-12
+  — it was the oldest and by far the largest entry here (7.042 chars), and round 57 pushed the file
+  past its 16.000 guard. Nothing deleted; `grep` the archive for the full text.
+
+### D. Known blind spots in the tooling (not "not done" — "cannot be seen")
+- **3D in the sandbox lives ~3 s** — SwiftShader is slow, the FPS watchdog (`renderLoop.js`) gives up
+  after three slow samples and BOTH the City tab and the Focus postcard fall back to the 2D drawing.
+  That is the tool, not the app: pass `--settle 600` to `shot.mjs` to catch the 3D frame (ADR-078).
+- ✅ **Solved 2026-09-02** — `src/dev/previewStage.js` + `shot.mjs --preview <scene>` (`loot` ·
+  `loot-max` · `era` · `level` · `toasts`); round 33 added `dc-preview-card=<card>`. Why it was
+  needed: `ui` is not in the store's `partialize`, so it cannot be seeded via `--fixture`/`--ls`, and
+  the store is not exposed on `window`, so `--probe` cannot open dialogs either. **Never click Start
+  on dev.** This blind spot had blocked a REAL fix (`TECH_DEBT #94`, since closed), not just convenience.
+- **Treasure › Relics tab** — the fixture never seeds `relics`/`research`, so it always shows 0/15 and
+  15 "??? KHOÁ" rows. That emptiness belongs to the TOOL, not the app. Seed `relics` in
+  `scripts/make-fixture.mjs` first.
+- **`refinedEarned` / `jackpot` are always 0 in fixtures** — `make-fixture.mjs` does not replay those
+  two fields, so never infer frequency from them. Ask the formula directly:
+  `minutes >= T2_DROP_THRESHOLD_MIN` (45′) and `>= DEEP_SESSION_THRESHOLD` (60′).
+
+
+### Also rotated on 2026-09-17 (round 62)
+
+- **Loop — ROUND 39 (2026-09-07): WHILE A TIMER RUNS, THE FOCUS SCREEN IS THE TIMER (ADR-079).**
+  Order: *"Dọn giao diện màn Tập trung — không thêm tính năng."* One indicator while running (daily-goal
+  ring deleted, brick strip = one headline, postcard `quiet`, no pill, voice line silent); one line under
+  the clock on every device (`describeClockSubline`: «Phiên thứ N hôm nay»; the goal fraction lives on the
+  idle postcard caption); goal/break line UNDER the ring; three colours (`--accent` focusing · `--good`
+  break; palette classes gone from `PomodoroEngine.jsx` + `focus/*`, Coach gold → accent); quiet chrome for
+  focus AND break (`anyTimerRunning`); 20 `truncate` sites → wrap (tab bar keeps 3). Counts while running:
+  indicators 6 → 1 · numbers 13 → 2 · colours 6 → 3 · cut texts ≥ 3 → 0. Guards: `timerRing.test.js` (one
+  dashed arc · tokens · palette gate), `focusFoldReach.test.js`. Inspect the running state with a seeded
+  `timerSession` fixture (ms timestamps) + `--settle 600`.

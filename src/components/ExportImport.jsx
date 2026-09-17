@@ -254,7 +254,7 @@ export default function ExportImport() {
             className="w-full max-w-[420px] rounded-[28px] border px-5 py-5"
             style={{ background: 'var(--card-bg-solid, rgba(255,255,255,0.98))', borderColor: 'var(--line-2, #d9d6cc)' }}
           >
-            <p className="text-[10px] font-semibold uppercase tracking-[0.24em]" style={{ color: 'var(--muted-2, #9b9892)' }}>
+            <p className="text-[10px] font-semibold uppercase tracking-[0.2em]" style={{ color: 'var(--muted-2, #9b9892)' }}>
               Xác nhận khôi phục
             </p>
             <h3 className="mt-2 text-[1.4rem] font-semibold leading-tight" style={{ color: 'var(--ink, #1f1e1d)', fontFamily: '"Source Serif 4", Georgia, serif' }}>

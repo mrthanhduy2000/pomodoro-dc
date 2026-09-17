@@ -9,6 +9,7 @@ import { dailyAllBonusXP, scaleMissionXP } from '../engine/missions';
 import RewardCard from './shared/RewardCard';
 import { DAILY_BONUS_COPY } from './dailyBonusCopy';
 import { useSnapMotion } from '../lib/motionPresets';
+import { CARD, EYEBROW } from './shared/surface';
 import {
   WEEKLY_CHAINS,
   WEEKLY_CHAIN_XP_SCALE,
@@ -190,7 +191,7 @@ export default function DailyMissions({ section = 'all' }) {
           {weeklyGlance && (
             <div className="border-t pt-4" style={{ borderColor: 'var(--line)' }}>
               <div className="flex items-baseline justify-between gap-3">
-                <span className="mono text-[10px] uppercase tracking-[0.16em]" style={{ color: 'var(--muted)' }}>
+                <span className="mono text-[10px] uppercase tracking-[0.2em]" style={{ color: 'var(--muted)' }}>
                   Tuần này · {chainStepsCompleted}/{chain.steps.length}
                 </span>
                 <span className="mono text-[12px] font-semibold tabular-nums" style={{ color: 'var(--accent2)' }}>
@@ -241,7 +242,7 @@ export default function DailyMissions({ section = 'all' }) {
                 game, and the screen had never once said so. So SP takes the headline and the XP
                 moves down here, where a supporting number belongs.
               */}
-              <div className="mono mt-0.5 text-[10px] uppercase tracking-[0.16em]" style={{ color: 'var(--muted)' }}>{weeklyBonusCaption}</div>
+              <div className="mono mt-0.5 text-[10px] uppercase tracking-[0.2em]" style={{ color: 'var(--muted)' }}>{weeklyBonusCaption}</div>
             </div>
           </div>
 
@@ -288,7 +289,7 @@ export default function DailyMissions({ section = 'all' }) {
               <div className="px-3.5 py-3" style={noteCardStyle(lightTheme)}>
                 <div className="flex items-start justify-between gap-3">
                   <div className="min-w-0">
-                    <div className="mono text-[10px] uppercase tracking-[0.2em]" style={{ color: 'var(--muted-2)' }}>
+                    <div className={EYEBROW} style={{ color: 'var(--muted-2)' }}>
                       Ghi chú thưởng
                     </div>
                     <div className="mt-1 text-[12px] leading-snug text-[var(--muted)]">
@@ -303,7 +304,7 @@ export default function DailyMissions({ section = 'all' }) {
                         <div className="mono text-[13px] font-semibold tabular-nums" style={{ color: 'var(--accent2)' }}>
                           +{missions.streakMissionClaimedToday ? 0 : streakMissionXP}
                         </div>
-                        <div className="mono mt-0.5 text-[10px] uppercase tracking-[0.16em]" style={{ color: 'var(--muted)' }}>
+                        <div className="mono mt-0.5 text-[10px] uppercase tracking-[0.2em]" style={{ color: 'var(--muted)' }}>
                           {missions.streakMissionClaimedToday ? 'đã cộng' : 'streak XP'}
                         </div>
                       </>
@@ -329,12 +330,7 @@ function QuietSection({ children, eyebrow, _lightTheme, meta, title }) {
   return (
     <section
       className="px-5 py-5"
-      style={{
-        background: 'var(--card-bg-solid)',
-        border: 'var(--skin-card-border-width, 1px) solid var(--line)',
-        borderRadius: 'var(--skin-radius-card, 18px)',
-        boxShadow: 'var(--skin-card-shadow)',
-      }}
+      style={CARD}
     >
       <div className="mb-4 flex items-end justify-between gap-3">
         <div className="min-w-0">

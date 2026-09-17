@@ -36,7 +36,7 @@ export default function InventoryHero({ hero, icon = null }) {
       <div className="flex items-start justify-between gap-3">
         <div className="min-w-0 flex-1">
           <p
-            className="mono text-[10px] uppercase tracking-[0.22em]"
+            className="mono text-[10px] uppercase tracking-[0.2em]"
             style={{ color: gap ? mau : 'var(--muted-2)' }}
           >
             {nhan}

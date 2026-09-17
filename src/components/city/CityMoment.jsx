@@ -35,7 +35,7 @@ export default function CityMoment({ moment, onDismiss }) {
         }}
       >
         <RewardBurst size="building" className="absolute inset-0" />
-        <span className="mono relative block text-[10px] uppercase tracking-[0.22em]" style={{ color: 'var(--muted)' }}>
+        <span className="mono relative block text-[10px] uppercase tracking-[0.2em]" style={{ color: 'var(--muted)' }}>
           {moment.eyebrow}
         </span>
         <span className="relative mt-0.5 block text-[14px] font-semibold leading-snug" style={{ color: 'var(--ink)' }}>

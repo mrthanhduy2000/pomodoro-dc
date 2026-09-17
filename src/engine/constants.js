@@ -1444,8 +1444,8 @@ export const MISSION_CATALOG = [
   { id: 'focus_45min',          label: 'Tích lũy 45 phút tập trung',                type: 'focusMinutes',    family: 'focusMinutes',     bucket: 'core',    weight: 1.0,  goal: 45,  rewardXP: 45  },
   { id: 'focus_60min',          label: 'Tích lũy 60 phút tập trung hôm nay',        type: 'focusMinutes',    family: 'focusMinutes',     bucket: 'core',    weight: 0.9,  goal: 60,  rewardXP: 60  },
   { id: 'focus_90min',          label: 'Tích lũy 90 phút tập trung hôm nay',        type: 'focusMinutes',    family: 'focusMinutes',     bucket: 'stretch', weight: 1.0,  goal: 90,  rewardXP: 90  },
-  { id: 'focus_120min',         label: 'Chinh phục 2 giờ tập trung',                type: 'focusMinutes',    family: 'focusMinutes',     bucket: 'stretch', weight: 0.8,  goal: 120, rewardXP: 120 },
-  { id: 'focus_150min',         label: 'Vượt 2.5 giờ tập trung trong ngày',         type: 'focusMinutes',    family: 'focusMinutes',     bucket: 'stretch', weight: 0.55, goal: 150, rewardXP: 160 },
+  { id: 'focus_120min',         label: 'Chinh phục 120 phút tập trung',             type: 'focusMinutes',    family: 'focusMinutes',     bucket: 'stretch', weight: 0.8,  goal: 120, rewardXP: 120 },
+  { id: 'focus_150min',         label: 'Vượt 150 phút tập trung trong ngày',        type: 'focusMinutes',    family: 'focusMinutes',     bucket: 'stretch', weight: 0.55, goal: 150, rewardXP: 160 },
   // Single session milestones
   { id: 'session_25min',        label: 'Hoàn thành 1 phiên ≥25 phút',               type: 'singleSession',   family: 'singleSession',    bucket: 'core',    weight: 1.0,  goal: 25,  rewardXP: 25  },
   { id: 'session_30min',        label: 'Hoàn thành 1 phiên ≥30 phút',               type: 'singleSession',   family: 'singleSession',    bucket: 'core',    weight: 1.0,  goal: 30,  rewardXP: 35  },

@@ -1,4 +1,4 @@
-# TECH_DEBT — 3D city subsystem (41 open entries · 3 closed in round 47 · 2 in round 48 · 1 in round 49 · 3 in round 50 · 2 in round 60)
+# TECH_DEBT — 3D city subsystem (42 open entries · 3 closed in round 47 · 2 in round 48 · 1 in round 49 · 3 in round 50 · 2 in round 60 · 1 opened in round 61)
 
 > Split out of the active `TECH_DEBT.md` on 2026-09-06 (ADR-075). **These are still OPEN debts, not
 > archived history** — they were moved by SUBSYSTEM, not by status.
@@ -94,6 +94,50 @@ không cắt hộp nào — tức đổi câu hỏi từ *"có chỗ đứng kh�
 
 **Cách tái hiện**: `node scripts/city-preview.mjs --era 8 --hour 12 --width 1170 --height 726
 --dpr 1 --nguoi 1 --nomotion` → ảnh đặc mặt tường. `--nguoi 2` cùng kỷ thì đúng.
+
+---
+
+## #100 — Round 61's remaining hollows (cheek, philtrum, collarbone notch) need a front-only local dent, which no shape in this engine can build yet
+
+**Discovered**: 2026-09-17, round 61 (Việc 4, while fixing the eye socket) · **Status**: OPEN ·
+**Priority**: Medium · **Severity**: Low (cosmetic; the round's headline complaint — protruding
+eyes — is already fixed)
+
+- **Name**: Đàm's round-61 order named four hollows: temple, cheek hollow, philtrum, collarbone
+  notch. Việc 4 substantially covers the temple (it now shares a ring with the eye-socket floor, in
+  `SKULL_RINGS`), but the other three are still zero blocks / zero rings — not started.
+- **Module**: `src/engine/city3d/humanShape.js` (`SKULL_RINGS`, `chest`'s ring table) ·
+  `human.js` (`skullPieces`, `facePieces`) if any of these end up needing a dedicated construction.
+- **Root Cause, and why this is a debt rather than a five-minute follow-up**: every shape in this
+  engine (`skull`, `chest`, `limb`, …) is a **solid of revolution** — one ring value narrows the
+  ENTIRE circumference at that height, uniformly in every direction. That is exactly the technique
+  Việc 1–4 used successfully for joints and the eye socket, because those features (a joint's
+  waist, an eye socket) legitimately want a uniform pinch all the way round. A cheek hollow, a
+  philtrum and a collarbone notch do not: each is a dent on ONE side only (front), and narrowing
+  the whole ring at that height would also narrow the back of the head/neck, which nothing asked
+  for and nothing should change.
+  The one construction in this codebase that already builds something front-biased on a lathe is
+  the scalp's hairline (`buildHairline`/`hairlineParam` in `humanShape.js`) — each of its 60
+  columns starts its walk up the profile from its OWN per-angle height instead of a shared one.
+  Việc 4 measured, first-hand, how fragile that per-column remapping is: a change to the SAME
+  shared ring the hairline also reads (`SKULL_RINGS`) that looked safe by every existing test broke
+  a hairline-containment check 284 vertices deep, for a reason (`scalpFit` stretching Y around the
+  chin, not around each ring) that took real time to trace. Building a NEW per-column construction
+  for the cheek/philtrum/collarbone, under this round's remaining time budget, risked repeating
+  that discovery under worse conditions — no existing test to catch it early.
+- **Current Risk**: none — nothing regresses. The round's own self-graded bar ("eyes sit deep in a
+  socket, limb outlines curve instead of bulging at joints") does not require these three features;
+  Đàm's own instructions explicitly permitted stopping after Việc 4 under time pressure.
+- **Future Risk**: attempting this quickly, by analogy with the eye-socket fix, would most likely
+  reproduce the exact failure this debt describes — a ring change that reads as safe by every test
+  that doesn't know about the hairline's per-column remapping.
+- **Recommended Solution (not started)**: a per-column or per-angle offset added to the relevant
+  ring's radius, active only within a narrow angular window centred on the front (θ near 0, the
+  same convention `hairlineHeight(c)` already uses for its front/side/back calibration), so the
+  dent reads at the front and does NOT narrow the back of the head or neck. Whatever shape carries
+  it needs its own containment/clearance test against the hairline (for the skull) BEFORE the ring
+  value ships, following the exact pattern this round used to catch the socket-vs-hairline
+  conflict, not after a photograph catches it.
 
 ---
 

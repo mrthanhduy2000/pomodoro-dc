@@ -73,6 +73,103 @@ roughly 44%. Titles below are the lookup key; read one with
 
 ---
 
+## ADR-097 — Round 61: a joint is the narrowest point of a limb, not the widest, and a hollow only ever comes from carving the generating line
+
+**Date**: 2026-09-17 · **Order**: *"Cận cảnh cư dân vẫn là một con ma-nơ-canh mắt lồi với những khối
+lòi lõm lạ… Cơ thể người đọc ra là người phần lớn nhờ những chỗ LÕM và những chỗ THẮT: hốc mắt, thái
+dương, hõm cổ, eo, cổ tay, khuỷu, gối, cổ chân. Thêm khối LỒI không tạo ra chỗ LÕM."* · Branch
+`claude/city-skill-points-display-7k4nof`.
+
+### Context
+Three straight rounds — round 58's eight skull blocks, round 59's four eyelid blocks, round 58's
+six joint spheres — had each solved a different photograph by ADDING a convex block. ADR-095 had
+already named the first failure mode (*"a sum of convex bodies is not a smooth surface"*) but the
+joint spheres and the eyeballs survived that diagnosis because they measured correct: the sphere
+sealed the gap at every bend angle, the eyeball sat where the brow ridge and cheek profile left
+room for it. Đàm's round-61 diagnosis reframes the whole class of bug: it is not that the added
+blocks were the wrong SHAPE, it is that addition itself cannot produce the feature these body parts
+need — a hollow, or a pinch — because a hollow is an absence, and nothing is subtracted by gluing
+something on.
+
+### Decision — two applications of one rule
+**(1) A joint is the segment's narrowest point, sealed by overlap, not by a padding sphere.**
+`limb`/`calf`/`cuff`'s ring profiles are inverted so the joint-adjacent end is the smallest radius
+on the whole segment and the belly peaks mid-segment. The six joint-ball pieces are deleted; each
+bone's far end now extends past its neighbouring joint by `JOINT_OVERLAP = 0.35` of its own length
+(`overlapNear`/`overlapFar` in `human.js`), sealing the gap by two solids overlapping in the
+interpenetration zone instead of one sphere padding it from outside.
+**(2) An eye socket is a ring in the skull's own generating line, narrower than its neighbours —
+never a block added for brow, nose or cheek.** `SKULL_RINGS` gains a dedicated floor at the eye's
+own height (`[0.045, 0.85]`, replacing a generic temple pinch at `[-0.04, 0.84]`); the eyeball
+(`eyeL/R`, `pupilL/R`) is pulled backward along the depth axis to sit behind both the brow ridge and
+the skull's own cheek-height radius, keeping its exact slit shape from round 59.
+
+### Verification method, because neither claim is provable by algebra alone
+For the joints: a real point-in-lathe-solid gap probe (`humanJoints.test.js`), reusing the project's
+own `profileAt`/ring-interpolation math rather than an approximation, measures residual gap
+coverage at the app's own measured max gait angles — elbow ≈33° (<1% residual), knee ≈84° (<6%,
+the binding case; `JOINT_OVERLAP` was tuned against a table of overlap-vs-residual-gap, not chosen
+for a round number). For the eye socket: a printed radius profile from shoulder to wrist (before:
+four irregular peaks from the ball bumps; after: two clean up-down cycles) and four before/after
+photo pairs at true resolution (face front-on, face 3/4, full arm+leg silhouette, 3-frame walk
+strip at max bend), per Đàm's own stated acceptance method.
+
+### The fragility a shared generating line hides, and the fix that nearly broke it
+The skull profile is a solid of revolution shared by TWO shapes (`skull`, the head, and `scalp`,
+the hair, via one constant since ADR-095). A first attempt deepened the eye-socket ring to 0.78 at
+the eye's exact height and broke `humanShape.test.js`'s hairline-containment test: 284 hair
+vertices fell inside the skull. Root cause, found by tracing the exact failing vertex: `scalpFit`
+stretches the whole scalp mesh's Y axis by `SCALP_LIFT` **around the chin** (y = 0), not around
+each ring's own position — so a vertex sitting exactly at the socket floor in ring-space lands,
+after the stretch, at a real-world height that has already climbed back onto the wide part of the
+rising slope toward the forehead. A deep, narrow notch is fragile against that mismatch; the
+shipped notch is shallower (floor 0.85, not 0.78) and spans 0.155 of head height instead of 0.12 —
+verified against the SAME hairline-containment test with its clearance margin restored above the
+existing 3% floor, not a new one invented for this round.
+
+### Alternatives rejected
+- **Deepen the eye socket to 0.78, keep it narrow.** Rejected: breaks the hairline (284 intruding
+  vertices), and every attempt to compensate by raising `SCALP_LIFT` alone required 1.35× (up from
+  1.10×) — visibly puffier hair in all 15 eras just to buy back margin the ring shape itself was
+  spending.
+  - **Add convex brow/nose/cheek blocks to fake a hollow by surrounding contrast.** Rejected by the
+  order itself: *"đừng thêm khối cho gò mày, cho sống mũi, cho gò má"* — the same failure mode
+  ADR-095 already named, applied to a different feature.
+- **Keep the pupil's absolute forward offset from the eyeWhite unchanged (0.085 `headW`) while
+  pulling both back.** Rejected: the socket floor and the cheek-height radius leave only ~0.015
+  `headW` of clearance at this depth, and the old offset pushed the pupil past the brow ridge.
+  The offset that stays (matching the eyeWhite's own recess) still guarantees the pupil visibly
+  pokes through the eyeWhite surface (round 56's concentric-block bug does not return).
+
+### Consequences
+- `humanSkull.test.js`'s round-58 assertion *"brow ridge must never exceed the eye"* is inverted,
+  not relaxed — that rule was true only because THAT round's fix enlarged the brow ridge itself into
+  an awning; this round never touches the brow ridge, so the failure mode it guarded against cannot
+  recur, and the new assertion is the opposite: the eye now sits behind the brow ridge, at all 15
+  eras (`humanFace.test.js`, new).
+- `humanPose.js`'s `footContactAt` generalises from a hardcoded `-part.h` to `part.rest.y - part.h/2`
+  — overlap breaks the assumption that a limb's rest position is exactly `-h/2` from its joint.
+- Several test files' hardcoded expectations move with dated before/after baselines rather than
+  being loosened: `drawCallBudget.test.js` (neck reusing `calf` costs +1 draw call in 7/15 eras that
+  had no bare `calf` before), `humanCoarse.test.js` (the six `bead` joint spheres are gone, so both
+  the block-count floor and the triangle-savings percentage are recomputed from the actual post-change
+  numbers, not guessed), `humanPose.test.js` (the silhouette-swing amplitude floor is lowered with a
+  measured explanation: the overlap-extended segment's larger axis-aligned bounding box dilutes a
+  proxy metric, not the walking mechanism itself, which a separate angle-amplitude test confirms
+  unchanged).
+- Việc 5–6 (temple hollow, cheek hollow, philtrum, collarbone notch) were assessed and deferred: the
+  temple pinch is already substantially satisfied as a side effect of the eye-socket ring (they are
+  geometrically the same ring on a solid of revolution), but a philtrum, a cheek hollow and a
+  collarbone notch are all FRONT-only local features that a rotationally-symmetric lathe cannot
+  represent without the same class of per-column construction the hairline uses — and this round's
+  own eye-socket fix shows exactly how fragile that construction is to a change nobody expected to
+  touch it. Recorded as `TECH_DEBT_3D` work rather than attempted under time pressure.
+
+### Status
+Accepted. Gates: lint · build · `npm run test:quiet`. Tests 1,852 → 1,858 pass, 0 fail, skipped 1.
+
+---
+
 ## ADR-096 — Round 60: a NaN loses every comparison, so a geometric quantity must be checked before it meets a threshold; and every garment edge is a step in the generating line
 
 **Date**: 2026-09-16 · **Order**: *"Lỗi NaN đảo cổng khoảng hở sống từ vòng 57… Dựng lại hàng 15 kỷ

@@ -32,7 +32,24 @@ Production branch `main` carries **both** work streams (merged 2026-08-28 on Đ�
 ⚠️ Phase 21 therefore shipped **before** Đàm reviewed its screenshots — the "waiting on Đàm's eyes"
 item below is still live, it just now reviews something already running.
 
-- **Loop — ROUND 60 (2026-09-16, LATEST): THE RULER WAS READING BACKWARDS, AND THE CLOTHES HAD NO SEAMS.**
+- **Loop — ROUND 61 (2026-09-17, LATEST): LÕM, AND CHỖ THẮT.**
+  Detail in `BAN_GIAO.md` and ADR-097; three laws live here:
+  ⚠️ **Adding a convex block never creates a hollow — only carving the generating line does.**
+  Three straight rounds (skull, eyelids, joint balls) only ever added lumps: joints read as a
+  string of beads, eyes as two balls glued on a face. The fix inverts each rule instead of adding
+  to it — joints are now the segment's NARROWEST point; the eye socket is a real ring in
+  `SKULL_RINGS`, not a relation between two separate glued blocks.
+  ⚠️ **Padding a gap and sealing it by overlap are different shapes.** A joint sphere sized to the
+  max of both neighbours closes the gap at every angle but reads as a bead. Two segments extended
+  past the joint by a fixed fraction of their own length seal it by union instead — measured with a
+  real point-in-lathe-solid probe, not assumed.
+  ⚠️ **A shared generating line is a shared FRAGILITY, in a system you didn't touch.** Deepening
+  the eye socket broke the hairline: `scalpFit` stretches the scalp's Y axis around the CHIN, not
+  the ring's own position, so a vertex reading "deep in the socket" in ring-space lands, after the
+  stretch, back on the wide part of the rising slope. Wide and shallow clears it; narrow and deep
+  does not.
+
+- **Loop — ROUND 60 (2026-09-16): THE RULER WAS READING BACKWARDS, AND THE CLOTHES HAD NO SEAMS.**
   Detail in `BAN_GIAO.md` and ADR-096; four laws live here:
   ⚠️ **A NaN LOSES EVERY COMPARISON, so there is no safe way to write the comparison.** `NaN < x`,
   `NaN > x` and `NaN >= x` are all false, so a broken quantity silently picks one of the two
@@ -53,25 +70,11 @@ item below is still live, it just now reviews something already running.
   called a plain torso tailored, because `chest` has had a 53.6° waist since round 52. The question
   is a DIRECTION, not a sharpness: an outward ledge, sharp at BOTH ends.
 
-- **Loop — ROUND 58 (2026-09-13): THE FIRST TIME I LOOKED A RESIDENT IN THE FACE.**
-  Detail in `BAN_GIAO.md` and ADR-095; five laws live here:
-  ⚠️ **A sum of CONVEX bodies is not a smooth surface — it is a set of bumps.** Seven skull features
-  built as eight blocks glued on a sphere measured correct on every number and photographed as a
-  headband, two chipmunk cheeks and a ball chin. Five of the seven belong in ONE lathe profile
-  (`SKULL_RINGS`); only front-back asymmetry (`occiput`, `browRidge`) may be a separate block.
-  Same lesson the brimmed hat taught: ask *"how many objects is this in real life?"*.
-  ⚠️ **A promise written in prose has no teeth.** `scalp`'s comment promised its rings equalled the
-  head's; changing the head broke it in silence and put the hair INSIDE the skull. One shared
-  constant, not two copies. (`TECH_DEBT #42`.)
-  ⚠️ **A number only means something together with the frame it was solved in.** The hairline's
-  three constants were in RING-INDEX units, solved for a 6-ring profile; on 9 rings the front
-  hairline fell from 0.672 to 0.343 of head height — down to eye level. Express positions in HEIGHT.
-  ⚠️ **A geometric sufficiency proof EXPIRES when the shape changes, and nothing reminds you.**
-  Round 56's "the generating line is monotone ⇒ the hair is provably outside" died at the temple
-  pinch. What caught it was the measured 3% clearance FLOOR, not the sentence in the comment.
-  ⚠️ **A quantity computed correctly can be dropped before it arrives.** Deleting the head-tilt term
-  from the pose left all 1,823 other tests green. Test at the OUTPUT: change one input, demand the
-  output move. (Same family as the helmet that carried cloth colour for seven rounds.)
+- **Loop — ROUND 58 (2026-09-13): THE FIRST TIME I LOOKED A RESIDENT IN THE FACE (ADR-095).**
+  Archived verbatim. Still-live: a sum of convex bodies is not a smooth surface, only asymmetric
+  features may be separate blocks · shared constants over promises written in prose (`TECH_DEBT
+  #42`) · a number means nothing without the frame it was solved in · a sufficiency proof expires
+  the moment the shape it proved something about changes.
 
 - **Loop — ROUND 57 (2026-09-12): THE PICTURE WAS NEVER DRAWN AT FULL SIZE.**
   Detail in `BAN_GIAO.md`; four laws live here:

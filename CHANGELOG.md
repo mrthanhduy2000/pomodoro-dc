@@ -10,6 +10,43 @@
 > **Muốn hiểu VÌ SAO một quyết định được chọn** → `ARCHITECTURE_DECISIONS.md`. **Muốn biết migration
 > cụ thể nào cần chạy** → `MIGRATION.md`.
 
+## 2026-09-17 — Round 61 (Việc 1–4): lõm, and chỗ thắt
+
+**Purpose** — three straight rounds (skull, eyelids, joint balls) fixed residents' anatomy by
+ADDING convex blocks. Đàm's diagnosis: a body reads as a body mostly from its HOLLOWS and its
+PINCHES — none of those rounds carved one. This round inverts the joint law and carves a real eye
+socket, using only the technique this project has already paid to learn: a hollow comes from
+carving the generating line, never from gluing something on.
+
+**Scope** — `humanShape.js` (`limb`/`calf`/`cuff` rings, `SKULL_RINGS`) · `human.js` (joint overlap,
+eye/pupil depth) · `humanPose.js` (`footContactAt`) · `humanJoints.test.js` (rewritten) ·
+`humanFace.test.js` (new) · six other test files' dated baselines · ADR-097.
+
+**What changed**
+1. **Joints are now the narrowest point of their segment, not the widest.** The six joint-ball
+   pieces are deleted; `limb`/`calf`/`cuff` pinch at the joint-adjacent end instead, and each bone's
+   far end extends past its neighbouring joint by `JOINT_OVERLAP = 0.35` of its own length, sealing
+   the gap by overlap instead of a padding sphere. Residual gap at the app's own measured max gait
+   angles: elbow ≈33° under 1%, knee ≈84° under 6%.
+2. **The eye socket is a real ring in the skull's shared generating line.** `SKULL_RINGS` gains a
+   dedicated floor at the eye's own height, narrower than both the cheek ring and the parietal ring;
+   the eyeball moves backward along the depth axis to sit behind the brow ridge and the skull's own
+   cheek-height radius at all 15 eras, keeping its exact round-59 slit shape.
+3. **A first, deeper attempt broke the hairline** (`scalpFit` stretches the scalp's Y axis around
+   the chin, not around each ring's own position) — the shipped socket is shallower and wider,
+   verified against the existing hairline-containment test rather than a newly invented margin.
+
+**Impact** — residents' block count and draw calls are effectively unchanged (neck reusing `calf`
+costs +1 draw call in 7/15 eras that had no bare `calf` shape already); the six deleted joint
+spheres are a net triangle saving. No new shapes, no new blocks for cheek/nose/brow (`humanFace.test.js`
+asserts this explicitly). `humanSkull.test.js`'s round-58 "brow must never exceed the eye" assertion
+is inverted, not relaxed — see ADR-097 for why that isn't the same mistake repeated.
+
+**Compatibility** — no state, no storage, no API change. Việc 5–6 (temple hollow — mostly covered
+as a side effect of #2; cheek hollow, philtrum, collarbone notch) are deferred as `TECH_DEBT_3D`:
+each is a front-only local dent that this engine's rotationally-symmetric shapes cannot represent
+without the hairline's own per-column construction, whose fragility this round measured first-hand.
+
 ## 2026-09-16 — Round 60: the ruler was reading backwards, and the clothes had no seams
 
 **Purpose** — close Phần C (clothes that look sewn), and first repair the instrument that rounds

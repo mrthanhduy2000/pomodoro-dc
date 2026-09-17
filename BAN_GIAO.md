@@ -1,7 +1,78 @@
-> Last update: **2026-09-16** — **ROUND 60: THE RULER WAS READING BACKWARDS, AND THE CLOTHES HAD NO SEAMS.**
-> Order: *"Lỗi NaN đảo cổng khoảng hở sống từ vòng 57… Dựng lại hàng 15 kỷ bằng phép đo đã sửa và
-> đưa con số thật."* · *"LUẬT: mỗi mép quần áo là một BẬC TRONG ĐƯỜNG SINH, không phải một khối dán
-> lên."* Branch `claude/city-skill-points-display-7k4nof`. Full reasoning: **ADR-096**.
+> Last update: **2026-09-17** — **ROUND 61: LÕM, AND CHỖ THẮT (Việc 1–4).**
+> Order: *"Cận cảnh cư dân vẫn là một con ma-nơ-canh mắt lồi với những khối lòi lõm lạ… Thêm khối
+> LỒI không tạo ra chỗ LÕM. Muốn có chỗ lõm thì phải KHOÉT ĐƯỜNG SINH."* Branch
+> `claude/city-skill-points-display-7k4nof`. Full reasoning: **ADR-097**.
+>
+> ### Việc 1–3 — the joint is the narrowest point of a limb, sealed by overlap, not by a sphere
+> Round 58 sized each joint sphere to the max radius of its two neighbours — mathematically exact
+> at every bend angle, and it read as a string of beads once the eye was looking for anatomy, not a
+> mannequin. `limb`/`calf`/`cuff`'s ring profiles are inverted: the joint-adjacent end is now the
+> segment's narrowest radius (limb's −1 end and calf's +1 end pinned to the identical value,
+> 0.3158 raw), the belly peaks mid-segment (limb ≈ y 0.10, calf ≈ y 0.15), and the six joint-ball
+> pieces are deleted outright. Each bone's far end now extends past its neighbouring joint by
+> `JOINT_OVERLAP = 0.35` of its own length (`overlapNear`/`overlapFar`), sealing the gap by two
+> solids overlapping instead of a sphere padding it.
+>
+>     residual gap at max gait angle   elbow ≈33° → <1%   ·   knee ≈84° → <6% (binding case)
+>     overlap chosen from a measured table (8%…45% tried); 0.35 keeps the elbow sealed and avoids
+>     the tip-poke-through risk of pushing further, with the knee's own 3.92% cited by name
+>     neck reuses `calf` (×1.15) instead of `limb` — a cinched cylinder with no opposing joint
+>     LEG_LOOK.boot's shin switches `limb` → `calf`; its old dodge (a wide ankle via the wrong
+>     shape) stops working once `limb` also pinches, so the "wider boot" look now comes from `loW`
+>
+> Verified two ways: `humanJoints.test.js` rebuilds a real point-in-lathe-solid gap probe (reusing
+> the project's own `profileAt`/ring-interpolation math, not an approximation) instead of the old
+> ball-radius formula test; and a printed radius profile from shoulder to wrist — before, four
+> irregular peaks from the ball bumps; after, two clean up-down cycles, with the elbow measurably
+> narrower than both the belly above and the belly below it, at every one of the 15 eras.
+>
+> Ripple, each with a dated before/after baseline rather than a loosened threshold:
+> `drawCallBudget.test.js` (neck→`calf` costs +1 draw call in the 7/15 eras that had no bare `calf`
+> already), `humanCoarse.test.js` (the six deleted `bead` spheres change both the coarse-block floor
+> and the triangle-savings percentage), `humanPose.test.js` (the leg-cluster block count drops
+> 8→6; the silhouette-swing floor is lowered with a measured explanation — the overlap-extended
+> segment's larger bounding box dilutes a PROXY metric, confirmed NOT a walking-mechanism regression
+> by a separate angle-amplitude test that stayed exact), `humanSeams.test.js`, `humanSkull.test.js`,
+> `humanWardrobe.test.js`.
+>
+> ### Việc 4 — a real eye socket, carved into the skull's own generating line
+> The brow ridge (round 58) and the temple pinch (round 58) already existed, but the eyeball itself
+> still sat glued at a near-flat depth — `eyeWhite` reached 0.557 `headW` forward while the skull's
+> own bare surface at eye height was only ≈0.46, and the pupil (0.595–0.609) poked out past the brow
+> ridge (≈0.505–0.510). Two numbers change: `SKULL_RINGS` gains a dedicated floor ring at the eye's
+> own height (`[0.045, 0.85]`, replacing the old generic temple pinch at `[-0.04, 0.84]` — one ring
+> now serves as BOTH the temple pinch and the socket floor, since a solid of revolution is uniformly
+> narrow at a given height in every direction); and `eyeL/R`/`pupilL/R` move backward along the depth
+> axis (`x`: 0.44→0.316 for the eyeWhite, 0.525→0.386 for the pupil) while keeping their exact slit
+> size and shape from round 59, and the pupil's forward offset from the eyeWhite's own centre — so it
+> still visibly pokes through the eyeWhite surface instead of disappearing concentrically (round 56).
+>
+> A first attempt (floor 0.78, at the exact old temple y-position) broke a THIRD system: 284 hair
+> vertices fell inside the skull (`humanShape.test.js`'s hairline-containment test). Root cause,
+> found by tracing the one worst vertex: `scalpFit` stretches the scalp mesh's Y axis by
+> `SCALP_LIFT` **around the chin**, not around each ring's own position, so a vertex sitting exactly
+> at the socket floor in ring-space lands, after the stretch, on the already-wide rising slope
+> toward the forehead — a narrow, deep notch is fragile against that mismatch. The shipped notch is
+> shallower (floor 0.85) and wider (span 0.155 of head height instead of 0.12, the intermediate ring
+> at 0.08 dropped so the profile rises in one gradual slope straight to the parietal ring), clearing
+> the hairline test's existing 3% margin rather than inventing a new one.
+>
+> `humanSkull.test.js`'s round-58 assertion *"brow ridge must never exceed the eye"* is INVERTED,
+> not relaxed: that rule was true only because THAT round's fix enlarged the brow ridge itself into
+> an awning that swallowed the eyes in shadow. This round never touches the brow ridge, so the
+> failure mode can't recur — the new assertion is the opposite, verified at all 15 eras in the new
+> `humanFace.test.js`, which also asserts zero new blocks for cheek/nose/brow.
+>
+> Việc 5–6 (temple hollow — substantially covered as a side effect above; cheek hollow, philtrum,
+> collarbone notch) are deferred, not silently dropped: all three remaining features are FRONT-only
+> local dents that a rotationally-symmetric lathe cannot represent without the same per-column
+> construction the hairline uses, whose fragility this round just measured first-hand. Recorded for
+> `TECH_DEBT_3D` rather than attempted under time pressure with the budget this round already spent.
+>
+> Gates: lint clean, build OK, `npm run test:quiet` 1852 → 1858 pass, 0 fail, skipped 1. Photo
+> evidence: face front-on close-up, face 3/4 profile, full arm+leg silhouette, 3-frame walk strip at
+> max bend, and a printed shoulder-to-wrist radius chart (before/after) — all at true resolution.
+>
 >
 > ### Việc 0(b) — a NaN loses EVERY comparison, so it must never reach one
 > Round 57 wrote the close-up gate as `boxDistance(stand, nearestBlocker(stand, blockers))`: a

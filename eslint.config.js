@@ -130,7 +130,7 @@ export default defineConfig([
     rules: { 'no-restricted-syntax': 'off' },
   },
   {
-    files: ['vite.config.js', 'electron/**/*.js', 'scripts/**/*.{js,mjs}', 'api/**/*.js', '*config.js'],
+    files: ['vite.config.js', 'v2/vite.config.js', 'electron/**/*.js', 'scripts/**/*.{js,mjs}', 'api/**/*.js', '*config.js'],
     languageOptions: {
       globals: globals.node,
     },

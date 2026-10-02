@@ -54,3 +54,6 @@ test-results/
 # trăm KB sẽ bị nuốt vào commit mà không ai để ý. Đây là ảnh để SOI BẰNG MẮT lúc phát triển,
 # không phải sản phẩm — ảnh nào đáng giữ thì `--out` ra chỗ khác rồi thêm có chủ đích.
 .shots/
+
+# v2 rewrite: exported production data (personal notes) used for local import tests — never commit.
+v2/.import/

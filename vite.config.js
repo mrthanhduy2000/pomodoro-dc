@@ -140,7 +140,10 @@ export default defineConfig({
         // loại ra thì mỗi lần mở app đều tải sẵn ~130 KB cho một tab Đàm có thể không bấm vào —
         // đúng thứ mà việc nạp lười sinh ra để tránh. Đổi lại phải có luật runtimeCaching bên
         // dưới, nếu không tab 3D sẽ không mở được khi mất mạng.
-        globIgnores: ['**/vendor-three-*.js'],
+        globIgnores: ['**/vendor-three-*.js', 'v2/**'],
+        // The v2 rewrite lives at /v2/ with its own service worker (ADR-101). Without this, v1's
+        // worker would answer every /v2/ navigation with v1's index.html.
+        navigateFallbackDenylist: [/^\/v2(\/|$)/],
         skipWaiting: true,
 
         // Runtime caching rules

@@ -8,8 +8,9 @@
 import { isCronAuthorized, methodNotAllowed, sendJson } from './_lib/http.js';
 import {
   getAdminClient, listActivePushSubscriptions, sendPushNotification,
-  isExpiredPushSubscriptionError, disablePushSubscription,
+  isExpiredPushSubscriptionError, disablePushSubscription, pushAppOfSubscription,
 } from './_lib/push.js';
+import { pickV2Nudge } from './_lib/v2Digest.js';
 import { evaluateStreakRisk, pickActiveBucketLabel, buildStreakNudgePayload } from './_lib/coachDigest.js';
 import { getVietnamHour, vietnamDayNumber } from '../src/engine/time.js';
 
@@ -22,8 +23,9 @@ async function readGameState() {
   return data?.data ?? null;
 }
 
-async function sendToAll(payload) {
-  const subs = await listActivePushSubscriptions();
+/** Send to the subscriptions of ONE app — v1's streak nudge must never reach a v2-only device. */
+async function sendToApp(payload, app) {
+  const subs = (await listActivePushSubscriptions()).filter((row) => pushAppOfSubscription(row) === app);
   let delivered = 0;
   for (const row of subs) {
     try {
@@ -54,8 +56,32 @@ async function runDigest() {
     getEntryHour: (e) => getVietnamHour(new Date(e?.timestamp ?? 0)),
   });
   const payload = buildStreakNudgePayload({ streak: risk.streak, activeBucketLabel });
-  const sent = await sendToAll(payload);
+  const sent = await sendToApp(payload, 'v1');
   return { ran: true, atRisk: true, streak: risk.streak, ...sent };
+}
+
+/** v2: read the whole event log (service role) and send at most one nudge. */
+async function readV2Events() {
+  const admin = getAdminClient();
+  const out = [];
+  for (let from = 0; ; from += 1000) {
+    const { data, error } = await admin.from('events_v2').select('id, at, kind, data').order('seq').range(from, from + 999);
+    if (error) {
+      if (error.code === '42P01' || error.code === 'PGRST205') return null; // table not created yet
+      throw error;
+    }
+    for (const r of data) out.push({ id: r.id, at: Date.parse(r.at), kind: r.kind, data: r.data ?? {} });
+    if (data.length < 1000) return out;
+  }
+}
+
+async function runV2Digest() {
+  const events = await readV2Events();
+  if (!events) return { ran: false, reason: 'no-table' };
+  const nudge = pickV2Nudge(events, Date.now());
+  if (!nudge) return { ran: true, sent: false };
+  const sent = await sendToApp(nudge.payload, 'v2');
+  return { ran: true, sent: true, reason: nudge.reason, ...sent };
 }
 
 export default async function handler(req, res) {
@@ -67,8 +93,10 @@ export default async function handler(req, res) {
     return sendJson(res, 401, { ok: false, error: 'Unauthorized.' });
   }
   try {
-    const result = await runDigest();
-    return sendJson(res, 200, { ok: true, ...result });
+    const [v1, v2] = await Promise.allSettled([runDigest(), runV2Digest()]);
+    const unwrap = (r) => (r.status === 'fulfilled' ? r.value : { error: r.reason instanceof Error ? r.reason.message : 'failed' });
+    // one app failing must not silence the other
+    return sendJson(res, 200, { ok: true, ...unwrap(v1), v2: unwrap(v2) });
   } catch (error) {
     return sendJson(res, 500, { ok: false, error: error instanceof Error ? error.message : 'digest-failed' });
   }

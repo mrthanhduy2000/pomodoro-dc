@@ -15,8 +15,9 @@ import { readFileSync, readdirSync, statSync } from 'node:fs';
 import { join } from 'node:path';
 
 import { CARD, CARD_INSET, EYEBROW, ratio, remaining } from './surface.js';
+import { fileURLToPath } from 'node:url';
 
-const ROOT = new URL('../', import.meta.url).pathname;
+const ROOT = fileURLToPath(new URL('../', import.meta.url));
 
 /** Every component the app actually ships, minus the frozen 3D city (Đàm forbids touching it). */
 function componentFiles(dir = ROOT, out = []) {

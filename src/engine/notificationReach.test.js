@@ -16,8 +16,9 @@ import { readFileSync, readdirSync, statSync } from 'node:fs';
 import { join } from 'node:path';
 
 import { stripComments } from '../utils/sourceScan.js';
+import { fileURLToPath } from 'node:url';
 
-const GOC = new URL('../', import.meta.url).pathname;
+const GOC = fileURLToPath(new URL('../', import.meta.url));
 
 function moiFileNguon(thuMuc, ra = []) {
   for (const ten of readdirSync(thuMuc)) {

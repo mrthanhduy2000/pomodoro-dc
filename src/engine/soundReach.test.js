@@ -15,8 +15,9 @@ import { join } from 'node:path';
 
 import { stripComments } from '../utils/sourceScan.js';
 import { REWARD_TIER_SOUND } from './rewardTiers.js';
+import { fileURLToPath } from 'node:url';
 
-const GOC = new URL('../', import.meta.url).pathname;
+const GOC = fileURLToPath(new URL('../', import.meta.url));
 
 function moiFileNguon(thuMuc, ra = []) {
   for (const ten of readdirSync(thuMuc)) {

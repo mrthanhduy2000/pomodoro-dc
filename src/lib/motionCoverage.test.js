@@ -18,8 +18,9 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { readdir, readFile } from 'node:fs/promises';
 import { join, relative } from 'node:path';
+import { fileURLToPath } from 'node:url';
 
-const SRC = new URL('../', import.meta.url).pathname;
+const SRC = fileURLToPath(new URL('../', import.meta.url));
 
 /**
  * ⚠️ `src/components/city/render3d/` ĐỨNG NGOÀI CÓ CHỦ ĐÍCH: chuyển động của thành phố 3D chạy

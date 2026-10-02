@@ -71,3 +71,22 @@ test('isSessionEndEvent: bỏ qua sự kiện huỷ kiểu cũ trước giờ k�
     },
   }, nowMs), false);
 });
+
+// ADR-101: v1 and v2 share one push pipeline during the rewrite. A device with both apps installed
+// must hear each session exactly once — from the app that ran it.
+import { pushAppOfSubscription, subscriptionMatchesJob } from '../../_lib/push.js';
+import { buildFocusCompletePayload, buildV2FocusCompletePayload } from '../../../src/engine/pushPayloads.js';
+
+test('push routing: v1 jobs reach only v1 subscriptions, v2 jobs only v2 ones', () => {
+  const v1Sub = { endpoint: 'a', platform: 'iPhone' };
+  const legacySub = { endpoint: 'b', platform: null }; // rows saved before v2 existed
+  const v2Sub = { endpoint: 'c', platform: 'v2:iPhone' };
+  const v1Job = buildFocusCompletePayload(25);
+  const v2Job = buildV2FocusCompletePayload(25);
+
+  assert.equal(pushAppOfSubscription(legacySub), 'v1');
+  assert.deepEqual([v1Sub, legacySub, v2Sub].filter((s) => subscriptionMatchesJob(s, v1Job)).map((s) => s.endpoint), ['a', 'b']);
+  assert.deepEqual([v1Sub, legacySub, v2Sub].filter((s) => subscriptionMatchesJob(s, v2Job)).map((s) => s.endpoint), ['c']);
+  // A job row written by an older server (no `app` field) is v1.
+  assert.equal(subscriptionMatchesJob(v1Sub, { title: 'x' }), true);
+});

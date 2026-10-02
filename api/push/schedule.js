@@ -1,11 +1,26 @@
 import { methodNotAllowed, readJsonBody, sendJson } from '../_lib/http.js';
 import { upsertPushJob } from '../_lib/push.js';
-import { buildFocusCompletePayload, buildPomodoroContinuePayload } from '../../src/engine/pushPayloads.js';
+import {
+  buildFocusCompletePayload,
+  buildPomodoroContinuePayload,
+  buildV2BreakOverPayload,
+  buildV2FocusCompletePayload,
+} from '../../src/engine/pushPayloads.js';
+
+// The server always rebuilds the payload from `kind`; whatever text the client sent is ignored.
+const KNOWN_KINDS = {
+  'focus-complete': buildFocusCompletePayload,
+  'pomodoro-continue': buildPomodoroContinuePayload,
+  'v2-focus-complete': buildV2FocusCompletePayload,
+  'v2-break-over': buildV2BreakOverPayload,
+};
+
+export function resolvePushKind(kind) {
+  return Object.hasOwn(KNOWN_KINDS, kind) ? kind : 'focus-complete';
+}
 
 function buildKnownPayload(kind, focusMinutes) {
-  return kind === 'pomodoro-continue'
-    ? buildPomodoroContinuePayload(focusMinutes)
-    : buildFocusCompletePayload(focusMinutes);
+  return KNOWN_KINDS[resolvePushKind(kind)](focusMinutes);
 }
 
 function inferFocusMinutes(body) {
@@ -23,7 +38,7 @@ export default async function handler(req, res) {
   try {
     const body = await readJsonBody(req);
     const jobKey = body?.jobKey;
-    const kind = body?.kind === 'pomodoro-continue' ? 'pomodoro-continue' : 'focus-complete';
+    const kind = resolvePushKind(body?.kind);
     const scheduledFor = body?.scheduledFor;
     const payload = body?.payload;
 

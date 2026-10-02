@@ -29,3 +29,34 @@ export function buildPomodoroContinuePayload(focusMinutes) {
     url: '/',
   };
 }
+
+/*
+ * v2 rewrite (ADR-101). Same push pipeline, but every v2 payload carries `app: 'v2'` and opens
+ * `/v2/`. `api/_lib/push.js` (`subscriptionMatchesJob`) delivers a job only to subscriptions of
+ * the same app, so a device with both apps installed never hears the same session twice.
+ */
+export function buildV2FocusCompletePayload(focusMinutes) {
+  const roundedMinutes = Math.max(1, Math.round(focusMinutes || 0));
+  return {
+    title: '🧱 Xong phiên — một viên gạch mới',
+    body: `${roundedMinutes} phút tập trung đã xong. Mở app nghỉ giải lao nhé.`,
+    icon: '/icon-192.png',
+    badge: '/icon-192.png',
+    tag: 'dc-v2-focus-complete',
+    url: '/v2/',
+    app: 'v2',
+  };
+}
+
+export function buildV2BreakOverPayload(breakMinutes) {
+  const roundedMinutes = Math.max(1, Math.round(breakMinutes || 0));
+  return {
+    title: '☕ Hết giờ nghỉ',
+    body: `${roundedMinutes} phút nghỉ đã hết. Sẵn sàng cho phiên tiếp theo?`,
+    icon: '/icon-192.png',
+    badge: '/icon-192.png',
+    tag: 'dc-v2-break-over',
+    url: '/v2/',
+    app: 'v2',
+  };
+}

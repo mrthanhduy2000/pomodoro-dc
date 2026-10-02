@@ -9,6 +9,7 @@ import {
   markPushJobError,
   markPushJobSent,
   sendPushNotification,
+  subscriptionMatchesJob,
 } from '../_lib/push.js';
 
 async function runDispatch(graceSeconds) {
@@ -17,7 +18,7 @@ async function runDispatch(graceSeconds) {
     return { dueJobs: 0, sentJobs: 0, report: [] };
   }
 
-  const subscriptions = await listActivePushSubscriptions();
+  const allSubscriptions = await listActivePushSubscriptions();
   const report = [];
   let sentJobs = 0;
 
@@ -28,6 +29,7 @@ async function runDispatch(graceSeconds) {
       continue;
     }
 
+    const subscriptions = allSubscriptions.filter((row) => subscriptionMatchesJob(row, job.payload));
     if (subscriptions.length === 0) {
       await markPushJobSent(job.job_key, 'no-active-subscriptions', { expectedStatus: 'processing' });
       sentJobs += 1;

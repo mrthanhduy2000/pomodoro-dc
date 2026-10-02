@@ -241,11 +241,25 @@ export async function listActivePushSubscriptions() {
   const admin = getAdminClient();
   const { data, error } = await admin
     .from('push_subscriptions')
-    .select('endpoint, subscription')
+    .select('endpoint, subscription, platform')
     .eq('enabled', true);
 
   if (error) throw error;
   return data ?? [];
+}
+
+/*
+ * Two apps share one push pipeline during the v2 rewrite (ADR-101). A v2 subscription is saved
+ * with `platform` starting `v2:` (no schema change, so production v1 is safe even before any v2
+ * SQL runs); a v2 job carries `payload.app === 'v2'`. Anything else is v1 — exactly as before.
+ */
+export function pushAppOfSubscription(row) {
+  return typeof row?.platform === 'string' && row.platform.startsWith('v2:') ? 'v2' : 'v1';
+}
+
+export function subscriptionMatchesJob(row, payload) {
+  const jobApp = payload?.app === 'v2' ? 'v2' : 'v1';
+  return pushAppOfSubscription(row) === jobApp;
 }
 
 export async function markPushJobSent(jobKey, lastError = null, { expectedStatus = null } = {}) {

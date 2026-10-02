@@ -32,6 +32,16 @@ Production branch `main` carries **both** work streams (merged 2026-08-28 on Đ�
 ⚠️ Phase 21 therefore shipped **before** Đàm reviewed its screenshots — the "waiting on Đàm's eyes"
 item below is still live, it just now reviews something already running.
 
+- **V2 REWRITE — STAGE 1 SHIPPED (2026-10-03, ADR-101). READ `v2/DESIGN.md` FIRST.**
+  Đàm ordered a full rewrite ("viết lại cả code · mọi rule làm mới · bắt đầu lại từ số 0"). v2 lives
+  in `v2/`, is built by the same `npm run build`, and is served at **`/v2/`** beside v1 until cutover.
+  Plan and gates: `v2/DESIGN.md`. Stage 1 = timer + session log + sync + push + PWA + v1 history
+  import. ⚠️ **Its whole state is an append-only EVENT LOG** (`events_v2`, anon may SELECT/INSERT
+  only) reduced by a pure engine (`v2/src/engine/timer.js`) — not CAS. ⚠️ v2 has **no write path**
+  to `game_state`/`timer_live`. ⚠️ On localhost sync is OFF unless `?sync=1`.
+  **Next: Gate 1** — Đàm runs `supabase/v2_events.sql`, then uses `/v2/` for real for 3 days.
+  Only then stage 2 (the 2D brick game loop). Do not start the 3D city of v2 before Gate 2.
+
 - **Loop — ROUND 64 (2026-09-17, LATEST): FIVE FAULTS ĐÀM COULD SEE (ADR-100).**
   ⚠️ **NEVER PUT A STATIC HINT ON SCREEN.** Round 63 quoted round 40's law and then shipped one
   anyway. Discovery is `focus/ShortcutSheet.jsx` — **hold `?`** — plus hover `title`s. List lives in
@@ -91,22 +101,8 @@ item below is still live, it just now reviews something already running.
   `s.activeBook` instead of `s.progress.activeBook`, and printed «30/75» under a rail saying «38/75».
   ADR-082 named that hook the one seam; `journeyWiring.test.js` now pins it.
 
-- **Loop — ROUND 61 (2026-09-17): LÕM, AND CHỖ THẮT.**
-  Detail in `BAN_GIAO.md` and ADR-097; three laws live here:
-  ⚠️ **Adding a convex block never creates a hollow — only carving the generating line does.**
-  Three straight rounds (skull, eyelids, joint balls) only ever added lumps: joints read as a
-  string of beads, eyes as two balls glued on a face. The fix inverts each rule instead of adding
-  to it — joints are now the segment's NARROWEST point; the eye socket is a real ring in
-  `SKULL_RINGS`, not a relation between two separate glued blocks.
-  ⚠️ **Padding a gap and sealing it by overlap are different shapes.** A joint sphere sized to the
-  max of both neighbours closes the gap at every angle but reads as a bead. Two segments extended
-  past the joint by a fixed fraction of their own length seal it by union instead — measured with a
-  real point-in-lathe-solid probe, not assumed.
-  ⚠️ **A shared generating line is a shared FRAGILITY, in a system you didn't touch.** Deepening
-  the eye socket broke the hairline: `scalpFit` stretches the scalp's Y axis around the CHIN, not
-  the ring's own position, so a vertex reading "deep in the socket" in ring-space lands, after the
-  stretch, back on the wide part of the rising slope. Wide and shallow clears it; narrow and deep
-  does not.
+- **Loop — ROUND 61 (2026-09-17): LÕM, AND CHỖ THẮT.** Moved verbatim to
+  `docs/archive/START_HERE_LOG_2026-09-06.md` — `grep -n 'ROUND 61'` there.
 
 - **Loop — ROUND 60 (2026-09-16): THE RULER WAS READING BACKWARDS.** Moved verbatim to
   `docs/archive/START_HERE_LOG_2026-09-06.md` — `grep -n 'ROUND 60'` there.

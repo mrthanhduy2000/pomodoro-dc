@@ -73,6 +73,43 @@ roughly 44%. Titles below are the lookup key; read one with
 
 ---
 
+## ADR-101 — v2 rewrite, stage 1: the whole state is an append-only event log, served at `/v2/` beside v1
+
+**Date**: 2026-10-03 · **Order**: *"Rà soát và lên plan tối ưu hoá toàn bộ… thành phố vô hồn"* → *"Làm lại toàn bộ, không chừa cái gì cả, mọi rule giờ có thể làm mới"* · *"Viết lại cả code"* · *"Bắt đầu lại từ số 0"* · *"Không đóng băng"* (3D).
+
+**Context.** v1 is ~80k lines, a dozen currencies, and a 3D city that reads counters, never `history[]`. Real usage after the 6/9 progress reset: 3 active days (6–8 Sep, 11 sessions), two cancelled sessions on 17–18 Sep, then nothing. The approved plan (`v2/DESIGN.md`) rewrites the game around one rule — *one session = one dated brick that never moves or disappears* — and gates every stage on real use. Stage 1 is only the daily core: timer, session log, sync, push, PWA, import of v1 history.
+
+**Problem.** The plan said "copy v1's CAS sync". CAS over one JSON row means a losing device must throw away its write and re-pull, and v1 has lost a real session to that race (2026-07-11) and still loses offline edits to different fields (`TECH_DEBT #8`). A timer is a stream of facts (start, pause, resume, complete), which is the one shape that can be merged without anybody losing.
+
+**Options considered.**
+1. **CAS on a `game_state_v2` row (the plan).** Proven code, but keeps the loser-discards-work property and needs four safety nets around it (`docs/OPERATIONS.md`).
+2. **Append-only event log, state = pure reduction (chosen).** Every device appends facts; sync is set union by id; no write can be rejected, so nothing is ever discarded.
+3. **Separate Vercel project / repo for v2.** Clean, but a second deploy pipeline, a second push key pair, a second domain for Đàm's iPhone to trust.
+
+**Decision 1 — one table `events_v2` (`supabase/v2_events.sql`): id · seq · at · kind · data · device.** The anon role may **SELECT and INSERT only** — no UPDATE, no DELETE — so a client bug cannot destroy history. `seq` (bigserial) is the pull cursor; the table is in the realtime publication. Upload is `INSERT … ON CONFLICT DO NOTHING`, so a retry is always safe.
+
+**Decision 2 — the reducer is pure and order-independent** (`v2/src/engine/timer.js`). Events are sorted by `(at, id)` before reduction, so two devices that received the same set in different orders compute the same state (tested with a seeded shuffle, 50 runs). Unknown kinds and malformed events are ignored, never thrown.
+
+**Decision 3 — facts more than one device may emit carry a DETERMINISTIC id** (`focus.complete:<sid>`, `focus.cancel:<sid>`, `break.end:<sid>`, `break.skip:<sid>`). Laptop and phone both noticing the timer ran out write the same row once. A completion is stamped at the **theoretical** end (start + target + pauses), not at the moment a device woke up — so an iOS tab frozen for an hour still logs the session at the right minute. `settle(now)` emits these due facts before any command.
+
+**Decision 4 — no penalties and no hidden state.** Cancel has no cost field. An early finish counts only after `MIN_COUNTED_MS` = 10 min. A second start supersedes a running session. Prefs and categories are last-write-wins by `at`. Even "skip the break" is an event, so the "just finished" panel survives a reload and closes on every device at once (`justFinished`).
+
+**Decision 5 — same repo, same deploy, served at `/v2/`.** `v2/vite.config.js` builds into `dist/v2` with its own PWA (scope `/v2/`, `importScripts('/push-worker.js')`); v1's service worker denylists `/v2`. `vercel.json` gets one rewrite. No new serverless function (still 10/12).
+
+**Decision 6 — push is routed, not duplicated.** A v2 subscription's `platform` starts with `v2:`; v2 jobs carry `payload.app = 'v2'`; `dispatch.js` filters with `subscriptionMatchesJob`. No schema change, so v1 delivery is untouched. Schedule and cancel are sent from **every** device, not only the one with push enabled — otherwise a pause on the laptop could not cancel the phone's job.
+
+**Decision 7 — a dev host never touches the cloud log** unless the URL has `?sync=1` (CLAUDE.md: never start a focus session on dev/localhost against real data). Status `dev-local` is shown in Settings.
+
+**Decision 8 — v1 history is imported read-only, as `legacy.session` events** with ids `legacy:<id>`, so importing twice is a no-op. v2 has **no code path** that writes `game_state` or `timer_live`.
+
+**Trade-offs.** The log only grows (fine: a year of heavy use is a few thousand small rows). The state is recomputed on every tick (fine at this size; memoise if it ever shows in a profile). The Electron tray still reads v1's `timer_live` until stage 5.
+
+**Consequences.** Two pre-existing local-build faults surfaced and were fixed on the way: six v1 imports that collided case-insensitively on macOS (`Foo.jsx` vs `foo.js`) now name the `.jsx` explicitly, and five tests that built paths with `new URL(...).pathname` (which keeps `%20` and percent-encoded diacritics) now use `fileURLToPath`. Neither failed on Vercel (Linux), both failed on Đàm's machine.
+
+**Revisit when.** Gate 1 fails for a sync reason, or the log passes ~50k rows on one device.
+
+---
+
 ## ADR-100 — Round 64: five faults Đàm could see, and a rail that was carrying a whole week on a screen for starting one session
 
 **Date**: 2026-09-17 · **Order**: *"Lệnh vòng 63 ghi rõ: 'Không thêm thứ đứng yên trên màn hình để quảng cáo phím tắt.' Hover tooltip anh làm là đúng — nhưng cái ô này thì không."*

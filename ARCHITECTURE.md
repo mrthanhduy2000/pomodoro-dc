@@ -1370,6 +1370,32 @@ riêng, ĐƯỢC PHÉP import trực tiếp từ `src/engine/` (tiền lệ: `ap
 được import từ `src/store/`/`src/components/` — vi phạm chiều này là dấu hiệu coupling sai hướng,
 ghi vào `TECH_DEBT.md` nếu phát hiện thay vì âm thầm bỏ qua.
 
+## 7b. v2 — event-log architecture (stage 1, ADR-101)
+
+```
+UI (v2/src/ui) ──actions──▶ useTimerApp ──cmd*(state, now)──▶ new events
+                                 │                                 │
+                                 ▼                                 ▼
+                       reduce(events, now)  ◀──────────  logStore (persist + outbox)
+                                                                   │ upload (insert-or-ignore)
+                                                                   ▼
+                                       events_v2 (Supabase: anon SELECT + INSERT only)
+                                                                   │ pull seq > cursor · realtime
+                                                                   ▼
+                                                     other devices merge by id (set union)
+```
+- **State flow**: there is no stored state, only events. `reduce` sorts by `(at, id)` and is pure, so
+  every device that holds the same set of events computes the same state.
+- **Timer flow**: `dueEvents(state, now)` emits facts that are due (completion at the THEORETICAL
+  end, break end) with deterministic ids; any device may emit them, the row lands once.
+- **Sync flow**: outbox → upsert `ignoreDuplicates` → pull by `seq`. Flush on `visibilitychange`
+  hidden and `pagehide` (iOS freezes timers), 20 s poll, realtime INSERT. Dev hosts: off unless `?sync=1`.
+- **Notification flow**: v2 schedules `v2-focus-complete` / `v2-break-over` jobs through the shared
+  `api/push/schedule.js`; `dispatch.js` delivers a job only to subscriptions whose `platform`
+  prefix matches the job's `payload.app` (`subscriptionMatchesJob`).
+- **Storage flow**: localStorage `dc-pomodoro-v2` on each device; cloud `events_v2`. v2 never writes
+  `game_state` / `timer_live`; `legacy.js` reads `game_state` once, read-only, for the history import.
+
 ## 8. Quy tắc lâu dài (bắt buộc cho mọi thay đổi tương lai)
 
 1. **Đọc trước khi sửa**: `START_HERE.md` + `CLAUDE.md` + file liên quan — xem NGUYÊN TẮC ƯU TIÊN

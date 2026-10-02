@@ -1029,6 +1029,27 @@
 └── AI_HANDOFF_KNOWLEDGE.md       # Bàn giao tri thức ĐẦY ĐỦ nhất, viết cho AI không đọc được code
 ```
 
+## `v2/` — the rewrite (ADR-101, `v2/DESIGN.md`)
+
+A second app in the same repo, built by the same `npm run build` into `dist/v2`, served at `/v2/`.
+It imports nothing from `src/` except the Supabase client (`src/lib/supabase.js`) and the shared
+push payload builders (`src/engine/pushPayloads.js`, via `api/push/schedule.js`).
+
+```
+v2/
+├── DESIGN.md            game rules, stages, gates, v2 laws — read first
+├── index.html · vite.config.js (root v2, base /v2/, own PWA scope)
+└── src/
+    ├── engine/          PURE + tested: timer.js · stats.js · log.js · legacyImport.js
+    ├── store/           logStore.js — Zustand persist 'dc-pomodoro-v2' (events, outbox, cursor)
+    ├── lib/             sync.js (events_v2) · push.js (platform 'v2:…') · legacy.js (read-only v1)
+    ├── app/             useTimerApp.js — the only bridge UI ↔ engine · sound.js
+    └── ui/              FocusView · StatsView · SettingsView · TimerRing · format.js
+```
+Rules: tests sit next to their file (`*.test.js`, picked up by `npm test`); `engine/` imports no
+React, no store, no browser API; `v2/.import/` is gitignored (it holds personal exports).
+SQL: `supabase/v2_events.sql`.
+
 ## Quy tắc đặt file mới (để khỏi lại rối theo thời gian)
 
 - **Logic thuần (không JSX, test được, không đụng Zustand/DOM)** → `src/engine/` (hoặc

@@ -1,4 +1,36 @@
-> Last update: **2026-09-17** — **ROUND 64: FIVE FAULTS ĐÀM COULD SEE (ADR-100).**
+> Last update: **2026-10-03** — **V2 REWRITE, STAGE 1: THE DAILY CORE (ADR-101).**
+> Order: *"Rà soát và lên plan tối ưu hoá toàn bộ… bộ game 3D… chỉ là một thành phố vô hồn."* →
+> *"Làm lại toàn bộ"* · *"Viết lại cả code"* · *"Bắt đầu lại từ số 0"* · *"Không đóng băng"*.
+> Plan approved in plan mode; the full plan is `v2/DESIGN.md`. Everything on `main`.
+>
+> ### Done
+> 1. **`v2/` — a second app at `/v2/`**, same repo and deploy, own PWA. v1 untouched and still live.
+> 2. **State = append-only event log** (`v2/src/engine/timer.js`), pure reducer sorted by `(at, id)`.
+>    Completion stamped at the THEORETICAL end, deterministic ids for facts two devices may emit,
+>    early finish counts after 10 min, cancel costs nothing, "skip break" is an event too.
+> 3. **Sync** to new table `events_v2` (`supabase/v2_events.sql`; anon SELECT + INSERT only).
+>    ⚠️ Localhost never syncs unless `?sync=1`.
+> 4. **Push at focus end AND break end**, routed by `platform` prefix `v2:` (`subscriptionMatchesJob`
+>    in `api/_lib/push.js`); new kinds in `api/push/schedule.js`; payloads in `pushPayloads.js`.
+> 5. **Stats** with retention metrics (active days/week, sessions per active day, longest gap,
+>    streak) and a **read-only import** of v1 history (13 sessions + 7 categories on the dev copy).
+> 6. Pre-existing local-only faults fixed: 6 case-colliding imports in `src/App.jsx` (`.jsx` now
+>    explicit), 5 tests that broke on a path with spaces/diacritics (`fileURLToPath`).
+>
+> ### Verified
+> Browser (dev-local, nothing written to the cloud): 1440×790 and 375 px, start → simulated frozen
+> tab → auto-complete at exactly +25 min → break → skip; reload keeps the done panel closed.
+>
+> ### Next — Gate 1 (Đàm)
+> Run `supabase/v2_events.sql` in the Supabase SQL editor, then focus with
+> `https://pomodoro-dc.vercel.app/v2/` for 3 real days. Stage 2 (2D brick loop) only after that.
+>
+> ### Gates
+> lint ✅ · build ✅ (v2 bundle 419 KB / 121 KB gzip) · `npm run test:quiet` 1892 pass, 0 fail, skipped 1.
+
+---
+
+> Previous: **2026-09-17** — **ROUND 64: FIVE FAULTS ĐÀM COULD SEE (ADR-100).**
 > Order: *"Lệnh vòng 63 ghi rõ: 'Không thêm thứ đứng yên trên màn hình để quảng cáo phím tắt.'…
 > nhưng cái ô này thì không."* Everything on `main`, on top of round 63.
 >

@@ -10,6 +10,21 @@
 > **Muốn hiểu VÌ SAO một quyết định được chọn** → `ARCHITECTURE_DECISIONS.md`. **Muốn biết migration
 > cụ thể nào cần chạy** → `MIGRATION.md`.
 
+## 2026-10-03 — v2 rewrite, stage 1: the daily core (ADR-101)
+
+**Purpose.** Đàm judged the game not sticky and the 3D city "soulless", and ordered a full rewrite
+that restarts the game from zero. Stage 1 delivers only what he uses every day, so it can be lived
+with for three days before any game is built on it.
+
+**Scope.** New app in `v2/`, served at `/v2/`: timer state machine on an append-only event log,
+sync to `events_v2`, push at focus end and break end, PWA, Stats with retention metrics, read-only
+import of v1 history. Shared push code learned to route by app (`v2:` platform prefix).
+
+**Impact.** v1 is unchanged for the user. Requires running `supabase/v2_events.sql` once; until
+then v2 works on one device only.
+
+**Compatibility.** No v1 table is written by v2. No new serverless function (10/12).
+
 ## 2026-09-17 — Round 64: five faults Đàm could see, and a rail carrying a whole week (ADR-100)
 
 **Purpose.** The round opens with round 63 breaking its own rule: it quoted round 40's *"no static

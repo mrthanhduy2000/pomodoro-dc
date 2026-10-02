@@ -848,3 +848,20 @@ Nothing deleted; the still-live rules stay summarised in `START_HERE.md`. Full r
   `sceneGraph.js`, so every helmet rendered in the era's CLOTH colour for three weeks.
   ⚠️ **The preview tool lied twice more** (5th and 6th): it could not photograph a face at all
   (34.4° default pitch), and above 1400 px it wrote BLACK images while reporting success.
+
+- **Loop — ROUND 61 (2026-09-17): LÕM, AND CHỖ THẮT.**
+  Detail in `BAN_GIAO.md` and ADR-097; three laws live here:
+  ⚠️ **Adding a convex block never creates a hollow — only carving the generating line does.**
+  Three straight rounds (skull, eyelids, joint balls) only ever added lumps: joints read as a
+  string of beads, eyes as two balls glued on a face. The fix inverts each rule instead of adding
+  to it — joints are now the segment's NARROWEST point; the eye socket is a real ring in
+  `SKULL_RINGS`, not a relation between two separate glued blocks.
+  ⚠️ **Padding a gap and sealing it by overlap are different shapes.** A joint sphere sized to the
+  max of both neighbours closes the gap at every angle but reads as a bead. Two segments extended
+  past the joint by a fixed fraction of their own length seal it by union instead — measured with a
+  real point-in-lathe-solid probe, not assumed.
+  ⚠️ **A shared generating line is a shared FRAGILITY, in a system you didn't touch.** Deepening
+  the eye socket broke the hairline: `scalpFit` stretches the scalp's Y axis around the CHIN, not
+  the ring's own position, so a vertex reading "deep in the socket" in ring-space lands, after the
+  stretch, back on the wide part of the rising slope. Wide and shallow clears it; narrow and deep
+  does not.

@@ -178,6 +178,76 @@ export function emitRoof(out, { w, d, top, x, z }, style, ctx) {
       break;
     }
 
+    // ⚠️ `hip` KHÔNG PHẢI `gable` NHÌN TỪ HƯỚNG KHÁC, VÀ CŨNG KHÔNG PHẢI `pyramid` CỤT NGỌN.
+    // Mái tứ giác có BỐN dốc gặp nhau ở một SỐNG MÁI — tức hai đầu hồi cũng dốc xuống thay vì dựng
+    // đứng thành hình tam giác. Đó là ba hình khác nhau, và mắt phân biệt được ở khoảng cách xa:
+    //   `gable`   → nhìn từ đầu hồi thấy một TAM GIÁC dựng đứng
+    //   `hip`     → nhìn từ hướng nào cũng thấy một mặt DỐC
+    //   `pyramid` → không có sống mái, bốn dốc chụm về MỘT ĐIỂM
+    //
+    // Dựng bằng HAI khối, và phải là hai: một chóp cụt (bốn dốc, `taper` thu về `RIDGE_SHARE`) rồi
+    // một mái hai dốc nhỏ đội lên để tạo cái sống. Một khối `prism` không tả nổi mái tứ giác vì
+    // `taper` thu ĐỀU cả hai trục, mà mái tứ giác thì thu HẾT theo trục ngắn và thu MỘT PHẦN theo
+    // trục dài — đúng chỗ `prism` không có tham số để nói.
+    //
+    // Công trình có thật: nhà ba gian Bắc Bộ (kỷ 6) và nhà phố Lisboa (kỷ 8) — cả hai mái tứ giác,
+    // và cả hai trước bản này đều đang khai `gable`.
+    case 'hip': {
+      const RIDGE_SHARE = 0.46;   // mặt trên của chóp cụt còn bao nhiêu phần bề ngang
+      const LOWER = 0.66;         // chóp cụt ăn bao nhiêu phần chiều cao mái
+      const lowH = pitch * LOWER;
+      out.push(prism({
+        x, z, y: top, w: rw, d: rd, h: lowH, sides: 4, taper: RIDGE_SHARE, role: 'roof',
+      }));
+      // ⚠️ Sống mái nằm dọc trục DÀI của mặt bằng — mái tứ giác thật luôn vậy, vì bốn dốc cùng độ
+      // nghiêng thì đường giao nhau chạy theo chiều dài. Đoán bừa hướng thì hai đầu hồi sẽ dốc
+      // ngược và mái đọc ra như bị vặn.
+      const ridgeRy = rd > rw ? Math.PI / 2 : 0;
+      const ridgeW = rw * RIDGE_SHARE;
+      const ridgeD = rd * RIDGE_SHARE;
+      out.push(gable({
+        x, z, y: top + lowH, w: ridgeW, d: ridgeD, h: pitch * (1 - LOWER), role: 'roof', ry: ridgeRy,
+      }));
+      anchors.apexY = top + pitch;
+      anchors.ridges.push({ x, z, y: top + pitch, w: Math.max(ridgeW, ridgeD), ry: ridgeRy });
+      break;
+    }
+
+    // ⚠️ `mansard` = KHÚC GÃY, chứ không phải "mái dốc nhiều hơn". Hai đoạn dốc chồng lên nhau,
+    // đoạn DƯỚI gần như dựng đứng (brisis) và đoạn TRÊN rất thoải (terrasson). Chính cái gãy ấy là
+    // thứ làm một tấm ảnh mái nhà Paris nhận ra được ngay, và không giá trị nào khác trong
+    // `ROOF_KINDS` tả nổi nó: mọi kiểu còn lại đều đơn điệu về độ dốc từ diềm lên đỉnh.
+    //
+    // Công trình có thật: nhà phố Haussmann (kỷ 9, Pháp) — tầng áp mái nằm TRONG đoạn dốc đứng,
+    // nên đoạn ấy phải cao hơn đoạn trên rõ rệt, nếu không nó chỉ còn là một cái viền.
+    //
+    // ⚠️ Số đo phải đọc ra là "đứng rồi thoải": độ dốc = chiều cao ÷ phần thu vào mỗi bên. Đoạn
+    // dưới thu `(1 − BRISIS_TAPER)/2 = 0,13` bề ngang mà cao `0,64 · pitch`; đoạn trên thu
+    // `0,74 · (1 − 0,30)/2 = 0,26` bề ngang mà chỉ cao `0,36 · pitch` ⇒ dốc dưới **gấp khoảng ba
+    // lần** dốc trên. Đổi hai con số này thì phải giữ nguyên quan hệ ấy, nếu không nó thoái hoá
+    // thành một cái chóp cụt tầm thường.
+    case 'mansard': {
+      const BRISIS_TAPER = 0.74;
+      const BRISIS_SHARE = 0.64;
+      const brisisH = pitch * BRISIS_SHARE;
+      out.push(prism({
+        x, z, y: top, w: rw, d: rd, h: brisisH, sides: 4, taper: BRISIS_TAPER, role: 'roof',
+      }));
+      out.push(prism({
+        x, z, y: top + brisisH,
+        w: rw * BRISIS_TAPER, d: rd * BRISIS_TAPER, h: pitch * (1 - BRISIS_SHARE),
+        sides: 4, taper: 0.3, role: 'roof',
+      }));
+      anchors.apexY = top + pitch;
+      // Đỉnh mansard là một mặt phẳng hẹp có thật (ở Paris nó thường là chỗ đặt ống khói), nên nó
+      // ĐỨNG ĐƯỢC — khác hẳn `gable`/`hip` vốn kết thúc bằng một cái sống.
+      anchors.deck = {
+        x, z, y: top + pitch,
+        w: rw * BRISIS_TAPER * 0.3, d: rd * BRISIS_TAPER * 0.3,
+      };
+      break;
+    }
+
     case 'flat': {
       // Mái bằng vẫn phải có GỜ CHẮN MÁI, nếu không khối hộp cụt ngọn trông như bị cắt dở.
       //

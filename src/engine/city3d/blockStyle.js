@@ -102,7 +102,13 @@ export const MAX_UNITS = 10;
  * · `alley`       — khe giữa hai đơn vị, tính theo TỈ LỆ bước lưới (0 = dính liền tuyệt đối).
  * · `storey`      — hệ số chiều cao đơn vị so với căn nhà đơn hôm nay.
  * · `vary`        — biên độ chênh cao giữa các đơn vị (0 = đều tăm tắp như luật quy hoạch bắt).
- * · `gableToStreet` — quay đầu hồi ra mặt phố (chỉ có nghĩa với kỷ lợp mái dốc).
+ * · `gableToStreet` — xoay đơn vị 90°, tức quay TRỤC DÀI của lô đất vuông góc với mặt phố.
+ *   ⚠️ **CÁI TÊN NÀY NAY HẸP HƠN THỨ NÓ LÀM, và nói dối ở đúng một dòng.** Nó được đặt lúc mọi kỷ
+ *   dùng nó đều lợp mái `gable` — quay lô đất khi ấy đúng là quay ĐẦU HỒI ra phố. Từ 2026-08-24
+ *   (`TECH_DEBT #76`) kỷ 8 lợp mái `hip`, mà mái tứ giác **không có đầu hồi**: bốn phía đều là mặt
+ *   dốc. Phép xoay vẫn có nghĩa và vẫn đúng (nó quyết định SỐNG MÁI chạy dọc hay ngang phố), chỉ
+ *   có cái tên là hẹp. Không đổi tên trong cùng bản vá này vì đổi tên một trường của bảng là một
+ *   thay đổi riêng — nhưng ai đọc dòng này phải biết nó KHÔNG còn hàm ý "có đầu hồi".
  */
 export const BLOCK_STYLES = {
   1: {
@@ -154,6 +160,9 @@ export const BLOCK_STYLES = {
   },
   8: {
     country: 'Bồ Đào Nha',
+    // ⚠️ `gableToStreet` ở ĐÂY nghĩa là "sống mái chạy dọc mặt phố", KHÔNG phải "đầu hồi ra phố":
+    // từ 2026-08-24 kỷ này lợp mái TỨ GIÁC (`hip`), mà mái tứ giác thì bốn phía đều dốc. Khu
+    // Pombalina dựng lại sau động đất 1755 đúng như vậy — một biển mái bốn dốc chạy song song phố.
     cols: 3, rows: 2, attach: 'party', alley: 0.05, storey: 1.58, vary: 0.16, gableToStreet: true,
     note: 'nhà phố Lisboa mặt tiền hẹp — ốp gạch men azulejo, mái dốc, dựng lại sau động đất 1755',
   },

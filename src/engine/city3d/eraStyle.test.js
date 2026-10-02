@@ -52,7 +52,11 @@ test('NHÀ THƯỜNG KHÔNG ĐỘI MÁI KỲ ĐÀI ở những kỷ mà hai th�
   // …và các kỷ còn lại khai TRÙNG một cách có chủ đích (thời đồ đá thì nhà nào cũng là lều).
   // Canh cả vế này để không ai "sửa" bảng bằng cách cho mọi kỷ khác nhau cho đủ chỉ tiêu.
   const same = ERAS.filter((e) => ERA_STYLES[e].vernacularRoof === ERA_STYLES[e].roof);
-  assert.deepEqual(same, [1, 5, 8, 12, 13, 14]);
+  // ⚠️ DANH SÁCH NÀY TỤT TỪ 6 XUỐNG 4 NGÀY 2026-08-24 (`TECH_DEBT #76`) — kỷ 8 (Bồ Đào Nha) đổi
+  // sang `hip` và kỷ 13 (Nhật) sang `gable`, nên chúng thôi trùng mái kỳ quan. Đây là một danh
+  // sách ĐẾM ĐƯỢC chứ không phải một lời miễn trừ: nó đỏ cả khi có kỷ mới rơi vào lẫn khi một kỷ
+  // trong đây được tách ra, tức nó buộc mỗi lần đụng bảng phải trả lời "vì sao trùng là ĐÚNG".
+  assert.deepEqual(same, [1, 5, 12, 14]);
 });
 
 test('getVernacularStyle THAY MÁI Ở NGUỒN — mọi trường khác giữ nguyên từng chữ số', () => {

@@ -955,6 +955,32 @@ test('TỪ VỰNG MÁI (b) — mọi kiểu phải dựng ra hình RIÊNG, khôn
   }
 });
 
+test('TỪ VỰNG MÁI (e) — MƯỜI HAI KIỂU PHẢI KHÁC NHAU ĐÔI MỘT, không chỉ khác tấm mặc định', () => {
+  // ⚠️ BÀI (b) SO MỖI KIỂU VỚI **TẤM MẶC ĐỊNH**, TỨC NÓ MÙ VỚI VIỆC HAI KIỂU TRÙNG KHÍT NHAU.
+  // Đó không phải một khả năng lý thuyết: trước 2026-08-21, `ziggurat` và `stepped` dùng CHUNG một
+  // nhánh mã — hai thứ ngược nhau về kiến trúc (đền Lưỡng Hà tường XIÊN thu từ mép thân nhà · cao
+  // ốc New York tường ĐỨNG thu từ mép mái) mà ra cùng một hình. Bài (b) khi ấy vẫn xanh, vì cả hai
+  // đều khác tấm mặc định.
+  //
+  // Nay từ vựng có 12 giá trị và hai giá trị mới (`hip`, `mansard`) nằm rất gần hàng xóm của
+  // chúng — `hip` cạnh `gable` và `pyramid`, `mansard` cạnh `stepped`. Đúng chỗ cần một cái gác
+  // hỏi thẳng: *"hai kiểu này có ra hai hình khác nhau không?"*
+  //
+  // THỬ-CHO-ĐỎ (đã chạy 2026-08-24): cho `case 'hip'` rơi xuống dùng chung thân của `case 'gable'`
+  // ⇒ đỏ, nêu đích danh cặp `gable` ↔ `hip`.
+  const vanTay = (parts) => parts
+    .map((p) => `${p.shape}|${p.sides ?? '-'}|${(p.taper ?? 1).toFixed(2)}|${p.role}|${p.h.toFixed(4)}|${p.w.toFixed(4)}|${p.y.toFixed(4)}`)
+    .join(' , ');
+  const thay = new Map();
+  for (const kind of ROOF_KINDS) {
+    const k = vanTay(loMai(kind).out);
+    assert.ok(!thay.has(k),
+      `kiểu mái "${kind}" dựng ra hình TRÙNG KHÍT kiểu "${thay.get(k)}" — một trong hai là trục chết`);
+    thay.set(k, kind);
+  }
+  assert.equal(thay.size, ROOF_KINDS.length);
+});
+
 test('TỪ VỰNG MÁI (c) — bảng không được dẹt: 15 kỷ phải còn ít nhất 10 kiểu mái kỳ quan', () => {
   // Đo 2026-08-21, SAU khi tách `ziggurat` khỏi `stepped` và đổi kỷ 2 sang `pyramid`:
   //   cone:1 · pyramid:2 · ziggurat:1 · tiered:2 · gable:2 · dome:1 · sawtooth:1 · stepped:1 ·
@@ -978,4 +1004,77 @@ test('TỪ VỰNG MÁI (c) — bảng không được dẹt: 15 kỷ phải còn
     `chỉ ${dem.size} kiểu mái kỳ quan cho 15 kỷ — nghèo đi so với mốc 10 của 2026-08-21`);
   assert.ok(dongNhat <= 3,
     `${dongNhat} kỷ cùng dùng một kiểu mái kỳ quan — bảng đang dồn cục, xem lại kỷ mới thêm`);
+});
+
+test('TỪ VỰNG MÁI (d) — BẢNG NHÀ DÂN CŨNG KHÔNG ĐƯỢC DẸT, và đây là cái cổng đã thiếu 4 phase', () => {
+  // ⚠️ ĐỌC ĐOẠN NÀY TRƯỚC KHI NỚI BẤT KỲ CON SỐ NÀO Ở ĐÂY.
+  //
+  // Bài (c) canh bảng mái KỲ QUAN từ 2026-08-21 và nó làm đúng việc của nó. Nhưng **không ai canh
+  // bảng mái NHÀ DÂN**, và hậu quả đo được: `flat` × 7 kỷ · `gable` × 7 kỷ · `cone` × 1 — tức
+  // 14/15 kỷ chia nhau đúng HAI hình mái, trong đó có **bảy kỷ liên tiếp (4→10) lợp y hệt nhau**.
+  // Điều đó được ghi thành `TECH_DEBT #76` ngày 2026-08-21, được rà soát đúng hẹn, rồi hoãn — và
+  // nó nằm mở thêm bốn phase nữa. Một mục nợ trong tài liệu chỉ được đọc khi có người đi tìm;
+  // **một con số trong bài test thì tự đòi được đọc**.
+  //
+  // ⚠️ VÀ ĐÂY LÀ CHỖ NÓ NGUY HIỂM HƠN BÀI (c): §1(3) (ADR-052) nâng số khối nhà dân nhìn thấy được
+  // từ 371 lên **1.812** (×4,88). Mái nhà thường vì vậy là thứ **chiếm nhiều điểm ảnh nhất khung
+  // hình**, trong khi kỳ quan chỉ có năm cái mỗi kỷ. Bảng ít được canh hơn lại là bảng nhìn thấy
+  // nhiều hơn.
+  //
+  // Hai con số, không phải một — đúng bài học Bước 2 Phase 10: **số kiểu** nói bảng có RỘNG không,
+  // **đông nhất** nói bảng có DỒN CỤC không, và một con số không thay được con số kia. Mốc đo
+  // 2026-08-24: `flat`:6 · `gable`:5 · `hip`:2 · `cone`:1 · `mansard`:1 → **5 kiểu, đông nhất 6**.
+  //
+  // ⚠️ MỐC ẤY TỪNG LÀ **6**, VÀ NÓ TỤT XUỐNG 5 VÌ MỘT BÀI TEST KHÁC BIẾT LỊCH SỬ HƠN TÔI — ghi ra
+  // ở đây vì đó mới là điều đáng học, không phải con số. Bản đầu tôi khai kỷ 4 (Trung Quốc) là
+  // `tiered`, lý lẽ nghe rất xuôi ("`tiered` ở hạng `common` chỉ dựng một tầng nên vẫn là nhà ở").
+  // Bài `NHÀ THƯỜNG KHÔNG ĐỘI MÁI KỲ ĐÀI` (`eraStyle.test.js`) ĐỎ ngay, và nó đúng cả về quy chế
+  // nhà Thanh (dân thường chỉ được lợp 硬山/悬山 = mái hai dốc) lẫn về kiến trúc mã (số tầng do
+  // `ctx.rarity` quyết, nên khai `tiered` là gửi lời hứa "chỉ một tầng" vào một tham số ở chỗ
+  // khác). ⇒ **Khi hạ một mốc, phải nói rõ hạ vì SỰ THẬT hay vì SỰ TIỆN.** Lần này là sự thật:
+  // đi tìm một kiểu thứ sáu cho đủ số sẽ là *mua một con số bằng cách nói dối lịch sử* — đúng thứ
+  // ADR-025 cấm. Ai muốn nâng lại lên 6 thì phải mang theo một công trình có thật, đừng mang theo
+  // một lý lẽ hay.
+  //
+  // ⚠️ Trần "đông nhất ≤ 6" LỎNG HƠN bài (c) (≤ 3) một cách CÓ CHỦ Ý, và lý do là lịch sử chứ
+  // không phải sự tiện tay: mái bằng thật sự là câu trả lời đúng cho sáu nền văn hoá rất khác nhau
+  // (nhà bùn Ai Cập · nhà sân trong Ur · tenement New York · nhà tập thể Nga · HDB Singapore · nhà
+  // sân trong UAE). Ép chúng khác nhau là **mua một con số bằng cách nói dối lịch sử**, đúng thứ
+  // ADR-025 đã cấm với mặt đường. Cái bị cấm là bảng NGHÈO ĐI, không phải bảng có một giá trị đông.
+  //
+  // ⚠️ THỬ-CHO-ĐỎ — ĐÃ CHẠY THẬT CẢ BA, VÀ PHẢI CHẠY BA LẦN RIÊNG CHỨ KHÔNG PHẢI MỘT.
+  // `assert` đầu tiên thất bại là `assert` dừng cả bài, nên một phép phá làm hỏng nhiều thứ cùng
+  // lúc chỉ CHỨNG MINH ĐƯỢC cái gác đứng trước — hai gác sau vẫn có thể đã mất răng mà không ai
+  // biết. Đây đúng bài học *"đối chứng phải hỏi TỪNG chiều một, đừng hỏi tổng"*.
+  //   (1) trả kỷ 9 (Pháp) về `gable` ⇒ còn 4 kiểu ⇒ ĐỎ ở "nghèo đi". ✔ đã chạy 2026-08-24
+  //   (2) trả cả 6 · 8 · 9 · 13 về bảng cũ ⇒ còn 3 kiểu ⇒ ĐỎ ở "nghèo đi" (bài dừng ngay đó;
+  //       "dồn cục" và "liên tiếp" cũng sai nhưng KHÔNG được chạy tới — nên chúng cần ca riêng).
+  //   (3) cô lập gác LIÊN TIẾP: kỷ 2 → `gable`, kỷ 13 → `flat`. Giữ nguyên 5 kiểu và đông nhất
+  //       vẫn 6, chỉ dồn `flat` về liền nhau ⇒ ĐỎ ĐÚNG một mình ở "5 kỷ LIÊN TIẾP". ✔ đã chạy
+  const dem = new Map();
+  for (const era of ERAS) {
+    const r = getVernacularStyle(era).roof;
+    dem.set(r, (dem.get(r) ?? 0) + 1);
+  }
+  const dongNhat = Math.max(...dem.values());
+  assert.ok(dem.size >= 5,
+    `chỉ ${dem.size} kiểu mái nhà dân cho 15 kỷ — nghèo đi so với mốc 5 của 2026-08-24`);
+  assert.ok(dongNhat <= 6,
+    `${dongNhat} kỷ cùng lợp một kiểu mái nhà dân — bảng đang dồn cục`);
+
+  // ⚠️ GÁC "KHÔNG BẢY KỶ LIÊN TIẾP GIỐNG NHAU" — hai con số ở trên KHÔNG bắt được ca này. Một bảng
+  // có 6 kiểu và đông nhất 6 vẫn có thể xếp cả sáu kỷ `flat` nằm liền nhau, và lúc ấy người chơi
+  // đi qua sáu kỷ liên tiếp mà mái nhà không đổi một lần nào — thứ mắt đọc ra là "game đứng yên".
+  // Bản sắc là một trải nghiệm THEO THỨ TỰ, nên nó phải được canh theo thứ tự.
+  let chuoi = 1;
+  let daiNhat = 1;
+  for (let e = 2; e <= 15; e += 1) {
+    chuoi = getVernacularStyle(e).roof === getVernacularStyle(e - 1).roof ? chuoi + 1 : 1;
+    daiNhat = Math.max(daiNhat, chuoi);
+  }
+  assert.ok(daiNhat <= 3,
+    `${daiNhat} kỷ LIÊN TIẾP lợp cùng một kiểu mái nhà dân — đi qua ngần ấy kỷ mà mái không đổi`);
+
+  console.log(`[mái] nhà dân: ${[...dem].map(([k, n]) => `${k}:${n}`).join(' · ')}`
+    + ` → ${dem.size} kiểu, đông nhất ${dongNhat}, chuỗi liên tiếp dài nhất ${daiNhat}`);
 });

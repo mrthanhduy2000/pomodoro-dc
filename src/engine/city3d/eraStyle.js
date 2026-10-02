@@ -83,6 +83,17 @@
  */
 export const ROOF_KINDS = [
   'cone', 'gable', 'flat', 'stepped', 'ziggurat', 'tiered', 'dome', 'pyramid', 'sawtooth', 'blade',
+  // ⚠️ HAI KIỂU THÊM 2026-08-24 (TECH_DEBT #76) — VÀ CHÚNG LÀ MÁI **NHÀ THƯỜNG**, KHÔNG PHẢI MÁI
+  // KỲ ĐÀI. Tám giá trị ở dòng trên sinh ra để tả công trình BIỂU TƯỢNG, nên bảng `vernacularRoof`
+  // xưa nay chỉ nhặt được 3 trong số đó (`flat` × 7 kỷ · `gable` × 7 kỷ · `cone` × 1) — bảy kỷ
+  // liên tiếp lợp y hệt nhau. Đó không phải lỗi điền bảng: từ vựng đơn giản là **thiếu hẳn hai
+  // hình mái phổ biến nhất thế giới**, và không ai điền được thứ không có tên.
+  //   `hip`     = BỐN dốc gặp nhau ở một SỐNG MÁI. `gable` chỉ có hai dốc, `pyramid` có bốn dốc
+  //               nhưng chụm về MỘT ĐIỂM — mái tứ giác là chỗ khuyết ở giữa, và nó là mái nhà ở
+  //               thông dụng nhất hành tinh (nhà ba gian Việt Nam, nhà Lisboa, cottage Anh).
+  //   `mansard` = dốc dưới ĐỨNG, dốc trên THOẢI. Chữ ký của Paris Haussmann; nhìn bất kỳ ảnh mái
+  //               nhà Paris nào cũng ra nó, và không một giá trị nào ở trên tả được khúc gãy ấy.
+  'hip', 'mansard',
 ];
 
 /**
@@ -195,6 +206,20 @@ export const ERA_STYLES = {
     roof: 'tiered', roofPitch: 0.34, eaves: 0.34,
     // Mái CHỒNG nhiều tầng là đặc quyền của cung điện và chùa; luật nhà Thanh còn cấm dân thường
     // lợp kiểu đó. Nhà tứ hợp viện của dân là mái dốc hai phía, một tầng, lợp ngói.
+    // ⚠️ GIỮ `gable` — VÀ ĐÂY LÀ MỘT LẦN BÀI TEST BIẾT KIẾN TRÚC HƠN NGƯỜI SỬA BẢNG (2026-08-24).
+    // Trong lúc mở rộng từ vựng mái nhà dân (`TECH_DEBT #76`) tôi đã đổi dòng này sang `tiered`,
+    // lý lẽ nghe rất xuôi: tứ hợp viện có diềm mái đua rất sâu, dốc thoải, gờ diềm nổi — mà
+    // `tiered` ở hạng `common` chỉ dựng MỘT tầng nên "vẫn là nhà ở, không phải cái điện".
+    // Bài `NHÀ THƯỜNG KHÔNG ĐỘI MÁI KỲ ĐÀI` (`eraStyle.test.js`) ĐỎ ngay, và nó đúng ở hai tầng:
+    //   (a) **Lịch sử**: quy chế nhà Thanh dành mái 庑殿 (tứ giác) và 歇山 (chồng diêm) cho cung
+    //       điện và đền miếu; dân thường chỉ được lợp 硬山/悬山 — tức đúng MÁI HAI DỐC. `gable`
+    //       xưa nay là câu trả lời ĐÚNG cho dòng này, không phải một chỗ trống chưa ai điền.
+    //   (b) **Kiến trúc mã**: số tầng của `tiered` do `ctx.rarity` quyết định, không do tên mái.
+    //       Khai `tiered` cho nhà dân là gửi lời hứa "chỉ một tầng" vào một tham số nằm ở chỗ
+    //       khác — ngày nào một nhà dân được dựng ở hạng `rare` thì dân thường Bắc Kinh mọc mái
+    //       chồng diêm, đúng thứ luật cấm, và không có gì đỏ lên.
+    // ⇒ Thứ thật sự phân biệt mái siheyuan không nằm ở HÌNH mái mà ở ĐỘ ĐUA CỦA DIỀM (`eaves`) —
+    // một trường khác, đã có sẵn. Đừng đổi dòng này lần nữa mà không đọc hết đoạn trên.
     vernacularRoof: 'gable',
     // đường lát THANH THẠCH (青石) kinh thành, kẻ ô vuông vắn theo quy hoạch Chu Lễ. Tên gọi
     // "đá xanh" là mô tả đúng: loại granite này ngả LỤC-xám, khác hẳn granite ngả LAM của Paris.
@@ -238,7 +263,11 @@ export const ERA_STYLES = {
     roof: 'tiered', roofPitch: 0.4, eaves: 0.4,
     // Mái chồng diềm cong là của ĐÌNH/CHÙA. Nhà ba gian Bắc Bộ là mái dốc hai phía lợp ngói âm
     // dương, hiên thấp — cùng vật liệu, khác hẳn dáng. Giữ `eaves` lớn nên hiên vẫn thò ra kiểu Việt.
-    vernacularRoof: 'gable',
+    // ⚠️ MÁI NHÀ THƯỜNG ĐỔI `gable` → `hip` (2026-08-24, `TECH_DEBT #76`). Nhà ba gian Bắc Bộ lợp
+    // mái TỨ GIÁC (bốn dốc gặp nhau ở một sống ngắn), hiên chạy suốt mặt trước — khác hẳn mái hai
+    // dốc có đầu hồi dựng đứng của nhà Fachwerk Đức ngay kỷ trước. Trước bản này cả hai cùng khai
+    // `gable`, tức hai nền kiến trúc ngược nhau về hình bóng lại ra cùng một cái mái.
+    vernacularRoof: 'hip',
     // đường GẠCH NGHIÊNG + đất ĐỎ laterite làng Bắc Bộ — đất miền Bắc ngả đỏ vì oxit sắt, và gạch
     // nghiêng lát sân đình cũng đỏ. Đây là mặt đường ĐỎ NHẤT cả 15 kỷ, và đó là sự thật về đất
     // Việt Nam chứ không phải một lựa chọn cho khác kỷ 5.
@@ -287,7 +316,10 @@ export const ERA_STYLES = {
     massScale: 0.64, spread: 1.12,
     roof: 'gable', roofPitch: 0.52, eaves: 0.24,
     // Nhà phố Lisboa cũng mái ngói dốc như kho cảng — khác ở quy mô.
-    vernacularRoof: 'gable',
+    // ⚠️ MÁI NHÀ THƯỜNG ĐỔI `gable` → `hip` (2026-08-24, `TECH_DEBT #76`). Nhà phố Lisboa (kể cả
+    // khu Pombalina dựng lại sau động đất 1755) lợp ngói ống trên mái TỨ GIÁC — nhìn bất kỳ ảnh
+    // nào chụp từ Miradouro da Graça cũng ra một biển mái bốn dốc, không thấy đầu hồi tam giác.
+    vernacularRoof: 'hip',
     // calçada portuguesa — đá vôi TRẮNG khảm hoa văn, sáng nhất bảng
     roadMaterial: 'stone', roadColor: '#c9c3b4',
     windows: 'square',
@@ -306,7 +338,12 @@ export const ERA_STYLES = {
     roof: 'pyramid', roofPitch: 0.28, eaves: 0.26,
     // Chóp bốn mặt là mái của điện Panthéon. Nhà phố Haussmann là mái MANSARD — dốc đứng, lợp
     // kẽm, ngắt thành hai độ dốc. `gable` là cách gần nhất dựng được bằng bộ khối hiện có.
-    vernacularRoof: 'gable',
+    // ⚠️ MÁI NHÀ THƯỜNG ĐỔI `gable` → `mansard` (2026-08-24, `TECH_DEBT #76`). Đây là thay đổi
+    // đáng giá nhất của cả bảng: mái mansard (dốc dưới gần như dựng đứng chứa tầng áp mái, dốc
+    // trên rất thoải) là **chữ ký của Paris Haussmann**, tới mức nó được UNESCO đưa vào hồ sơ di
+    // sản. Kỳ quan kỷ này là điện Panthéon (`pyramid`), còn thứ phủ kín khung hình là hàng trăm
+    // nóc nhà phố — nên nếu mái nhà dân sai thì cả kỷ 9 sai, dù kỳ quan có đúng tới đâu.
+    vernacularRoof: 'mansard',
     // pavé Paris — đá granite xám ngả LAM rõ, mặt đã mòn bóng vì xe ngựa
     roadMaterial: 'stone', roadColor: '#767f8a',
     windows: 'arch',
@@ -379,7 +416,13 @@ export const ERA_STYLES = {
     massScale: 1.24, spread: 0.92,
     roof: 'flat', roofPitch: 0.1, eaves: 0.08,
     // Chung cư Nhật thời Metabolism: mái bằng, giống tháp nang. Không đổi.
-    vernacularRoof: 'flat',
+    // ⚠️ MÁI NHÀ THƯỜNG ĐỔI `flat` → `gable` (2026-08-24, `TECH_DEBT #76`) — và bản cũ là một LỖI
+    // LỊCH SỬ, không phải một lựa chọn mỹ thuật. Kỳ quan kỷ này (tháp nang Nakagin) đúng là mái
+    // bằng, nhưng nhà ở Nhật thời hậu chiến thì ngược lại: mái dốc lợp ngói kawara, tới mức "biển
+    // ngói xám" là hình ảnh kinh điển của mọi thị trấn Nhật. Đây chính là ca mà `vernacularRoof`
+    // sinh ra để bắt (Phase 7C) — kỳ đài và nhà ở của cùng một nền văn hoá gần như không bao giờ
+    // cùng đáp án — và nó đã bị bỏ lỡ vì bảng chỉ được điền bằng giá trị có sẵn lúc ấy.
+    vernacularRoof: 'gable',
     // asphalt Tokyo hậu chiến phẳng lì, kẻ vạch trắng — xám ngả lam, sẫm
     roadMaterial: 'concrete', roadColor: '#42474f',
     windows: 'grid',

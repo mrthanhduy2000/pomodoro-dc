@@ -19,9 +19,16 @@ import {
   reduce,
   timeline,
 } from '../engine/timer.js';
+import { buildCity, cmdCancelPlan, cmdPlan } from '../engine/city.js';
 import { newEventId, useLogStore } from '../store/logStore.js';
 import { breakJobKey, cancelPush, focusJobKey, schedulePush } from '../lib/push.js';
 import { chime } from './sound.js';
+
+/** The city as of `t`, read straight from the store (for commands, which must not use a stale render). */
+function cityAt(t) {
+  const evs = useLogStore.getState().events;
+  return buildCity(evs, reduce(evs, t), t);
+}
 
 function useNow(fast) {
   const [now, setNow] = useState(() => Date.now());
@@ -46,6 +53,10 @@ export function useTimerApp() {
   const now = useNow(Boolean(written.active));
   const state = useMemo(() => reduce(events, now), [events, now]);
   const tl = timeline(written, now);
+
+  // The city only needs minute precision; a finished session reaches it through the log itself.
+  const cityNow = Math.floor(now / 60_000) * 60_000;
+  const city = useMemo(() => buildCity(events, reduce(events, cityNow), cityNow), [events, cityNow]);
 
   // Facts that became true while nobody pressed anything (target reached): written with their
   // theoretical time and a deterministic id, so every device agrees.
@@ -124,13 +135,27 @@ export function useTimerApp() {
     if (act(cmdEndBreak(st, t))) cancelPush(breakJobKey(st.active.sid));
   }, [act]);
 
+  const planBuilding = useCallback((blueprintKey, plot) => {
+    const t = Date.now();
+    return act(cmdPlan(cityAt(t), t, { planId: newEventId('p').slice(2), blueprintKey, plot }));
+  }, [act]);
+
+  const cancelPlan = useCallback((planId) => {
+    const t = Date.now();
+    return act(cmdCancelPlan(cityAt(t), t, planId));
+  }, [act]);
+
   const setPrefs = useCallback((patch) => {
     act({ id: newEventId('prefs'), at: Date.now(), kind: 'prefs.set', data: patch });
   }, [act]);
 
   return {
     now,
+    cityNow,
     state,
+    city,
+    planBuilding,
+    cancelPlan,
     timeline: tl,
     justDone,
     skipBreak: () => act(cmdSkipBreak(reduce(useLogStore.getState().events, Date.now()), Date.now())),

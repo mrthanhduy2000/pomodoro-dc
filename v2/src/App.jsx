@@ -4,12 +4,14 @@ import { useTimerApp } from './app/useTimerApp.js';
 import { getSyncStatus, onSyncStatus, startSync } from './lib/sync.js';
 import { todaySummary } from './engine/stats.js';
 import { clock } from './ui/format.js';
+import CityView from './ui/CityView.jsx';
 import FocusView from './ui/FocusView.jsx';
 import StatsView from './ui/StatsView.jsx';
 import SettingsView from './ui/SettingsView.jsx';
 
 const TABS = [
   { id: 'focus', label: 'Tập trung' },
+  { id: 'city', label: 'Thành phố' },
   { id: 'stats', label: 'Thống kê' },
   { id: 'settings', label: 'Cài đặt' },
 ];
@@ -49,7 +51,8 @@ export default function App() {
         </div>
       </header>
       <main className="page">
-        {tab === 'focus' && <FocusView app={app} />}
+        {tab === 'focus' && <FocusView app={app} goTo={setTab} />}
+        {tab === 'city' && <CityView app={app} />}
         {tab === 'stats' && <StatsView app={app} />}
         {tab === 'settings' && <SettingsView app={app} sync={sync} />}
       </main>

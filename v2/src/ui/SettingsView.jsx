@@ -3,6 +3,11 @@ import { useState } from 'react';
 import { useLogStore } from '../store/logStore.js';
 import { loadLegacyEvents } from '../lib/legacy.js';
 import { enablePush, pushEnabled, pushSupport } from '../lib/push.js';
+import { syncNow } from '../lib/sync.js';
+import setupSql from '../../../supabase/v2_events.sql?raw';
+
+// The one step the app cannot do for itself: creating the table needs Đàm's Supabase login.
+const SQL_EDITOR = 'https://supabase.com/dashboard/project/jcefdsdccmnmqvuwelmm/sql/new';
 
 function NumberField({ label, value, min, max, onCommit }) {
   const [draft, setDraft] = useState(String(value));
@@ -23,6 +28,41 @@ function NumberField({ label, value, min, max, onCommit }) {
         }}
       />
     </label>
+  );
+}
+
+/** Shown only while the cloud table is missing: copy the SQL, paste it in Supabase, come back. */
+function CloudSetup() {
+  const [copied, setCopied] = useState('');
+  return (
+    <div className="setup">
+      <p>Bật đồng bộ một lần duy nhất (khoảng 1 phút):</p>
+      <ol>
+        <li>
+          <button
+            type="button"
+            className="btn btn--small btn--primary"
+            onClick={async () => {
+              try {
+                await navigator.clipboard.writeText(setupSql);
+                setCopied('Đã chép lệnh.');
+              } catch {
+                setCopied('Không chép được tự động — mở mục bên dưới và chép tay.');
+              }
+            }}
+          >
+            Chép lệnh tạo bảng
+          </button>
+          {copied && <span className="muted small"> {copied}</span>}
+        </li>
+        <li><a href={SQL_EDITOR} target="_blank" rel="noreferrer">Mở trình soạn SQL của Supabase</a>, dán vào, bấm <b>Run</b>.</li>
+        <li>Quay lại đây: app tự kiểm tra lại, hoặc <button type="button" className="link" onClick={() => void syncNow()}>kiểm tra ngay</button>.</li>
+      </ol>
+      <details>
+        <summary className="muted small">Xem lệnh (chỉ tạo bảng mới events_v2, không đụng dữ liệu bản 1)</summary>
+        <pre className="sql">{setupSql}</pre>
+      </details>
+    </div>
   );
 }
 
@@ -102,7 +142,7 @@ export default function SettingsView({ app, sync }) {
       <section className="card">
         <span className="eyebrow">Đồng bộ</span>
         <p className={`sync sync--${sync.state}`}>{SYNC_TEXT[sync.state] ?? sync.state}</p>
-        {sync.detail && <p className="muted small">{sync.detail}</p>}
+        {sync.state === 'missing-table' ? <CloudSetup /> : sync.detail && <p className="muted small">{sync.detail}</p>}
         {outbox > 0 && <p className="muted small">{outbox} thay đổi đang chờ gửi lên.</p>}
         <p className="muted small">Bản 2 · {__APP_COMMIT__} · máy {deviceId.slice(0, 8)}</p>
       </section>

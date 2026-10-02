@@ -32,15 +32,17 @@ Production branch `main` carries **both** work streams (merged 2026-08-28 on Đ�
 ⚠️ Phase 21 therefore shipped **before** Đàm reviewed its screenshots — the "waiting on Đàm's eyes"
 item below is still live, it just now reviews something already running.
 
-- **V2 REWRITE — STAGE 1 SHIPPED (2026-10-03, ADR-101). READ `v2/DESIGN.md` FIRST.**
+- **V2 REWRITE — STAGES 1–4 SHIPPED (2026-10-03, ADR-101 + ADR-102). READ `v2/DESIGN.md` FIRST.**
   Đàm ordered a full rewrite ("viết lại cả code · mọi rule làm mới · bắt đầu lại từ số 0"). v2 lives
   in `v2/`, is built by the same `npm run build`, and is served at **`/v2/`** beside v1 until cutover.
-  Plan and gates: `v2/DESIGN.md`. Stage 1 = timer + session log + sync + push + PWA + v1 history
-  import. ⚠️ **Its whole state is an append-only EVENT LOG** (`events_v2`, anon may SELECT/INSERT
-  only) reduced by a pure engine (`v2/src/engine/timer.js`) — not CAS. ⚠️ v2 has **no write path**
-  to `game_state`/`timer_live`. ⚠️ On localhost sync is OFF unless `?sync=1`.
-  **Next: Gate 1** — Đàm runs `supabase/v2_events.sql`, then uses `/v2/` for real for 3 days.
-  Only then stage 2 (the 2D brick game loop). Do not start the 3D city of v2 before Gate 2.
+  ⚠️ **Its whole state is an append-only EVENT LOG** (`events_v2`, anon may SELECT/INSERT only)
+  reduced by pure engines (`v2/src/engine/timer.js`, `city.js`) — not CAS. The 3D diary city is
+  DERIVED from that log; only Đàm's choices (`build.plan`/`build.cancel`) are stored. ⚠️ v2 has
+  **no write path** to `game_state`/`timer_live`. ⚠️ On localhost sync is OFF unless `?sync=1`.
+  Gates 1–2 were skipped **by Đàm's order** ("tiếp tục toàn bộ").
+  **Next:** (1) Đàm runs `supabase/v2_events.sql` (Settings → *Chép lệnh tạo bảng*) — until then
+  each device keeps its own city; (2) measure the city's frame time on the iPhone; (3) stage 5
+  cutover only after sync is on and Đàm approves by eye (Gate 5).
 
 - **Loop — ROUND 64 (2026-09-17, LATEST): FIVE FAULTS ĐÀM COULD SEE (ADR-100).**
   ⚠️ **NEVER PUT A STATIC HINT ON SCREEN.** Round 63 quoted round 40's law and then shipped one

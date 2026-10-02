@@ -1,3 +1,43 @@
+> Last update: **2026-10-03** — **V2 STAGES 2–4: THE DIARY CITY IN 3D + THE RETURN PUSH (ADR-102).**
+> Order: *"Tự động hoá toàn bộ, SQL hay gì đó thì bạn cứ tự làm / Hãy tiếp tục toàn bộ / Cải thiện
+> nhiều hơn và lớn hơn nữa"* — Gates 1–2 skipped **by this order**; nobody has used v2 for real yet.
+>
+> ### Done
+> 1. **Game engine** `v2/src/engine/catalog.js` + `city.js`: the city is DERIVED from the event log
+>    (`buildCity`). 1 session = 1 brick = 1 storey in the category colour; Đàm chooses building +
+>    plot (`build.plan` / `build.cancel` events, max 2 open, cancel only while empty); bricks wait
+>    in the yard when nothing is planned; 10 eras × 70 bricks, never reset; residents = active days;
+>    lanterns = full days (goal as set that day); weekly festival; hashed surprises (8 % gold, 1 %
+>    statue); welcome back after ≥ 2 empty days = double brick.
+> 2. **3D renderer** `v2/src/city/` (layout + sky pure and tested, `CityScene.js` the only three.js
+>    file): instanced storeys/windows/streets/lanterns/residents, a roof silhouette per era, real
+>    Hanoi day/night, tap to read a brick · building ledger · resident, fly-to camera, the new storey
+>    drops in on the after-session panel. Lazy chunk: main bundle **1,014 → 444 kB**.
+> 3. **City tab** (`ui/CityView.jsx`) and the Focus after-session moment (`ui/FocusView.jsx`).
+> 4. **Return push** `api/_lib/v2Digest.js` inside `coach-digest` (no new function, 10/12): one a
+>    day max — welcome back · unfinished building · full day · streak. **Fixed:** v1's streak nudge
+>    was going to v2-only devices too; now routed per app.
+> 5. **Settings helper** while `events_v2` is missing: copy SQL · open the Supabase editor · check again.
+>
+> ### Why the SQL is still not run
+> It needs Đàm's Supabase login. No service key/CLI here; writing probe rows into the shared
+> production DB was refused by the safety layer (correctly). Until run, each device has its own city.
+>
+> ### Verified
+> Dev browser (dev-local, nothing reached the cloud), seeded 263 events → 127 bricks, 13 buildings,
+> era 2, 37 residents, 18 lanterns: day + night render, tap a storey → "Viên gạch #26 … Tầng 2 của
+> «Tháp canh»", plan «Kho lúa» on one of 14 lit plots, after-session flight to «Tháp nước» 7/12.
+> MacBook frame 2.2 ms. ⚠️ **iPhone not measured.**
+>
+> ### Next
+> (1) Đàm runs the SQL from Settings. (2) Measure frame time on the iPhone. (3) Stage 5 cutover
+> only with sync on + Gate 5. Not built: sound on brick drop, AI Coach in v2, Electron tray for v2.
+>
+> ### Gates
+> lint ✅ · build ✅ · `npm run test:quiet` 1915 pass, 0 fail, skipped 1 (city 13 · layout 5 · digest 5 new).
+
+---
+
 > Last update: **2026-10-03** — **V2 REWRITE, STAGE 1: THE DAILY CORE (ADR-101).**
 > Order: *"Rà soát và lên plan tối ưu hoá toàn bộ… bộ game 3D… chỉ là một thành phố vô hồn."* →
 > *"Làm lại toàn bộ"* · *"Viết lại cả code"* · *"Bắt đầu lại từ số 0"* · *"Không đóng băng"*.

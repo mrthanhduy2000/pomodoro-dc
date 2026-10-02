@@ -1370,7 +1370,7 @@ riêng, ĐƯỢC PHÉP import trực tiếp từ `src/engine/` (tiền lệ: `ap
 được import từ `src/store/`/`src/components/` — vi phạm chiều này là dấu hiệu coupling sai hướng,
 ghi vào `TECH_DEBT.md` nếu phát hiện thay vì âm thầm bỏ qua.
 
-## 7b. v2 — event-log architecture (stage 1, ADR-101)
+## 7b. v2 — event-log architecture (stage 1, ADR-101; city + return push, ADR-102)
 
 ```
 UI (v2/src/ui) ──actions──▶ useTimerApp ──cmd*(state, now)──▶ new events
@@ -1395,6 +1395,14 @@ UI (v2/src/ui) ──actions──▶ useTimerApp ──cmd*(state, now)──�
   prefix matches the job's `payload.app` (`subscriptionMatchesJob`).
 - **Storage flow**: localStorage `dc-pomodoro-v2` on each device; cloud `events_v2`. v2 never writes
   `game_state` / `timer_live`; `legacy.js` reads `game_state` once, read-only, for the history import.
+- **City flow (stages 2–4, ADR-102)**: `buildCity(events, reduce(events, minute), minute)` derives
+  bricks → buildings (FIFO, yard when nothing planned) → residents, lanterns, statues, festivals,
+  era. The only stored choices are `build.plan` / `build.cancel` events (`cmdPlan` / `cmdCancelPlan`).
+  `CityScene` (three.js, lazy chunk) receives the derived model and rebuilds only when its signature
+  changes; `layout.js` and `sky.js` decide positions and light, purely.
+- **Return push flow**: the 17:00 `coach-digest` cron runs v1's digest and `runV2Digest` side by
+  side (`Promise.allSettled`). `runV2Digest` pages `events_v2` with the service role, asks the pure
+  `pickV2Nudge` for at most one message, and sends it to v2 subscriptions only (`sendToApp`).
 
 ## 8. Quy tắc lâu dài (bắt buộc cho mọi thay đổi tương lai)
 

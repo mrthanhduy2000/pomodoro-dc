@@ -10,6 +10,22 @@
 > **Muốn hiểu VÌ SAO một quyết định được chọn** → `ARCHITECTURE_DECISIONS.md`. **Muốn biết migration
 > cụ thể nào cần chạy** → `MIGRATION.md`.
 
+## 2026-10-03 — v2 stages 2–4: the diary city in 3D and the return push (ADR-102)
+
+**Purpose.** Đàm ordered the rest of the plan at once ("tiếp tục toàn bộ… lớn hơn nữa"), skipping
+the waiting gates. The city now answers "what did I do on Tuesday": every session is one dated storey.
+
+**Scope.** `v2/src/engine/catalog.js` + `city.js` (city derived from the log; `build.plan` /
+`build.cancel` are the only stored choices), `v2/src/city/` (pure layout + sky, one three.js scene,
+lazy-loaded), City tab, after-session flight, `api/_lib/v2Digest.js` folded into `coach-digest`,
+a Settings helper for the one-off SQL.
+
+**Impact.** v1 unchanged, except its streak push no longer reaches v2-only devices. v2 still needs
+`supabase/v2_events.sql` run once before two devices share one city.
+
+**Compatibility.** No v1 table written. No new serverless function (10/12). New event kinds are
+ignored by the stage-1 timer reducer.
+
 ## 2026-10-03 — v2 rewrite, stage 1: the daily core (ADR-101)
 
 **Purpose.** Đàm judged the game not sticky and the 3D city "soulless", and ordered a full rewrite

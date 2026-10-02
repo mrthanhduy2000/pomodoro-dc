@@ -1029,7 +1029,7 @@
 └── AI_HANDOFF_KNOWLEDGE.md       # Bàn giao tri thức ĐẦY ĐỦ nhất, viết cho AI không đọc được code
 ```
 
-## `v2/` — the rewrite (ADR-101, `v2/DESIGN.md`)
+## `v2/` — the rewrite (ADR-101, ADR-102, `v2/DESIGN.md`)
 
 A second app in the same repo, built by the same `npm run build` into `dist/v2`, served at `/v2/`.
 It imports nothing from `src/` except the Supabase client (`src/lib/supabase.js`) and the shared
@@ -1040,12 +1040,17 @@ v2/
 ├── DESIGN.md            game rules, stages, gates, v2 laws — read first
 ├── index.html · vite.config.js (root v2, base /v2/, own PWA scope)
 └── src/
-    ├── engine/          PURE + tested: timer.js · stats.js · log.js · legacyImport.js
+    ├── engine/          PURE + tested: timer.js · stats.js · log.js · legacyImport.js ·
+    │                    catalog.js (eras, blueprints) · city.js (buildCity — the city from the log)
+    ├── city/            layout.js · sky.js (pure, tested) · CityScene.js (the ONLY three.js file)
     ├── store/           logStore.js — Zustand persist 'dc-pomodoro-v2' (events, outbox, cursor)
     ├── lib/             sync.js (events_v2) · push.js (platform 'v2:…') · legacy.js (read-only v1)
     ├── app/             useTimerApp.js — the only bridge UI ↔ engine · sound.js
-    └── ui/              FocusView · StatsView · SettingsView · TimerRing · format.js
+    └── ui/              FocusView · CityView · StatsView · SettingsView · TimerRing · format.js ·
+                         CityCanvas (mounts CityScene) · LazyCityCanvas (three.js as its own chunk)
 ```
+Server side: `api/_lib/v2Digest.js` (pure `pickV2Nudge`, imports the v2 engine) is called by
+`api/coach-digest.js`; its test is `api/_tests/v2-digest.test.js`.
 Rules: tests sit next to their file (`*.test.js`, picked up by `npm test`); `engine/` imports no
 React, no store, no browser API; `v2/.import/` is gitignored (it holds personal exports).
 SQL: `supabase/v2_events.sql`.

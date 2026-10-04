@@ -1,5 +1,7 @@
-/** A short two-note chime, synthesised so v2 ships no audio files. Silent if audio is blocked. */
+/** Short synthesised sounds, so v2 ships no audio files. Silent if audio is blocked. */
 let ctx = null;
+
+/** Two rising notes: the session is done. */
 
 export function chime() {
   try {
@@ -19,5 +21,26 @@ export function chime() {
     });
   } catch {
     // audio unavailable (autoplay policy, old browser) — the visual panel still shows
+  }
+}
+
+/** A soft wooden knock: the brick lands on its storey (plan: "the camera flies… with a sound"). */
+export function thud() {
+  try {
+    ctx ??= new (window.AudioContext || window.webkitAudioContext)();
+    const t = ctx.currentTime;
+    const osc = ctx.createOscillator();
+    const gain = ctx.createGain();
+    osc.type = 'triangle';
+    osc.frequency.setValueAtTime(190, t);
+    osc.frequency.exponentialRampToValueAtTime(70, t + 0.16);
+    gain.gain.setValueAtTime(0.0001, t);
+    gain.gain.exponentialRampToValueAtTime(0.35, t + 0.008);
+    gain.gain.exponentialRampToValueAtTime(0.0001, t + 0.22);
+    osc.connect(gain).connect(ctx.destination);
+    osc.start(t);
+    osc.stop(t + 0.25);
+  } catch {
+    // audio unavailable — the storey still drops
   }
 }

@@ -17,6 +17,7 @@ import {
   statueSpot, storeyBox, storeyHeight, yardSpot,
 } from './layout.js';
 import { skyAt } from './sky.js';
+import { thud } from '../app/sound.js';
 
 const GOLD = '#f2c14e';
 const MAX_RESIDENTS = 320;
@@ -127,6 +128,14 @@ export class CityScene {
     this.ro.observe(canvas);
     this.resize();
 
+    // A canvas scrolled out of view (the City tab on a phone, below the fold) draws nothing:
+    // shadows at 40 fps for a picture nobody sees is the iPhone's battery, not ours.
+    this.onScreen = true;
+    this.io = typeof IntersectionObserver === 'function'
+      ? new IntersectionObserver(([entry]) => { this.onScreen = entry?.isIntersecting ?? true; })
+      : null;
+    this.io?.observe(canvas);
+
     if (interactive) this.bindPicking();
     this.renderer.setAnimationLoop((t) => this.frame(t));
   }
@@ -185,7 +194,7 @@ export class CityScene {
     this.setSelection(selectedPlan);
     if (model.focusSid && model.focusSid !== this.focusedSid) {
       this.focusedSid = model.focusSid;
-      this.startDrop(model.focusSid);
+      this.startDrop(model.focusSid, Boolean(model.dropSound));
     }
     if (!this.framed) {
       this.framed = true;
@@ -581,12 +590,12 @@ export class CityScene {
   }
 
   /** The after-session moment: the camera flies to the brick, the storey drops into place. */
-  startDrop(sid) {
+  startDrop(sid, sound = false) {
     const idx = [];
     (this.storeyRefs ?? []).forEach((ref, i) => { if (ref.brick.sid === sid) idx.push(i); });
     const ref = this.storeyRefs?.[idx[0]];
     if (ref?.planId) this.focusBuilding(ref.planId, 1600);
-    this.drop = idx.length ? { idx, start: performance.now() + 900 } : null;
+    this.drop = idx.length ? { idx, start: performance.now() + 900, sound } : null;
   }
 
   placeResidents(t) {
@@ -607,6 +616,7 @@ export class CityScene {
   }
 
   frame(t) {
+    if (!this.onScreen && !this.fly && !this.drop) return;
     if (t - this.lastFrame < FRAME_MS) return;
     this.lastFrame = t;
     if (this.fly) {
@@ -649,12 +659,16 @@ export class CityScene {
       this.windows.setMatrixAt(i, shift.makeTranslation(0, lift, 0).multiply(this.windowBase[i]));
     });
     this.windows.instanceMatrix.needsUpdate = true;
-    if (k >= 1) this.drop = null;
+    if (k >= 1) {
+      if (this.drop.sound) thud();
+      this.drop = null;
+    }
   }
 
   dispose() {
     this.renderer.setAnimationLoop(null);
     this.ro.disconnect();
+    this.io?.disconnect();
     if (this.onDown) {
       this.canvas.removeEventListener('pointerdown', this.onDown);
       this.canvas.removeEventListener('pointerup', this.onUp);

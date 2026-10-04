@@ -66,6 +66,58 @@ function CloudSetup() {
   );
 }
 
+const NEW_COLORS = ['#e05a47', '#c45bb2', '#4a7bd0', '#3f9b7a', '#d99a2b', '#8a6a3c'];
+
+/** One category row: rename on blur, recolour on pick, hide/show. Hiding never deletes a brick. */
+function CategoryRow({ cat, canHide, onSave }) {
+  const [label, setLabel] = useState(cat.label);
+  return (
+    <li className={`cat-row${cat.hidden ? ' cat-row--hidden' : ''}`}>
+      <input type="color" className="cat-row__color" value={/^#[0-9a-f]{6}$/i.test(cat.color) ? cat.color : '#94a3b8'} aria-label={`Màu của ${cat.label}`} onChange={(e) => onSave({ ...cat, color: e.target.value })} />
+      <input
+        className="cat-row__label"
+        value={label}
+        maxLength={40}
+        aria-label="Tên loại việc"
+        onChange={(e) => setLabel(e.target.value)}
+        onBlur={() => {
+          const v = label.trim();
+          if (v && v !== cat.label) onSave({ ...cat, label: v });
+          else setLabel(cat.label);
+        }}
+      />
+      <button type="button" className="link" disabled={!cat.hidden && !canHide} onClick={() => onSave({ ...cat, hidden: !cat.hidden })}>
+        {cat.hidden ? 'Hiện lại' : 'Ẩn'}
+      </button>
+    </li>
+  );
+}
+
+function Categories({ categories, onSave }) {
+  const list = [...categories.values()];
+  const visible = list.filter((c) => !c.hidden).length;
+  const [draft, setDraft] = useState('');
+  const add = () => {
+    const label = draft.trim();
+    if (!label) return;
+    onSave({ label, color: NEW_COLORS[list.length % NEW_COLORS.length] });
+    setDraft('');
+  };
+  return (
+    <section className="card">
+      <span className="eyebrow">Loại việc</span>
+      <p className="muted small">Màu của loại việc là màu tầng nhà. Ẩn thì không hiện khi chọn nữa, các viên gạch cũ vẫn giữ nguyên.</p>
+      <ul className="cats">
+        {list.map((c) => <CategoryRow key={`${c.id}:${c.at}`} cat={c} canHide={visible > 1} onSave={onSave} />)}
+      </ul>
+      <form className="cat-add" onSubmit={(e) => { e.preventDefault(); add(); }}>
+        <input value={draft} maxLength={40} onChange={(e) => setDraft(e.target.value)} placeholder="Loại việc mới…" aria-label="Tên loại việc mới" />
+        <button type="submit" className="btn btn--small" disabled={!draft.trim()}>Thêm</button>
+      </form>
+    </section>
+  );
+}
+
 const SYNC_TEXT = {
   idle: 'Đang khởi động…',
   syncing: 'Đang đồng bộ…',
@@ -89,11 +141,13 @@ export default function SettingsView({ app, sync }) {
       <section className="card">
         <span className="eyebrow">Nhịp làm việc</span>
         <div className="fields">
-          <NumberField label="Phiên tập trung (phút)" value={prefs.focusMin} min={5} max={180} onCommit={(n) => app.setPrefs({ focusMin: n })} />
-          <NumberField label="Nghỉ giải lao (phút)" value={prefs.breakMin} min={1} max={60} onCommit={(n) => app.setPrefs({ breakMin: n })} />
-          <NumberField label="Mục tiêu mỗi ngày (phiên)" value={prefs.dailyGoal} min={1} max={20} onCommit={(n) => app.setPrefs({ dailyGoal: n })} />
+          <NumberField key={`f${prefs.focusMin}`} label="Phiên tập trung (phút)" value={prefs.focusMin} min={5} max={180} onCommit={(n) => app.setPrefs({ focusMin: n })} />
+          <NumberField key={`b${prefs.breakMin}`} label="Nghỉ giải lao (phút)" value={prefs.breakMin} min={1} max={60} onCommit={(n) => app.setPrefs({ breakMin: n })} />
+          <NumberField key={`g${prefs.dailyGoal}`} label="Mục tiêu mỗi ngày (phiên)" value={prefs.dailyGoal} min={1} max={20} onCommit={(n) => app.setPrefs({ dailyGoal: n })} />
         </div>
       </section>
+
+      <Categories categories={app.state.categories} onSave={app.upsertCategory} />
 
       <section className="card">
         <span className="eyebrow">Thông báo</span>

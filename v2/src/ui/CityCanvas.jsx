@@ -7,7 +7,7 @@ import { CityScene } from '../city/CityScene.js';
  * new model needs a rebuild (it compares a signature), so passing the model on every render is cheap.
  */
 export default function CityCanvas({
-  city, categories, now, picking = false, selectedPlan = null, focusSid = null, onPick, interactive = true,
+  city, categories, now, picking = false, selectedPlan = null, focusSid = null, dropSound = false, onPick, interactive = true,
   className = '', onScene = null, label = 'Thành phố',
 }) {
   const canvasRef = useRef(null);
@@ -35,9 +35,9 @@ export default function CityCanvas({
   const categoriesKey = useMemo(() => [...categories.values()].map((c) => `${c.id}${c.color}`).join('|'), [categories]);
 
   useEffect(() => {
-    modelRef.current = { city, categories, categoriesKey, now, picking, selectedPlan, focusSid };
+    modelRef.current = { city, categories, categoriesKey, now, picking, selectedPlan, focusSid, dropSound };
     sceneLocal.current?.setModel(modelRef.current);
-  }, [city, categories, categoriesKey, now, picking, selectedPlan, focusSid]);
+  }, [city, categories, categoriesKey, now, picking, selectedPlan, focusSid, dropSound]);
 
   return <canvas ref={canvasRef} className={`city-canvas ${className}`} role="img" aria-label={label} />;
 }

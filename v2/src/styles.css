@@ -193,3 +193,11 @@ p { margin: 8px 0; line-height: 1.45; }
   .city-side { max-height: none; overflow: visible; }
   .tab { padding: 8px 6px; font-size: 14px; }
 }
+
+/* Categories (Settings) */
+.cats { list-style: none; padding: 0; margin: 10px 0; display: grid; gap: 8px; }
+.cat-row { display: grid; grid-template-columns: 34px 1fr auto; align-items: center; gap: 10px; }
+.cat-row--hidden { opacity: .5; }
+.cat-row__color { width: 34px; height: 30px; padding: 0; border: 1px solid var(--line); border-radius: 8px; background: none; cursor: pointer; }
+.cat-row__label, .cat-add input { min-width: 0; border: 1px solid var(--line); background: var(--bg); color: var(--ink); border-radius: 10px; padding: 7px 10px; font: inherit; }
+.cat-add { display: grid; grid-template-columns: 1fr auto; gap: 8px; }

@@ -1,14 +1,24 @@
-import { useState } from 'react';
+import { useRef, useState } from 'react';
 
 import { brickReport } from '../engine/city.js';
 import { eraStyle } from '../engine/catalog.js';
 import CityCanvas from './LazyCityCanvas.jsx';
 import TimerRing from './TimerRing.jsx';
 import { clock, hoursMinutes } from './format.js';
+import { useSpaceKey } from './keys.js';
 import { lastDays, todaySummary } from '../engine/stats.js';
 
 function visibleCategories(state) {
   return [...state.categories.values()].filter((c) => !c.hidden);
+}
+
+/** The last session started on v2 — its category and length are what Đàm most likely wants again. */
+function lastChoice(state) {
+  let last = null;
+  for (const s of state.sessions.values()) {
+    if (!s.legacy && (!last || s.startedAt > last.startedAt)) last = s;
+  }
+  return last;
 }
 
 function TodayStrip({ state, now }) {
@@ -71,13 +81,17 @@ function CityLine({ app, goTo }) {
 function IdlePanel({ app, goTo }) {
   const { state } = app;
   const cats = visibleCategories(state);
-  const [categoryId, setCategoryId] = useState(() => cats[0]?.id ?? null);
+  const [last] = useState(() => lastChoice(state));
+  const [categoryId, setCategoryId] = useState(() => (cats.some((c) => c.id === last?.categoryId) ? last.categoryId : cats[0]?.id ?? null));
   const [goal, setGoal] = useState('');
-  const [minutes, setMinutes] = useState(state.prefs.focusMin);
-  const presets = [...new Set([25, 50, state.prefs.focusMin])].sort((a, b) => a - b);
+  const [minutes, setMinutes] = useState(() => last?.targetMin || state.prefs.focusMin);
+  const presets = [...new Set([25, 50, state.prefs.focusMin, minutes])].sort((a, b) => a - b);
+  const form = useRef(null);
+  useSpaceKey(() => form.current?.requestSubmit());
 
   return (
     <form
+      ref={form}
       className="idle"
       onSubmit={(e) => {
         e.preventDefault();
@@ -118,7 +132,7 @@ function IdlePanel({ app, goTo }) {
 
       <input className="goal" value={goal} onChange={(e) => setGoal(e.target.value)} placeholder="Phiên này làm gì? (không bắt buộc)" maxLength={140} />
 
-      <button type="submit" className="btn btn--primary btn--big">Bắt đầu tập trung</button>
+      <button type="submit" className="btn btn--primary btn--big" title="Phím cách">Bắt đầu tập trung</button>
     </form>
   );
 }
@@ -128,6 +142,11 @@ function RunningPanel({ app }) {
   const a = state.active;
   const cat = a?.categoryId ? state.categories.get(a.categoryId) : null;
   const [confirmCancel, setConfirmCancel] = useState(false);
+  useSpaceKey(() => {
+    if (tl?.mode !== 'focus') return;
+    if (tl.paused) app.resume();
+    else app.pause();
+  });
   if (!tl || !a) return null;
 
   if (tl.mode === 'break') {
@@ -158,8 +177,8 @@ function RunningPanel({ app }) {
       )}
       <div className="row">
         {tl.paused
-          ? <button type="button" className="btn btn--primary" onClick={app.resume}>Tiếp tục</button>
-          : <button type="button" className="btn" onClick={app.pause}>Tạm dừng</button>}
+          ? <button type="button" className="btn btn--primary" title="Phím cách" onClick={app.resume}>Tiếp tục</button>
+          : <button type="button" className="btn" title="Phím cách" onClick={app.pause}>Tạm dừng</button>}
         <button type="button" className="btn" disabled={!app.canFinishEarly} title="Được tính khi đã tập trung từ 10 phút" onClick={app.finishEarly}>
           Xong sớm
         </button>
@@ -204,6 +223,7 @@ function DonePanel({ app, goTo }) {
         categories={app.state.categories}
         now={app.cityNow}
         focusSid={s.sid}
+        dropSound={app.now - s.endedAt < 2 * 60_000}
         interactive={false}
         selectedPlan={report?.building?.planId ?? null}
         label="Viên gạch vừa đặt"
@@ -224,7 +244,8 @@ export default function FocusView({ app, goTo }) {
   let main;
   if (app.state.active) main = <RunningPanel app={app} />;
   else if (app.justDone) main = <DonePanel app={app} goTo={goTo} />;
-  else main = <IdlePanel app={app} goTo={goTo} />;
+  // Keyed on the default length so a change made on another device reaches an untouched form.
+  else main = <IdlePanel key={app.state.prefs.focusMin} app={app} goTo={goTo} />;
 
   return (
     <div className="focus-layout">

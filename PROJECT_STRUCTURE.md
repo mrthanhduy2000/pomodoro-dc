@@ -1047,7 +1047,8 @@ v2/
     ├── lib/             sync.js (events_v2) · push.js (platform 'v2:…') · legacy.js (read-only v1)
     ├── app/             useTimerApp.js — the only bridge UI ↔ engine · sound.js
     └── ui/              FocusView · CityView · StatsView · SettingsView · TimerRing · format.js ·
-                         CityCanvas (mounts CityScene) · LazyCityCanvas (three.js as its own chunk)
+                         keys.js (Space shortcut) · CityCanvas (mounts CityScene) ·
+                         LazyCityCanvas (three.js as its own chunk)
 ```
 Server side: `api/_lib/v2Digest.js` (pure `pickV2Nudge`, imports the v2 engine) is called by
 `api/coach-digest.js`; its test is `api/_tests/v2-digest.test.js`.

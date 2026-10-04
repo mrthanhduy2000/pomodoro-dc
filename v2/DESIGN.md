@@ -73,6 +73,10 @@ code — stop and rethink before adding more. Stage 5 needs sync ON first (else 
 4. **Stamp completions at the theoretical end**, never at wake-up time (iOS freezes tabs).
 5. **On localhost, sync is OFF** unless `?sync=1` — test sessions must never reach Đàm's real log.
 6. **Laptop first** (1440×790), phone must still work at 375 px with no horizontal scroll.
+7. **The pull cursor only crosses SETTLED rows** (`pullAll`, ADR-103): `seq` is handed out at
+   INSERT start, so a cursor set to the highest seq seen can skip a row that commits late — forever.
+8. **The tick never re-reads the log**: `advance(written, now)`; re-reduce only when `events` change.
+9. **One shortcut: Space** (start · pause · resume). Discovery is a `title`, never text on screen.
 
 ## Run it
 `npm run dev:v2` → `http://localhost:31120/v2/` (preview config "Pomodoro v2"). `npm run build`

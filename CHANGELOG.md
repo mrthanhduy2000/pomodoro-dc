@@ -10,6 +10,20 @@
 > **Muốn hiểu VÌ SAO một quyết định được chọn** → `ARCHITECTURE_DECISIONS.md`. **Muốn biết migration
 > cụ thể nào cần chạy** → `MIGRATION.md`.
 
+## 2026-10-05 — v2 hardening: safe sync cursor, 300× cheaper tick, everyday controls (ADR-103)
+
+**Purpose.** Đàm asked for a deeper quality pass. A sync race could make one device miss a row
+forever; the timer tick re-sorted the whole log; v2 had no way to edit categories.
+
+**Scope.** `v2/src/engine/log.js` (`pullAll`, settled cursor), `timer.js` (`advance`), `stats.js`
+(identity cache), `city.js` (O(1) brick target and plot check), `lib/sync.js`, `ui/keys.js` (Space),
+FocusView (remembered choice), SettingsView (categories), CityScene (off-screen pause, landing knock).
+
+**Impact.** Tick 1.69 → 0.005 ms and city rebuild 40.6 → 3.1 ms at 3 synthetic years. No data
+format change; no new event kind; v1 untouched.
+
+**Compatibility.** Pull now also selects `created_at` (already in `supabase/v2_events.sql`). Still 10/12 functions.
+
 ## 2026-10-03 — v2 stages 2–4: the diary city in 3D and the return push (ADR-102)
 
 **Purpose.** Đàm ordered the rest of the plan at once ("tiếp tục toàn bộ… lớn hơn nữa"), skipping

@@ -73,6 +73,24 @@ roughly 44%. Titles below are the lookup key; read one with
 
 ---
 
+## ADR-103 — v2 hardening: a pull cursor that never jumps a committing row, a tick that does not re-read the log, and the missing everyday controls
+
+**Date**: 2026-10-05 · **Order**: *"Tiếp tục đào sâu và hoàn thiện hơn nữa… nâng cấp chất lượng tổng thể, độ hoàn thiện, logic, hiệu năng và trải nghiệm… fix toàn bộ backlog, technical debt"*. `events_v2` was checked read-only first: **still missing** (PGRST205), so nobody has a synced v2 city yet.
+
+**Problem 1 — sync could lose a row for good.** `pull()` moved the cursor to the highest `seq` it saw. Postgres assigns `seq` when an INSERT *starts*, not when it commits; if seq 10 commits after seq 11, a pull in between moves past 10 and never asks again. One device would then miss a session forever, which breaks v2's promise that every device derives the same city.
+**Decision 1.** `pullAll(fetchPage, cursor, clientNow)` (`v2/src/engine/log.js`, pure, injected fetcher) moves the cursor only across a **settled prefix**: rows whose `created_at` is ≥ `SETTLE_MS` (60 s) older than the later of the device clock and the newest row seen. Fresh rows are re-read next pull (a handful) and the union-by-id merge ignores repeats. Rejected: a fixed seq overlap (re-downloads N rows every 20 s forever) and gap detection (`ON CONFLICT DO NOTHING` burns sequence values, so gaps are normal). The realtime INSERT payload is now merged immediately; while the table is missing the 20 s poll backs off to 5 min.
+
+**Problem 2 — every 250 ms tick re-sorted the whole log, and the city rebuild was quadratic.** Measured on the MacBook with 3 synthetic years (22,266 events): tick **1.69 ms**, `buildCity` **40.6 ms**. A CPU profile put 77 % of the rebuild in `candidatePlots`, called once per plan only to validate one plot.
+**Decision 2.** `advance(written, now)` (timer.js) lets time pass on the already-reduced state and returns **the same object** until something ends; stats cache on the identity of the `sessions` Map (exact, never stale, because `reduce` makes a new Map only when the log changes and `advance` copies it when it settles). `buildCity` keeps an `open` list (O(1) target per brick) and validates a requested plot with `isCandidatePlot` (O(1)); the full candidate list is built only for the rare collision. Result: tick **1.69 → 0.005 ms**, rebuild **40.6 → 3.1 ms**. Both equivalences are tested against the slow path (`advance` vs `reduce` at five moments; `isCandidatePlot` vs `candidatePlots` on 60 random cities), each break-tested red.
+
+**Decision 3 — the everyday controls v2 lacked.** Space starts / pauses / resumes (`ui/keys.js`; refuses in fields, on focused controls, under modifiers, on repeat; discovery = the button `title`, never a static hint). The start form remembers the last v2 session's category and length. Settings manages categories (add · rename · recolour · hide; the last visible one cannot be hidden; hiding never touches a brick) through the existing `category.upsert` event — no new kind. The 3D canvas stops drawing while fully scrolled out of view (verified by stepping frames: off-screen 0/40, back 40/40, a camera flight still finishes), and the landing storey makes a synthesised knock when the session ended < 2 min ago.
+
+**Not done, on purpose.** v1's open debts (`TECH_DEBT.md` #1 god function, #2 god file, #4, #14, #102, #104) live in code that stage 5 archives; refactoring ~760 lines of `completeFocusSession` is high-risk work on software being retired, so it is left for Đàm to decide. #8 (sync loses a field) is already designed out in v2. iPhone frame time is still unmeasured.
+
+**Revisit when.** A pull ever sees a row more than 60 s late (raise `SETTLE_MS`), or the log passes ~50k events (then persist the reduced state, not just the log).
+
+---
+
 ## ADR-102 — v2 stages 2–4: the city is DERIVED from the log, game choices are events, one renderer, one daily push
 
 **Date**: 2026-10-03 · **Order**: *"Tự động hoá toàn bộ, SQL hay gì đó thì bạn cứ tự làm / Hãy tiếp tục toàn bộ / Cải thiện nhiều hơn và lớn hơn nữa"* — Đàm explicitly overrides the waiting gates of ADR-101 (Gate 1 "3 real days", Gate 2 "one week of 2D first"). ⚠️ Recorded so a later session does not mistake the skipped gates for an oversight: the gates were skipped **by order**, and the data they were meant to produce (does v2 make Đàm come back more than v1?) **does not exist yet**.

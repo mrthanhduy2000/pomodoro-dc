@@ -1,3 +1,35 @@
+> Last update: **2026-10-05** — **V2 HARDENING: SYNC RACE, TICK COST, EVERYDAY CONTROLS (ADR-103).**
+> Order: *"Tiếp tục đào sâu và hoàn thiện hơn nữa… fix toàn bộ backlog, technical debt"*.
+> `events_v2` checked read-only first: **still missing** (PGRST205) — no v2 data is synced yet.
+>
+> ### Done
+> 1. **Sync race fixed** — `pullAll` (`v2/src/engine/log.js`): the cursor crosses only rows ≥ 60 s
+>    old, so a row committing after a higher `seq` is no longer skipped forever. Realtime payload
+>    merged at once; missing-table poll 20 s → 5 min.
+> 2. **Performance** (MacBook, 3 synthetic years = 22,266 events): tick 1.69 → 0.005 ms
+>    (`advance` + stats cached on the sessions Map); `buildCity` 40.6 → 3.1 ms (O(1) brick target,
+>    O(1) plot check — a profile showed 77 % in `candidatePlots`).
+> 3. **UX**: Space = start/pause/resume (`ui/keys.js`); the start form remembers the last category
+>    and length; Settings edits categories (add · rename · colour · hide); prefs fields refresh when
+>    another device changes them; the 3D canvas stops drawing when fully off-screen; a knock when
+>    the storey lands (only if the session ended < 2 min ago).
+>
+> ### Verified
+> Dev browser (dev-local; push calls hit localhost → 404, never production): category add + hide,
+> hidden one gone from the start chips; Space start → pause → resume; remembered «50 phút · Tập
+> gym»; 375 px no horizontal scroll. Off-screen gate checked by stepping frames by hand: 0/40
+> off-screen, 40/40 back. ⚠️ My first off-screen reading was a constant I typed into the probe, and
+> the pane's own rAF ran at 2/s — **lesson #1 again: suspect the measuring tool first.**
+>
+> ### Not done
+> v1 debts #1/#2/#4/#14/#102/#104 — code that stage 5 retires; high-risk refactor, Đàm decides.
+> iPhone frame time still unmeasured. SQL still needs Đàm's login.
+>
+> ### Gates
+> lint ✅ · build ✅ · `npm run test:quiet` 1922 pass, 0 fail, skipped 1 (+7 tests, each break-tested red).
+
+---
+
 > Last update: **2026-10-03** — **V2 STAGES 2–4: THE DIARY CITY IN 3D + THE RETURN PUSH (ADR-102).**
 > Order: *"Tự động hoá toàn bộ, SQL hay gì đó thì bạn cứ tự làm / Hãy tiếp tục toàn bộ / Cải thiện
 > nhiều hơn và lớn hơn nữa"* — Gates 1–2 skipped **by this order**; nobody has used v2 for real yet.

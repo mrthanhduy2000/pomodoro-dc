@@ -40,6 +40,9 @@ item below is still live, it just now reviews something already running.
   DERIVED from that log; only Đàm's choices (`build.plan`/`build.cancel`) are stored. ⚠️ v2 has
   **no write path** to `game_state`/`timer_live`. ⚠️ On localhost sync is OFF unless `?sync=1`.
   Gates 1–2 were skipped **by Đàm's order** ("tiếp tục toàn bộ").
+  **2026-10-05 hardening (ADR-103):** pull cursor crosses only rows settled ≥ 60 s (`pullAll`) ·
+  the tick uses `advance()`, never re-reduces · Space shortcut · category editor · `events_v2`
+  re-checked read-only: **still missing**.
   **Next:** (1) Đàm runs `supabase/v2_events.sql` (Settings → *Chép lệnh tạo bảng*) — until then
   each device keeps its own city; (2) measure the city's frame time on the iPhone; (3) stage 5
   cutover only after sync is on and Đàm approves by eye (Gate 5).

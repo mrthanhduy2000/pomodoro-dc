@@ -34,3 +34,50 @@ export function isMissingTableError(error) {
   const msg = error?.message ?? '';
   return code === '42P01' || code === 'PGRST205' || (/events_v2/.test(msg) && /not (exist|find)/i.test(msg));
 }
+
+/*
+ * Pulling by `seq` alone can skip a row for good: Postgres hands out a `seq` when an INSERT
+ * starts, not when it commits. If the row holding seq 10 commits after the one holding 11, a pull
+ * in between sees 11, moves the cursor past 10, and never asks for 10 again — one device then
+ * misses a session forever (the diary city would differ between the phone and the Mac).
+ * So the cursor only moves past rows that have been in the table for SETTLE_MS: anything that
+ * started before them has long committed. Fresh rows are read again on the next pull (cheap: it
+ * is only the last minute's handful) and the merge, a union by id, ignores the repeats.
+ */
+export const SETTLE_MS = 60_000;
+
+/**
+ * Read every row after `cursor`, page by page. `fetchPage(afterSeq, limit)` resolves to rows
+ * ordered by `seq` ascending, each with `created_at`. Returns the events and the SAFE cursor.
+ * The clock reference is the later of this device's clock and the newest row seen, so a device
+ * whose clock runs behind still lets old rows settle.
+ */
+export async function pullAll(fetchPage, cursor, clientNow, page = 500) {
+  const events = [];
+  let from = cursor;
+  let safe = cursor;
+  let blocked = false;
+  const rowsSeen = [];
+  for (;;) {
+    const rows = await fetchPage(from, page);
+    if (!rows?.length) break;
+    for (const r of rows) {
+      const e = rowToEvent(r);
+      if (e) events.push(e);
+      rowsSeen.push(r);
+      from = Math.max(from, Number(r.seq) || 0);
+    }
+    if (rows.length < page) break;
+  }
+  let newest = clientNow;
+  for (const r of rowsSeen) newest = Math.max(newest, Date.parse(r.created_at ?? '') || 0);
+  for (const r of rowsSeen) {
+    const created = Date.parse(r.created_at ?? '');
+    if (blocked || !(created <= newest - SETTLE_MS)) {
+      blocked = true; // the cursor may only cover a settled PREFIX: never jump over a fresh row
+      continue;
+    }
+    safe = Math.max(safe, Number(r.seq) || 0);
+  }
+  return { events, cursor: safe };
+}

@@ -6,17 +6,19 @@
  * a fact emitted by two devices (deterministic id) lands once.
  */
 import { supabase } from '../../../src/lib/supabase.js';
-import { eventToRow, isMissingTableError, rowToEvent } from '../engine/log.js';
+import { eventToRow, isMissingTableError, pullAll, rowToEvent } from '../engine/log.js';
 import { useLogStore } from '../store/logStore.js';
 
 const TABLE = 'events_v2';
 const PAGE = 500;
+const MISSING_TABLE_RETRY_MS = 5 * 60_000; // until the SQL is run, poll rarely instead of every 20 s
 const listeners = new Set();
 let status = { state: 'idle', detail: '' };
 let started = false;
 let busy = false;
 let again = false;
 let debounce = null;
+let lastAttempt = 0;
 
 function setStatus(state, detail = '') {
   if (status.state === state && status.detail === detail) return;
@@ -50,21 +52,20 @@ async function upload() {
   return true;
 }
 
+/** Pull with a cursor that never jumps a row still committing (see `pullAll` in engine/log.js). */
 async function pull() {
-  for (;;) {
-    const cursor = useLogStore.getState().cursor;
+  const fetchPage = async (after, limit) => {
     const { data, error } = await supabase
       .from(TABLE)
-      .select('id, seq, at, kind, data')
-      .gt('seq', cursor)
+      .select('id, seq, at, kind, data, created_at')
+      .gt('seq', after)
       .order('seq', { ascending: true })
-      .limit(PAGE);
+      .limit(limit);
     if (error) throw error;
-    if (!data?.length) return;
-    const maxSeq = data.reduce((m, r) => Math.max(m, Number(r.seq) || 0), cursor);
-    useLogStore.getState().mergeRemote(data.map(rowToEvent).filter(Boolean), maxSeq);
-    if (data.length < PAGE) return;
-  }
+    return data ?? [];
+  };
+  const { events, cursor } = await pullAll(fetchPage, useLogStore.getState().cursor, Date.now(), PAGE);
+  useLogStore.getState().mergeRemote(events, cursor);
 }
 
 export async function syncNow() {
@@ -73,6 +74,7 @@ export async function syncNow() {
     return;
   }
   busy = true;
+  lastAttempt = Date.now();
   setStatus('syncing');
   try {
     await upload();
@@ -127,7 +129,12 @@ export function startSync() {
 
   supabase
     .channel('events-v2')
-    .on('postgres_changes', { event: 'INSERT', schema: 'public', table: TABLE }, () => scheduleSync(150))
+    .on('postgres_changes', { event: 'INSERT', schema: 'public', table: TABLE }, (payload) => {
+      // The new row is in the message: show it now, then pull to move the cursor safely.
+      const e = rowToEvent(payload?.new);
+      if (e) useLogStore.getState().mergeRemote([e]);
+      scheduleSync(150);
+    })
     .subscribe();
 
   // iOS freezes background tabs: a debounce timer may never fire, so flush on the way out and
@@ -140,6 +147,8 @@ export function startSync() {
   window.addEventListener('focus', () => scheduleSync(50));
   window.addEventListener('online', () => scheduleSync(50));
   setInterval(() => {
-    if (document.visibilityState === 'visible') void syncNow();
+    if (document.visibilityState !== 'visible') return;
+    if (status.state === 'missing-table' && Date.now() - lastAttempt < MISSING_TABLE_RETRY_MS) return;
+    void syncNow();
   }, 20_000);
 }

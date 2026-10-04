@@ -226,6 +226,20 @@ export function reduce(events, now = null) {
   return state;
 }
 
+/**
+ * `reduce(events, now)` without re-reading the log: take the state as written (`reduce(events)`)
+ * and let time pass to `now`. Returns the SAME object when nothing ends in between, so the
+ * once-a-tick screen refresh costs nothing and memo caches keyed on `sessions` keep hitting.
+ * Never mutates its input.
+ */
+export function advance(written, now) {
+  const end = theoreticalEnd(written.active);
+  if (end == null || end > now) return written;
+  const next = { ...written, active: { ...written.active }, sessions: new Map(written.sessions) };
+  settle(next, now);
+  return next;
+}
+
 export function isEvent(e) {
   return Boolean(e) && typeof e.id === 'string' && Number.isFinite(e.at) && typeof e.kind === 'string';
 }

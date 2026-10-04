@@ -5,6 +5,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 
 import {
+  advance,
   canFinishEarly,
   cmdCancel,
   cmdEndBreak,
@@ -49,14 +50,16 @@ function useNow(fast) {
 export function useTimerApp() {
   const events = useLogStore((s) => s.events);
   const append = useLogStore((s) => s.append);
+  // The log is re-read only when it changes; each tick only lets time pass (`advance`), which
+  // returns the same object until something actually ends — 1.7 ms → 0.005 ms a tick at 3 years.
   const written = useMemo(() => reduce(events), [events]);
   const now = useNow(Boolean(written.active));
-  const state = useMemo(() => reduce(events, now), [events, now]);
+  const state = useMemo(() => advance(written, now), [written, now]);
   const tl = timeline(written, now);
 
   // The city only needs minute precision; a finished session reaches it through the log itself.
   const cityNow = Math.floor(now / 60_000) * 60_000;
-  const city = useMemo(() => buildCity(events, reduce(events, cityNow), cityNow), [events, cityNow]);
+  const city = useMemo(() => buildCity(events, advance(written, cityNow), cityNow), [events, written, cityNow]);
 
   // Facts that became true while nobody pressed anything (target reached): written with their
   // theoretical time and a deterministic id, so every device agrees.
@@ -149,6 +152,19 @@ export function useTimerApp() {
     act({ id: newEventId('prefs'), at: Date.now(), kind: 'prefs.set', data: patch });
   }, [act]);
 
+  /** Add or edit a category (always the full record: an upsert without `hidden` un-hides). */
+  const upsertCategory = useCallback((cat) => {
+    const id = cat.id ?? `cat_${newEventId('c').slice(2, 14)}`;
+    const label = String(cat.label ?? '').trim().slice(0, 40);
+    if (!label) return null;
+    return act({
+      id: newEventId('cat'),
+      at: Date.now(),
+      kind: 'category.upsert',
+      data: { id, label, color: cat.color ?? '#94a3b8', icon: cat.icon ?? '', hidden: Boolean(cat.hidden) },
+    });
+  }, [act]);
+
   return {
     now,
     cityNow,
@@ -168,5 +184,6 @@ export function useTimerApp() {
     startBreak,
     endBreak,
     setPrefs,
+    upsertCategory,
   };
 }

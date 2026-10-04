@@ -3,6 +3,7 @@ import assert from 'node:assert/strict';
 
 import {
   MIN_COUNTED_MS,
+  advance,
   canFinishEarly,
   cmdCancel,
   cmdEndBreak,
@@ -204,4 +205,23 @@ test('the "just finished" panel is derived from the log: it survives a reload an
   let next = [...log, cmdStartFocus(reduce(log, end + 2 * MIN), end + 2 * MIN, { sid: 's2', targetMin: 25 })];
   next = [...next, cmdCancel(reduce(next), end + 3 * MIN)];
   assert.equal(justFinished(reduce(next, end + 4 * MIN), end + 4 * MIN), null, 'an old panel never returns after a newer start');
+});
+
+test('advance(written, now) equals reduce(log, now) at every moment, and is free while nothing ends', () => {
+  let log = start([], T0, 's1', 25);
+  log = [...log, cmdPause(reduce(log), T0 + 5 * MIN, 'p1'), cmdResume(reduce([...log]), T0 + 5 * MIN, 'r0')].filter(Boolean);
+  log = [...log, cmdResume(reduce(log), T0 + 8 * MIN, 'r1')].filter(Boolean);
+  const written = reduce(log);
+  for (const t of [T0 + 10 * MIN, T0 + 27 * MIN, T0 + 28 * MIN - 1, T0 + 28 * MIN, T0 + 99 * MIN]) {
+    const fast = advance(written, t);
+    const slow = reduce(log, t);
+    assert.deepEqual(fast.active, slow.active, `active at +${(t - T0) / MIN} min`);
+    assert.deepEqual([...fast.sessions.values()], [...slow.sessions.values()]);
+    assert.equal(fast.lastCompletedSid, slow.lastCompletedSid);
+  }
+  assert.equal(advance(written, T0 + 10 * MIN), written, 'nothing ended: same object, no copy');
+  assert.equal(written.active.sid, 's1', 'the input is never mutated');
+  const ended = advance(written, T0 + 40 * MIN);
+  assert.equal(ended.sessions.get('s1').endedAt, T0 + 28 * MIN, 'ends at its theoretical end (+3 paused)');
+  assert.equal(written.sessions.size, 0);
 });

@@ -72,14 +72,26 @@ export function candidatePlots(occupied) {
   return out.sort((a, b) => (a.x * a.x + a.y * a.y) - (b.x * b.x + b.y * b.y) || a.y - b.y || a.x - b.x);
 }
 
-/** The requested plot if it is valid, otherwise the nearest valid one (two devices, same plot). */
+/** Is `p` one of `candidatePlots(occupied)`? O(1), without listing them all. */
+export function isCandidatePlot(p, occupied) {
+  if (occupied.has(plotKey(p))) return false;
+  if (!occupied.size) return p.x === 0 && p.y === 0;
+  return NEIGHBOURS.some(([dx, dy]) => occupied.has(plotKey({ x: p.x + dx, y: p.y + dy })));
+}
+
+/**
+ * The requested plot if it is valid, otherwise the nearest valid one (two devices, same plot).
+ * The common case checks one plot; listing every candidate is kept for the rare collision —
+ * listing them on EVERY plan made 3 years of city cost 36 ms to rebuild, 77 % of it here.
+ */
 function placePlot(requested, occupied) {
-  const cands = candidatePlots(occupied);
   const rx = Number(requested?.x);
   const ry = Number(requested?.y);
+  if (Number.isInteger(rx) && Number.isInteger(ry) && isCandidatePlot({ x: rx, y: ry }, occupied)) {
+    return { x: rx, y: ry };
+  }
+  const cands = candidatePlots(occupied);
   if (Number.isInteger(rx) && Number.isInteger(ry)) {
-    const hit = cands.find((p) => p.x === rx && p.y === ry);
-    if (hit) return hit;
     let best = null;
     let bestD = Infinity;
     for (const p of cands) {
@@ -151,6 +163,9 @@ export function buildCity(events, timerState, now = Date.now()) {
   ].sort((a, b) => a.at - b.at || a.order - b.order || (a.id < b.id ? -1 : a.id > b.id ? 1 : 0));
 
   const buildings = [];
+  // Buildings with room left, in plan order. Bricks always fill the FIRST one, so a brick costs
+  // O(1) instead of scanning every building ever built (3 years of data: 45 ms → see ADR-103).
+  const open = [];
   const byPlan = new Map();
   const occupied = new Map();
   const pile = [];
@@ -161,7 +176,10 @@ export function buildCity(events, timerState, now = Date.now()) {
     brick.planId = b.planId;
     brick.storey = b.bricks.length;
     b.bricks.push(brick);
-    if (b.bricks.length >= b.size) b.completedAt = at;
+    if (b.bricks.length >= b.size) {
+      b.completedAt = at;
+      open.splice(open.indexOf(b), 1);
+    }
   };
 
   for (const it of items) {
@@ -172,7 +190,7 @@ export function buildCity(events, timerState, now = Date.now()) {
       brick.n = total;
       brick.era = eraOf(total - 1); // the era this brick was laid in
       if (eraOf(total) > before) eraUps.push({ era: eraOf(total), at: brick.at, brickId: brick.id, sid: brick.sid });
-      const target = buildings.find((b) => b.bricks.length < b.size);
+      const target = open[0];
       if (target) fill(target, brick, brick.at);
       else {
         brick.planId = null;
@@ -194,6 +212,7 @@ export function buildCity(events, timerState, now = Date.now()) {
         plannedAt: e.at, bricks: [], completedAt: null,
       };
       buildings.push(b);
+      open.push(b);
       byPlan.set(b.planId, b);
       occupied.set(plotKey(plot), b.planId);
       while (pile.length && b.bricks.length < b.size) fill(b, pile.shift(), e.at);
@@ -201,6 +220,7 @@ export function buildCity(events, timerState, now = Date.now()) {
       const b = byPlan.get(d.planId);
       if (!b || b.bricks.length) continue; // only an empty plan can be withdrawn
       buildings.splice(buildings.indexOf(b), 1);
+      open.splice(open.indexOf(b), 1);
       byPlan.delete(b.planId);
       occupied.delete(plotKey(b.plot));
     }
@@ -242,8 +262,7 @@ export function buildCity(events, timerState, now = Date.now()) {
   const lastActive = residents.length ? residents[residents.length - 1].day : null;
   const workedToday = lastActive === today;
 
-  const current = buildings.find((b) => b.bricks.length < b.size) ?? null;
-  const open = buildings.filter((b) => b.bricks.length < b.size);
+  const current = open[0] ?? null;
   const era = eraOf(total);
 
   return {

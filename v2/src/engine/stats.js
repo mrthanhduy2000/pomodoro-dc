@@ -17,14 +17,29 @@ export function dayIndex(ms) {
   return Math.floor((ms + VN_OFFSET_MS) / DAY_MS);
 }
 
+/*
+ * The screen asks these questions several times a tick. `reduce` builds a NEW sessions Map only
+ * when the log changes and `advance` keeps the same one while nothing ends, so caching on that
+ * Map's identity is exact — never stale — and frees each later tick from re-sorting the history.
+ * Callers must treat the returned arrays and maps as read-only.
+ */
+const completedCache = new WeakMap();
+const byDayCache = new WeakMap();
+
 export function completedSessions(state) {
-  return [...state.sessions.values()]
+  const hit = completedCache.get(state.sessions);
+  if (hit) return hit;
+  const list = [...state.sessions.values()]
     .filter((s) => s.status === 'completed')
     .sort((a, b) => a.endedAt - b.endedAt);
+  completedCache.set(state.sessions, list);
+  return list;
 }
 
 /** Map dayIndex → { count, minutes } of completed sessions. */
 export function sessionsByDay(state) {
+  const hit = byDayCache.get(state.sessions);
+  if (hit) return hit;
   const byDay = new Map();
   for (const s of completedSessions(state)) {
     const k = dayIndex(s.endedAt);
@@ -33,6 +48,7 @@ export function sessionsByDay(state) {
     cur.minutes += s.minutes;
     byDay.set(k, cur);
   }
+  byDayCache.set(state.sessions, byDay);
   return byDay;
 }
 

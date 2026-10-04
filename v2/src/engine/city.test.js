@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 
 import { blueprintsOf, ERA_BRICKS } from './catalog.js';
 import {
-  brickReport, buildCity, candidatePlots, cmdCancelPlan, cmdPlan, GOLD_RATE, hash01, ledger,
+  brickReport, buildCity, candidatePlots, cmdCancelPlan, cmdPlan, GOLD_RATE, hash01, isCandidatePlot, ledger,
   STATUE_RATE, surpriseOf,
 } from './city.js';
 import { reduce } from './timer.js';
@@ -172,4 +172,29 @@ test('the city does not depend on the order events arrived in (two devices, merg
     }
     assert.equal(sig(city(shuffled)), want);
   }
+});
+
+test('isCandidatePlot agrees with candidatePlots on every plot, for many random cities', () => {
+  for (let seed = 0; seed < 60; seed += 1) {
+    const occupied = new Map();
+    const n = Math.floor(hash01(`n${seed}`) * 25);
+    for (let i = 0; i < n; i += 1) {
+      const x = Math.floor(hash01(`x${seed}:${i}`) * 9) - 4;
+      const y = Math.floor(hash01(`y${seed}:${i}`) * 9) - 4;
+      occupied.set(`${x},${y}`, `p${i}`);
+    }
+    const listed = new Set(candidatePlots(occupied).map((p) => `${p.x},${p.y}`));
+    for (let x = -7; x <= 7; x += 1) {
+      for (let y = -7; y <= 7; y += 1) {
+        assert.equal(isCandidatePlot({ x, y }, occupied), listed.has(`${x},${y}`), `seed ${seed} plot ${x},${y}`);
+      }
+    }
+  }
+});
+
+test('a plan on a plot someone else just took lands on the NEAREST free plot (two devices, one plot)', () => {
+  const log = [plan('p1', T0, 'e1-0', { x: 0, y: 0 }), plan('p2', T0 + 1, 'e1-0', { x: 0, y: 0 })];
+  const c = city(log);
+  assert.deepEqual(c.buildings.map((b) => [b.plot.x, b.plot.y]), [[0, 0], [0, -1]]);
+  assert.equal(c.buildings[1].moved, true);
 });

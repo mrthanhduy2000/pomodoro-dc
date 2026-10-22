@@ -1042,7 +1042,9 @@ v2/
 └── src/
     ├── engine/          PURE + tested: timer.js · stats.js · log.js · legacyImport.js ·
     │                    catalog.js (eras, blueprints) · city.js (buildCity — the city from the log)
-    ├── city/            layout.js · sky.js (pure, tested) · CityScene.js (the ONLY three.js file)
+    ├── city/            layout.js · sky.js (pure, tested) · CityScene.js (base three.js renderer)
+    ├── gpt/             GptEdition.jsx + gpt.css (opt-in UI), GptCanvas.jsx + GptScene.js
+    │                    (architectural renderer), art.js + art.test.js (pure presentation rules)
     ├── store/           logStore.js — Zustand persist 'dc-pomodoro-v2' (events, outbox, cursor)
     ├── lib/             sync.js (events_v2) · push.js (platform 'v2:…') · legacy.js (read-only v1)
     ├── app/             useTimerApp.js — the only bridge UI ↔ engine · sound.js

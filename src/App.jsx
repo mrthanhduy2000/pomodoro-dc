@@ -1672,6 +1672,7 @@ function EditorialSidebar({ activeTab, attentionByTab, isOpen, onSelect, onToggl
       </nav>
 
       <div className="mt-auto flex flex-col gap-1 px-2.5 pb-3 pt-3">
+        <a href="/v2/?edition=gpt" title="Phiên bản GPT" className="flex h-10 items-center justify-center rounded-[11px] text-[12px]" style={{ background: '#244d42', color: '#fff9ec' }}>{isOpen ? 'Phiên bản GPT ↗' : 'GPT'}</a>
         <button
           type="button"
           onClick={onToggle}

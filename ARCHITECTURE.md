@@ -1393,6 +1393,13 @@ UI (v2/src/ui) ──actions──▶ useTimerApp ──cmd*(state, now)──�
 - **Notification flow**: v2 schedules `v2-focus-complete` / `v2-break-over` jobs through the shared
   `api/push/schedule.js`; `dispatch.js` delivers a job only to subscriptions whose `platform`
   prefix matches the job's `payload.app` (`subscriptionMatchesJob`).
+- **GPT edition (2026-10-22)**: `/v2/?edition=gpt` selects a lazy presentation layer in
+  `v2/src/gpt/`. It shares `useTimerApp`, the event log, FocusPanel, StatsView and SettingsView;
+  there is no second timer or database. `GptScene` inherits canvas lifecycle, picking and camera
+  navigation from `CityScene`, and draws architectural completion parts on unchanged plot centers.
+  Session mosaics remain individually pickable. Local art preferences use `dc-gpt-appearance`
+  only. Explicitly labelled postcard buildings are render-only and never enter the event log.
+  v1 links to the edition from the sidebar and Settings; `/` and `/v2/` remain available.
 - **Storage flow**: localStorage `dc-pomodoro-v2` on each device; cloud `events_v2`. v2 never writes
   `game_state` / `timer_live`; `legacy.js` reads `game_state` once, read-only, for the history import.
 - **City flow (stages 2–4, ADR-102)**: `buildCity(events, reduce(events, minute), minute)` derives

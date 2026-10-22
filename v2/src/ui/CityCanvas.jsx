@@ -8,7 +8,7 @@ import { CityScene } from '../city/CityScene.js';
  */
 export default function CityCanvas({
   city, categories, now, picking = false, selectedPlan = null, focusSid = null, dropSound = false, onPick, interactive = true,
-  className = '', onScene = null, label = 'Thành phố',
+  className = '', onScene = null, label = 'Thành phố', Scene = CityScene, appearance = null,
 }) {
   const canvasRef = useRef(null);
   const sceneLocal = useRef(null);
@@ -20,7 +20,7 @@ export default function CityCanvas({
   }, [onPick]);
 
   useEffect(() => {
-    const scene = new CityScene(canvasRef.current, { onPick: (p) => pickRef.current?.(p), interactive });
+    const scene = new Scene(canvasRef.current, { onPick: (p) => pickRef.current?.(p), interactive });
     sceneLocal.current = scene;
     if (import.meta.env?.DEV) window.__cityScene = scene; // dev-only handle for measuring
     if (modelRef.current) scene.setModel(modelRef.current); // a re-created scene gets the last model
@@ -30,14 +30,14 @@ export default function CityCanvas({
       scene.dispose();
       sceneLocal.current = null;
     };
-  }, [interactive, onScene]);
+  }, [interactive, onScene, Scene]);
 
   const categoriesKey = useMemo(() => [...categories.values()].map((c) => `${c.id}${c.color}`).join('|'), [categories]);
 
   useEffect(() => {
-    modelRef.current = { city, categories, categoriesKey, now, picking, selectedPlan, focusSid, dropSound };
+    modelRef.current = { city, categories, categoriesKey, now, picking, selectedPlan, focusSid, dropSound, appearance };
     sceneLocal.current?.setModel(modelRef.current);
-  }, [city, categories, categoriesKey, now, picking, selectedPlan, focusSid, dropSound]);
+  }, [city, categories, categoriesKey, now, picking, selectedPlan, focusSid, dropSound, appearance]);
 
   return <canvas ref={canvasRef} className={`city-canvas ${className}`} role="img" aria-label={label} />;
 }

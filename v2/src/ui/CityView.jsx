@@ -28,7 +28,7 @@ function Storeys({ building, categories }) {
   );
 }
 
-function BlueprintPicker({ era, onChoose, onCancel }) {
+export function BlueprintPicker({ era, onChoose, onCancel }) {
   const [shownEra, setShownEra] = useState(era);
   const list = blueprintsOf(shownEra);
   return (
@@ -55,7 +55,7 @@ function BlueprintPicker({ era, onChoose, onCancel }) {
   );
 }
 
-function Detail({ pick, city, categories, onFocus, onClose }) {
+export function Detail({ pick, city, categories, onFocus, onClose, architectural = false }) {
   const cat = (id) => categories.get(id);
   if (pick.type === 'building') {
     const b = city.buildings.find((x) => x.planId === pick.planId);
@@ -113,7 +113,7 @@ function Detail({ pick, city, categories, onFocus, onClose }) {
         </p>
         {brick.goal && <p>“{brick.goal}”</p>}
         <p className="muted">
-          {b ? `Tầng ${brick.storey + 1} của «${b.name}»` : 'Đang chờ trong kho gạch'}
+          {b ? `${architectural ? 'Phần' : 'Tầng'} ${brick.storey + 1} của «${b.name}»` : 'Đang chờ trong kho gạch'}
           {pick.type === 'statue' ? ' · phiên này dựng một bức tượng ở ngã tư' : ''}
         </p>
       </section>

@@ -52,7 +52,7 @@ function TodayStrip({ state, now }) {
 }
 
 /** One line that says where the NEXT session goes — the reason to press Start. */
-function CityLine({ app, goTo }) {
+function CityLine({ app, goTo, architectural = false }) {
   const { city } = app;
   if (city.welcomeBack) {
     return (
@@ -65,7 +65,7 @@ function CityLine({ app, goTo }) {
     const b = city.current;
     return (
       <p className="city-line">
-        Phiên này thành tầng <b>{b.bricks.length + 1}/{b.size}</b> của «{b.name}»
+        {architectural ? 'Phiên này hoàn thiện phần ' : 'Phiên này thành tầng '}<b>{b.bricks.length + 1}/{b.size}</b> của «{b.name}»
         {' '}<button type="button" className="link" onClick={() => goTo('city')}>xem</button>
       </p>
     );
@@ -78,7 +78,7 @@ function CityLine({ app, goTo }) {
   );
 }
 
-function IdlePanel({ app, goTo }) {
+function IdlePanel({ app, goTo, architectural = false }) {
   const { state } = app;
   const cats = visibleCategories(state);
   const [last] = useState(() => lastChoice(state));
@@ -99,7 +99,7 @@ function IdlePanel({ app, goTo }) {
         setGoal('');
       }}
     >
-      <CityLine app={app} goTo={goTo} />
+      <CityLine app={app} goTo={goTo} architectural={architectural} />
       <TimerRing progress={0} mode="idle">
         <div className="ring__time">{clock(minutes * 60_000)}</div>
         <div className="ring__label">sẵn sàng</div>
@@ -191,7 +191,7 @@ function RunningPanel({ app }) {
   );
 }
 
-function ReportLines({ report, city }) {
+function ReportLines({ report, city, architectural = false }) {
   if (!report) return null;
   const lines = [];
   if (report.welcomeBack) lines.push(['welcome', 'Chào mừng trở lại: phiên này được 2 viên gạch.']);
@@ -200,7 +200,7 @@ function ReportLines({ report, city }) {
   if (report.building) {
     const b = report.building;
     const storey = report.bricks[report.bricks.length - 1].storey + 1;
-    lines.push(['', report.finished ? `Xong «${b.name}» — ${b.size} phiên thành một toà nhà.` : `Tầng ${storey}/${b.size} của «${b.name}».`]);
+    lines.push(['', report.finished ? `Xong «${b.name}» — ${b.size} phiên thành một toà nhà.` : `${architectural ? 'Phần' : 'Tầng'} ${storey}/${b.size} của «${b.name}».`]);
   } else lines.push(['', 'Viên gạch đang chờ trong kho — chọn công trình kế tiếp để đặt nó.']);
   if (report.eraUp) lines.push(['gold', `Mở kỷ ${report.eraUp.era}: ${eraStyle(report.eraUp.era).name}.`]);
   if (report.finished && !city.current) lines.push(['', 'Chọn công trình kế tiếp ở tab Thành phố.']);
@@ -211,13 +211,14 @@ function ReportLines({ report, city }) {
   );
 }
 
-function DonePanel({ app, goTo }) {
+function DonePanel({ app, goTo, CityRenderer = CityCanvas, appearance, architectural = false }) {
   const s = app.justDone;
   const today = todaySummary(app.state, app.now);
   const report = brickReport(app.city, s.sid);
   return (
     <div className="done">
-      <CityCanvas
+      <CityRenderer
+        appearance={appearance}
         className="city-canvas--moment"
         city={app.city}
         categories={app.state.categories}
@@ -229,7 +230,7 @@ function DonePanel({ app, goTo }) {
         label="Viên gạch vừa đặt"
       />
       <h2>Xong phiên {s.minutes} phút</h2>
-      <ReportLines report={report} city={app.city} />
+      <ReportLines report={report} city={app.city} architectural={architectural} />
       <p className="muted">Phiên thứ {today.count} hôm nay{today.count >= app.state.prefs.dailyGoal ? ' — ngày trọn rồi!' : ` · còn ${app.state.prefs.dailyGoal - today.count} nữa là ngày trọn`}.</p>
       <div className="row">
         <button type="button" className="btn btn--primary" onClick={() => app.startBreak(app.state.prefs.breakMin)}>Nghỉ {app.state.prefs.breakMin} phút</button>
@@ -240,16 +241,20 @@ function DonePanel({ app, goTo }) {
   );
 }
 
-export default function FocusView({ app, goTo }) {
+export function FocusPanel({ app, goTo, CityRenderer, appearance, architectural = false }) {
   let main;
   if (app.state.active) main = <RunningPanel app={app} />;
-  else if (app.justDone) main = <DonePanel app={app} goTo={goTo} />;
+  else if (app.justDone) main = <DonePanel app={app} goTo={goTo} CityRenderer={CityRenderer} appearance={appearance} architectural={architectural} />;
   // Keyed on the default length so a change made on another device reaches an untouched form.
-  else main = <IdlePanel key={app.state.prefs.focusMin} app={app} goTo={goTo} />;
+  else main = <IdlePanel key={app.state.prefs.focusMin} app={app} goTo={goTo} architectural={architectural} />;
 
+  return main;
+}
+
+export default function FocusView({ app, goTo }) {
   return (
     <div className="focus-layout">
-      <section className="card focus-main">{main}</section>
+      <section className="card focus-main"><FocusPanel app={app} goTo={goTo} /></section>
       <aside className="focus-side">
         <TodayStrip state={app.state} now={app.now} />
       </aside>

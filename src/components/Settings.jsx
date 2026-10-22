@@ -255,6 +255,7 @@ export default function Settings() {
 
   return (
     <div className="w-full max-w-5xl mx-auto space-y-5 pb-6">
+      <a href="/v2/?edition=gpt" className="flex items-center justify-between rounded-xl px-5 py-4" style={{ background: '#244d42', color: '#fff9ec' }}><span>Phiên bản GPT</span><span aria-hidden="true">↗</span></a>
       <div className="px-5 py-5" style={paperCardStyle(lightTheme)}>
         <div className="flex flex-wrap items-end justify-between gap-4">
           {/*

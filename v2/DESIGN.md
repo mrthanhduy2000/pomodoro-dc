@@ -78,6 +78,15 @@ code — stop and rethink before adding more. Stage 5 needs sync ON first (else 
 8. **The tick never re-reads the log**: `advance(written, now)`; re-reduce only when `events` change.
 9. **One shortcut: Space** (start · pause · resume). Discovery is a `title`, never text on screen.
 
+## GPT visual edition (2026-10-22)
+
+Opt in at `/v2/?edition=gpt` from the original app or the v2 header. It shares v2 data and
+commands; this is not the stage-5 cutover. The classic view keeps the storey representation.
+GPT renders the same bricks as construction details plus independently selectable mosaic tiles,
+with fixed building footprints. Four place-inspired skins and seasonal atmosphere are local
+presentation preferences. The labelled sample town contains no earned progress and cannot write
+sample sessions or buildings to the log. Actual plot selection still uses `cmdPlan` unchanged.
+
 ## Run it
 `npm run dev:v2` → `http://localhost:31120/v2/` (preview config "Pomodoro v2"). `npm run build`
 builds both apps. Tests live next to the code and run inside `npm test`.

@@ -1,3 +1,26 @@
+> Last update: **2026-10-22 — OPT-IN GPT VISUAL EDITION.**
+> User requested an alternate version/button and immediate implementation of the approved concept.
+>
+> **Done:** `/v2/?edition=gpt`, v1 sidebar + Settings entry, v2 header entry, return links.
+> Cream/forest UI reuses FocusPanel and all timer actions, stats and settings. GptScene inherits
+> canvas lifecycle/picking/camera from CityScene; only rendering changes. Hoi An tiled roofs,
+> Kyoto wood, Paris mansards, Colmar half-timber; seasons, rain/snow/petals/leaves, day/night,
+> water, boat, trees, bridge, balcony/window details. Original plot coordinates never change.
+> Each original session is selectable in a front mosaic. Residents, lanterns, statues and festival
+> remain derived from the real city. Architectural phases replace stacked storeys in GPT only.
+>
+> **Data boundary:** one v2 store and timer; appearance alone is stored as `dc-gpt-appearance`.
+> Sample town is explicitly labelled and cannot write events. v1 data/renderer and v2 classic
+> remain available; this does not migrate v1 history or complete the v2 database setup.
+>
+> **Verification:** browser checked edition switch, place/season/light controls, read-only sample,
+> and actual plot selection with dev sync off. No focus session started on localhost.
+> Art direction is procedural miniature 3D, not the photorealistic generated concept image.
+> Validation: 1,923 fast passes, 0 failures, 1 expected skip; 3 cross-check passes; lint/build green.
+> Final doc-budget check also passes. Screenshots under `/tmp/pomodoro-gpt-review`.
+
+---
+
 > Last update: **2026-10-05** — **V2 HARDENING: SYNC RACE, TICK COST, EVERYDAY CONTROLS (ADR-103).**
 > Order: *"Tiếp tục đào sâu và hoàn thiện hơn nữa… fix toàn bộ backlog, technical debt"*.
 > `events_v2` checked read-only first: **still missing** (PGRST205) — no v2 data is synced yet.

@@ -10,6 +10,18 @@
 > **Muốn hiểu VÌ SAO một quyết định được chọn** → `ARCHITECTURE_DECISIONS.md`. **Muốn biết migration
 > cụ thể nào cần chạy** → `MIGRATION.md`.
 
+## 2026-10-22 — Opt-in GPT edition: architectural diary city
+
+**Purpose.** Make the approved visual direction usable in a separate edition while keeping the
+original app accessible. Entry: v1 sidebar/Settings or v2 header → `/v2/?edition=gpt`.
+
+**Scope.** Cream/green focus UI, large city canvas, contextual inspector, four architectural
+skins, seasons/weather/daylight, reduced motion, selectable construction mosaics, and a clearly
+labelled render-only sample town. Original plots, session facts and game commands are unchanged.
+
+**Compatibility.** GPT and classic v2 share one event log; v1 remains at `/`. Local art preferences
+are separate from game data. This release does not perform a data migration or stage-5 cutover.
+
 ## 2026-10-05 — v2 hardening: safe sync cursor, 300× cheaper tick, everyday controls (ADR-103)
 
 **Purpose.** Đàm asked for a deeper quality pass. A sync race could make one device miss a row

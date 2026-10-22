@@ -28,6 +28,10 @@ live here:
    `CityScene3D.jsx` carry a reason each. Never disable the rule "just to move fast".
 
 ## Where we are
+
+- **GPT EDITION (2026-10-22):** `/v2/?edition=gpt`; entry in v1 sidebar/Settings and v2 header.
+  Architectural skins + seasonal UI; same v2 log. See `v2/DESIGN.md`, `v2/src/gpt/`.
+
 Production branch `main` carries **both** work streams (merged 2026-08-28 on Đàm's direct order).
 ⚠️ Phase 21 therefore shipped **before** Đàm reviewed its screenshots — the "waiting on Đàm's eyes"
 item below is still live, it just now reviews something already running.

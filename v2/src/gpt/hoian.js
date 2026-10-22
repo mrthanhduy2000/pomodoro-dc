@@ -9,8 +9,9 @@ export function drawHoiAnBuilding(scene, b) {
   const pick = { type: 'building', planId: b.planId };
   const progress = Math.min(1, b.bricks.length / b.size);
   const variant = Math.floor(hash01(`front:${b.planId}`) * 4);
-  const wall = ['wall:#e0b253', 'wall:#dbc18a', 'wall:#d6a15c', 'wall:#e4cf9b'][variant];
-  const tile = ['#66665b', '#777365', '#575d58', '#7a7061'][variant];
+  const wall = ['wall:#e5b65c', 'wall:#ddbf7b', 'wall:#dba65b', 'wall:#e8ca89'][variant];
+  const tile = ['#535d59', '#687067', '#4b5554', '#746d5c'][variant];
+  const shutterColor = ['#4f6555','#786247','#476466','#705043'][variant];
   const part = (kind, mat, x, y, z, w, h, d, rotation = [0, 0, 0]) => scene.part(kind, mat, [c.x+x, y, c.z+z], [w,h,d], rotation, pick);
   const beam = (mat, a, to, radius=.025) => scene.beam(mat, [c.x+a[0],a[1],c.z+a[2]], [c.x+to[0],to[1],c.z+to[2]], radius, pick);
   const box = (mat,x,y,z,w,h,d) => part('box',mat,x,y,z,w,h,d);
@@ -19,16 +20,20 @@ export function drawHoiAnBuilding(scene, b) {
     const reach=d/2;
     for(const side of [-1,1]) {
       const height = (u) => rise*(1-u)+.1*Math.pow(u,4);
-      for(let row=0;row<7;row+=1) {
-        const a=row/7, u=(row+.5)/7, next=(row+1)/7;
-        const slope=Math.atan2(height(a)-height(next),reach/7);
-        part('box','tile',x,y+height(u),z+side*reach*u,w,.045,Math.hypot(reach/7,height(a)-height(next))+.025,[side*slope,0,0]);
-        const n=Math.max(5,Math.round(w/.13));
-        for(let col=0;col<n;col+=1) part('pole',tile,x-w/2+(col+.5)*w/n,y+height(u)+.035,z+side*reach*u,.036,reach/6,.036,[Math.PI/2+side*slope,0,0]);
+      for(let row=0;row<10;row+=1) {
+        const a=row/10, u=(row+.5)/10, next=(row+1)/10;
+        const slope=Math.atan2(height(a)-height(next),reach/10);
+        part('box','tile',x,y+height(u),z+side*reach*u,w,.025,Math.hypot(reach/10,height(a)-height(next))+.018,[side*slope,0,0]);
+        const n=Math.max(5,Math.round(w/.085));
+        for(let col=0;col<n;col+=1) part('roofTile',tile,x-w/2+(col+.5)*w/n,y+height(u)+.018,z+side*reach*u,.029,reach/9,.029,[Math.PI/2+side*slope,0,0]);
       }
       // Gable boards close the roof volume. Slim timber eaves keep the edges light.
       for(let j=0;j<7;j+=1) for(const end of [-1,1]) box('timber',x+end*(w/2-.09),y+rise*j/7,z,.04,rise/7+.01,d*(1-j/7));
       beam('timber',[x-w/2,y+.07,z+side*reach],[x+w/2,y+.07,z+side*reach],.025);
+      for(let bracket=0;bracket<Math.floor(w/.3);bracket+=1) {
+        const bx=x-w/2+.16+bracket*.3;
+        beam('timber',[bx,y-.1,z+side*(reach-.17)],[bx,y+.05,z+side*reach],.016);
+      }
     }
     beam('tile',[x-w/2-.025,y+rise+.04,z],[x+w/2+.025,y+rise+.04,z],.055);
     if(b.shape !== 'house' && b.shape !== 'market') for(const end of [-1,1]) {
@@ -43,13 +48,28 @@ export function drawHoiAnBuilding(scene, b) {
     box('timber',x,y,z+.065,w,.025,.025);
     if(shutter) for(const side of [-1,1]) {
       const sx=x+side*(w/2+.105);
-      box('timber',sx,y,z+.035,.15,h+.05,.04);
-      for(let i=0;i<4;i+=1) box(tile,sx,y-h*.35+i*h*.23,z+.062,.12,.018,.02);
+      part('box',shutterColor,sx,y,z+.08,.16,h+.05,.035,[0,side*.4,0]);
+      for(let i=0;i<6;i+=1) box('timber',sx,y-h*.38+i*h*.15,z+.105,.12,.014,.018);
     }
     box('stone',x,y-h/2-.055,z+.02,w+.16,.05,.13);
   };
   const body = (x,z,w,d,h) => {
-    box(wall,x,.16+h/2,z,w,h,d);
+    if(b.shape==='house' && progress>=.35) {
+      // The shop is genuinely hollow: deep verandas reveal shelves and rooms behind the facade.
+      box(wall,x,.16+h/2,z-d/2+.055,w,h,.11);
+      for(const side of [-1,1]) box(wall,x+side*(w/2-.055),.16+h/2,z,.11,h,d);
+      box('timber',x,.18,z,w,.06,d);
+      box('timber',x,h+.12,z,w,.07,d);
+      if(h>1.6) box('timber',x,1.22,z,w,.07,d);
+      if(h>1.8) box(wall,x,(1.25+h-.54)/2,z+d/2,w,h-.54-1.25,.09);
+      const bays=Math.max(1,Math.round(w/.6));
+      for(let i=0;i<=bays;i+=1) box('timber',x-w/2+i*w/bays,.16+h/2,z+d/2,.065,h,.09);
+      for(const level of [1.1,h+.1]) box('timber',x,level,z+d/2,w,.12,.11);
+      for(let shelf=0;shelf<3;shelf+=1) {
+        box('timber',x,.45+shelf*.24,z-d*.3,w*.72,.035,.16);
+        for(let jar=0;jar<5;jar+=1) part('taper',jar%2?'#b98855':'#c8b98d',x+(jar-2)*w*.12,.53+shelf*.24,z-d*.3,.045,.085,.045);
+      }
+    } else box(wall,x,.16+h/2,z,w,h,d);
     box('stone',x,.16,z,w+.08,.16,d+.08);
     for(const side of [-1,1]) box('timber',x+side*w/2,.16+h/2,z+d/2+.01,.045,h,.05);
     if(progress >= .35) {
@@ -98,83 +118,103 @@ export function drawHoiAnBuilding(scene, b) {
     box('timber',x,y,z,w,.045,.05);
     for(let i=0;i<12;i+=1) beam('timber',[x-w/2+i*w/11,y-.32,z],[x-w/2+i*w/11,y,z],.012);
   };
-  const courtyard = () => { box('paving',0,.09,0,2.45,.12,1.85); };
+  const courtyard = () => { box('paving',0,.09,0,3.45,.12,1.85); };
   courtyard();
   if(progress === 0) { posts([-1,1],.16,-.65,.6); posts([-1,1],.16,.65,.6); return; }
   if(progress < .25) { body(0,-.18,1.65,1,.45); return; }
 
   switch(b.shape) {
     case 'house': {
-      // Split merchant house: a narrow upper wing, lower tea shop and a side garden.
+      // A full merchant frontage: two unequal wings, recessed shop bays and inhabited upper rooms.
       const flip=variant%2 ? -1:1;
-      const twoStoreys=variant!==1;
-      const upper=twoStoreys ? 1.72 : 1.06;
-      body(flip*-.28,-.14,1.25,1.3,upper);
-      roof(flip*-.28,upper+.17,-.14,1.48,1.63,.43);
-      body(flip*.68,.03,.65,1.15,.85);
-      roof(flip*.68,1.02,.03,.83,1.42,.3);
-      window(flip*-.28,.65,.55,.42,.59);
-      if(twoStoreys) {
-        window(flip*-.28,1.43,.55,.39,.44);
-        box('timber',flip*-.28,1.08,.72,1.25,.06,.3);
-        rail(flip*-.28,1.38,.87,1.28);
-        garden(flip*-.28,1.35,.89,.85);
+      const mainX=flip*-.43, wingX=flip*1.05;
+      const upper=variant===1?1.8:2.25+variant*.06;
+      body(mainX,-.04,2.02,1.48,upper);
+      roof(mainX,upper+.17,-.02,2.3,1.7,.51);
+      if(variant===3 && progress>=.65) {
+        box(wall,mainX,upper+.37,.43,.62,.43,.53);
+        roof(mainX,upper+.57,.43,.78,.73,.23);
+        window(mainX,upper+.39,.72,.24,.27,false);
       }
-      window(flip*.68,.6,.63,.28,.43,false);
-      posts([flip*-.85,flip*.2],.16,.87,.85);
-      roof(flip*-.32,1.01,.73,1.4,.48,.16);
-      lantern(flip*.18,.84,.89);
-      lantern(flip*-.62,.84,.89);
-      // Open shop threshold, a carved sign and cafe seating belong to this house's plot.
-      box('timber',flip*-.28,.2,.7,.49,.09,.35);
-      box('timber',flip*.67,.88,.64,.45,.12,.06);
-      for(let i=0;i<5;i+=1) box('#c5ab69',flip*.67+(i-2)*.065,.88,.675,.018,.06,.01);
+      body(wingX,.09,.9,1.35,variant===2?1.67:1.05);
+      roof(wingX,variant===2?1.84:1.22,.1,1.13,1.57,.33);
+      // Three bays and a continuous timber balcony read as a street house, not a pavilion.
+      for(const dx of [-.57,0,.57]) {
+        window(mainX+dx,upper-.28,.72,.3,.52);
+        if(progress>=.65) {
+          part('box',shutterColor,mainX+dx-.22,.62,.77,.15,.78,.035,[0,-.55,0]);
+          box('timber',mainX+dx,.98,.77,.48,.08,.12);
+        }
+      }
+      box('timber',mainX,1.24,.92,2.16,.085,.46);
+      rail(mainX,1.62,1.13,2.18);
+      for(const dx of [-.9,0,.9]) {
+        beam('timber',[mainX+dx,.94,.72],[mainX+dx,1.23,1.13],.028);
+        lantern(mainX+dx,1.05,1.04);
+      }
+      posts([mainX-.91,mainX,mainX+.91],.16,1.05,1.04);
+      roof(mainX,1.21,.93,2.22,.49,.13);
+      window(wingX,.69,.8,.36,.55,false);
+      box('timber',wingX,1.05,.83,.67,.16,.065);
+      for(let i=0;i<7;i+=1) box('#d1b477',wingX+(i-3)*.073,1.05,.87,.022,.07,.012);
       if(progress>=.8) {
-        const tx=flip*.72,tz=1.05;
+        // Flowering vines drape over the balcony, with a cafe and display at street level.
+        for(const dx of [-.7,.1,.7]) garden(mainX+dx,1.58,1.14,.6);
+        for(let i=0;i<70;i+=1) {
+          const u=hash01(`${b.planId}:climb:${i}`),v=hash01(`climb:${i}`);
+          const vx=mainX-.78+u*1.55,vy=upper+.06-v*.62;
+          part('leaf','foliage:#526d3c',vx,vy,.86,.08,.14,.08,[u*4,v*6,u]);
+          if(i%2===0) part('orb','#c24780',vx,vy,.9,.04,.028,.04);
+        }
+        const tx=wingX,tz=1.15;
         part('pole','timber',tx,.43,tz,.23,.045,.23);
         beam('iron',[tx,.16,tz],[tx,.42,tz],.018);
         for(const side of [-1,1]) {
-          box('timber',tx+side*.28,.29,tz,.17,.035,.17);
-          posts([tx+side*.28-.06,tx+side*.28+.06],.16,tz,.12);
-          box('timber',tx+side*.28,.43,tz+.07,.17,.22,.025);
+          box('timber',tx+side*.27,.29,tz,.16,.035,.17);
+          posts([tx+side*.27-.05,tx+side*.27+.05],.16,tz,.12);
+          box('timber',tx+side*.27,.43,tz+.07,.16,.22,.025);
         }
         part('pole','#e0d0a0',tx,.47,tz,.035,.04,.035);
-        garden(flip*-.65,.92,.96,.75);
+        for(const dx of [-.3,.3]) part('taper','#b78054',mainX+dx,.34,.97,.09,.2,.09);
       }
-      garden(flip*.98,.33,.64,.3);
+      garden(flip*1.55,.32,.65,.25);
       break;
     }
     case 'hall': {
-      // Assembly hall: broad ceremonial hall, raised platform, triple entry and two roof tiers.
-      body(0,-.22,2.15,1.1,1.12);
-      roof(0,1.28,-.22,2.5,1.48,.56);
-      roof(0,1.85,-.24,1.65,.94,.36);
-      box('stone',0,.18,.58,1.7,.16,.43);
-      for(const x of [-.58,0,.58]) {
-        part('arch','timber',x,.66,.37,.4,.82,.07);
-        part('arch','glow',x,.66,.42,.28,.65,.025);
-        lantern(x,1.06,.57);
+      // Broad ceremonial frontage with layered roofs, carved doors and a stone stair.
+      body(0,-.12,2.85,1.24,1.55);
+      roof(0,1.71,-.04,3.3,1.62,.63);
+      roof(0,2.33,-.08,2.23,1.06,.38);
+      box('stone',0,.18,.72,2.6,.16,.43);
+      for(let step=0;step<3;step+=1) box('stone',0,.18-step*.04,.94+step*.1,1.9+step*.15,.08,.15);
+      for(const x of [-.85,0,.85]) {
+        part('arch','timber',x,.86,.54,.59,1.12,.12);
+        part('arch','glow',x,.86,.6,.42,.92,.025);
+        for(const dx of [-.1,.1]) box('timber',x+dx,.86,.64,.025,.9,.025);
+        lantern(x,1.47,.91);
       }
-      posts([-1,-.35,.35,1],.2,.61,1.05);
-      roof(0,1.23,.58,2.46,.65,.23);
-      box('timber',0,1.04,.68,.86,.19,.04);
-      for(const x of [-.95,.95]) garden(x,.23,.83,.34);
+      posts([-1.36,-.45,.45,1.36],.2,.96,1.35);
+      roof(0,1.61,.78,3.23,.6,.18);
+      box('timber',0,1.45,1.02,1.28,.23,.07);
+      for(let i=0;i<9;i+=1) box('#c7a668',(i-4)*.12,1.45,1.06,.035,.105,.015);
+      for(const x of [-1.39,1.39]) { garden(x,.3,1.07,.35); part('taper','stone',x,.26,.9,.14,.22,.14); }
       break;
     }
     case 'market': {
-      // Open market shed, visibly hollow beneath its roof, with stalls and textile awnings.
-      posts([-1.02,-.34,.34,1.02],.15,-.63,1.05);
-      posts([-1.02,-.34,.34,1.02],.15,.63,1.05);
-      roof(0,1.22,0,2.48,1.7,.46);
-      box('timber',0,.34,-.25,2.1,.12,.46);
-      for(let i=0;i<3;i+=1) {
-        const x=(i-1)*.7;
-        box('timber',x,.46,.5,.59,.5,.38);
-        for(let j=0;j<8;j+=1) part('orb',['#b76b3b','#759243','#d9b568'][i],x+(j%4-.5)*.095-.1,.76,.47+Math.floor(j/4)*.1,.052,.047,.052);
-        lantern(x,1.01,.6);
-        for(let j=0;j<5;j+=1) part('box',j%2 ? '#e5d6b0': variant%2 ? '#8b4c3d':'#55785d',x+(j-2)*.125,.98,.79,.124,.035,.4,[.13,0,0]);
+      // Four independently dressed stalls under one long roof form a continuous shopfront.
+      posts([-1.45,-.72,0,.72,1.45],.15,-.62,1.32);
+      posts([-1.45,-.72,0,.72,1.45],.15,.63,1.32);
+      roof(0,1.49,0,3.4,1.73,.48);
+      box('timber',0,.4,-.25,2.95,.12,.46);
+      for(let i=0;i<4;i+=1) {
+        const x=(i-1.5)*.73;
+        box('timber',x,.48,.53,.66,.55,.43);
+        for(let j=0;j<18;j+=1) part('orb',['#bb733f','#799448','#ceaa59','#a65349'][i],x+(j%6-2.5)*.087,.79,.46+Math.floor(j/6)*.082,.045,.04,.045);
+        lantern(x,1.26,.72);
+        for(let j=0;j<6;j+=1) part('box',j%2 ? '#e5d6b0': i%2 ? '#8b4c3d':'#55785d',x+(j-2.5)*.116,1.18,.9,.115,.035,.48,[.2,0,0]);
+        for(const dx of [-.2,.2]) part('taper','#a47e55',x+dx,.27,1.04,.12,.22,.12);
       }
-      garden(-1.09,.22,.79,.25);
+      garden(-1.54,.22,.85,.25);
       break;
     }
     case 'tower': {
@@ -194,11 +234,11 @@ export function drawHoiAnBuilding(scene, b) {
     }
     default: {
       // Courtyard culture house: rear shrine, two low side wings, gate and open centre.
-      body(0,-.52,1.78,.58,.94);
-      roof(0,1.1,-.52,2.14,.85,.51);
-      for(const x of [-.91,.91]) {
-        body(x,.02,.39,.8,.63);
-        roof(x,.81,.02,.64,1.1,.22);
+      body(0,-.48,2.3,.66,1.14);
+      roof(0,1.3,-.48,2.65,.91,.51);
+      for(const x of [-1.3,1.3]) {
+        body(x,.02,.43,1.05,.83);
+        roof(x,1,.02,.7,1.35,.27);
         lantern(x,.67,.46);
       }
       posts([-.56,.56],.16,.7,.69);

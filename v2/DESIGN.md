@@ -85,8 +85,9 @@ commands; this is not the stage-5 cutover. The classic view keeps the storey rep
 Both Focus and City use real three.js architecture. "Xem trước 3D" opens a labelled, read-only
 sample with five selectable building types. No illustrative background replaces the city.
 GPT renders the same bricks as construction details plus independently selectable mosaic tiles,
-with fixed building footprints. Four place-inspired skins and seasonal atmosphere are local
-presentation preferences. The labelled sample town contains no earned progress and cannot write
+with unchanged plot centers. Hoi An frontages fill more of each plot; adjacent developed buildings
+share render-only alley pergolas and lantern strings. Four place-inspired skins and seasonal
+atmosphere are local presentation preferences. The labelled sample town contains no earned progress and cannot write
 sample sessions or buildings to the log. Actual plot selection still uses `cmdPlan` unchanged.
 
 ## Run it

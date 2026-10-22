@@ -16,6 +16,7 @@ const GEO = {
   box: new RoundedBoxGeometry(1, 1, 1, 2, 0.04),
   orb: new THREE.SphereGeometry(1, 12, 9),
   pole: new THREE.CylinderGeometry(1, 1, 1, 10),
+  roofTile: new THREE.CylinderGeometry(1, 1, 1, 8, 1, true, Math.PI/2, Math.PI),
   taper: new THREE.CylinderGeometry(0.68, 1, 1, 4).rotateY(Math.PI / 4),
 };
 // Curved leaf silhouettes give foliage a broken, organic edge instead of sphere clusters.
@@ -100,6 +101,7 @@ export class GptScene extends CityScene {
     this.buildLandscape();
     this.buildSky();
     for (const b of this.model.city.buildings) this.buildHouse(b);
+    if(this.a.place==='hoian') this.buildStreetscape();
     if (this.model.picking) {
       for (const plot of this.model.city.candidates) {
         const p = plotCenter(plot);
@@ -127,15 +129,15 @@ export class GptScene extends CityScene {
   material(key) {
     if (this.artMaterials.has(key)) return this.artMaterials.get(key);
     const p = this.palette;
-    const colors = { plaster: p.wall, timber: p.wood, tile: this.snow ? '#e6e8e1' : p.roof, stone: '#b6aa92', paving: this.snow ? '#d9ded9' : '#c4b9a0', leaf: this.snow ? '#a5b8a5' : this.a.season === 'autumn' ? '#b0803e' : p.leaf, flower: this.a.season === 'spring' ? '#e5b2bc' : p.flower, glow: '#e6ac56', iron: '#3b514a', candidate: '#d6b96b' };
+    const colors = { lanternRed:'#b9442a', plaster: p.wall, timber: p.wood, tile: this.snow ? '#e6e8e1' : p.roof, stone: '#b6aa92', paving: this.snow ? '#d9ded9' : '#c4b9a0', leaf: this.snow ? '#a5b8a5' : this.a.season === 'autumn' ? '#b0803e' : p.leaf, flower: this.a.season === 'spring' ? '#e5b2bc' : p.flower, glow: '#e6ac56', iron: '#3b514a', candidate: '#d6b96b' };
     const mat = new THREE.MeshStandardMaterial({ color: colors[key] || (key.startsWith('foliage:') ? key.slice(8) : key.startsWith('wall:') ? key.slice(5) : key), roughness: this.a.weather === 'rain' ? 0.5 : 0.87 });
     const textureKey=key.startsWith('wall:') ? 'plaster' : key;
     if (['plaster','timber','tile','stone','paving'].includes(textureKey)) {
-      if (!this.textures.has(key)) { const tex = surfaceTexture(textureKey); this.textures.set(key,tex); this.disposables.push(tex); }
+      if (!this.textures.has(key)) { const tex = surfaceTexture(textureKey); if(key==='paving' && this.a.place==='hoian') tex.repeat.set(3,3); this.textures.set(key,tex); this.disposables.push(tex); }
       mat.map=this.textures.get(key); mat.bumpMap=mat.map; mat.bumpScale=key==='plaster'?.025:.045;
     }
     if (key.startsWith('foliage') || key === 'flower') { mat.side=THREE.DoubleSide; mat.roughness=1; }
-    if (key === 'glow') { mat.emissive.set('#ffba62'); mat.emissiveIntensity = 0.55; }
+    if (key === 'glow' || key === 'lanternRed') { mat.emissive.set(key==='glow'?'#ffba62':'#ff6427'); mat.emissiveIntensity = 0.55; }
     if (key === 'candidate') { mat.transparent = true; mat.opacity = 0.5; }
     this.artMaterials.set(key, mat);
     this.disposables.push(mat);
@@ -175,7 +177,7 @@ export class GptScene extends CityScene {
       if(mat===this.artMaterials.get('glow')) {
         const groundPools=[];
         for(const p of parts) {
-          const halo=new THREE.Sprite(this.haloMaterial);halo.position.setFromMatrixPosition(p.matrix);halo.scale.set(.55,.55,.55);this.world.add(halo);
+          const halo=new THREE.Sprite(this.haloMaterial);halo.position.setFromMatrixPosition(p.matrix);halo.scale.set(.42,.42,.42);this.world.add(halo);
           if(halo.position.y < 1.5) groundPools.push(halo.position.clone());
         }
         const pools=new THREE.InstancedMesh(poolGeometry,this.poolMaterial,groundPools.length);
@@ -211,27 +213,41 @@ export class GptScene extends CityScene {
     }
     const blossom = this.a.place === 'kyoto' && this.a.season === 'spring';
     const colors = this.snow ? ['#e6e6dc','#a2b2a0','#c3ccba'] : blossom ? ['#e4a7b8','#f2c9d1','#bf839d'] : this.a.season === 'autumn' ? ['#a97736','#c9a34e','#8c6535'] : ['#506c35','#75934b','#94a85b'];
-    const height = size * (1.9 + hash01(seed)*.45);
-    this.beam('timber', [x,0,z], [x+.12,height*.77,z-.05], .065*size);
-    for (let branch=0;branch<5;branch+=1) {
-      const angle=branch*2.4+hash01(seed)*4;
-      const bx=x+Math.cos(angle)*size*.55, bz=z+Math.sin(angle)*size*.5;
-      const by=height*(.63+hash01(`${seed}b${branch}`)*.35);
-      this.beam('timber',[x+.06,height*.48,z],[bx,by,bz],.025*size);
-      this.part('canopy',`foliage:${colors[branch%3]}`,[bx,by,bz],[size*.29,size*.28,size*.27],[branch*.2,branch,0]);
-      for (let i=0;i<320;i+=1) {
-        const u=hash01(`${seed}:${branch}:${i}u`), v=hash01(`${seed}:${branch}:${i}v`);
-        const theta=u*Math.PI*2, r=Math.sqrt(v)*size*.55;
-        const px=bx+Math.cos(theta)*r, pz=bz+Math.sin(theta)*r;
-        const py=by+(hash01(`${seed}:${i}y`)-.4)*size*.65;
-        const color=colors[i%colors.length];
-        this.part('leaf',`foliage:${color}`,[px,py,pz],[size*.12,size*.17,size*.12],[u*3,v*6,theta]);
+    const height=size*(2+hash01(`height:${seed}`)*.7);
+    const leanX=(hash01(`leanx:${seed}`)-.5)*.45,leanZ=(hash01(`leanz:${seed}`)-.5)*.35;
+    for(let segment=0;segment<6;segment+=1) {
+      const u=segment/6,v=(segment+1)/6;
+      this.beam('timber',[x+leanX*u*u,height*u*.8,z+leanZ*u*u],[x+leanX*v*v,height*v*.8,z+leanZ*v*v],size*(.065-u*.035));
+    }
+    for(let root=0;root<4;root+=1) {
+      const angle=root*1.6+hash01(seed)*2;
+      this.beam('timber',[x,.2,z],[x+Math.cos(angle)*.22,.03,z+Math.sin(angle)*.22],.026*size);
+    }
+    for(let branch=0;branch<7;branch+=1) {
+      const angle=branch*2.4+hash01(seed)*5;
+      const bx=x+leanX+Math.cos(angle)*size*.48,bz=z+leanZ+Math.sin(angle)*size*.46;
+      const by=height*(.52+branch*.07+hash01(`${seed}:b${branch}`)*.08);
+      this.beam('timber',[x+leanX*.6,height*.51,z+leanZ*.6],[bx,by,bz],.024*size);
+      for(let twig=0;twig<4;twig+=1) {
+        const a=angle+twig*1.8,r=size*(.2+hash01(`${seed}:twig:${branch}:${twig}`)*.23);
+        const ex=bx+Math.cos(a)*r,ez=bz+Math.sin(a)*r,ey=by+(hash01(`tw:${branch}:${twig}`)-.4)*size*.3;
+        this.beam('timber',[bx,by,bz],[ex,ey,ez],.011*size);
+        this.part('canopy',`foliage:${colors[(branch+twig)%3]}`,[ex,ey,ez],[size*.16,size*.13,size*.16],[twig*.3,branch,.2]);
+        for(let i=0;i<110;i+=1) {
+          const u=hash01(`${seed}:${branch}:${twig}:${i}u`),v=hash01(`${seed}:${branch}:${twig}:${i}v`);
+          const theta=u*Math.PI*2,radius=Math.sqrt(v)*size*.32;
+          const px=ex+Math.cos(theta)*radius,pz=ez+Math.sin(theta)*radius;
+          const py=ey+(hash01(`${seed}:ly:${i}`)-.4)*size*.38;
+          this.part('leaf',`foliage:${colors[i%3]}`,[px,py,pz],[size*.13,size*.18,size*.13],[u*5,v*6,theta]);
+        }
       }
     }
   }
 
   buildLandscape() {
     const b = this.bounds;
+    const dense=this.a.place==='hoian';
+    const padding=dense?0:1;
     const span = Math.max(48, (b.maxX - b.minX + 5) * PLOT, (b.maxY - b.minY + 5) * PLOT);
     this.part('box', this.snow ? '#d7dfd8' : '#798269', [0, -0.17, 0], [span * 3, 0.25, span * 3]);
     // Fixed canal in the street between rows -1 and 0. It never displaces a building.
@@ -239,10 +255,16 @@ export class GptScene extends CityScene {
     for (const z of [-3.1, -0.9]) {
       this.part('box', 'stone', [0, 0.02, z], [span * 2, 0.15, 0.2]);
     }
-    for (let x = b.minX - 1; x <= b.maxX + 1; x += 1) {
-      for (let z = b.minY - 1; z <= b.maxY + 1; z += 1) {
+    for (let x = b.minX - padding; x <= b.maxX + padding; x += 1) {
+      for (let z = b.minY - padding; z <= b.maxY + padding; z += 1) {
         const cx = x * PLOT;
         const cz = z * PLOT;
+        if(dense) {
+          // Continuous street paving, clipped around the fixed river; no checkerboard grass gaps.
+          const near=z===0?-.88:cz-PLOT/2,far=z===-1?-3.12:cz+PLOT/2;
+          this.part('box','paving',[cx,-.015,(near+far)/2],[PLOT,.06,far-near]);
+          this.part('box','stone',[cx,.025,z===-1?-3.14:cz+1.42],[PLOT,.07,.13]);
+        } else {
         this.part('box', 'paving', [cx, -0.005, cz + 1.1], [3.45, 0.06, 0.45]);
         this.part('box', 'paving', [cx + 1.8, -0.005, cz], [0.6, 0.06, 2.55]);
         for (let j = 0; j < 3; j += 1) {
@@ -260,7 +282,12 @@ export class GptScene extends CityScene {
           this.part('box', i % 2 ? '#b3a68f' : 'paving', [cx - 1.4 + i * 0.4, 0.025, cz + 1.48], [0.37, 0.03, 0.35]);
           if (z !== -1) this.part('box', '#afa58e', [cx - 1.4 + i * 0.4, 0.005, cz + 1.9], [0.37, 0.03, 0.36]);
         }
-        if (hash01(`grove:${x},${z}`) > .55) this.tree(cx - 1.55, cz - .65 + hash01(`offset:${x},${z}`)*.4, .6 + hash01(`${x},${z}`)*.4, `${x},${z}`);
+        }
+        if (hash01(`grove:${x},${z}`) > (dense?.35:.55)) {
+          const tx=cx-1.76,tz=cz+(dense?.05:-.65)+hash01(`offset:${x},${z}`)*.4;
+          if(dense) this.part('orb','#686b4b',[tx,.02,tz],[.33,.025,.45]);
+          this.tree(tx,tz,.7+hash01(`${x},${z}`)*.35,`${x},${z}`);
+        }
         if ((x + z) % 2 === 0) {
           this.beam('iron', [cx + 1.55, 0, cz + 1.3], [cx + 1.55, 1.35, cz + 1.3], 0.025);
           this.part('orb', 'glow', [cx + 1.55, 1.4, cz + 1.3], [0.1, 0.15, 0.1]);
@@ -346,6 +373,46 @@ export class GptScene extends CityScene {
       const support=new THREE.Mesh(GEO.pole,hullMat);support.scale.set(.012,.23,.012);support.position.set(x,.17,z);this.boat.add(support);
     }
     this.boat.position.set(0.6, 0.08, -2); this.world.add(this.boat);
+  }
+
+  buildStreetscape() {
+    const buildings=this.model.city.buildings;
+    const byPlot=new Map(buildings.map(b=>[`${b.plot.x},${b.plot.y}`,b]));
+    for(const b of buildings) {
+      if(b.bricks.length/b.size<.65) continue;
+      const c=plotCenter(b.plot),next=byPlot.get(`${b.plot.x+1},${b.plot.y}`);
+      if(next && next.bricks.length/next.size>=.65) {
+        // Neighbouring earned frontages share a real planted pergola over the alley.
+        const x=c.x+PLOT/2,z=c.z+.88;
+        for(const dx of [-.33,.33]) this.beam('timber',[x+dx,.04,z],[x+dx,1.85,z],.033);
+        for(let i=0;i<6;i+=1) this.beam('timber',[x-.5,1.84,z-.3+i*.12],[x+.5,1.84,z-.3+i*.12],.02);
+        for(let i=0;i<90;i+=1) {
+          const u=hash01(`${b.planId}:trellis:${i}`),v=hash01(`trellis:${i}`);
+          this.part('leaf','foliage:#536e3f',[x+(u-.5)*1.1,1.86-v*.18,z+(v-.5)*.65],[.1,.15,.1],[u*3,v*5,u]);
+          if(i%3===0) this.part('orb','#b93678',[x+(u-.5)*1.1,1.87-v*.2,z+(v-.5)*.65],[.04,.03,.04]);
+        }
+        for(let i=0;i<14;i+=1) {
+          const u=i/14,v=(i+1)/14;
+          this.beam('iron',[c.x+.8+u*2.4,2.35-Math.sin(u*Math.PI)*.28,c.z+1.18],[c.x+.8+v*2.4,2.35-Math.sin(v*Math.PI)*.28,c.z+1.18],.008);
+        }
+        for(let i=0;i<5;i+=1) {
+          const u=(i+1)/6,lx=c.x+.8+u*2.4,ly=2.2-Math.sin(u*Math.PI)*.28;
+          this.part('orb',i%2?'lanternRed':'glow',[lx,ly,c.z+1.18],[.075,.11,.075]);
+          this.beam('timber',[lx,ly+.15,c.z+1.18],[lx,ly+.08,c.z+1.18],.009);
+          this.beam('#c39040',[lx,ly-.11,c.z+1.18],[lx,ly-.21,c.z+1.18],.008);
+        }
+      }
+      // Street furniture stays on the same plot; no decorative houses count as progress.
+      const x=c.x+1.57,z=c.z+.65;
+      this.part('taper','#a56c48',[x,.25,z],[.13,.35,.13]);
+      for(let leaf=0;leaf<15;leaf+=1) this.part('leaf','foliage:#587642',[x+Math.sin(leaf)*.14,.43+hash01(`pot:${leaf}`)*.22,z+Math.cos(leaf)*.13],[.12,.25,.12],[leaf,.6,leaf]);
+      if(b.shape==='house') {
+        for(const wheel of [-.2,.2]) this.part('orb','iron',[c.x-1.27+wheel,.21,c.z+.95],[.14,.14,.022]);
+        this.beam('iron',[c.x-1.47,.21,c.z+.95],[c.x-1.19,.45,c.z+.95],.013);
+        this.beam('iron',[c.x-1.19,.45,c.z+.95],[c.x-1.07,.21,c.z+.95],.013);
+        this.part('box','timber',[c.x-1.22,.46,c.z+.95],[.12,.035,.08]);
+      }
+    }
   }
 
   buildHouse(b) {
@@ -556,23 +623,27 @@ export class GptScene extends CityScene {
     this.artSkyKey = artSkyKey;
     this.nightAmount = this.a.light === 'night' ? 1 : this.a.light === 'live' ? (this.mats.lamp.emissiveIntensity-.5)/3.2 : 0;
     const night = this.nightAmount > .45;
+    if(this.a.light==='live') this.hemi.groundColor.set('#806f58');
     if (this.a.light !== 'live') {
       const sky = night ? '#344d59' : this.a.weather === 'rain' ? '#b4c1bb' : '#dce1cb';
       this.scene.background.set(sky);
       this.scene.fog = new THREE.Fog(sky, 27, 95);
-      this.hemi.intensity = night ? 1.65 : 1.35;
-      this.hemi.color.set(night ? '#8faac3' : '#fff3dc');
-      this.sun.intensity = night ? 1.15 : 3.1;
-      this.sun.color.set(night ? '#9db5d3' : '#ffe3b3');
-      this.sun.position.set(-16, 13, 10)
+      this.hemi.intensity = night ? 1.5 : 1.2;
+      this.hemi.color.set(night ? '#93a9bf' : '#fff0d0');
+      this.hemi.groundColor.set(night?'#b58b5d':'#9b8662');
+      this.sun.intensity = night ? .8 : 3.4;
+      this.sun.color.set(night ? '#adc1d3' : '#ffd39a');
+      this.sun.position.set(-16, 13, 10);
       this.sun.shadow.radius=3; this.sun.shadow.normalBias=.025;
     }
     this.artMaterials.get('glow')?.emissive.copy(this.mats.lamp.emissive);
-    if(this.haloMaterial) this.haloMaterial.opacity=night?.65:.08;
-    if(this.poolMaterial) this.poolMaterial.opacity=night?.34:.025;
+    if(this.haloMaterial) this.haloMaterial.opacity=night?.38:.08;
+    if(this.poolMaterial) this.poolMaterial.opacity=night?.5:.06;
     const glow = this.artMaterials.get('glow');
-    if (glow) glow.emissiveIntensity = night ? 1.2 : this.a.light === 'live' ? this.mats.lamp.emissiveIntensity : 0.18;
-    const horizon=new THREE.Color('#d0bea0').lerp(new THREE.Color('#536375'),this.nightAmount);
+    if (glow) glow.emissiveIntensity = night ? 1.45 : this.a.light === 'live' ? this.mats.lamp.emissiveIntensity : 0.18;
+    const red=this.artMaterials.get('lanternRed');
+    if(red) red.emissiveIntensity=night?1.3:.3;
+    const horizon=new THREE.Color('#dfbea0').lerp(new THREE.Color('#536375'),this.nightAmount);
     this.scene.fog = new THREE.Fog(horizon,22,85);
     if(this.skyMaterial) {
       this.skyMaterial.uniforms.bottom.value.copy(horizon);
@@ -600,7 +671,7 @@ export class GptScene extends CityScene {
       this.output=new OutputPass();
       this.composer.addPass(this.renderPass);this.composer.addPass(this.bloom);this.composer.addPass(this.output);
     }
-    this.bloom.strength=.12+(this.nightAmount||0)*.2;
+    this.bloom.strength=.12+(this.nightAmount||0)*.08;
     this.composer.render();
   }
 

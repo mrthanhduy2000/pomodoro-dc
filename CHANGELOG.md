@@ -10,6 +10,15 @@
 > **Muốn hiểu VÌ SAO một quyết định được chọn** → `ARCHITECTURE_DECISIONS.md`. **Muốn biết migration
 > cụ thể nào cần chạy** → `MIGRATION.md`.
 
+## 2026-10-23 — Detailed merchant houses and connected Hoi An streets
+
+Rebuilt merchant frontages with real recessed interiors, three bays, balconies, shutters,
+flowering rails and finer individual roof tiles. Broader halls and markets, continuous paving,
+planted alley pergolas and lantern strings make the neighbourhood more coherent. Trees have
+leaning trunks, root flares and finer branching crowns. Sunlight, ground bounce and lanterns
+are warmer. The interactive 3D preview is retained; no backgrounds or decorative earned buildings
+were introduced. Existing plot centers, session histories and construction rules stay intact.
+
 ## 2026-10-23 — Buildable 3D city restored; architectural preview expanded
 
 Removed illustrated backgrounds after the user's correction. Both GPT screens render the actual

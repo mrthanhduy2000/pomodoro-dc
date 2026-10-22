@@ -1,3 +1,28 @@
+> Last update: **2026-10-23 — DENSER HOI AN STREETS AND DEEP MERCHANT HOUSES.**
+> User requested richer 3D architecture, connected streets, natural trees and warmer lighting.
+> Merchant houses now occupy a broad two-wing frontage with three bays, hollow shop interiors,
+> shelves and jars, louvred shutters, a continuous balcony, diagonal brackets, planted rails
+> and cafe seating. Roofs use individual open half-cylinder tiles in ten overlapping courses.
+> Assembly halls and markets have broader, distinct frontages; courtyard houses have wider wings.
+> Hoi An paving is continuous and clipped around the unchanged canal, with no spare checkerboard
+> streets around the settlement. Adjacent developed frontages share planted alley pergolas and
+> sagging lantern strings. Street links are render-only and never create buildings or events.
+> Trees now have leaning segmented trunks, roots, forked branches, small foliage cores and more
+> individual leaves. Warm ground bounce, warmer sunlight and brighter amber/red lanterns improve
+> evening contrast without adding lights, reducing DPR or changing the camera.
+> Preview remains interactive 3D with all five types; one extra sample house fills its ninth lot.
+> All real plot centers, session facts, plan costs, timer, sync and storage are unchanged.
+> The data guard now covers eight seeds per shape and all thirteen construction phases; its
+> locality check uses the real half-plot width for wider architecture. Material-key validation
+> caught a shutter-name collision before deployment (red), then passed after the fix.
+> Validation: 1,924 full-suite passes, 0 failures, 1 expected skip; 3 cross-check passes;
+> 26 plot/block invariants and both expanded GPT guards passed; lint/build passed.
+> Browser: all five silhouettes, all four skins, preview/earned navigation; 375px layout has
+> exactly 375px document width, one canvas and zero images. No JavaScript errors in the clean
+> browser run (including live/day/night). Preview evidence: `/tmp/pomodoro-gpt-review/streets-preview-night.png`.
+
+---
+
 > Last update: **2026-10-23 — RESTORED BUILDABLE 3D CITY, REMOVED ARTWORK.**
 > User corrected the previous interpretation: a picture is not a city-building upgrade.
 > Removed ScenicView and both bundled illustrations. Focus and City render GptScene again;

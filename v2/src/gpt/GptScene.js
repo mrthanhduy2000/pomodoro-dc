@@ -1,4 +1,8 @@
 import * as THREE from 'three';
+import { EffectComposer } from 'three/addons/postprocessing/EffectComposer.js';
+import { RenderPass } from 'three/addons/postprocessing/RenderPass.js';
+import { UnrealBloomPass } from 'three/addons/postprocessing/UnrealBloomPass.js';
+import { OutputPass } from 'three/addons/postprocessing/OutputPass.js';
 import { Reflector } from 'three/addons/objects/Reflector.js';
 import { RoundedBoxGeometry } from 'three/addons/geometries/RoundedBoxGeometry.js';
 
@@ -94,6 +98,7 @@ export class GptScene extends CityScene {
     this.snow = snowIn(this.a);
     this.bounds = plotBounds(this.model.city.buildings, this.model.city.candidates);
     this.buildLandscape();
+    this.buildSky();
     for (const b of this.model.city.buildings) this.buildHouse(b);
     if (this.model.picking) {
       for (const plot of this.model.city.candidates) {
@@ -160,19 +165,50 @@ export class GptScene extends CityScene {
     ctx.fillStyle=gradient;ctx.fillRect(0,0,64,64);
     const glowTexture=new THREE.CanvasTexture(glowCanvas);
     this.haloMaterial=new THREE.SpriteMaterial({map:glowTexture,color:'#ffcb87',blending:THREE.AdditiveBlending,transparent:true,opacity:.15,depthWrite:false,toneMapped:false});
-    this.disposables.push(glowTexture,this.haloMaterial);
+    this.poolMaterial=new THREE.MeshBasicMaterial({map:glowTexture,color:'#ffbd6d',blending:THREE.AdditiveBlending,transparent:true,opacity:.2,depthWrite:false,toneMapped:false});
+    const poolGeometry=new THREE.PlaneGeometry(1,1).rotateX(-Math.PI/2);
+    this.disposables.push(glowTexture,this.haloMaterial,this.poolMaterial,poolGeometry);
     for (const { geo, mat, parts } of this.batches.values()) {
       const mesh = this.instanced(geo, mat, parts.length, { pick: parts.some((p) => p.pick) ? parts.map((p) => p.pick) : null });
       parts.forEach((p, i) => mesh.setMatrixAt(i, p.matrix));
       mesh.instanceMatrix.needsUpdate = true;
-      if(mat===this.artMaterials.get('glow')) for(const p of parts) {
-        const halo=new THREE.Sprite(this.haloMaterial);halo.position.setFromMatrixPosition(p.matrix);halo.scale.set(.55,.55,.55);this.world.add(halo);
+      if(mat===this.artMaterials.get('glow')) {
+        const groundPools=[];
+        for(const p of parts) {
+          const halo=new THREE.Sprite(this.haloMaterial);halo.position.setFromMatrixPosition(p.matrix);halo.scale.set(.55,.55,.55);this.world.add(halo);
+          if(halo.position.y < 1.5) groundPools.push(halo.position.clone());
+        }
+        const pools=new THREE.InstancedMesh(poolGeometry,this.poolMaterial,groundPools.length);
+        groundPools.forEach((p,i)=>pools.setMatrixAt(i,new THREE.Matrix4().makeScale(1.15,1,.95).setPosition(p.x,.075,p.z+.2)));
+        pools.instanceMatrix.needsUpdate=true;this.world.add(pools);
       }
     }
     this.batches.clear();
   }
 
   tree(x, z, size, seed) {
+    if(this.a.place==='hoian' && hash01(`palm:${seed}`)>.7) {
+      // Curved trunks and feathered fronds give the riverside a second tree silhouette.
+      const height=size*2.8;
+      for(let i=0;i<9;i+=1) {
+        const u=i/9,v=(i+1)/9;
+        this.beam('timber',[x+.16*u*u,height*u,z],[x+.16*v*v,height*v,z],size*(.065-u*.025));
+      }
+      for(let frond=0;frond<9;frond+=1) {
+        const angle=frond*Math.PI*2/9;
+        const point=(u)=>[x+.16+Math.cos(angle)*u*size*1.05,height+Math.sin(u*Math.PI)*size*.3-u*u*size*.55,z+Math.sin(angle)*u*size*1.05];
+        for(let j=0;j<10;j+=1) {
+          const u=j/10, p=point(u);
+          this.beam('leaf',p,point((j+1)/10),.012*size);
+          if(j<2) continue;
+          for(const side of [-1,1]) {
+            const direction=new THREE.Vector3(Math.cos(angle+side*.85),-.25,Math.sin(angle+side*.85)).normalize();
+            this.part('leaf',`foliage:${j%2?'#58773e':'#79914b'}`,p,[size*.12,size*(.48-u*.3),size*.12],[0,0,0],null,new THREE.Quaternion().setFromUnitVectors(UP,direction));
+          }
+        }
+      }
+      return;
+    }
     const blossom = this.a.place === 'kyoto' && this.a.season === 'spring';
     const colors = this.snow ? ['#e6e6dc','#a2b2a0','#c3ccba'] : blossom ? ['#e4a7b8','#f2c9d1','#bf839d'] : this.a.season === 'autumn' ? ['#a97736','#c9a34e','#8c6535'] : ['#506c35','#75934b','#94a85b'];
     const height = size * (1.9 + hash01(seed)*.45);
@@ -183,13 +219,13 @@ export class GptScene extends CityScene {
       const by=height*(.63+hash01(`${seed}b${branch}`)*.35);
       this.beam('timber',[x+.06,height*.48,z],[bx,by,bz],.025*size);
       this.part('canopy',`foliage:${colors[branch%3]}`,[bx,by,bz],[size*.29,size*.28,size*.27],[branch*.2,branch,0]);
-      for (let i=0;i<220;i+=1) {
+      for (let i=0;i<320;i+=1) {
         const u=hash01(`${seed}:${branch}:${i}u`), v=hash01(`${seed}:${branch}:${i}v`);
         const theta=u*Math.PI*2, r=Math.sqrt(v)*size*.55;
         const px=bx+Math.cos(theta)*r, pz=bz+Math.sin(theta)*r;
         const py=by+(hash01(`${seed}:${i}y`)-.4)*size*.65;
         const color=colors[i%colors.length];
-        this.part('leaf',`foliage:${color}`,[px,py,pz],[size*.3,size*.36,size*.3],[u*3,v*6,theta]);
+        this.part('leaf',`foliage:${color}`,[px,py,pz],[size*.12,size*.17,size*.12],[u*3,v*6,theta]);
       }
     }
   }
@@ -197,7 +233,7 @@ export class GptScene extends CityScene {
   buildLandscape() {
     const b = this.bounds;
     const span = Math.max(48, (b.maxX - b.minX + 5) * PLOT, (b.maxY - b.minY + 5) * PLOT);
-    this.part('box', this.snow ? '#d7dfd8' : '#aaad89', [0, -0.17, 0], [span * 3, 0.25, span * 3]);
+    this.part('box', this.snow ? '#d7dfd8' : '#798269', [0, -0.17, 0], [span * 3, 0.25, span * 3]);
     // Fixed canal in the street between rows -1 and 0. It never displaces a building.
     this.part('box', '#526f67', [0, -0.06, -2], [span * 2, 0.14, 2.05]);
     for (const z of [-3.1, -0.9]) {
@@ -224,7 +260,7 @@ export class GptScene extends CityScene {
           this.part('box', i % 2 ? '#b3a68f' : 'paving', [cx - 1.4 + i * 0.4, 0.025, cz + 1.48], [0.37, 0.03, 0.35]);
           if (z !== -1) this.part('box', '#afa58e', [cx - 1.4 + i * 0.4, 0.005, cz + 1.9], [0.37, 0.03, 0.36]);
         }
-        this.tree(cx - 1.55, cz - 0.5 + hash01(`offset:${x},${z}`)*.35, 0.75 + hash01(`${x},${z}`) * 0.45, `${x},${z}`);
+        if (hash01(`grove:${x},${z}`) > .55) this.tree(cx - 1.55, cz - .65 + hash01(`offset:${x},${z}`)*.4, .6 + hash01(`${x},${z}`)*.4, `${x},${z}`);
         if ((x + z) % 2 === 0) {
           this.beam('iron', [cx + 1.55, 0, cz + 1.3], [cx + 1.55, 1.35, cz + 1.3], 0.025);
           this.part('orb', 'glow', [cx + 1.55, 1.4, cz + 1.3], [0.1, 0.15, 0.1]);
@@ -233,6 +269,9 @@ export class GptScene extends CityScene {
       // Quays are built from separate weathered stones and carry warm lantern reflections.
       for (let i=0;i<10;i+=1) for (const bank of [-3.08,-.92]) {
         this.part('box',i%3 ? 'stone':'paving',[x*PLOT-2+i*.4,.055,bank],[.38,.2,.19]);
+      }
+      if(x%2!==0) for(let step=0;step<3;step+=1) {
+        this.part('box','stone',[x*PLOT+1.55,.065-step*.04,-.94-step*.13],[.55,.08,.24]);
       }
       if(x%2===0) for (const bank of [-3.12,-.88]) {
         const lx=x*PLOT+.9;
@@ -246,12 +285,26 @@ export class GptScene extends CityScene {
         const bx = x * PLOT + 2;
         for (let i = 0; i < 11; i += 1) {
           const z = -3.16 + i * 0.232;
-          const y = 0.12 + Math.sin((i / 10) * Math.PI) * 0.15;
-          this.part('box', 'timber', [bx, y, z], [0.78, 0.09, 0.225]);
+          const y = 0.12 + Math.sin((i / 10) * Math.PI) * 0.35;
+          this.part('box', 'stone', [bx, y, z], [0.84, 0.16, 0.225]);
           for (const side of [-1, 1]) {
-            if (i % 2 === 0) this.beam('timber', [bx + side * 0.38, y, z], [bx + side * 0.38, y + 0.42, z], 0.025);
-            if (i < 10) this.beam('timber', [bx + side * 0.38, y + 0.42, z], [bx + side * 0.38, 0.54 + Math.sin(((i + 1) / 10) * Math.PI) * 0.15, z + 0.232], 0.025);
+            if (i % 2 === 0) {
+              this.beam('stone', [bx + side * 0.38, y, z], [bx + side * 0.38, y + 0.42, z], 0.045);
+              this.part('orb','stone',[bx+side*.38,y+.45,z],[.06,.06,.06]);
+            }
+            if (i < 10) this.beam('stone', [bx + side * 0.38, y + 0.38, z], [bx + side * 0.38, 0.5 + Math.sin(((i + 1) / 10) * Math.PI) * 0.35, z + 0.232], 0.035);
           }
+        }
+        if(x===0 && this.a.place==='hoian') {
+          // A covered footbridge is fixed street scenery, never a planned building.
+          for(const side of [-1,1]) {
+            for(const z of [-2.95,-2,-1.05]) this.beam('timber',[bx+side*.37,.25,z],[bx+side*.37,1.28,z],.04);
+            this.part('box','tile',[bx+side*.29,1.4,-2],[.68,.065,2.65],[0,0,side*.5]);
+            this.beam('timber',[bx+side*.58,1.25,-3.3],[bx+side*.58,1.25,-.7],.035);
+            for(let course=0;course<18;course+=1) this.beam('tile',[bx,1.58,-3.25+course*.145],[bx+side*.59,1.26,-3.25+course*.145],.023);
+            for(const z of [-2.85,-1.15]) this.part('orb','glow',[bx+side*.48,1.04,z],[.08,.12,.08]);
+          }
+          this.beam('tile',[bx,1.59,-3.34],[bx,1.59,-.66],.045);
         }
       }
     }
@@ -264,9 +317,9 @@ export class GptScene extends CityScene {
         vec4 rippleUv=vUv;
         rippleUv.xy += vec2(sin(vSurface.x*8.0+vSurface.y*15.0+uTime),cos(vSurface.x*5.0-uTime*.7))*0.0018*vUv.w;
         vec4 base=texture2DProj(tDiffuse,rippleUv);
-        base.rgb=mix(base.rgb,uWater,.58);
+        base.rgb=mix(base.rgb,uWater,.38);
         float glint=pow(max(0.,sin(vSurface.x*25.+vSurface.y*45.+uTime*1.4)),32.);
-        base.rgb+=glint*.07;
+        base.rgb+=glint*.025;
       `),
     };
     const dpr=this.renderer.getPixelRatio();
@@ -276,11 +329,22 @@ export class GptScene extends CityScene {
     // A decorative boat is scenery, not an earned building or a session.
     this.boat = new THREE.Group();
     const hullMat = this.material('timber');
-    const hull = new THREE.Mesh(GEO.orb, hullMat);
-    hull.scale.set(0.65, 0.08, 0.21);
+    const hullShape=new THREE.Shape();
+    hullShape.moveTo(-.75,0);hullShape.bezierCurveTo(-.5,-.3,.5,-.3,.75,0);hullShape.bezierCurveTo(.5,.3,-.5,.3,-.75,0);
+    const hollow=new THREE.Path();hollow.moveTo(-.59,0);hollow.bezierCurveTo(-.4,.21,.4,.21,.59,0);hollow.bezierCurveTo(.4,-.21,-.4,-.21,-.59,0);hullShape.holes.push(hollow);
+    const hullGeometry=new THREE.ExtrudeGeometry(hullShape,{depth:.13,bevelEnabled:true,bevelSize:.012,bevelThickness:.012,bevelSegments:2,steps:1,curveSegments:20}).rotateX(-Math.PI/2);
+    this.disposables.push(hullGeometry);
+    const hull = new THREE.Mesh(hullGeometry, hullMat);
+    hull.castShadow=true;
     this.boat.add(hull);
+    for(let plank=0;plank<5;plank+=1) {
+      const seat=new THREE.Mesh(GEO.box,hullMat);seat.scale.set(.065,.035,.32);seat.position.set((plank-2)*.21,.085,0);this.boat.add(seat);
+    }
     const canopy = new THREE.Mesh(GEO.box, this.material('#c29a61'));
     canopy.scale.set(0.5, 0.055, 0.4); canopy.position.y = 0.28; this.boat.add(canopy);
+    for(const x of [-.23,.23]) for(const z of [-.17,.17]) {
+      const support=new THREE.Mesh(GEO.pole,hullMat);support.scale.set(.012,.23,.012);support.position.set(x,.17,z);this.boat.add(support);
+    }
     this.boat.position.set(0.6, 0.08, -2); this.world.add(this.boat);
   }
 
@@ -490,26 +554,64 @@ export class GptScene extends CityScene {
     const artSkyKey = `${this.appearanceSignature}:${this.skyMinute}`;
     if (!force && this.artSkyKey === artSkyKey) return;
     this.artSkyKey = artSkyKey;
-    const night = this.a.light === 'night';
+    this.nightAmount = this.a.light === 'night' ? 1 : this.a.light === 'live' ? (this.mats.lamp.emissiveIntensity-.5)/3.2 : 0;
+    const night = this.nightAmount > .45;
     if (this.a.light !== 'live') {
       const sky = night ? '#344d59' : this.a.weather === 'rain' ? '#b4c1bb' : '#dce1cb';
       this.scene.background.set(sky);
       this.scene.fog = new THREE.Fog(sky, 27, 95);
-      this.hemi.intensity = night ? 1.05 : 1.1;
+      this.hemi.intensity = night ? 1.65 : 1.35;
       this.hemi.color.set(night ? '#8faac3' : '#fff3dc');
-      this.sun.intensity = night ? 0.8 : 3.1;
+      this.sun.intensity = night ? 1.15 : 3.1;
       this.sun.color.set(night ? '#9db5d3' : '#ffe3b3');
       this.sun.position.set(-16, 13, 10)
       this.sun.shadow.radius=3; this.sun.shadow.normalBias=.025;
     }
     this.artMaterials.get('glow')?.emissive.copy(this.mats.lamp.emissive);
     if(this.haloMaterial) this.haloMaterial.opacity=night?.65:.08;
+    if(this.poolMaterial) this.poolMaterial.opacity=night?.34:.025;
     const glow = this.artMaterials.get('glow');
     if (glow) glow.emissiveIntensity = night ? 1.2 : this.a.light === 'live' ? this.mats.lamp.emissiveIntensity : 0.18;
+    const horizon=new THREE.Color('#d0bea0').lerp(new THREE.Color('#536375'),this.nightAmount);
+    this.scene.fog = new THREE.Fog(horizon,22,85);
+    if(this.skyMaterial) {
+      this.skyMaterial.uniforms.bottom.value.copy(horizon);
+      this.skyMaterial.uniforms.top.value.set('#819bad').lerp(new THREE.Color('#122947'),this.nightAmount);
+    }
+  }
+
+  buildSky() {
+    const night=this.a.light==='night';
+    const geo=new THREE.SphereGeometry(180,32,16);
+    const mat=new THREE.ShaderMaterial({side:THREE.BackSide,depthWrite:false,uniforms:{top:{value:new THREE.Color(night?'#122947':'#819bad')},bottom:{value:new THREE.Color(night?'#536375':'#d0bea0')}},vertexShader:'varying vec3 vPos; void main(){ vPos=position; gl_Position=projectionMatrix*modelViewMatrix*vec4(position,1.); }',fragmentShader:`uniform vec3 top; uniform vec3 bottom; varying vec3 vPos; void main(){gl_FragColor=vec4(mix(bottom,top,smoothstep(0.,.65,normalize(vPos).y)),1.);
+ #include <tonemapping_fragment>
+ #include <colorspace_fragment>
+ }`});
+    this.skyMaterial=mat;
+    const sky=new THREE.Mesh(geo,mat);sky.renderOrder=-100;this.world.add(sky);this.disposables.push(geo,mat);
+  }
+
+  renderScene() {
+    if(!this.composer) {
+      this.composer=new EffectComposer(this.renderer);
+      this.composer.renderTarget1.samples=4;this.composer.renderTarget2.samples=4;
+      this.renderPass=new RenderPass(this.scene,this.camera);
+      this.bloom=new UnrealBloomPass(new THREE.Vector2(this.canvas.clientWidth,this.canvas.clientHeight),.22,.45,1.05);
+      this.output=new OutputPass();
+      this.composer.addPass(this.renderPass);this.composer.addPass(this.bloom);this.composer.addPass(this.output);
+    }
+    this.bloom.strength=.12+(this.nightAmount||0)*.2;
+    this.composer.render();
+  }
+
+  dispose() {
+    this.bloom?.dispose();this.output?.dispose();this.composer?.dispose();
+    super.dispose();
   }
 
   resize() {
     super.resize();
+    this.composer?.setSize(this.canvas.clientWidth,this.canvas.clientHeight);
     if (this.water) this.water.getRenderTarget().setSize(Math.ceil(this.canvas.clientWidth*this.renderer.getPixelRatio()),Math.ceil(this.canvas.clientHeight*this.renderer.getPixelRatio()));
   }
 

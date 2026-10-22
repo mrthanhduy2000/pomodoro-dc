@@ -1,6 +1,6 @@
 /** Presentation only: no event creation, store writes, or changes to plot coordinates. */
 export const PLACES = {
-  hoian: { name: 'Hội An', subtitle: 'Một chiều bên sông', wall: '#dfb95f', roof: '#9c503c', wood: '#49382b', water: '#427f79', flower: '#b6537e', leaf: '#537c48' },
+  hoian: { name: 'Hội An', subtitle: 'Một chiều bên sông', wall: '#dfb95f', roof: '#66665b', wood: '#49382b', water: '#315f63', flower: '#b6537e', leaf: '#537c48' },
   kyoto: { name: 'Kyoto', subtitle: 'Những ngày thật chậm', wall: '#e6ddbd', roof: '#465755', wood: '#523f31', water: '#618d86', flower: '#e5abc0', leaf: '#71915a' },
   paris: { name: 'Paris', subtitle: 'Hẹn ở quán cà phê', wall: '#e1d4b7', roof: '#536270', wood: '#45534d', water: '#68868b', flower: '#bc645e', leaf: '#8c8b48' },
   colmar: { name: 'Colmar', subtitle: 'Ánh đèn bên ô cửa', wall: '#dfb5a3', roof: '#89564c', wood: '#584237', water: '#638a8d', flower: '#c58091', leaf: '#557a65' },

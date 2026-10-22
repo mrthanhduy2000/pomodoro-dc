@@ -10,7 +10,7 @@
 .gpt-edition :focus-visible { outline: 2px solid var(--accent); outline-offset: 4px; }
 .gpt-edition button { cursor: pointer; }
 .gpt-edition a { color: inherit; text-decoration: none; }
-.gpt-header { min-height: 74px; display: flex; align-items: center; justify-content: space-between; gap: 20px; padding: 12px 3%; border-bottom: 1px solid var(--line); }
+.gpt-header { min-height: 58px; display: flex; align-items: center; justify-content: space-between; gap: 20px; padding: 12px 3%; border-bottom: 1px solid var(--line); }
 .gpt-brand { display: flex; align-items: center; gap: 10px; font: 600 22px Georgia, serif; white-space: nowrap; }
 .gpt-brand > span { font-size: 34px; color: #8f8b5a; }
 .gpt-brand small { font: 600 10px -apple-system, sans-serif; letter-spacing: 1.5px; border: 1px solid #bcc9b6; padding: 5px 7px; border-radius: 5px; }
@@ -20,7 +20,7 @@
 .gpt-header nav button:hover:not([aria-current]) { background: #e9ebdf; }
 .gpt-header-end { display: flex; gap: 14px; align-items: center; font-size: 12px; color: var(--muted); }
 .gpt-main { padding: 0 3%; max-width: 1900px; margin: 0 auto; }
-.gpt-location-bar { min-height: 88px; display: flex; align-items: center; justify-content: space-between; gap: 16px; }
+.gpt-location-bar { min-height: 68px; display: flex; align-items: center; justify-content: space-between; gap: 16px; }
 .gpt-edition .eyebrow { font-size: 10px; letter-spacing: .16em; margin-bottom: 8px; color: var(--muted); }
 .gpt-location-bar label { display: flex; gap: 16px; align-items: center; }
 .gpt-location-bar select { border: 0; background: transparent; font: 25px Georgia, serif; color: var(--ink); cursor: pointer; margin-left: -4px; }
@@ -34,7 +34,7 @@
 .gpt-atmosphere-panel select { margin: 0; width: 100%; border: 1px solid var(--line); border-radius: 8px; padding: 8px; font: inherit; }
 .gpt-atmosphere-panel .gpt-check { display: flex; gap: 10px; }
 .gpt-check input { accent-color: var(--accent); }
-.gpt-focus-layout { display: grid; grid-template-columns: minmax(320px, 32%) minmax(0, 1fr); min-height: 558px; height: calc(100dvh - 214px); max-height: 850px; border: 1px solid var(--line); border-radius: 20px; overflow: hidden; background: var(--card); box-shadow: 0 6px 24px #30463808; }
+.gpt-focus-layout { display: grid; grid-template-columns: minmax(320px, 32%) minmax(0, 1fr); min-height: 480px; height: calc(100dvh - 174px); max-height: 850px; border: 1px solid var(--line); border-radius: 20px; overflow: hidden; background: var(--card); box-shadow: 0 6px 24px #30463808; }
 .gpt-focus-panel { display: flex; flex-direction: column; padding: 24px 30px 18px; overflow-y: auto; }
 .gpt-edition h1 { font: 400 34px/1.2 Georgia, 'Times New Roman', serif; letter-spacing: -.8px; margin: 0 0 12px; }
 .gpt-edition h1 em { font-weight: 400; color: #7b866b; }
@@ -58,6 +58,9 @@
 .gpt-today b { color: var(--ink); margin-left: 7px; }
 .gpt-focus-scene, .gpt-city-stage { position: relative; min-width: 0; overflow: hidden; background: #dce1cb; }
 .gpt-edition .city-canvas { display: block; width: 100%; height: 100%; min-height: 0; border-radius: 0; touch-action: none; }
+.gpt-preview-types { display: grid; margin: 12px 0 20px; border-top: 1px solid var(--line); }
+.gpt-preview-types button { display: flex; justify-content: space-between; gap: 12px; text-align: left; padding: 11px 0; border: 0; border-bottom: 1px solid var(--line); background: transparent; color: var(--ink); font: inherit; font-size: 12px; }
+.gpt-preview-types button[aria-pressed="true"] { color: var(--accent); font-weight: 600; }
 .gpt-focus-postcard { position: absolute; bottom: 30px; left: 30px; padding: 18px 22px; background: #fbf9f2e8; border: 1px solid #fffff080; border-radius: 12px; backdrop-filter: blur(14px); max-width: calc(100% - 60px); }
 .gpt-focus-postcard h2 { font: 27px Georgia, serif; margin: 4px 0 14px; }
 .gpt-focus-postcard button { background: transparent; border: 0; padding: 0; font-size: 12px; color: var(--accent); }
@@ -67,7 +70,7 @@
 .gpt-is-running .gpt-focus-postcard { opacity: .7; }
 .gpt-focus-done { grid-template-columns: minmax(360px, 42%) minmax(0, 1fr); }
 .gpt-focus-done .city-canvas--moment { height: 170px; border-radius: 12px; }
-.gpt-city-workspace { display: grid; grid-template-columns: minmax(0, 1fr) 300px; height: calc(100dvh - 214px); min-height: 558px; border: 1px solid var(--line); border-radius: 20px; overflow: hidden; background: var(--card); }
+.gpt-city-workspace { display: grid; grid-template-columns: minmax(0, 1fr) 300px; height: calc(100dvh - 174px); min-height: 480px; border: 1px solid var(--line); border-radius: 20px; overflow: hidden; background: var(--card); }
 .gpt-city-inspector { padding: 30px 25px; overflow-y: auto; display: flex; flex-direction: column; align-items: stretch; gap: 14px; }
 .gpt-city-inspector h2 { font: 32px/1.2 Georgia, serif; letter-spacing: -.5px; margin: 0; white-space: pre-line; }
 .gpt-city-inspector p { font-size: 13px; line-height: 1.7; margin: 0; }
@@ -137,60 +140,3 @@
   .gpt-footer > span:last-child { gap: 5px; }
 }
 @media (prefers-reduced-motion: reduce) { .gpt-edition *, .gpt-edition *::before, .gpt-edition *::after { animation: none !important; transition: none !important; scroll-behavior: auto !important; } }
-
-/* Illustrated Hoi An composition follows the approved reference; data lives in the inspector. */
-.gpt-scenic-view { position: absolute; inset: 0; margin: 0; background: #243b35; }
-.gpt-scenic-view img { display: block; width: 100%; height: 100%; object-fit: cover; object-position: 52% 50%; }
-.gpt-scenic-view figcaption { position: absolute; bottom: 20px; right: 20px; background: #152923b8; color: #fff4de; padding: 9px 14px; border-radius: 24px; font-size: 11px; backdrop-filter: blur(12px); }
-.gpt-scenic-view figcaption span { color: #eadfca; }
-.gpt-visit-city { position: absolute; right: 20px; top: 20px; background: #fcf6e8ee; border: 1px solid #fff7; color: var(--ink); padding: 10px 15px; border-radius: 24px; font-size: 12px; }
-.gpt-illustrated { --bg: #f3f0e6; --card: #faf7ee; --ink: #203d32; }
-.gpt-illustrated .gpt-header { min-height: 62px; padding: 10px 24px; gap: 20px; justify-content: flex-start; }
-.gpt-illustrated .gpt-brand { padding-right: 25px; border-right: 1px solid var(--line); font-size: 22px; }
-.gpt-illustrated .gpt-header-end { margin-left: auto; }
-.gpt-illustrated .gpt-header nav button { font-family: Georgia, serif; padding: 9px 16px; }
-.gpt-illustrated .gpt-main { padding: 0 16px; }
-.gpt-illustrated .gpt-location-bar { min-height: 56px; }
-.gpt-illustrated .gpt-location-bar .eyebrow { display: none; }
-.gpt-illustrated .gpt-location-bar select { font-size: 16px; }
-.gpt-illustrated .gpt-atmosphere summary { padding: 7px 13px; }
-.gpt-illustrated .gpt-focus-layout { grid-template-columns: minmax(310px,27%) minmax(0,1fr); height: calc(100dvh - 157px); min-height: 540px; border-radius: 12px; }
-.gpt-illustrated .gpt-focus-panel { padding: 28px 30px 20px; }
-.gpt-illustrated .gpt-focus-panel > h1 { font: 400 27px/1.3 Georgia,serif; letter-spacing: -.6px; margin: 12px 0 8px; }
-.gpt-illustrated h1 em { color: inherit; font-style: normal; }
-.gpt-illustrated .gpt-focus-panel .ring { height: 128px; }
-.gpt-illustrated .gpt-focus-panel .ring__time { font-size: clamp(82px,7.8vw,112px); letter-spacing: -5px; }
-.gpt-illustrated .gpt-focus-panel .ring__label { font-size: 11px; }
-.gpt-illustrated .gpt-focus-panel .chip { flex-shrink: 0; }
-.gpt-illustrated .gpt-focus-panel .chips[aria-label="Loại việc"] { flex-wrap: nowrap; max-width: 100%; overflow-x: auto; justify-content: flex-start; padding: 3px; scrollbar-width: thin; }
-.gpt-illustrated .gpt-focus-panel .goal { border-radius: 24px; }
-.gpt-illustrated .gpt-focus-panel .btn--big { min-height: 46px; font-family: Georgia,serif; }
-.gpt-illustrated .gpt-focus-panel .city-line { font-size: 10px; line-height: 1.6; }
-.gpt-illustrated .gpt-city-workspace { grid-template-columns: minmax(0,1fr) 270px; height: calc(100dvh - 157px); min-height: 540px; border-radius: 12px; }
-.gpt-illustrated .gpt-city-inspector { padding: 28px 22px; }
-.gpt-illustrated .gpt-city-inspector h2 { font-size: 27px; }
-.gpt-illustrated .gpt-city-inspector .btn { border-radius: 24px; }
-.gpt-illustrated .gpt-footer { padding: 12px 20px; }
-.gpt-illustrated .gpt-scene-caption { display: none; }
-@media(max-width:1050px) {
- .gpt-illustrated .gpt-header { flex-wrap: wrap; gap: 12px; }
- .gpt-illustrated .gpt-brand { font-size: 19px; padding-right: 14px; }
- .gpt-illustrated .gpt-focus-panel { padding: 24px; }
-}
-@media(max-width:740px) {
- .gpt-illustrated .gpt-header { padding: 10px 15px; }
- .gpt-illustrated .gpt-brand { border: 0; font-size: 18px; }
- .gpt-illustrated .gpt-header nav { gap: 0; }
- .gpt-illustrated .gpt-header nav button { padding: 8px 12px; }
- .gpt-illustrated .gpt-main { padding: 0 12px; }
- .gpt-illustrated .gpt-focus-layout,.gpt-illustrated .gpt-city-workspace { height: auto; min-height: 0; }
- .gpt-illustrated .gpt-focus-panel .ring__time { font-size: 90px; }
- .gpt-illustrated .gpt-focus-panel > h1 { font-size: 27px; }
- .gpt-illustrated .gpt-focus-scene { height: 370px; }
- .gpt-illustrated .gpt-city-stage { height: 500px; }
- .gpt-scenic-view figcaption { bottom: 14px; right: 12px; font-size: 10px; }
- .gpt-visit-city { top: 12px; right: 12px; font-size: 11px; }
-}
-
-.gpt-category-select { width: 100%; max-width: 260px; border: 0; border-bottom: 1px solid var(--line); background: transparent; color: var(--muted); padding: 8px 10px; font-size: 12px; cursor: pointer; }
-.gpt-illustrated .gpt-focus-panel .idle { gap: 16px; }

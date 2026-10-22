@@ -10,7 +10,7 @@ export function drawHoiAnBuilding(scene, b) {
   const progress = Math.min(1, b.bricks.length / b.size);
   const variant = Math.floor(hash01(`front:${b.planId}`) * 4);
   const wall = ['wall:#e0b253', 'wall:#dbc18a', 'wall:#d6a15c', 'wall:#e4cf9b'][variant];
-  const tile = ['#985138', '#a26546', '#92503e', '#a36a48'][variant];
+  const tile = ['#66665b', '#777365', '#575d58', '#7a7061'][variant];
   const part = (kind, mat, x, y, z, w, h, d, rotation = [0, 0, 0]) => scene.part(kind, mat, [c.x+x, y, c.z+z], [w,h,d], rotation, pick);
   const beam = (mat, a, to, radius=.025) => scene.beam(mat, [c.x+a[0],a[1],c.z+a[2]], [c.x+to[0],to[1],c.z+to[2]], radius, pick);
   const box = (mat,x,y,z,w,h,d) => part('box',mat,x,y,z,w,h,d);
@@ -52,11 +52,35 @@ export function drawHoiAnBuilding(scene, b) {
     box(wall,x,.16+h/2,z,w,h,d);
     box('stone',x,.16,z,w+.08,.16,d+.08);
     for(const side of [-1,1]) box('timber',x+side*w/2,.16+h/2,z+d/2+.01,.045,h,.05);
+    if(progress >= .35) {
+      // Recesses, louvres and sills wrap around the actual volume, including its rear.
+      for(const side of [-1,1]) for(let floor=0;floor<Math.max(1,Math.floor(h/.8));floor+=1) {
+        const wy=.61+floor*.76;
+        if(wy+.23 > h+.16) continue;
+        for(const offset of [-.24,.24]) if(d>.7 || offset<0) {
+          const wz=z+offset*d;
+          box('timber',x+side*(w/2+.013),wy,wz,.045,.48,.29);
+          box('glow',x+side*(w/2+.04),wy,wz,.018,.38,.21);
+          for(let slat=0;slat<4;slat+=1) box('timber',x+side*(w/2+.055),wy-.15+slat*.1,wz,.02,.025,.23);
+          box('stone',x+side*(w/2+.04),wy-.27,wz,.13,.055,.4);
+        }
+        box('timber',x,wy,z-d/2-.025,Math.min(w*.55,.6),.51,.05);
+        box('glow',x,wy,z-d/2-.055,Math.min(w*.44,.48),.39,.015);
+        for(let bar=0;bar<3;bar+=1) box('timber',x+(bar-1)*Math.min(w*.14,.15),wy,z-d/2-.07,.025,.4,.02);
+      }
+      // A damp plaster base and thin cornice keep the wall from reading as one slab.
+      box('stone',x,.27,z,w+.018,.1,d+.018);
+      box(wall,x,h+.11,z,w+.085,.075,d+.085);
+    }
   };
   const lantern = (x,y,z) => {
     if(progress < .8) return;
     beam('timber',[x,y+.2,z],[x,y+.06,z],.008);
     part('orb','glow',x,y,z,.085,.12,.085);
+    for(let rib=0;rib<6;rib+=1) {
+      const angle=rib*Math.PI/3;
+      beam('#a85932',[x+Math.sin(angle)*.078,y-.08,z+Math.cos(angle)*.078],[x+Math.sin(angle)*.078,y+.08,z+Math.cos(angle)*.078],.005);
+    }
     for(const yy of [-.12,.12]) part('pole','timber',x,y+yy,z,.055,.02,.055);
     beam('#b78e42',[x,y-.12,z],[x,y-.23,z],.008);
   };
@@ -65,8 +89,8 @@ export function drawHoiAnBuilding(scene, b) {
     box('timber',x,y-.05,z,width,.1,.16);
     for(let i=0;i<44;i+=1) {
       const u=hash01(`${b.planId}:garden:${i}`),v=hash01(`g:${i}`);
-      part('leaf',`foliage:${i%2?'#63804a':'#7d934e'}`,x+(u-.5)*width,y+.04+v*.14,z+(v-.5)*.17,.1,.16,.1,[u*4,v*4,i]);
-      if(i%3===0) part('orb','flower',x+(u-.5)*width,y+.15+v*.12,z+.03,.05,.035,.05);
+      part('leaf',`foliage:${i%2?'#63804a':'#7d934e'}`,x+(u-.5)*width,y+.04+v*.14,z+(v-.5)*.17,.07,.11,.07,[u*4,v*4,i]);
+      if(i%2===0) part('orb',scene.snow?'#dce4dc':'#bd387c',x+(u-.5)*width,y+.15+v*.12,z+.03,.05,.035,.05);
     }
   };
   const posts = (xs,y,z,h) => xs.forEach(x=>beam('timber',[x,y,z],[x,y+h,z],.035));
@@ -100,6 +124,23 @@ export function drawHoiAnBuilding(scene, b) {
       posts([flip*-.85,flip*.2],.16,.87,.85);
       roof(flip*-.32,1.01,.73,1.4,.48,.16);
       lantern(flip*.18,.84,.89);
+      lantern(flip*-.62,.84,.89);
+      // Open shop threshold, a carved sign and cafe seating belong to this house's plot.
+      box('timber',flip*-.28,.2,.7,.49,.09,.35);
+      box('timber',flip*.67,.88,.64,.45,.12,.06);
+      for(let i=0;i<5;i+=1) box('#c5ab69',flip*.67+(i-2)*.065,.88,.675,.018,.06,.01);
+      if(progress>=.8) {
+        const tx=flip*.72,tz=1.05;
+        part('pole','timber',tx,.43,tz,.23,.045,.23);
+        beam('iron',[tx,.16,tz],[tx,.42,tz],.018);
+        for(const side of [-1,1]) {
+          box('timber',tx+side*.28,.29,tz,.17,.035,.17);
+          posts([tx+side*.28-.06,tx+side*.28+.06],.16,tz,.12);
+          box('timber',tx+side*.28,.43,tz+.07,.17,.22,.025);
+        }
+        part('pole','#e0d0a0',tx,.47,tz,.035,.04,.035);
+        garden(flip*-.65,.92,.96,.75);
+      }
       garden(flip*.98,.33,.64,.3);
       break;
     }

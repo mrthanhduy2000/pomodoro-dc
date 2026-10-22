@@ -67,7 +67,6 @@ export default defineConfig({
         skipWaiting: true,
         importScripts: ['/push-worker.js'],
         globPatterns: ['**/*.{js,css,html,svg,png}'],
-        maximumFileSizeToCacheInBytes: 8 * 1024 * 1024, // Illustrated scenes are available offline too.
         navigateFallback: '/v2/index.html',
         navigateFallbackAllowlist: [/^\/v2\//],
       },

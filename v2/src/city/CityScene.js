@@ -635,8 +635,10 @@ export class CityScene {
     if (this.plotTiles) this.mats.plot.opacity = 0.4 + 0.25 * (0.5 + 0.5 * Math.sin(secs * 4));
     if (this.drop && this.storeys) this.animateDrop(t);
     this.applySky();
-    this.renderer.render(this.scene, this.camera);
+    this.renderScene();
   }
+
+  renderScene() { this.renderer.render(this.scene, this.camera); }
 
   animateDrop(t) {
     const k = Math.max(0, Math.min(1, (t - this.drop.start) / 900));

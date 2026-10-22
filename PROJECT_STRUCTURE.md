@@ -1045,7 +1045,6 @@ v2/
     ├── city/            layout.js · sky.js (pure, tested) · CityScene.js (base three.js renderer)
     ├── gpt/             GptEdition.jsx + gpt.css (opt-in UI), GptCanvas.jsx + GptScene.js
     │                    (architectural renderer), hoian.js (place-specific architectural kit),
-    │                    ScenicView.jsx + assets/ (labelled Hoi An illustrations, day/night),
     │                    art.js + art.test.js (presentation rules and data guards)
     ├── store/           logStore.js — Zustand persist 'dc-pomodoro-v2' (events, outbox, cursor)
     ├── lib/             sync.js (events_v2) · push.js (platform 'v2:…') · legacy.js (read-only v1)

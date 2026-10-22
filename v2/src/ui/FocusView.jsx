@@ -113,10 +113,6 @@ function IdlePanel({ app, goTo, architectural = false }) {
         ))}
       </div>
 
-      {architectural ? <select className="gpt-category-select" aria-label="Loại việc" value={categoryId ?? ''} onChange={(e) => setCategoryId(e.target.value || null)}>
-        {cats.length === 0 && <option value="">Chưa có loại việc</option>}
-        {cats.map(c => <option key={c.id} value={c.id}>{c.label}</option>)}
-      </select> : (
       <div className="chips" role="radiogroup" aria-label="Loại việc">
         {cats.map((c) => (
           <button
@@ -132,7 +128,7 @@ function IdlePanel({ app, goTo, architectural = false }) {
             {c.icon ? `${c.icon} ` : ''}{c.label}
           </button>
         ))}
-      </div>      )}
+      </div>
 
       <input className="goal" value={goal} onChange={(e) => setGoal(e.target.value)} placeholder="Phiên này làm gì? (không bắt buộc)" maxLength={140} />
 

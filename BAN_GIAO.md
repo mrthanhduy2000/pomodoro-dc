@@ -1,3 +1,22 @@
+> Last update: **2026-10-23 — RESTORED BUILDABLE 3D CITY, REMOVED ARTWORK.**
+> User corrected the previous interpretation: a picture is not a city-building upgrade.
+> Removed ScenicView and both bundled illustrations. Focus and City render GptScene again;
+> "Xem trước 3D" restores the read-only sample with selectable building types and close views.
+> Sample picks remain separate from real plans; switching to the real city clears sample picks.
+> Improved actual geometry: side/rear shutter windows, damp plaster bases and cornices,
+> lantern ribs, merchant signs, cafe furniture, smaller foliage, feathered palms,
+> grey tile roofs, stone bridge balustrades, a covered footbridge, quay steps and a hollow boat.
+> Added procedural sky, horizon haze, subtle ground glow and a multisampled bloom composer.
+> ACES output runs through OutputPass once; the base renderer keeps its existing direct path.
+> Preserved DPR, two scene lights, original plot centers, camera framing and all event/timer logic.
+> City remains stylized procedural 3D; it does NOT yet match the reference's photoreal asset quality.
+> Validation: full suite 1,924 passes, 0 failures, 1 expected skip; 3 cross-check passes;
+> 26 plot/block invariants plus both GPT data guards passed; lint/build passed.
+> Browser: five preview types, sample/earned navigation, Hoi An day/night, Kyoto winter,
+> no JavaScript errors; 375px document width exactly 375px. No focus session started.
+
+---
+
 > Last update: **2026-10-23 — REFERENCE-MATCHED ILLUSTRATED HOI AN.**
 > User explicitly rejected the procedural art and supplied the original concept image again.
 > Replaced the default Hoi An focus/postcard presentation with two generated, reference-guided

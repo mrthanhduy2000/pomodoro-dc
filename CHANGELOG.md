@@ -10,6 +10,15 @@
 > **Muốn hiểu VÌ SAO một quyết định được chọn** → `ARCHITECTURE_DECISIONS.md`. **Muốn biết migration
 > cụ thể nào cần chạy** → `MIGRATION.md`.
 
+## 2026-10-23 — Buildable 3D city restored; architectural preview expanded
+
+Removed illustrated backgrounds after the user's correction. Both GPT screens render the actual
+city again. The read-only 3D preview exposes five building types and close inspection. Added
+side/rear facade relief, merchant furniture, smaller leaves and palms, grey roofs, stone bridge
+detail and a covered bridge. Procedural sky, haze and subtle bloom improve the actual scene.
+Original plots, camera framing, earned progress, timer and event storage remain unchanged.
+This is a procedural 3D improvement; the reference's photoreal quality is not yet achieved.
+
 ## 2026-10-23 — Reference-matched illustrated Hoi An atmosphere
 
 The GPT focus screen and Hoi An postcard now use labelled golden-hour and blue-hour artwork,

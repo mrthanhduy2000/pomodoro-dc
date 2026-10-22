@@ -37,3 +37,23 @@ test('GPT presentation preserves existing session identities, notes, plots and p
   assert.equal(city.buildings[0].bricks[0].sid, 'real-session');
   assert.equal(ledger(city.buildings[0]).notes[0].text, 'Keep this note');
 });
+
+
+test('Hoi An kit keeps every construction phase anchored to the original plot and preserves its facts', async () => {
+  const { drawHoiAnBuilding } = await import('./hoian.js');
+  for (const shape of ['house','hall','market','tower','temple']) {
+    for (let count=0;count<=12;count+=1) {
+      const b=freeze({planId:`original-${shape}`,plot:{x:-3,y:2},shape,size:12,bricks:Array.from({length:count},(_,i)=>({id:`session-${i}`,goal:'Preserve my diary'}))});
+      const original=JSON.stringify(b);
+      const parts=[];
+      drawHoiAnBuilding({part:(...args)=>parts.push(args),beam:()=>{}},b);
+      const foundation=parts.find(p=>p[1]==='paving');
+      assert.deepEqual(foundation[2],[-12,.09,8], 'construction stays on its original plot at every session count');
+      for(const p of parts) {
+        assert.equal(p[5].planId,b.planId,'all decorative picks lead to the original building');
+        assert.ok(Math.abs(p[2][0]+12)<1.5 && Math.abs(p[2][2]-8)<1.5,'the kit remains local to its plot');
+      }
+      assert.equal(JSON.stringify(b),original);
+    }
+  }
+});

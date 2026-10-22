@@ -1,3 +1,16 @@
+> Last update: **2026-10-23 — DISTINCT HOI AN ARCHITECTURAL KIT.**
+> The user requested unique Hoi An buildings rather than repeated house meshes.
+> `v2/src/gpt/hoian.js` draws five independent silhouettes using shared roof/window/lantern
+> primitives: split merchant house, double-roof assembly hall, open stall market, bell pavilion,
+> and courtyard culture house. House variants are deterministic by planId: palette, mirrored
+> wing arrangement, single/two-storey frontage. Selection labels use the Hoi An kit names.
+> Other cities keep their existing renderer; no event, cost, plot, session or camera changes.
+> Every phase remains at the original plot center, including the individual session mosaics.
+> Browser reviewed all five silhouettes together in the labelled postcard; no JavaScript errors.
+> Visual evidence: `/tmp/pomodoro-gpt-review/hoian-kit.png`.
+
+---
+
 > Last update: **2026-10-23 — GPT CITY ART, SECOND PASS.**
 > User rejected the primitive look and requested closer fidelity to the concept.
 > GptScene now renders deterministic aged plaster/wood/stone/roof maps with bump relief,

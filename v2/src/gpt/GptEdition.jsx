@@ -8,6 +8,7 @@ import StatsView from '../ui/StatsView.jsx';
 import SettingsView from '../ui/SettingsView.jsx';
 import { hoursMinutes } from '../ui/format.js';
 import { PLACES, SEASONS, postcardCity, readAppearance, snowIn } from './art.js';
+import { HOIAN_NAMES } from './hoian.js';
 import './gpt.css';
 
 const Canvas = lazy(() => import('./GptCanvas.jsx'));
@@ -33,11 +34,11 @@ function Atmosphere({ value, onChange }) {
   );
 }
 
-function BlueprintChoices({ city, onChoose }) {
+function BlueprintChoices({ city, onChoose, names = SHAPES }) {
   return <div className="gpt-blueprints">{blueprintsOf(city.era).map((bp) => (
     <button key={bp.key} type="button" onClick={() => onChoose(bp)}>
       <span className={`gpt-house-icon gpt-house-icon--${bp.shape}`} aria-hidden="true">⌂</span>
-      <span><b>{SHAPES[bp.shape]}</b><small>{bp.size} phiên · {bp.name}</small></span><span aria-hidden="true">↗</span>
+      <span><b>{names[bp.shape]}</b><small>{bp.size} phiên · {bp.name}</small></span><span aria-hidden="true">↗</span>
     </button>
   ))}</div>;
 }
@@ -48,6 +49,7 @@ function CityWorkspace({ app, appearance, sample, onSampleChange }) {
   const [planning, setPlanning] = useState(false);
   const [scene, setScene] = useState(null);
   const city = app.city;
+  const names = appearance.place === 'hoian' ? HOIAN_NAMES : SHAPES;
   const shownCity = useMemo(() => sample ? postcardCity(city) : city, [sample, city]);
   const current = city.current;
   const remaining = current ? current.size - current.bricks.length : 0;
@@ -70,17 +72,17 @@ function CityWorkspace({ app, appearance, sample, onSampleChange }) {
           <button type="button" onClick={() => scene?.frameCity(appearance.motion ? 900 : 0)} title="Đưa máy ảnh về toàn cảnh">Toàn cảnh</button>
           <button type="button" onClick={() => { onSampleChange(!sample); setPick(null); setBlueprint(null); }}>{sample ? 'Thành phố của tôi' : 'Xem phố mẫu'}</button>
         </div>
-        {blueprint && <div className="gpt-placement"><b>Đặt {SHAPES[blueprint.shape].toLowerCase()}</b><span>Chọn một ô đất sáng trong thành phố.</span><div className="row"><button type="button" className="btn btn--primary" onClick={() => place(city.candidates[0])}>Chọn ô gần nhất</button><button type="button" className="btn" onClick={() => setBlueprint(null)}>Huỷ</button></div></div>}
+        {blueprint && <div className="gpt-placement"><b>Đặt {names[blueprint.shape].toLowerCase()}</b><span>Chọn một ô đất sáng trong thành phố.</span><div className="row"><button type="button" className="btn btn--primary" onClick={() => place(city.candidates[0])}>Chọn ô gần nhất</button><button type="button" className="btn" onClick={() => setBlueprint(null)}>Huỷ</button></div></div>}
       </div>
       <aside className="gpt-city-inspector">
         {sample ? (
           <><span className="eyebrow">Bưu thiếp kiến trúc</span><h2>Một nơi để<br />muốn trở về.</h2><p className="muted">Ngắm thử phố {PLACES[appearance.place].name}. Những căn nhà ở đây chỉ minh họa thiết kế.</p><button type="button" className="btn btn--primary" onClick={() => onSampleChange(false)}>Xây thành phố của tôi</button><div className="gpt-inspector-note">Mỗi phiên của bạn sẽ hoàn thiện một phần nhà: từ khung cửa đến mái ngói, ban công và những ngọn đèn.</div></>
         ) : pick ? <Detail pick={pick} city={city} categories={app.state.categories} onFocus={(id) => scene?.focusBuilding(id, appearance.motion ? 1000 : 0)} onClose={() => setPick(null)} architectural /> : (
-          <><span className="eyebrow">Góc phố của bạn</span><h2>{current ? SHAPES[current.shape] : 'Bắt đầu từ\nmột căn nhà.'}</h2>
+          <><span className="eyebrow">Góc phố của bạn</span><h2>{current ? names[current.shape] : 'Bắt đầu từ\nmột căn nhà.'}</h2>
             {current ? <><p className="muted">{current.name}</p><div className="gpt-progress"><span style={{ width: `${current.bricks.length / current.size * 100}%` }} /></div><p><b>{current.bricks.length}/{current.size}</b> phần hoàn thiện</p><p className="muted">Còn {remaining} phiên để hoàn thành.</p><button type="button" className="btn" onClick={() => scene?.focusBuilding(current.planId, appearance.motion ? 1000 : 0)}>Đến công trình ↗</button></> : <p className="muted">Chọn một công trình. Mỗi phiên tập trung sẽ để lại một dấu tích ở đây.</p>}
             {city.pile.length > 0 && <p className="gpt-inspector-note">{city.pile.length} viên gạch đang chờ công trình tiếp theo.</p>}
-            {city.queued.map((b) => <div className="gpt-queued" key={b.planId}><span>Tiếp theo: {SHAPES[b.shape]}</span>{b.bricks.length === 0 && <button className="link" type="button" onClick={() => app.cancelPlan(b.planId)}>Bỏ</button>}</div>)}
-            {!blueprint && city.canPlan && (planning || !current ? <BlueprintChoices city={city} onChoose={choose} /> : <button type="button" className="btn btn--primary" onClick={() => setPlanning(true)}>Chọn công trình kế tiếp</button>)}
+            {city.queued.map((b) => <div className="gpt-queued" key={b.planId}><span>Tiếp theo: {names[b.shape]}</span>{b.bricks.length === 0 && <button className="link" type="button" onClick={() => app.cancelPlan(b.planId)}>Bỏ</button>}</div>)}
+            {!blueprint && city.canPlan && (planning || !current ? <BlueprintChoices city={city} onChoose={choose} names={names} /> : <button type="button" className="btn btn--primary" onClick={() => setPlanning(true)}>Chọn công trình kế tiếp</button>)}
             {current && current.bricks.length === 0 && <button type="button" className="link gpt-cancel-plan" onClick={() => app.cancelPlan(current.planId)}>Đổi công trình này</button>}
           </>
         )}

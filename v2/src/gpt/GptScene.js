@@ -5,6 +5,7 @@ import { RoundedBoxGeometry } from 'three/addons/geometries/RoundedBoxGeometry.j
 import { CityScene } from '../city/CityScene.js';
 import { plotBounds, plotCenter, PLOT } from '../city/layout.js';
 import { hash01 } from '../engine/city.js';
+import { drawHoiAnBuilding } from './hoian.js';
 import { architectureOf, DEFAULT_APPEARANCE, PLACES, snowIn } from './art.js';
 
 const GEO = {
@@ -122,9 +123,10 @@ export class GptScene extends CityScene {
     if (this.artMaterials.has(key)) return this.artMaterials.get(key);
     const p = this.palette;
     const colors = { plaster: p.wall, timber: p.wood, tile: this.snow ? '#e6e8e1' : p.roof, stone: '#b6aa92', paving: this.snow ? '#d9ded9' : '#c4b9a0', leaf: this.snow ? '#a5b8a5' : this.a.season === 'autumn' ? '#b0803e' : p.leaf, flower: this.a.season === 'spring' ? '#e5b2bc' : p.flower, glow: '#e6ac56', iron: '#3b514a', candidate: '#d6b96b' };
-    const mat = new THREE.MeshStandardMaterial({ color: colors[key] || (key.startsWith('foliage:') ? key.slice(8) : key), roughness: this.a.weather === 'rain' ? 0.5 : 0.87 });
-    if (['plaster','timber','tile','stone','paving'].includes(key)) {
-      if (!this.textures.has(key)) { const tex = surfaceTexture(key); this.textures.set(key,tex); this.disposables.push(tex); }
+    const mat = new THREE.MeshStandardMaterial({ color: colors[key] || (key.startsWith('foliage:') ? key.slice(8) : key.startsWith('wall:') ? key.slice(5) : key), roughness: this.a.weather === 'rain' ? 0.5 : 0.87 });
+    const textureKey=key.startsWith('wall:') ? 'plaster' : key;
+    if (['plaster','timber','tile','stone','paving'].includes(textureKey)) {
+      if (!this.textures.has(key)) { const tex = surfaceTexture(textureKey); this.textures.set(key,tex); this.disposables.push(tex); }
       mat.map=this.textures.get(key); mat.bumpMap=mat.map; mat.bumpScale=key==='plaster'?.025:.045;
     }
     if (key.startsWith('foliage') || key === 'flower') { mat.side=THREE.DoubleSide; mat.roughness=1; }
@@ -283,6 +285,7 @@ export class GptScene extends CityScene {
   }
 
   buildHouse(b) {
+    if (this.a.place === 'hoian') { drawHoiAnBuilding(this, b); return; }
     const c = plotCenter(b.plot);
     const spec = architectureOf(b);
     const { width: w, depth: d, floors, progress } = spec;

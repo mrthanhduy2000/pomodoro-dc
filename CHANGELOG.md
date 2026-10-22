@@ -10,6 +10,13 @@
 > **Muốn hiểu VÌ SAO một quyết định được chọn** → `ARCHITECTURE_DECISIONS.md`. **Muốn biết migration
 > cụ thể nào cần chạy** → `MIGRATION.md`.
 
+## 2026-10-23 — Hoi An kit: five architectural identities
+
+Merchant houses now have asymmetric wings and stable facade variants. Assembly halls have
+ceremonial double roofs; markets are open sheds with produce stalls; bell pavilions have an open
+belfry; culture houses enclose a courtyard with side wings and a gate. Labels match the Hoi An
+architecture. Construction facts, plot centers and the other city skins are unchanged.
+
 ## 2026-10-23 — GPT city: architectural relief, organic foliage and reflective water
 
 **Purpose.** Address the block-like appearance of the first GPT renderer.

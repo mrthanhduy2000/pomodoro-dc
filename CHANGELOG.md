@@ -10,6 +10,15 @@
 > **Muốn hiểu VÌ SAO một quyết định được chọn** → `ARCHITECTURE_DECISIONS.md`. **Muốn biết migration
 > cụ thể nào cần chạy** → `MIGRATION.md`.
 
+## 2026-10-23 — GPT city: architectural relief, organic foliage and reflective water
+
+**Purpose.** Address the block-like appearance of the first GPT renderer.
+**Scope.** Aged surface maps and relief, tile courses, layered shopfronts/arched doors, verandas,
+climbing flowers, irregular leafy trees, stone quays, and real scene reflections with ripple
+animation. Softer sunlight/shadows and single-stage tone mapping add depth.
+**Compatibility.** Fixed plot positions, original session picks, reduced motion, and all game data
+remain intact. Changes apply to the GPT art layer only.
+
 ## 2026-10-22 — Opt-in GPT edition: architectural diary city
 
 **Purpose.** Make the approved visual direction usable in a separate edition while keeping the

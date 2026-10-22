@@ -1,3 +1,21 @@
+> Last update: **2026-10-23 — GPT CITY ART, SECOND PASS.**
+> User rejected the primitive look and requested closer fidelity to the concept.
+> GptScene now renders deterministic aged plaster/wood/stone/roof maps with bump relief,
+> overlapping terracotta courses, layered lintels/shutters, arched entrance, verandas, vines,
+> flowers and cafe furniture. Trees use branching silhouettes, irregular canopy geometry and
+> hundreds of curved leaves; the foliage changes with seasons.
+> Water uses the bundled three.js Reflector with a ripple-distorted projection of the real scene,
+> matching canvas DPR and resizing with it. The fixed canal was widened inside the street,
+> with individual quay stones and lanterns. No building moved. Water targets/materials/textures
+> are disposed on scene rebuild. Existing motion preference freezes waves and particles.
+> ACES tone mapping runs once on the renderer (no OutputPass), with softer directional shadows
+> and less uniform ambient light. No additional light, engine/store/timer/sync change.
+> Browser checked Hoi An summer and Kyoto winter without JavaScript errors; screenshots in
+> `/tmp/pomodoro-gpt-review`. Validation: 1,923 fast passes, 0 failures, 1 expected skip;
+> 3 cross-check passes; 26 plot/block invariants; lint/build pass. The city remains miniature art.
+
+---
+
 > Last update: **2026-10-22 — OPT-IN GPT VISUAL EDITION.**
 > User requested an alternate version/button and immediate implementation of the approved concept.
 >

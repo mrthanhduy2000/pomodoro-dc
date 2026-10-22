@@ -10,6 +10,14 @@
 > **Muốn hiểu VÌ SAO một quyết định được chọn** → `ARCHITECTURE_DECISIONS.md`. **Muốn biết migration
 > cụ thể nào cần chạy** → `MIGRATION.md`.
 
+## 2026-10-23 — Detailed riverfront, reflective ripples and moored boats
+
+The GPT canal has layered weathered quay stones, planted joints and broader water steps.
+Multi-scale ripples break live reflections into softer highlights, with darker bank edges.
+Three moored open/canopied boats have hollow hulls, planks, ribs, benches, oars, cargo and lamps.
+Independent gentle bobbing respects the motion preference. City plots, camera, construction
+progress and interactive 3D preview are unchanged; no illustrative background was added.
+
 ## 2026-10-23 — Detailed merchant houses and connected Hoi An streets
 
 Rebuilt merchant frontages with real recessed interiors, three bays, balconies, shutters,

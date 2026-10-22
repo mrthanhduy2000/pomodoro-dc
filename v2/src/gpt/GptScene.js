@@ -293,12 +293,27 @@ export class GptScene extends CityScene {
           this.part('orb', 'glow', [cx + 1.55, 1.4, cz + 1.3], [0.1, 0.15, 0.1]);
         }
       }
+      // Staggered masonry, damp joints and a lighter coping give the quay a real waterline.
+      for(const bank of [-3.08,-.92]) {
+        const toward=bank<-2?1:-1;
+        for(let row=0;row<3;row+=1) for(let block=0;block<12;block+=1) {
+          const bx=x*PLOT-2+(block+.5)*PLOT/12+(row%2)*.08;
+          const tint=hash01(`quay:${x}:${row}:${block}`);
+          this.part('box',row===0?'#526a5d':tint>.5?'#958d79':'#a69c85',[bx,-.065+row*.075,bank],[.31,.069,.23],[0,(tint-.5)*.025,0]);
+        }
+        for(let joint=0;joint<8;joint+=1) {
+          const bx=x*PLOT-1.8+joint*.49;
+          this.part('leaf','foliage:#5f7447',[bx,.08,bank+toward*.07],[.07,.12,.07],[joint,0,joint]);
+        }
+        if(x%2!==0) {
+          for(let step=0;step<5;step+=1) this.part('box','stone',[x*PLOT+1.5,.14-step*.045,bank+toward*(.05+step*.09)],[.72,.085,.2]);
+          this.part('pole','timber',[x*PLOT+.99,.27,bank],[.035,.44,.035]);
+          this.part('orb','iron',[x*PLOT+.99,.48,bank],[.05,.025,.05]);
+        }
+      }
       // Quays are built from separate weathered stones and carry warm lantern reflections.
       for (let i=0;i<10;i+=1) for (const bank of [-3.08,-.92]) {
         this.part('box',i%3 ? 'stone':'paving',[x*PLOT-2+i*.4,.055,bank],[.38,.2,.19]);
-      }
-      if(x%2!==0) for(let step=0;step<3;step+=1) {
-        this.part('box','stone',[x*PLOT+1.55,.065-step*.04,-.94-step*.13],[.55,.08,.24]);
       }
       if(x%2===0) for (const bank of [-3.12,-.88]) {
         const lx=x*PLOT+.9;
@@ -342,10 +357,14 @@ export class GptScene extends CityScene {
       vertexShader: Reflector.ReflectorShader.vertexShader.replace('varying vec4 vUv;', 'varying vec4 vUv; varying vec2 vSurface;').replace('vUv = textureMatrix', 'vSurface = position.xy; vUv = textureMatrix'),
       fragmentShader: Reflector.ReflectorShader.fragmentShader.replace('varying vec4 vUv;', 'varying vec4 vUv; varying vec2 vSurface; uniform float uTime; uniform vec3 uWater;').replace('vec4 base = texture2DProj( tDiffuse, vUv );', `
         vec4 rippleUv=vUv;
-        rippleUv.xy += vec2(sin(vSurface.x*8.0+vSurface.y*15.0+uTime),cos(vSurface.x*5.0-uTime*.7))*0.0018*vUv.w;
+        float swell=sin(vSurface.x*3.7+vSurface.y*5.2-uTime*.8);
+        float ripple=sin(vSurface.x*11.3-vSurface.y*8.1+uTime*1.3+swell*.65);
+        rippleUv.xy += vec2(swell*.0015+ripple*.0006,cos(vSurface.x*4.9+vSurface.y*7.1+uTime*.6)*.0019)*vUv.w;
         vec4 base=texture2DProj(tDiffuse,rippleUv);
-        base.rgb=mix(base.rgb,uWater,.38);
-        float glint=pow(max(0.,sin(vSurface.x*25.+vSurface.y*45.+uTime*1.4)),32.);
+        float edge=smoothstep(.55,1.025,abs(vSurface.y));
+        base.rgb=mix(base.rgb,uWater,.25+edge*.2);
+        base.rgb*=1.-edge*.12;
+        float glint=pow(max(0.,sin(vSurface.y*39.+swell*1.8+ripple*.35+uTime*.5)),24.);
         base.rgb+=glint*.025;
       `),
     };
@@ -353,26 +372,52 @@ export class GptScene extends CityScene {
     this.water = new Reflector(waterGeo,{textureWidth:Math.ceil(this.canvas.clientWidth*dpr),textureHeight:Math.ceil(this.canvas.clientHeight*dpr),color:'#79998e',clipBias:.003,shader});
     this.water.rotation.x=-Math.PI/2; this.water.position.set(0,.018,-2);
     this.world.add(this.water); this.disposables.push(waterGeo,this.water);
-    // A decorative boat is scenery, not an earned building or a session.
-    this.boat = new THREE.Group();
-    const hullMat = this.material('timber');
-    const hullShape=new THREE.Shape();
-    hullShape.moveTo(-.75,0);hullShape.bezierCurveTo(-.5,-.3,.5,-.3,.75,0);hullShape.bezierCurveTo(.5,.3,-.5,.3,-.75,0);
-    const hollow=new THREE.Path();hollow.moveTo(-.59,0);hollow.bezierCurveTo(-.4,.21,.4,.21,.59,0);hollow.bezierCurveTo(.4,-.21,-.4,-.21,-.59,0);hullShape.holes.push(hollow);
-    const hullGeometry=new THREE.ExtrudeGeometry(hullShape,{depth:.13,bevelEnabled:true,bevelSize:.012,bevelThickness:.012,bevelSegments:2,steps:1,curveSegments:20}).rotateX(-Math.PI/2);
-    this.disposables.push(hullGeometry);
-    const hull = new THREE.Mesh(hullGeometry, hullMat);
-    hull.castShadow=true;
-    this.boat.add(hull);
-    for(let plank=0;plank<5;plank+=1) {
-      const seat=new THREE.Mesh(GEO.box,hullMat);seat.scale.set(.065,.035,.32);seat.position.set((plank-2)*.21,.085,0);this.boat.add(seat);
+    // Fixed moorings occupy the canal between the existing bridges, never building plots.
+    this.boats=[];
+    for(const [i,bx] of [.1,3.6,-3.1].entries()) {
+      const boat=this.buildRiverBoat(i);
+      const bz=i===1?-2.5:i===2?-1.55:-2.05;
+      boat.position.set(bx,.055,bz);boat.rotation.y=i===1?-.13:i===2?.12:.06;
+      this.world.add(boat);this.boats.push(boat);
+      const bank=i===1?-3.08:-.92;
+      this.beam('timber',[bx-.6,.17,bz],[bx-.92,.22,bank],.008);
     }
-    const canopy = new THREE.Mesh(GEO.box, this.material('#c29a61'));
-    canopy.scale.set(0.5, 0.055, 0.4); canopy.position.y = 0.28; this.boat.add(canopy);
-    for(const x of [-.23,.23]) for(const z of [-.17,.17]) {
-      const support=new THREE.Mesh(GEO.pole,hullMat);support.scale.set(.012,.23,.012);support.position.set(x,.17,z);this.boat.add(support);
+  }
+
+  buildRiverBoat(index) {
+    const boat=new THREE.Group(),wood=this.material(index===1?'#70503b':'timber');
+    const add=(geometry,material,position,scale,rotation=[0,0,0])=>{
+      const mesh=new THREE.Mesh(geometry,material);mesh.position.set(...position);mesh.scale.set(...scale);mesh.rotation.set(...rotation);mesh.castShadow=true;mesh.receiveShadow=true;boat.add(mesh);return mesh;
+    };
+    const spar=(a,b,r=.012,material=wood)=>{
+      const from=new THREE.Vector3(...a),to=new THREE.Vector3(...b),direction=to.clone().sub(from);
+      const mesh=add(GEO.pole,material,from.add(to).multiplyScalar(.5).toArray(),[r,direction.length(),r]);
+      mesh.quaternion.setFromUnitVectors(UP,direction.normalize());
+    };
+    const outline=new THREE.Shape();
+    outline.moveTo(-.88,0);outline.bezierCurveTo(-.6,-.33,.6,-.33,.88,0);outline.bezierCurveTo(.6,.33,-.6,.33,-.88,0);
+    const opening=new THREE.Path();opening.moveTo(-.71,0);opening.bezierCurveTo(-.49,.24,.49,.24,.71,0);opening.bezierCurveTo(.49,-.24,-.49,-.24,-.71,0);outline.holes.push(opening);
+    const shell=new THREE.ExtrudeGeometry(outline,{depth:.16,bevelEnabled:true,bevelSize:.014,bevelThickness:.014,bevelSegments:3,steps:1,curveSegments:24}).rotateX(-Math.PI/2);
+    this.disposables.push(shell);add(shell,wood,[0,0,0],[1,1,1]);
+    for(let plank=0;plank<5;plank+=1) add(GEO.box,wood,[0,.022,(plank-2)*.071],[1.28,.025,.065]);
+    for(let rib=0;rib<7;rib+=1) add(GEO.box,this.material('#a57c53'),[(rib-3)*.18,.065,0],[.018,.07,.37]);
+    for(const x of [-.42,.33]) add(GEO.box,wood,[x,.14,0],[.12,.035,.41]);
+    // Raised bow/stern, an oar, ceramic cargo and a small lantern distinguish each hull.
+    for(const side of [-1,1]) spar([side*.6,.12,0],[side*.87,.25,0],.025);
+    spar([-.58,.19,-.19],[.65,.2,.31],.012);
+    add(GEO.box,wood,[.68,.2,.32],[.22,.025,.075],[0,-.39,0]);
+    add(GEO.taper,this.material('#b28a60'),[-.14,.12,0],[.07,.13,.07]);
+    add(GEO.taper,this.material('#887950'),[.02,.1,-.11],[.055,.1,.055]);
+    spar([-.57,.14,.1],[-.57,.48,.1],.012);
+    add(GEO.orb,this.material('glow'),[-.57,.37,.1],[.045,.068,.045]);
+    if(index===1) {
+      for(const x of [-.27,.27]) for(const z of [-.18,.18]) spar([x,.14,z],[x,.45,z]);
+      for(let slat=0;slat<9;slat+=1) {
+        const z=(slat-4)*.047,y=.45+.065*Math.cos(z/.2*Math.PI/2);
+        add(GEO.box,this.material('#af8c58'),[0,y,z],[.67,.025,.045],[z*.7,0,0]);
+      }
     }
-    this.boat.position.set(0.6, 0.08, -2); this.world.add(this.boat);
+    boat.userData.phase=index*2.1;return boat;
   }
 
   buildStreetscape() {
@@ -695,7 +740,7 @@ export class GptScene extends CityScene {
     if (this.a?.motion && this.onScreen) {
       const time = t / 1000;
       if (this.water) this.water.material.uniforms.uTime.value=time;
-      if (this.boat) { this.boat.position.y = 0.09 + Math.sin(time) * 0.015; this.boat.rotation.z = Math.sin(time * 0.7) * 0.015; }
+      for(const boat of this.boats||[]) { const phase=boat.userData.phase;boat.position.y=.055+Math.sin(time*.8+phase)*.009;boat.rotation.z=Math.sin(time*.65+phase)*.012; }
       if (this.particles) {
         const attr = this.particles.geometry.attributes.position;
         const step = Math.min(0.05, Math.max(0, (t - (this.weatherTick || t)) / 1000));

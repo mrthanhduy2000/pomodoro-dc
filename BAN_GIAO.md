@@ -1,3 +1,19 @@
+> Last update: **2026-10-23 — RIVER QUAYS, WATER AND MOORED BOATS.**
+> Added staggered masonry courses, damp lower stones, coping joints, small plants and paired
+> five-step landings along the existing canal. No building, street or camera moved.
+> Water now combines two non-aligned wave fields for distorted live reflections, darker bank
+> edges and broken transverse highlights instead of repeated diagonal stripes.
+> Three fixed moorings hold distinct open/canopied boats with hollow curved hulls, bottom planks,
+> ribs, benches, raised stems, oars, ceramic cargo, lanterns and ropes. Boats bob with independent
+> phases only while motion is enabled. They are scenery, never earned buildings or events.
+> All geometry/material resources follow existing rebuild disposal; reflection DPR is preserved.
+> Interactive preview and all city/timer/data paths remain unchanged.
+> Validation: 1,924 full-suite passes, 0 failures, 1 expected skip; 44 targeted guards, lint
+> and build passed. Browser reviewed day/night and motion toggle without JavaScript errors.
+> Preview screenshot: `/tmp/pomodoro-gpt-review/river-review.jpg`.
+
+---
+
 > Last update: **2026-10-23 — DENSER HOI AN STREETS AND DEEP MERCHANT HOUSES.**
 > User requested richer 3D architecture, connected streets, natural trees and warmer lighting.
 > Merchant houses now occupy a broad two-wing frontage with three bays, hollow shop interiors,

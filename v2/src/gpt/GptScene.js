@@ -31,30 +31,54 @@ GEO.leaf = leafGeometry;
 
 // Deterministic, locally generated material relief: no remote assets or loading dependencies.
 function surfaceTexture(kind) {
-  const canvas = document.createElement('canvas'); canvas.width = 256; canvas.height = 256;
-  const ctx = canvas.getContext('2d');
-  ctx.fillStyle = '#eee7d5'; ctx.fillRect(0,0,256,256);
-  for (let i = 0; i < 7000; i += 1) {
-    const h = hash01(`${kind}:${i}`);
-    ctx.fillStyle = `rgba(${h > .5 ? '255,251,231' : '50,41,24'},${.02 + h * .13})`;
-    ctx.fillRect(hash01(`x${i}`)*256, hash01(`y${i}`)*256, 1 + h*5, kind === 'timber' ? 12 + h*60 : 1 + h*6);
-  }
-  if (kind === 'plaster') for (let i = 0; i < 80; i += 1) {
-    ctx.fillStyle = 'rgba(78,66,43,.055)'; ctx.beginPath();
-    ctx.ellipse(hash01(`px${i}`)*256, hash01(`py${i}`)*256, 2 + hash01(`pr${i}`)*22, 3 + hash01(`ph${i}`)*14, 0,0,Math.PI*2); ctx.fill();
-  }
-  if (kind === 'tile' || kind === 'paving' || kind === 'stone') {
-    const rows = kind === 'tile' ? 12 : 8;
-    for (let y=0;y<rows;y+=1) for (let x=-1;x<8;x+=1) {
-      const px=x*36+(y%2)*18, py=y*256/rows;
-      ctx.fillStyle=`rgba(45,32,20,${.06+hash01(`p${x},${y}`)*.17})`;
-      ctx.fillRect(px,py,34,256/rows-2);
-      ctx.strokeStyle='rgba(255,247,211,.3)';ctx.strokeRect(px+1,py+1,33,256/rows-3);
+  const size=512;
+  const canvases=Array.from({length:3},()=>{const c=document.createElement('canvas');c.width=c.height=size;return c;});
+  const contexts=canvases.map(c=>c.getContext('2d'));
+  const pixels=contexts.map(ctx=>ctx.createImageData(size,size));
+  const random=(x,y)=>{let n=Math.imul(x+19,374761393)^Math.imul(y+71,668265263);n=Math.imul(n^(n>>>13),1274126177);return ((n^(n>>>16))>>>0)/4294967295;};
+  const noise=(x,y,cells)=>{
+    const px=x/size*cells,py=y/size*cells,ix=Math.floor(px),iy=Math.floor(py);
+    const sx=px-ix,sy=py-iy,u=sx*sx*(3-2*sx),v=sy*sy*(3-2*sy);
+    const at=(dx,dy)=>random((ix+dx)%cells,(iy+dy)%cells);
+    return (at(0,0)*(1-u)+at(1,0)*u)*(1-v)+(at(0,1)*(1-u)+at(1,1)*u)*v;
+  };
+  for(let y=0;y<size;y+=1) for(let x=0;x<size;x+=1) {
+    const broad=noise(x,y,5),fine=noise(x,y,31),grit=random(x,y);
+    let shade=.78+(broad-.5)*.2+(fine-.5)*.1+(grit-.5)*.04;
+    let relief=.5+(fine-.5)*.23+(grit-.5)*.12,rough=.86+(fine-.5)*.16;
+    if(kind==='timber') {
+      const warp=Math.sin(y/size*Math.PI*4)*5+(broad-.5)*24;
+      const grain=Math.sin((x+warp)/size*Math.PI*78+Math.sin(y/size*Math.PI*6)*1.5);
+      const pore=Math.pow(Math.max(0,grain),12);
+      const knot=Math.exp(-Math.pow((x-178)/24,2)-Math.pow((y-290)/60,2));
+      shade=.74+(broad-.5)*.18-pore*.12-knot*.19;
+      relief=.5-pore*.13+(fine-.5)*.12;rough=.72+pore*.14+(fine-.5)*.16;
     }
+    if(kind==='paving' || kind==='tile') {
+      const row=Math.floor(y/64),px=(x+(row%2)*32)%64,py=y%64;
+      const joint=px<2 || py<2;
+      const slab=random(Math.floor((x+(row%2)*32)/64),row);
+      shade=joint?.4:.76+(slab-.5)*.19+(fine-.5)*.11+(grit-.5)*.035;
+      relief=joint?.16:.53+(fine-.5)*.12;rough=joint?.98:.83+(fine-.5)*.17;
+    }
+    const offset=(y*size+x)*4;
+    const warm=kind==='timber'?[1,.96,.88]:kind==='stone'?[.98,1,.99]:[1,.99,.95];
+    for(let channel=0;channel<3;channel+=1) {
+      pixels[0].data[offset+channel]=Math.round(shade*255*warm[channel]);
+      pixels[1].data[offset+channel]=Math.round(relief*255);
+      pixels[2].data[offset+channel]=Math.round(rough*255);
+    }
+    for(const data of pixels) data.data[offset+3]=255;
   }
-  const tex = new THREE.CanvasTexture(canvas); tex.wrapS=tex.wrapT=THREE.RepeatWrapping;
-  tex.colorSpace=THREE.SRGBColorSpace; tex.anisotropy=4; return tex;
+  const maps=canvases.map((canvas,i)=>{contexts[i].putImageData(pixels[i],0,0);const t=new THREE.CanvasTexture(canvas);t.wrapS=t.wrapT=THREE.RepeatWrapping;t.anisotropy=4;if(i===0)t.colorSpace=THREE.SRGBColorSpace;return t;});
+  return {color:maps[0],height:maps[1],roughness:maps[2]};
 }
+
+// Material roles include the independently shaded quay stones and boat timbers.
+const SURFACES=new Map([
+  ...['#526a5d','#958d79','#a69c85','#afa58e','#b3a68f'].map(key=>[key,'stone']),
+  ...['#70503b','#a57c53','#af8c58'].map(key=>[key,'timber']),
+]);
 
 const canopy = new THREE.SphereGeometry(1,18,12);
 const canopyPos=canopy.attributes.position;
@@ -129,12 +153,58 @@ export class GptScene extends CityScene {
   material(key) {
     if (this.artMaterials.has(key)) return this.artMaterials.get(key);
     const p = this.palette;
-    const colors = { lanternRed:'#b9442a', plaster: p.wall, timber: p.wood, tile: this.snow ? '#e6e8e1' : p.roof, stone: '#b6aa92', paving: this.snow ? '#d9ded9' : '#c4b9a0', leaf: this.snow ? '#a5b8a5' : this.a.season === 'autumn' ? '#b0803e' : p.leaf, flower: this.a.season === 'spring' ? '#e5b2bc' : p.flower, glow: '#e6ac56', iron: '#3b514a', candidate: '#d6b96b' };
+    const colors = { lanternRed:'#b9442a', plaster: p.wall, timber: p.wood, tile: this.snow ? '#e6e8e1' : p.roof, stone: '#a2a297', paving: this.snow ? '#d9ded9' : '#b9b09a', leaf: this.snow ? '#a5b8a5' : this.a.season === 'autumn' ? '#b0803e' : p.leaf, flower: this.a.season === 'spring' ? '#e5b2bc' : p.flower, glow: '#e6ac56', iron: '#3b514a', candidate: '#d6b96b' };
     const mat = new THREE.MeshStandardMaterial({ color: colors[key] || (key.startsWith('foliage:') ? key.slice(8) : key.startsWith('wall:') ? key.slice(5) : key), roughness: this.a.weather === 'rain' ? 0.5 : 0.87 });
-    const textureKey=key.startsWith('wall:') ? 'plaster' : key;
+    const textureKey=key.startsWith('wall:') ? 'plaster' : SURFACES.get(key)||key;
     if (['plaster','timber','tile','stone','paving'].includes(textureKey)) {
-      if (!this.textures.has(key)) { const tex = surfaceTexture(textureKey); if(key==='paving' && this.a.place==='hoian') tex.repeat.set(3,3); this.textures.set(key,tex); this.disposables.push(tex); }
-      mat.map=this.textures.get(key); mat.bumpMap=mat.map; mat.bumpScale=key==='plaster'?.025:.045;
+      if (!this.textures.has(textureKey)) {
+        const maps=surfaceTexture(textureKey);this.textures.set(textureKey,maps);this.disposables.push(...Object.values(maps));
+      }
+      const maps=this.textures.get(textureKey);
+      mat.map=maps.color;mat.bumpMap=maps.height;mat.roughnessMap=maps.roughness;
+      mat.bumpScale=textureKey==='stone'?.018:textureKey==='paving'?.022:.012;
+      mat.roughness=this.a.weather==='rain'?.57:1;
+      if(textureKey==='stone' || textureKey==='paving') {
+        // World-space colour/roughness remove the miniature brick pattern stretched on every stone.
+        mat.onBeforeCompile=shader=>{
+          shader.vertexShader=shader.vertexShader.replace('#include <common>','#include <common>\nvarying vec3 vStonePosition; varying vec3 vStoneNormal;');
+          shader.vertexShader=shader.vertexShader.replace('#include <begin_vertex>',`#include <begin_vertex>
+            vec4 stonePosition=vec4(position,1.);
+            vec3 stoneNormal=normal;
+            #ifdef USE_INSTANCING
+            stonePosition=instanceMatrix*stonePosition;
+            stoneNormal=mat3(instanceMatrix)*stoneNormal;
+            #endif
+            vStonePosition=(modelMatrix*stonePosition).xyz;
+            vStoneNormal=normalize(mat3(modelMatrix)*stoneNormal);
+          `);
+          shader.fragmentShader=shader.fragmentShader.replace('#include <common>','#include <common>\nvarying vec3 vStonePosition; varying vec3 vStoneNormal;');
+          const uv='(abs(vStoneNormal.y)>.5?vStonePosition.xz:abs(vStoneNormal.x)>.5?vStonePosition.zy:vStonePosition.xy)*.5';
+          shader.fragmentShader=shader.fragmentShader
+            .replace('#include <map_fragment>',THREE.ShaderChunk.map_fragment.replaceAll('vMapUv',uv))
+            .replace('#include <roughnessmap_fragment>',THREE.ShaderChunk.roughnessmap_fragment.replaceAll('vRoughnessMapUv',uv))
+            .replace('#include <bumpmap_pars_fragment>',THREE.ShaderChunk.bumpmap_pars_fragment.replaceAll('vBumpMapUv',uv));
+        };
+        mat.customProgramCacheKey=()=> 'gpt-world-stone-v2';
+      } else if(textureKey==='timber') {
+        mat.onBeforeCompile=shader=>{
+          shader.vertexShader=shader.vertexShader.replace('#include <common>','#include <common>\nvarying vec2 vWoodOffset;');
+          shader.vertexShader=shader.vertexShader.replace('#include <begin_vertex>',`#include <begin_vertex>
+            vec4 woodOrigin=vec4(0.,0.,0.,1.);
+            #ifdef USE_INSTANCING
+            woodOrigin=instanceMatrix*woodOrigin;
+            #endif
+            vec3 woodWorld=(modelMatrix*woodOrigin).xyz;
+            vWoodOffset=fract(sin(vec2(dot(woodWorld,vec3(12.9898,78.233,37.719)),dot(woodWorld,vec3(39.346,11.135,83.155))))*43758.5453);
+          `);
+          shader.fragmentShader=shader.fragmentShader.replace('#include <common>','#include <common>\nvarying vec2 vWoodOffset;');
+          shader.fragmentShader=shader.fragmentShader
+            .replace('#include <map_fragment>',THREE.ShaderChunk.map_fragment.replaceAll('vMapUv','(vMapUv+vWoodOffset)'))
+            .replace('#include <roughnessmap_fragment>',THREE.ShaderChunk.roughnessmap_fragment.replaceAll('vRoughnessMapUv','(vRoughnessMapUv+vWoodOffset)'))
+            .replace('#include <bumpmap_pars_fragment>',THREE.ShaderChunk.bumpmap_pars_fragment.replaceAll('vBumpMapUv','(vBumpMapUv+vWoodOffset)'));
+        };
+        mat.customProgramCacheKey=()=> 'gpt-wood-grain-v1';
+      }
     }
     if (key.startsWith('foliage') || key === 'flower') { mat.side=THREE.DoubleSide; mat.roughness=1; }
     if (key === 'glow' || key === 'lanternRed') { mat.emissive.set(key==='glow'?'#ffba62':'#ff6427'); mat.emissiveIntensity = 0.55; }
@@ -354,18 +424,19 @@ export class GptScene extends CityScene {
     const shader = {
       ...Reflector.ReflectorShader,
       uniforms: {...THREE.UniformsUtils.clone(Reflector.ReflectorShader.uniforms), uTime: {value:0}, uWater: {value:new THREE.Color(this.palette.water)}},
-      vertexShader: Reflector.ReflectorShader.vertexShader.replace('varying vec4 vUv;', 'varying vec4 vUv; varying vec2 vSurface;').replace('vUv = textureMatrix', 'vSurface = position.xy; vUv = textureMatrix'),
-      fragmentShader: Reflector.ReflectorShader.fragmentShader.replace('varying vec4 vUv;', 'varying vec4 vUv; varying vec2 vSurface; uniform float uTime; uniform vec3 uWater;').replace('vec4 base = texture2DProj( tDiffuse, vUv );', `
+      vertexShader: Reflector.ReflectorShader.vertexShader.replace('varying vec4 vUv;', 'varying vec4 vUv; varying vec2 vSurface; varying vec3 vWorldPosition;').replace('vUv = textureMatrix', 'vSurface = position.xy; vWorldPosition = (modelMatrix*vec4(position,1.)).xyz; vUv = textureMatrix'),
+      fragmentShader: Reflector.ReflectorShader.fragmentShader.replace('varying vec4 vUv;', 'varying vec4 vUv; varying vec2 vSurface; varying vec3 vWorldPosition; uniform float uTime; uniform vec3 uWater;').replace('vec4 base = texture2DProj( tDiffuse, vUv );', `
         vec4 rippleUv=vUv;
         float swell=sin(vSurface.x*3.7+vSurface.y*5.2-uTime*.8);
         float ripple=sin(vSurface.x*11.3-vSurface.y*8.1+uTime*1.3+swell*.65);
         rippleUv.xy += vec2(swell*.0015+ripple*.0006,cos(vSurface.x*4.9+vSurface.y*7.1+uTime*.6)*.0019)*vUv.w;
         vec4 base=texture2DProj(tDiffuse,rippleUv);
         float edge=smoothstep(.55,1.025,abs(vSurface.y));
-        base.rgb=mix(base.rgb,uWater,.25+edge*.2);
+        float fresnel=pow(1.-clamp(dot(normalize(cameraPosition-vWorldPosition),vec3(0.,1.,0.)),0.,1.),3.);
+        base.rgb=mix(base.rgb,uWater,.18+edge*.18+(1.-fresnel)*.16);
         base.rgb*=1.-edge*.12;
         float glint=pow(max(0.,sin(vSurface.y*39.+swell*1.8+ripple*.35+uTime*.5)),24.);
-        base.rgb+=glint*.025;
+        base.rgb+=glint*(.009+fresnel*.018);
       `),
     };
     const dpr=this.renderer.getPixelRatio();

@@ -1,3 +1,21 @@
+> Last update: **2026-10-23 — NATURAL STONE, WOOD AND WATER MATERIALS.**
+> Replaced the shared speckled colour-as-bump texture with deterministic 512px colour, height
+> and roughness maps. Stone has multi-scale mineral mottling, wood has warped grain and knots,
+> and paving has restrained slab variation and recessed joints. Stable per-part wood offsets
+> avoid identical knots on every beam. Shaded quay/boat colour variants
+> now inherit the appropriate material role. Maps are shared by role and disposed on rebuild.
+> Stone/paving colour and roughness use world-space coordinates to avoid repeated tiny masonry
+> stamped on each individual block. Relief is shallower and independent of the colour map.
+> Water reflection/tint balance now changes with view angle; bank darkening is retained and
+> specular glints are less uniform. Buildings, plots, camera and interactive preview unchanged.
+> No illustrative background or data/timer changes. Targeted validation: 44 guards passed;
+> lint/build passed. Browser reviewed four skins, dry/rain and day/night with no shader errors;
+> 375px document width remains exactly 375px after renderer resizing.
+> Preview evidence: `/tmp/pomodoro-gpt-review/material-preview.jpg`. Full suite: 1,924 passes, zero failures,
+> one expected skip; all three cross-checks passed.
+
+---
+
 > Last update: **2026-10-23 — RIVER QUAYS, WATER AND MOORED BOATS.**
 > Added staggered masonry courses, damp lower stones, coping joints, small plants and paired
 > five-step landings along the existing canal. No building, street or camera moved.

@@ -10,6 +10,13 @@
 > **Muốn hiểu VÌ SAO một quyết định được chọn** → `ARCHITECTURE_DECISIONS.md`. **Muốn biết migration
 > cụ thể nào cần chạy** → `MIGRATION.md`.
 
+## 2026-10-23 — Natural stone, timber and water surface response
+
+Added distinct colour, height and roughness maps for weathered stone, grainy timber and paving.
+World-space stone scale removes miniature masonry patterns from individual blocks; quay stones
+and boat timber variants receive their material roles. View-dependent water tint and quieter
+highlights soften reflections. All geometry, city progress and interactive 3D preview remain.
+
 ## 2026-10-23 — Detailed riverfront, reflective ripples and moored boats
 
 The GPT canal has layered weathered quay stones, planted joints and broader water steps.

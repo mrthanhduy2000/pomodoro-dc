@@ -82,6 +82,8 @@ code — stop and rethink before adding more. Stage 5 needs sync ON first (else 
 
 Opt in at `/v2/?edition=gpt` from the original app or the v2 header. It shares v2 data and
 commands; this is not the stage-5 cutover. The classic view keeps the storey representation.
+Hoi An defaults to a labelled illustrated atmosphere with day/night artwork; the interactive
+city remains available under "Công trình của tôi". Artwork is independent of earned progress.
 GPT renders the same bricks as construction details plus independently selectable mosaic tiles,
 with fixed building footprints. Four place-inspired skins and seasonal atmosphere are local
 presentation preferences. The labelled sample town contains no earned progress and cannot write

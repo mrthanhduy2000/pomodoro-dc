@@ -1,3 +1,20 @@
+> Last update: **2026-10-23 — REFERENCE-MATCHED ILLUSTRATED HOI AN.**
+> User explicitly rejected the procedural art and supplied the original concept image again.
+> Replaced the default Hoi An focus/postcard presentation with two generated, reference-guided
+> production illustrations (golden hour and blue hour). ScenicView labels them as illustrations;
+> no artwork is represented as the user's earned buildings. The real city, plot picker, session
+> mosaics and all prior actions remain under "Công trình của tôi". The city inspector shows real
+> progress or an honest empty state; no fabricated 6/8 progress or clickable picture buildings.
+> Matched the reference layout: slimmer header, narrower timer panel, large unobstructed scene,
+> serif typography, category dropdown, compact controls. Illustrated mode offers light selection;
+> season/weather/motion controls remain on the interactive renderer where they actually apply.
+> No timer, sync, engine or stored-game changes. Artwork is bundled and precached offline.
+> Validation: 1,924 test passes, 0 failures, 1 expected skip; 3 cross-check passes; lint/build pass.
+> Browser: golden/night artwork, real-city navigation and 375px no horizontal overflow.
+> Image generation used the built-in tool; asset intent/prompt specification in assets/PROMPTS.txt.
+
+---
+
 > Last update: **2026-10-23 — DISTINCT HOI AN ARCHITECTURAL KIT.**
 > The user requested unique Hoi An buildings rather than repeated house meshes.
 > `v2/src/gpt/hoian.js` draws five independent silhouettes using shared roof/window/lantern

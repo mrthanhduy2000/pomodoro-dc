@@ -1,0 +1,7 @@
+Tool: built-in image_gen.imagegen. Two independent reference-guided generations.
+Reference: user-supplied concept board, codex-clipboard-46197037-7c01-4b49-9e1b-c57ec742a75a.png.
+Purpose: explicitly labelled ambient illustrations, never representations of earned buildings.
+
+Golden hour: Reimagine ONLY the top viewport scenery as a full bleed 16:9 Hoi An riverside town. No UI, text, borders, labels or watermark. Dense ochre merchant houses, richly detailed weathered ceramic roofs, carved wooden balconies, bougainvillea, organic trees, red silk lanterns, jade river, boats and a stone arch footbridge. Low elevated architectural view, warm sunset from upper right, sky at top 12 percent. Physically realistic textures and reflections. Match the supplied reference richness; no low-poly, toy blocks or spherical trees.
+
+Blue hour: Reimagine ONLY the bottom viewport scenery as a full bleed 16:9 Hoi An riverside town. No UI, text, borders or watermark. Rich dark roof tiles, warm timber balconies, lanterns and windows, cascading flowers, mature palms, cobbled cafes with believable people. Jade river winding across foreground with lamp-lit boats and rippling golden reflections, arch bridge mid-right. Low elevated close 3/4 view, indigo twilight contrasting amber light. Match reference material detail; no primitive blocks or low-poly trees.

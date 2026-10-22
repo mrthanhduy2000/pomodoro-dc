@@ -1397,6 +1397,9 @@ UI (v2/src/ui) ──actions──▶ useTimerApp ──cmd*(state, now)──�
   `v2/src/gpt/`. It shares `useTimerApp`, the event log, FocusPanel, StatsView and SettingsView;
   there is no second timer or database. `GptScene` inherits canvas lifecycle, picking and camera
   navigation from `CityScene`, and draws architectural completion parts on unchanged plot centers.
+  Hoi An Focus and the default city postcard use `ScenicView` with labelled day/night artwork;
+  these are illustrations, never earned progress. "Công trình của tôi" opens the interactive
+  event-derived city, and the illustrated inspector uses real progress only.
   Hoi An delegates its five building types to `gpt/hoian.js`; the other skins keep the shared kit.
   Session mosaics remain individually pickable. Local art preferences use `dc-gpt-appearance`
   only. Explicitly labelled postcard buildings are render-only and never enter the event log.

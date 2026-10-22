@@ -137,3 +137,60 @@
   .gpt-footer > span:last-child { gap: 5px; }
 }
 @media (prefers-reduced-motion: reduce) { .gpt-edition *, .gpt-edition *::before, .gpt-edition *::after { animation: none !important; transition: none !important; scroll-behavior: auto !important; } }
+
+/* Illustrated Hoi An composition follows the approved reference; data lives in the inspector. */
+.gpt-scenic-view { position: absolute; inset: 0; margin: 0; background: #243b35; }
+.gpt-scenic-view img { display: block; width: 100%; height: 100%; object-fit: cover; object-position: 52% 50%; }
+.gpt-scenic-view figcaption { position: absolute; bottom: 20px; right: 20px; background: #152923b8; color: #fff4de; padding: 9px 14px; border-radius: 24px; font-size: 11px; backdrop-filter: blur(12px); }
+.gpt-scenic-view figcaption span { color: #eadfca; }
+.gpt-visit-city { position: absolute; right: 20px; top: 20px; background: #fcf6e8ee; border: 1px solid #fff7; color: var(--ink); padding: 10px 15px; border-radius: 24px; font-size: 12px; }
+.gpt-illustrated { --bg: #f3f0e6; --card: #faf7ee; --ink: #203d32; }
+.gpt-illustrated .gpt-header { min-height: 62px; padding: 10px 24px; gap: 20px; justify-content: flex-start; }
+.gpt-illustrated .gpt-brand { padding-right: 25px; border-right: 1px solid var(--line); font-size: 22px; }
+.gpt-illustrated .gpt-header-end { margin-left: auto; }
+.gpt-illustrated .gpt-header nav button { font-family: Georgia, serif; padding: 9px 16px; }
+.gpt-illustrated .gpt-main { padding: 0 16px; }
+.gpt-illustrated .gpt-location-bar { min-height: 56px; }
+.gpt-illustrated .gpt-location-bar .eyebrow { display: none; }
+.gpt-illustrated .gpt-location-bar select { font-size: 16px; }
+.gpt-illustrated .gpt-atmosphere summary { padding: 7px 13px; }
+.gpt-illustrated .gpt-focus-layout { grid-template-columns: minmax(310px,27%) minmax(0,1fr); height: calc(100dvh - 157px); min-height: 540px; border-radius: 12px; }
+.gpt-illustrated .gpt-focus-panel { padding: 28px 30px 20px; }
+.gpt-illustrated .gpt-focus-panel > h1 { font: 400 27px/1.3 Georgia,serif; letter-spacing: -.6px; margin: 12px 0 8px; }
+.gpt-illustrated h1 em { color: inherit; font-style: normal; }
+.gpt-illustrated .gpt-focus-panel .ring { height: 128px; }
+.gpt-illustrated .gpt-focus-panel .ring__time { font-size: clamp(82px,7.8vw,112px); letter-spacing: -5px; }
+.gpt-illustrated .gpt-focus-panel .ring__label { font-size: 11px; }
+.gpt-illustrated .gpt-focus-panel .chip { flex-shrink: 0; }
+.gpt-illustrated .gpt-focus-panel .chips[aria-label="Loại việc"] { flex-wrap: nowrap; max-width: 100%; overflow-x: auto; justify-content: flex-start; padding: 3px; scrollbar-width: thin; }
+.gpt-illustrated .gpt-focus-panel .goal { border-radius: 24px; }
+.gpt-illustrated .gpt-focus-panel .btn--big { min-height: 46px; font-family: Georgia,serif; }
+.gpt-illustrated .gpt-focus-panel .city-line { font-size: 10px; line-height: 1.6; }
+.gpt-illustrated .gpt-city-workspace { grid-template-columns: minmax(0,1fr) 270px; height: calc(100dvh - 157px); min-height: 540px; border-radius: 12px; }
+.gpt-illustrated .gpt-city-inspector { padding: 28px 22px; }
+.gpt-illustrated .gpt-city-inspector h2 { font-size: 27px; }
+.gpt-illustrated .gpt-city-inspector .btn { border-radius: 24px; }
+.gpt-illustrated .gpt-footer { padding: 12px 20px; }
+.gpt-illustrated .gpt-scene-caption { display: none; }
+@media(max-width:1050px) {
+ .gpt-illustrated .gpt-header { flex-wrap: wrap; gap: 12px; }
+ .gpt-illustrated .gpt-brand { font-size: 19px; padding-right: 14px; }
+ .gpt-illustrated .gpt-focus-panel { padding: 24px; }
+}
+@media(max-width:740px) {
+ .gpt-illustrated .gpt-header { padding: 10px 15px; }
+ .gpt-illustrated .gpt-brand { border: 0; font-size: 18px; }
+ .gpt-illustrated .gpt-header nav { gap: 0; }
+ .gpt-illustrated .gpt-header nav button { padding: 8px 12px; }
+ .gpt-illustrated .gpt-main { padding: 0 12px; }
+ .gpt-illustrated .gpt-focus-layout,.gpt-illustrated .gpt-city-workspace { height: auto; min-height: 0; }
+ .gpt-illustrated .gpt-focus-panel .ring__time { font-size: 90px; }
+ .gpt-illustrated .gpt-focus-panel > h1 { font-size: 27px; }
+ .gpt-illustrated .gpt-focus-scene { height: 370px; }
+ .gpt-illustrated .gpt-city-stage { height: 500px; }
+ .gpt-scenic-view figcaption { bottom: 14px; right: 12px; font-size: 10px; }
+ .gpt-visit-city { top: 12px; right: 12px; font-size: 11px; }
+}
+
+.gpt-category-select { width: 100%; max-width: 260px; border: 0; border-bottom: 1px solid var(--line); background: transparent; color: var(--muted); padding: 8px 10px; font-size: 12px; cursor: pointer; }
+.gpt-illustrated .gpt-focus-panel .idle { gap: 16px; }

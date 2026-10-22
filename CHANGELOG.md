@@ -10,6 +10,13 @@
 > **Muốn hiểu VÌ SAO một quyết định được chọn** → `ARCHITECTURE_DECISIONS.md`. **Muốn biết migration
 > cụ thể nào cần chạy** → `MIGRATION.md`.
 
+## 2026-10-23 — Reference-matched illustrated Hoi An atmosphere
+
+The GPT focus screen and Hoi An postcard now use labelled golden-hour and blue-hour artwork,
+with a narrower timer panel and unobstructed scenery matching the supplied visual reference.
+Real progress remains in the inspector; "Công trình của tôi" opens the existing interactive city.
+No session, building or sync data changed. Both images are bundled for offline availability.
+
 ## 2026-10-23 — Hoi An kit: five architectural identities
 
 Merchant houses now have asymmetric wings and stable facade variants. Assembly halls have

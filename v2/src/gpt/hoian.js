@@ -49,6 +49,7 @@ export function drawHoiAnBuilding(scene, b) {
       // Gable boards close the roof volume. Slim timber eaves keep the edges light.
       for(let j=0;j<7;j+=1) for(const end of [-1,1]) box('timber',x+end*(w/2-.09),y+rise*j/7,z,.04,rise/7+.01,d*(1-j/7));
       beam('timber',[x-w/2,y+.07,z+side*reach],[x+w/2,y+.07,z+side*reach],.025);
+      for(let drip=0;drip<Math.floor(w/.42);drip+=1)box('timber',x-w/2+.2+drip*.42,y-.015-random(`drip:${drip}`)*.025,z+side*(reach-.025),.33,.045,.06);
       for(let bracket=0;bracket<Math.floor(w/.3);bracket+=1) {
         const bx=x-w/2+.16+bracket*.3;
         beam('timber',[bx,y-.1,z+side*(reach-.17)],[bx,y+.05,z+side*reach],.016);
@@ -77,7 +78,7 @@ export function drawHoiAnBuilding(scene, b) {
   const awning=(x,y,z,width,color)=>{
     if(progress<.65)return;
     for(let stripe=0;stripe<10;stripe+=1) {
-      part('box',stripe%2?'#d9cdae':color,x+(stripe-4.5)*width/10,y,z,width/10,.025,.52,[.16,0,0]);
+      part('cloth',`cloth:${stripe%2?'#d9cdae':color}`,x+(stripe-4.5)*width/10,y,z,width/10,.14,.52,[.16,0,0]);
       part('orb',stripe%2?'#d9cdae':color,x+(stripe-4.5)*width/10,y-.055,z+.25,width/20,.06,.025);
     }
   };
@@ -103,6 +104,9 @@ export function drawHoiAnBuilding(scene, b) {
       part('box',shutterColor,sx,y,z+.08,.16,h+.05,.035,[0,side*.4,0]);
       for(let i=0;i<6;i+=1) box('timber',sx,y-h*.38+i*h*.15,z+.105,.12,.014,.018);
     }
+    if(progress>=.8 && random(`curtain:${x}:${y}:${z}`)>.45) {
+      for(const side of [-1,1])part('cloth','cloth:#c6b994',x+side*w*.34,y,z+.072,w*.25,.07,h*.88,[Math.PI/2,0,side*.08]);
+    }
     box('stone',x,y-h/2-.055,z+.02,w+.16,.05,.13);
   };
   const body = (x,z,w,d,h) => {
@@ -123,6 +127,25 @@ export function drawHoiAnBuilding(scene, b) {
       }
     } else box(wall,x,.16+h/2,z,w,h,d);
     box('stone',x,.16,z,w+.08,.16,d+.08);
+    if(progress>=.65) {
+      // Irregular apron stones seat the facade in the street instead of a perfect plinth edge.
+      const count=Math.max(3,Math.round(w/.3));
+      for(let stone=0;stone<count;stone+=1) {
+        const wear=random(`apron:${x}:${z}:${stone}`),dx=(stone+.5)/count*w-w/2;
+        box(wear>.6?'stone':'paving',x+dx,.075+wear*.012,z+d/2+.085,w/count-.012,.075,.13+wear*.045);
+      }
+      if(b.shape==='house' && h>1.6) {
+        part('box',shutterColor,x-w*.28,.59,z+d/2-.02,.25,.78,.035,[0,.72+random(`door:${x}`)*.35,0]);
+        for(let slat=0;slat<5;slat+=1)box('timber',x-w*.28,.33+slat*.13,z+d/2+.01,.19,.014,.018);
+        // Open shop ceiling glow and a pooled spill use the existing emissive/pool materials.
+        box('glow',x,.99,z+d/2-.19,Math.min(w*.45,.7),.025,.07);
+        scene.shopPools?.push({x:c.x+mirror*x,z:c.z+z+d/2+.4,w:Math.min(w*.8,1.7),d:1.05});
+      }
+      for(const side of [-1,1]) {
+        const wear=random(`footing:${x}:${z}:${side}`);
+        if(wear>.4)part('orb','foliage:#647053',x+side*(w/2+.04),.09,z-d*.25,.075,.018,.13);
+      }
+    }
     for(const side of [-1,1]) box('timber',x+side*w/2,.16+h/2,z+d/2+.01,.045,h,.05);
     if(progress >= .35) {
       // Recesses, louvres and sills wrap around the actual volume, including its rear.

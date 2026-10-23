@@ -1,3 +1,32 @@
+> Last update: **2026-10-23 — LIVING GPT STREETS, DISTANCE DETAIL AND PAIRED SHOP ACTIVITY.**
+> Covers all requested directions: orbit workload, purposeful street life, architecture/contact,
+> river life, warm shop spill, GPU wind and progress-derived construction activity.
+> Customer/seller pairs share one 26-second local clock: approach, browse, exchange and depart
+> carrying a parcel. Market stalls guarantee visible trades; some street carts use the same flow.
+> Reuse the existing visitor slot, rather than adding a duplicate crowd. Cafe figures drink tea.
+> Partially built earned buildings gain scaffolds/materials and a worker; finished stalls open.
+> A labelled sample-only toggle previews construction by copying/truncating sample bricks. It
+> resets on leaving the sample and cannot create events or mutate real progress. Twenty anchors stay.
+> Open door panels, folded cloth awnings/curtains, settled apron stones, moss, staggered eaves and
+> sparse alley laundry add contact/depth. Shop ceiling strips reuse warm pooled spill, with no light
+> or postprocessing pass added. GPT selection uses a subdued amber ring instead of a white stripe.
+> Quay stairs settle slightly; ropes sag and boats drift within their
+> moorings. The rower's oar now follows its occupant's stroke frequency.
+> GPU wind shares the paused motion clock. Reduced motion/offscreen/hidden behavior is preserved.
+> Original near leaf sprays remain; coarser distant sprays use the same seeds and wider silhouettes.
+> 17/19-unit hysteresis prevents threshold chatter. Throttled classification uploads only changed
+> partitions. Architecture, camera presets, DPR, light count, picking and real city facts stay fixed.
+> Moving-view reflections reuse their full-resolution map for up to 80 ms; rested animated views
+> retain 125 ms scheduling. Final camera view is refreshed; sky/rebuild invalidate immediately.
+> Cache immutable CPU surface canvases between scene mounts; GPU textures still dispose with scene.
+> Local browser checks cover orbit, close/overview, trade activity and the sample construction toggle.
+> Historical v1 M3 timings do not measure this edition. No measured FPS improvement is claimed.
+> Validation: 1,924 full-suite passes, zero failures, one expected skip; all three cross-checks
+> and 44 coordinate/fact/doc guards passed; lint/build passed. Verify Vercel Ready + production SHA
+> and capture actual production day/night and construction frames before reporting completion.
+
+---
+
 > Last update: **2026-10-23 — ARTICULATED GPT PEOPLE AND LESS REPEATED RENDERING.**
 > Walkers now have hip/knee and shoulder/elbow articulation, eased short routes, pauses and turns.
 > Street routes use clear front corridors; the canal-side route stays in the side alley on land.

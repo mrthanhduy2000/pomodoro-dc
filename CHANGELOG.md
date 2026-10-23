@@ -1,3 +1,15 @@
+## 2026-10-23 — Living streets with distance detail and paired shopping
+
+- Customers approach stalls, browse, exchange with sellers and leave with parcels on a shared clock.
+- Add cafe drinking and progress-derived construction workers, scaffolds and materials.
+- Preview construction on copied sample data; preserve every real event and all twenty sample plots.
+- Add open doors, cloth awnings/curtains, settled aprons, moss, eaves and sparse alley laundry.
+- Reuse warm shop spill, subdue selection highlighting, soften quay steps/ropes and synchronize the rower's oar.
+- Animate foliage/cloth on the GPU while respecting reduced motion and paused scenes.
+- Use detailed near foliage and coarse distant sprays with hysteresis and selective matrix uploads.
+- Bound moving-view reflection refreshes and cache procedural CPU canvases across screen changes.
+- Preserve native DPR, light count, architecture, camera presets and the actual city/3D preview.
+
 ## 2026-10-23 — Moving GPT street life and rendering reuse
 
 - Articulate pedestrians, basket carriers, vendors and boat occupants with independent seeded motion.

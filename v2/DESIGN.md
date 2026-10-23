@@ -91,7 +91,9 @@ houses/halls/markets have shallow service wings inside their own plot, clear of 
 Hoi An paving excludes the navigation margin without changing camera bounds; perimeter trees
 and fine layered crowns soften the open edge. Four place-inspired skins and seasonal
 atmosphere are local presentation preferences. The labelled twenty-building sample town contains no earned progress and cannot write
-sample sessions or buildings to the log. Actual plot selection still uses `cmdPlan` unchanged.
+sample sessions or buildings to the log. A sample-only construction toggle truncates a copied
+sample building's bricks, exposing workers/scaffolding without changing the real log or sample
+anchors. Leaving the sample resets this toggle. Actual plot selection still uses `cmdPlan` unchanged.
 
 GPT atmosphere uses the existing hemisphere and directional lights: cool sky fill, warm direct
 sun, restrained lamp bloom and continuous day/night interpolation. Rain softens the direct sun
@@ -105,22 +107,36 @@ coordinates or construction facts. Articulated street/quay figures, vendors and 
 decorative; they are separate from earned residents and never write or impersonate diary records.
 Boat occupants share their hull transform. Walkers follow short, fixed clear corridors with smooth
 starts, stops and on-the-spot turns; vendors reach/bend and figures breathe/look around with seeded
-phases. Moving parts use their own instanced batches, separate from architecture. Animation uses a
+phases. Completed market stalls and selected street carts share a customer/seller clock: approach,
+browse, exchange, leave with a parcel, then return. Existing walkers become customers rather than
+adding a second crowd. Cafe occupants drink from cups; unfinished earned buildings gain worksite
+scaffolding, timber, buckets and an articulated worker. These are progress-derived scenery only.
+Moving parts use their own instanced batches, separate from architecture. Animation uses a
 paused local clock, respects reduced motion and never catches up after an offscreen/hidden pause.
 
-GPT reuses procedural surface maps across rebuilds and disposes them with the scene. Motion toggles
+GPT reuses procedural surface maps across rebuilds and disposes GPU textures with the scene.
+Immutable CPU canvases for the five surface roles survive scene mounts, avoiding repeated pixel
+generation when switching screens; they do not retain old renderer-owned GPU resources. Motion toggles
 update the current scene without rebuilding it. Reflections and shadow maps retain their original
-resolution but refresh at most every 125 ms while the view rests; camera changes refresh reflections
-immediately and sky/rebuild changes invalidate both. Water ripples/people keep the scene's existing
+resolution but refresh at most every 125 ms while the view rests. Moving-camera reflections refresh
+at most every 80 ms rather than rendering the whole city on every orbit frame; the last camera view
+remains pending until refreshed. Sky/rebuild changes invalidate both immediately. Water ripples/people keep the scene's existing
 40 Hz render cadence. With motion off, the composer skips identical views; interaction, resize,
-selection and sky changes still redraw. Native DPR, lights and building/foliage detail are unchanged.
-These are scheduling/lifecycle changes, not a measured M3 frame-time claim.
+selection and sky changes still redraw. Native DPR and light count are unchanged; architecture keeps full detail at every distance.
+Foliage batches partition into original close leaf sprays and seeded coarser distant sprays, with
+17/19-world-unit hysteresis. View classification is throttled and matrices upload only when a
+partition changes. This is a rendering implementation, not a measured M3 frame-time claim.
 
 Organic wear is deterministic: world-space plaster dampness, grouped clay-tile ageing,
 small roof installation offsets and irregular street planting never reseed on rebuild.
 Broadleaf branches and palm fronds vary by their existing planting seed. Broadleaf twigs use
 three shared merged leaf sprays (one per foliage tone), keeping fine leaves without rebuilding
-individual leaf transforms per tree.
+individual leaf transforms per tree. A shared GPU wind clock gently moves leaves and cloth;
+reduced motion freezes it. Cloth awnings/curtains and alley laundry use shared geometry. Open door
+panels, settled apron stones, moss and staggered eaves connect houses to paving. Shop ceiling strips
+feed the existing warm ground-pool batch, adding no light or postprocessing pass. Quay steps have
+seeded settlement, ropes sag, boats remain within their fixed moorings, and the rower's oar shares
+its animation frequency.
 
 ## Run it
 `npm run dev:v2` → `http://localhost:31120/v2/` (preview config "Pomodoro v2"). `npm run build`

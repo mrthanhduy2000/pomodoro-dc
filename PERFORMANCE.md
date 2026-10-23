@@ -17,7 +17,10 @@ The user reports lag on MacBook Air M3 and currently does not use iPhone. The hi
 v1 timings below are not measurements of the GPT edition. GPT now reuses procedural maps,
 separates moving-figure uploads from architecture, pauses hidden animation and skips identical
 motion-off renders. Full-resolution reflection/shadow maps are reused between 125 ms updates;
-camera movement refreshes reflection immediately. DPR, lights and city detail stay unchanged.
+camera movement now refreshes reflection at most every 80 ms, retaining the final pending view.
+Detailed leaf sprays remain close; seeded coarse sprays serve distant trees with hysteresis.
+Only changed partitions upload, and immutable surface canvases survive screen changes while GPU
+textures remain scene-owned. Native DPR, lights, building anchors and architecture stay unchanged.
 Browser checks establish working animation/picking/appearance, not a measured frame-time gain.
 No new measuring tool, FPS target claim or extrapolated iPhone result was introduced.
 

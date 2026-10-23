@@ -1,3 +1,11 @@
+## 2026-10-23 — Organic Hoi An streets
+
+- Weather plaster in world space and expose small seeded brick patches on solid side walls.
+- Mix aged clay tile tones, slight installation offsets and shallow sag across each roof.
+- Replace oversized broadleaf rings with smaller leaves and asymmetrical branch spread.
+- Break continuous curb strips into settled stones with sparse joint planting.
+- Preserve building anchors, construction facts, camera and the interactive 3D preview.
+
 ## 2026-10-23 — GPT atmospheric light
 
 - Balance cool skylight against warm direct sun; reduce the terrain's olive cast.

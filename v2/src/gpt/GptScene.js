@@ -54,12 +54,21 @@ function surfaceTexture(kind) {
       shade=.74+(broad-.5)*.18-pore*.12-knot*.19;
       relief=.5-pore*.13+(fine-.5)*.12;rough=.72+pore*.14+(fine-.5)*.16;
     }
-    if(kind==='paving' || kind==='tile') {
+    if(kind==='paving') {
       const row=Math.floor(y/64),px=(x+(row%2)*32)%64,py=y%64;
       const joint=px<2 || py<2;
       const slab=random(Math.floor((x+(row%2)*32)/64),row);
       shade=joint?.4:.76+(slab-.5)*.19+(fine-.5)*.11+(grit-.5)*.035;
       relief=joint?.16:.53+(fine-.5)*.12;rough=joint?.98:.83+(fine-.5)*.17;
+    }
+    if(kind==='plaster') {
+      const eroded=Math.max(0,.38-broad)*.65;
+      shade=.89+(broad-.5)*.17+(fine-.5)*.08-eroded;
+      relief=.53+(fine-.5)*.13-eroded*.4;rough=.91;
+    }
+    if(kind==='tile') {
+      shade=.81+(broad-.5)*.27+(fine-.5)*.13;
+      relief=.5+(fine-.5)*.12;rough=.82+(broad-.5)*.2;
     }
     const offset=(y*size+x)*4;
     const warm=kind==='timber'?[1,.96,.88]:kind==='stone'?[.98,1,.99]:[1,.99,.95];
@@ -154,8 +163,8 @@ export class GptScene extends CityScene {
     if (this.artMaterials.has(key)) return this.artMaterials.get(key);
     const p = this.palette;
     const colors = { lanternRed:'#b9442a', plaster: p.wall, timber: p.wood, tile: this.snow ? '#e6e8e1' : p.roof, stone: '#a2a297', paving: this.snow ? '#d9ded9' : '#b9b09a', leaf: this.snow ? '#a5b8a5' : this.a.season === 'autumn' ? '#b0803e' : p.leaf, flower: this.a.season === 'spring' ? '#e5b2bc' : p.flower, glow: '#e6ac56', iron: '#3b514a', candidate: '#d6b96b' };
-    const mat = new THREE.MeshStandardMaterial({ color: colors[key] || (key.startsWith('foliage:') ? key.slice(8) : key.startsWith('wall:') ? key.slice(5) : key), roughness: this.a.weather === 'rain' ? 0.5 : 0.87 });
-    const textureKey=key.startsWith('wall:') ? 'plaster' : SURFACES.get(key)||key;
+    const mat = new THREE.MeshStandardMaterial({ color: colors[key] || (key.startsWith('foliage:') ? key.slice(8) : key.startsWith('wall:') ? key.slice(5) : key.startsWith('tile:') ? (this.snow?'#e6e8e1':key.slice(5)) : key), roughness: this.a.weather === 'rain' ? 0.5 : 0.87 });
+    const textureKey=key.startsWith('wall:') ? 'plaster' : key.startsWith('tile:') ? 'tile' : SURFACES.get(key)||key;
     if (['plaster','timber','tile','stone','paving'].includes(textureKey)) {
       if (!this.textures.has(textureKey)) {
         const maps=surfaceTexture(textureKey);this.textures.set(textureKey,maps);this.disposables.push(...Object.values(maps));
@@ -164,7 +173,7 @@ export class GptScene extends CityScene {
       mat.map=maps.color;mat.bumpMap=maps.height;mat.roughnessMap=maps.roughness;
       mat.bumpScale=textureKey==='stone'?.018:textureKey==='paving'?.022:.012;
       mat.roughness=this.a.weather==='rain'?.57:1;
-      if(textureKey==='stone' || textureKey==='paving') {
+      if(textureKey==='stone' || textureKey==='paving' || textureKey==='plaster') {
         // World-space colour/roughness remove the miniature brick pattern stretched on every stone.
         mat.onBeforeCompile=shader=>{
           shader.vertexShader=shader.vertexShader.replace('#include <common>','#include <common>\nvarying vec3 vStonePosition; varying vec3 vStoneNormal;');
@@ -184,8 +193,25 @@ export class GptScene extends CityScene {
             .replace('#include <map_fragment>',THREE.ShaderChunk.map_fragment.replaceAll('vMapUv',uv))
             .replace('#include <roughnessmap_fragment>',THREE.ShaderChunk.roughnessmap_fragment.replaceAll('vRoughnessMapUv',uv))
             .replace('#include <bumpmap_pars_fragment>',THREE.ShaderChunk.bumpmap_pars_fragment.replaceAll('vBumpMapUv',uv));
+          if(textureKey==='plaster') {
+            shader.fragmentShader=shader.fragmentShader.replace('#include <common>',`#include <common>
+              float plasterNoise(vec2 p) {
+                vec2 i=floor(p),f=fract(p);f=f*f*(3.-2.*f);
+                vec4 h=fract(sin(vec4(dot(i,vec2(127.1,311.7)),dot(i+vec2(1.,0.),vec2(127.1,311.7)),dot(i+vec2(0.,1.),vec2(127.1,311.7)),dot(i+vec2(1.,1.),vec2(127.1,311.7))))*43758.5453);
+                return mix(mix(h.x,h.y,f.x),mix(h.z,h.w,f.x),f.y);
+              }
+            `);
+            shader.fragmentShader=shader.fragmentShader.replace('#include <color_fragment>',`#include <color_fragment>
+              vec2 wallUv=abs(vStoneNormal.x)>.5?vStonePosition.zy:vStonePosition.xy;
+              float plasterWear=plasterNoise(wallUv*2.7);
+              float damp=exp(-max(0.,vStonePosition.y-.18)*3.5);
+              float streak=plasterNoise(vec2(wallUv.x*9.,wallUv.y*.65));
+              float weather=damp*(.14+streak*.23)+smoothstep(.62,.86,plasterWear)*.12;
+              diffuseColor.rgb=mix(diffuseColor.rgb,diffuseColor.rgb*vec3(.57,.62,.52),weather);
+            `);
+          }
         };
-        mat.customProgramCacheKey=()=> 'gpt-world-stone-v2';
+        mat.customProgramCacheKey=()=> `gpt-world-${textureKey}-v3`;
       } else if(textureKey==='timber') {
         mat.onBeforeCompile=shader=>{
           shader.vertexShader=shader.vertexShader.replace('#include <common>','#include <common>\nvarying vec2 vWoodOffset;');
@@ -261,14 +287,16 @@ export class GptScene extends CityScene {
   tree(x, z, size, seed) {
     if(this.a.place==='hoian' && hash01(`palm:${seed}`)>.7) {
       // Curved trunks and feathered fronds give the riverside a second tree silhouette.
-      const height=size*2.8;
+      const height=size*(2.5+hash01(`palm-height:${seed}`)*.65);
+      const bendX=(hash01(`palm-x:${seed}`)-.3)*.4,bendZ=(hash01(`palm-z:${seed}`)-.5)*.35;
       for(let i=0;i<9;i+=1) {
         const u=i/9,v=(i+1)/9;
-        this.beam('timber',[x+.16*u*u,height*u,z],[x+.16*v*v,height*v,z],size*(.065-u*.025));
+        this.beam('timber',[x+bendX*u*u,height*u,z+bendZ*u*u],[x+bendX*v*v,height*v,z+bendZ*v*v],size*(.065-u*.025));
       }
       for(let frond=0;frond<9;frond+=1) {
-        const angle=frond*Math.PI*2/9;
-        const point=(u)=>[x+.16+Math.cos(angle)*u*size*1.05,height+Math.sin(u*Math.PI)*size*.3-u*u*size*.55,z+Math.sin(angle)*u*size*1.05];
+        const spread=hash01(`${seed}:frond:${frond}`),angle=frond*Math.PI*2/9+(spread-.5)*.45;
+        const length=size*(.82+spread*.45),droop=.35+hash01(`${seed}:droop:${frond}`)*.4;
+        const point=(u)=>[x+bendX+Math.cos(angle)*u*length,height+Math.sin(u*Math.PI)*size*.3-u*u*size*droop,z+bendZ+Math.sin(angle)*u*length];
         for(let j=0;j<10;j+=1) {
           const u=j/10, p=point(u);
           this.beam('leaf',p,point((j+1)/10),.012*size);
@@ -282,7 +310,7 @@ export class GptScene extends CityScene {
       return;
     }
     const blossom = this.a.place === 'kyoto' && this.a.season === 'spring';
-    const colors = this.snow ? ['#e6e6dc','#a2b2a0','#c3ccba'] : blossom ? ['#e4a7b8','#f2c9d1','#bf839d'] : this.a.season === 'autumn' ? ['#a97736','#c9a34e','#8c6535'] : ['#506c35','#75934b','#94a85b'];
+    const colors = this.snow ? ['#e6e6dc','#a2b2a0','#c3ccba'] : blossom ? ['#e4a7b8','#f2c9d1','#bf839d'] : this.a.season === 'autumn' ? ['#a97736','#c9a34e','#8c6535'] : ['#476544','#64834e','#819761'];
     const height=size*(2+hash01(`height:${seed}`)*.7);
     const leanX=(hash01(`leanx:${seed}`)-.5)*.45,leanZ=(hash01(`leanz:${seed}`)-.5)*.35;
     for(let segment=0;segment<6;segment+=1) {
@@ -294,21 +322,22 @@ export class GptScene extends CityScene {
       this.beam('timber',[x,.2,z],[x+Math.cos(angle)*.22,.03,z+Math.sin(angle)*.22],.026*size);
     }
     for(let branch=0;branch<7;branch+=1) {
-      const angle=branch*2.4+hash01(seed)*5;
-      const bx=x+leanX+Math.cos(angle)*size*.48,bz=z+leanZ+Math.sin(angle)*size*.46;
+      const angle=branch*2.4+hash01(seed)*5+(hash01(`${seed}:angle:${branch}`)-.5)*1.25;
+      const reach=.65+hash01(`${seed}:reach:${branch}`)*.85;
+      const bx=x+leanX+Math.cos(angle)*size*.48*reach,bz=z+leanZ+Math.sin(angle)*size*.46*reach;
       const by=height*(.52+branch*.07+hash01(`${seed}:b${branch}`)*.08);
       this.beam('timber',[x+leanX*.6,height*.51,z+leanZ*.6],[bx,by,bz],.024*size);
       for(let twig=0;twig<4;twig+=1) {
-        const a=angle+twig*1.8,r=size*(.2+hash01(`${seed}:twig:${branch}:${twig}`)*.23);
-        const ex=bx+Math.cos(a)*r,ez=bz+Math.sin(a)*r,ey=by+(hash01(`tw:${branch}:${twig}`)-.4)*size*.3;
+        const a=angle+twig*1.8,r=size*(.16+hash01(`${seed}:twig:${branch}:${twig}`)*.35);
+        const ex=bx+Math.cos(a)*r,ez=bz+Math.sin(a)*r,ey=by+(hash01(`${seed}:tw:${branch}:${twig}`)-.4)*size*.45;
         this.beam('timber',[bx,by,bz],[ex,ey,ez],.011*size);
-        this.part('canopy',`foliage:${colors[(branch+twig)%3]}`,[ex,ey,ez],[size*.16,size*.13,size*.16],[twig*.3,branch,.2]);
-        for(let i=0;i<110;i+=1) {
+        if(hash01(`${seed}:core:${branch}:${twig}`)>.6) this.part('canopy',`foliage:${colors[(branch+twig)%3]}`,[ex,ey,ez],[size*.11*reach,size*.08,size*.11],[twig*.3,branch,.2]);
+        for(let i=0;i<260;i+=1) {
           const u=hash01(`${seed}:${branch}:${twig}:${i}u`),v=hash01(`${seed}:${branch}:${twig}:${i}v`);
-          const theta=u*Math.PI*2,radius=Math.sqrt(v)*size*.32;
+          const theta=u*Math.PI*2,radius=Math.sqrt(v)*size*.38;
           const px=ex+Math.cos(theta)*radius,pz=ez+Math.sin(theta)*radius;
-          const py=ey+(hash01(`${seed}:ly:${i}`)-.4)*size*.38;
-          this.part('leaf',`foliage:${colors[i%3]}`,[px,py,pz],[size*.13,size*.18,size*.13],[u*5,v*6,theta]);
+          const py=ey+(hash01(`${seed}:${branch}:${twig}:ly:${i}`)-.4)*size*.38;
+          this.part('leaf',`foliage:${colors[i%3]}`,[px,py,pz],[size*(.045+v*.025),size*(.07+u*.04),size*.07],[u*5,v*6,theta]);
         }
       }
     }
@@ -333,7 +362,13 @@ export class GptScene extends CityScene {
           // Continuous street paving, clipped around the fixed river; no checkerboard grass gaps.
           const near=z===0?-.88:cz-PLOT/2,far=z===-1?-3.12:cz+PLOT/2;
           this.part('box','paving',[cx,-.015,(near+far)/2],[PLOT,.06,far-near]);
-          this.part('box','stone',[cx,.025,z===-1?-3.14:cz+1.42],[PLOT,.07,.13]);
+          for(let edge=0;edge<9;edge+=1) {
+            const wear=hash01(`curb:${x}:${z}:${edge}`),ex=cx-PLOT/2+(edge+.5)*PLOT/9;
+            this.part('box',wear>.65?'#958d79':'stone',[ex,.025+(wear-.5)*.018,z===-1?-3.14:cz+1.42+(wear-.5)*.035],[PLOT/9-.012,.07,.13],[0,(wear-.5)*.045,0]);
+            if(wear>.68 && z!==-1) for(let blade=0;blade<5;blade+=1) {
+              this.part('leaf','foliage:#64834e',[ex+(blade-2)*.035,.035,cz+1.46+wear*.035],[.025,.065+wear*.04,.025],[blade*.6,wear*4,blade*.4]);
+            }
+          }
         } else {
         this.part('box', 'paving', [cx, -0.005, cz + 1.1], [3.45, 0.06, 0.45]);
         this.part('box', 'paving', [cx + 1.8, -0.005, cz], [0.6, 0.06, 2.55]);
@@ -353,8 +388,25 @@ export class GptScene extends CityScene {
           if (z !== -1) this.part('box', '#afa58e', [cx - 1.4 + i * 0.4, 0.005, cz + 1.9], [0.37, 0.03, 0.36]);
         }
         }
+        if(dense) {
+          // Only the outer pavement edge receives erosion, soil and self-seeded plants.
+          const edges=[];
+          if(x===b.minX)edges.push([-1,0]);if(x===b.maxX)edges.push([1,0]);
+          if(z===b.minY)edges.push([0,-1]);if(z===b.maxY)edges.push([0,1]);
+          for(const [nx,nz] of edges) for(let clump=0;clump<9;clump+=1) {
+            const seed=`edge:${x}:${z}:${nx}:${nz}:${clump}`,u=hash01(seed);
+            if(u<.42)continue;
+            const along=(clump-4)*.43,px=cx+nx*1.97+nz*along,pz=cz+nz*1.97+nx*along;
+            this.part('orb','#6d765a',[px,.002,pz],[.12+u*.12,.018,.1+u*.13],[0,u*5,0]);
+            for(let blade=0;blade<9;blade+=1) {
+              const v=hash01(`${seed}:${blade}`);
+              this.part('leaf','foliage:#64834e',[px+(v-.5)*.24,.025,pz+Math.sin(blade)*.1],[.025,.055+v*.11,.025],[v*1.4,u*6,blade*.7]);
+            }
+            if(u>.75)this.part('box','#958d79',[px-nx*.12,.025,pz-nz*.12],[.085,.045,.12],[u*.13,u*4,.1]);
+          }
+        }
         if (hash01(`grove:${x},${z}`) > (dense?.35:.55)) {
-          const tx=cx-1.76,tz=cz+(dense?.05:-.65)+hash01(`offset:${x},${z}`)*.4;
+          const tx=cx-1.76+(hash01(`treex:${x},${z}`)-.5)*.23,tz=cz+(dense?.05:-.65)+hash01(`offset:${x},${z}`)*.55;
           if(dense) this.part('orb','#686b4b',[tx,.02,tz],[.33,.025,.45]);
           this.tree(tx,tz,.7+hash01(`${x},${z}`)*.35,`${x},${z}`);
         }

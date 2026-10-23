@@ -10,7 +10,8 @@ export function drawHoiAnBuilding(scene, b) {
   const progress = Math.min(1, b.bricks.length / b.size);
   const variant = Math.floor(hash01(`front:${b.planId}`) * 4);
   const wall = ['wall:#e5b65c', 'wall:#ddbf7b', 'wall:#dba65b', 'wall:#e8ca89'][variant];
-  const tile = ['#535d59', '#687067', '#4b5554', '#746d5c'][variant];
+  const tiles = ['tile:#505b57','tile:#68716a','tile:#7c7765','tile:#595346'];
+  const random = (label) => hash01(`${b.planId}:${label}`);
   const shutterColor = ['#4f6555','#786247','#476466','#705043'][variant];
   const part = (kind, mat, x, y, z, w, h, d, rotation = [0, 0, 0]) => scene.part(kind, mat, [c.x+x, y, c.z+z], [w,h,d], rotation, pick);
   const beam = (mat, a, to, radius=.025) => scene.beam(mat, [c.x+a[0],a[1],c.z+a[2]], [c.x+to[0],to[1],c.z+to[2]], radius, pick);
@@ -18,14 +19,30 @@ export function drawHoiAnBuilding(scene, b) {
   const roof = (x,y,z,w,d,rise=.42) => {
     if(progress < .5) return;
     const reach=d/2;
+    const ageAt=(col,row,side)=>{
+      const px=col/5,py=row/3,ix=Math.floor(px),iy=Math.floor(py);
+      const fx=px-ix,fy=py-iy,u=fx*fx*(3-2*fx),v=fy*fy*(3-2*fy);
+      const sample=(dx,dy)=>random(`roof-age:${x}:${y}:${z}:${side}:${ix+dx}:${iy+dy}`);
+      return (sample(0,0)*(1-u)+sample(1,0)*u)*(1-v)+(sample(0,1)*(1-u)+sample(1,1)*u)*v;
+    };
     for(const side of [-1,1]) {
       const height = (u) => rise*(1-u)+.1*Math.pow(u,4);
+      const sag = (dx) => -.025*(1-Math.pow(dx/(w/2),2));
       for(let row=0;row<10;row+=1) {
         const a=row/10, u=(row+.5)/10, next=(row+1)/10;
         const slope=Math.atan2(height(a)-height(next),reach/10);
-        part('box','tile',x,y+height(u),z+side*reach*u,w,.025,Math.hypot(reach/10,height(a)-height(next))+.018,[side*slope,0,0]);
+        for(let strip=0;strip<4;strip+=1) {
+          const dx=(strip-1.5)*w/4;
+          part('box','tile',x+dx,y+height(u)+sag(dx),z+side*reach*u,w/4+.008,.025,Math.hypot(reach/10,height(a)-height(next))+.018,[side*slope,0,0]);
+        }
         const n=Math.max(5,Math.round(w/.085));
-        for(let col=0;col<n;col+=1) part('roofTile',tile,x-w/2+(col+.5)*w/n,y+height(u)+.018,z+side*reach*u,.029,reach/9,.029,[Math.PI/2+side*slope,0,0]);
+        for(let col=0;col<n;col+=1) {
+          const seed=`tile:${x}:${y}:${z}:${side}:${row}:${col}`;
+          const wear=random(seed),dx=-w/2+(col+.5)*w/n;
+          const age=ageAt(col,row,side)*.75+wear*.25;
+          const tint=age<.5?variant:age<.72?(variant+1)%4:age<.9?(variant+3)%4:(variant+2)%4;
+          part('roofTile',tiles[tint],x+dx+(random(`${seed}:x`)-.5)*.009,y+height(u)+.018+sag(dx)+(wear-.5)*.012,z+side*reach*u, .029*(.94+wear*.12),reach/9,.029,[Math.PI/2+side*slope,(wear-.5)*.035,(random(`${seed}:tilt`)-.5)*.025]);
+        }
       }
       // Gable boards close the roof volume. Slim timber eaves keep the edges light.
       for(let j=0;j<7;j+=1) for(const end of [-1,1]) box('timber',x+end*(w/2-.09),y+rise*j/7,z,.04,rise/7+.01,d*(1-j/7));
@@ -91,6 +108,19 @@ export function drawHoiAnBuilding(scene, b) {
       // A damp plaster base and thin cornice keep the wall from reading as one slab.
       box('stone',x,.27,z,w+.018,.1,d+.018);
       box(wall,x,h+.11,z,w+.085,.075,d+.085);
+      // Small worn patches sit on solid side walls, never across an open shop bay.
+      if(progress>=.65) {
+        const side=random(`wear-side:${x}:${z}`)>.5?1:-1;
+        const centerZ=z+(random(`wear-z:${x}:${z}`)-.5)*d*.45;
+        for(let row=0;row<4;row+=1) for(let brick=0;brick<5;brick+=1) {
+          const wear=random(`brick:${x}:${z}:${row}:${brick}`);
+          if(wear<.25 || (row===3 && wear<.6)) continue;
+          const bz=centerZ+(brick-2)*.1+(row%2)*.035;
+          if(Math.abs(bz-z)>d/2-.08) continue;
+          box(wear>.65?'#a97f5a':'#b98e63',x+side*(w/2+.006),.33+row*.052,bz,.018,.045,.091);
+        }
+      }
+
     }
   };
   const lantern = (x,y,z) => {

@@ -1,3 +1,24 @@
+> Last update: **2026-10-23 — ORGANIC HOI AN WALLS, ROOFS, TREES AND CURBS.**
+> Plaster now uses world-space colour/relief plus low damp marks and broad weathering instead
+> of repeating the same full texture on every wall. Seeded exposed-brick patches occupy only
+> solid side walls, never open shop bays. Roof tiles share a typed clay material role and
+> four weathered tones, with small installation offsets and shallow roof sag; snowy tiles still
+> follow the existing winter appearance. Roof strips follow the same sag beneath the tiles.
+> Broadleaf trees have smaller leaves, fewer visible foliage cores and uneven seeded branch
+> lengths/directions. Tree offsets vary inside their existing street planting areas.
+> Palm heights, trunk bends and frond droop also vary by seed. Hoi An curb strips are individual
+> subtly settled stones with sparse joint plants; exposed outer paving has soil and grass clumps.
+> Every variation is deterministic, so rebuilds do not reshuffle the neighbourhood.
+> No plot, building anchor, camera, DPR, light count, progress or event/timer logic changed.
+> Interactive 3D and all five construction previews remain. Validation: 1,924 full-suite passes,
+> zero failures, one expected skip; all three cross-checks and 44 targeted guards passed.
+> Lint/build passed. Browser reviewed five Hoi An types, four skins, day/night, rain/snow and
+> preview/earned navigation. The clean run has no shader errors; 375px remains exactly 375px wide
+> with one canvas and zero images. Evidence: `/tmp/pomodoro-gpt-review/organic-day.jpg` and
+> `organic-night.jpg`. A reserved GLSL variable name was caught and fixed during browser review.
+
+---
+
 > Last update: **2026-10-23 — GPT SKY LIGHT AND ATMOSPHERIC DEPTH.**
 > Separated cool skylight from warm sunlight; reduced the olive cast of the terrain and shadows.
 > Distance haze shares its colour with the procedural sky horizon. The sky glow follows the

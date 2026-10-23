@@ -96,6 +96,10 @@ and increases distance haze. The procedural sky shares its horizon with exponent
 its glow direction with the actual sun. No image background, extra light, camera change or
 additional postprocessing pass is used.
 
+Organic wear is deterministic: world-space plaster dampness, grouped clay-tile ageing,
+small roof installation offsets and irregular street planting never reseed on rebuild.
+Broadleaf branches and palm fronds vary by their existing planting seed.
+
 ## Run it
 `npm run dev:v2` → `http://localhost:31120/v2/` (preview config "Pomodoro v2"). `npm run build`
 builds both apps. Tests live next to the code and run inside `npm test`.

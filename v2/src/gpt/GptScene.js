@@ -319,7 +319,7 @@ export class GptScene extends CityScene {
     const dense=this.a.place==='hoian';
     const padding=dense?0:1;
     const span = Math.max(48, (b.maxX - b.minX + 5) * PLOT, (b.maxY - b.minY + 5) * PLOT);
-    this.part('box', this.snow ? '#d7dfd8' : '#798269', [0, -0.17, 0], [span * 3, 0.25, span * 3]);
+    this.part('box', this.snow ? '#d7dfd8' : '#6d8077', [0, -0.17, 0], [span * 8, 0.25, span * 8]);
     // Fixed canal in the street between rows -1 and 0. It never displaces a building.
     this.part('box', '#526f67', [0, -0.06, -2], [span * 2, 0.14, 2.05]);
     for (const z of [-3.1, -0.9]) {
@@ -738,42 +738,68 @@ export class GptScene extends CityScene {
     if (!force && this.artSkyKey === artSkyKey) return;
     this.artSkyKey = artSkyKey;
     this.nightAmount = this.a.light === 'night' ? 1 : this.a.light === 'live' ? (this.mats.lamp.emissiveIntensity-.5)/3.2 : 0;
-    const night = this.nightAmount > .45;
-    if(this.a.light==='live') this.hemi.groundColor.set('#806f58');
-    if (this.a.light !== 'live') {
-      const sky = night ? '#344d59' : this.a.weather === 'rain' ? '#b4c1bb' : '#dce1cb';
-      this.scene.background.set(sky);
-      this.scene.fog = new THREE.Fog(sky, 27, 95);
-      this.hemi.intensity = night ? 1.5 : 1.2;
-      this.hemi.color.set(night ? '#93a9bf' : '#fff0d0');
-      this.hemi.groundColor.set(night?'#b58b5d':'#9b8662');
-      this.sun.intensity = night ? .8 : 3.4;
-      this.sun.color.set(night ? '#adc1d3' : '#ffd39a');
-      this.sun.position.set(-16, 13, 10);
-      this.sun.shadow.radius=3; this.sun.shadow.normalBias=.025;
+    this.nightAmount=THREE.MathUtils.clamp(this.nightAmount,0,1);
+    const dusk=this.nightAmount;
+    const rain=this.a.weather==='rain'?1:0;
+    const blend=(day,night)=>new THREE.Color(day).lerp(new THREE.Color(night),dusk);
+    // Cool open-sky fill and warm direct sun keep shaded plaster/foliage out of sepia.
+    this.hemi.color.copy(blend('#c2d9ed','#859fbf'));
+    this.hemi.groundColor.copy(blend('#928875','#655d57'));
+    this.hemi.intensity=THREE.MathUtils.lerp(1.35,1.15,dusk)+rain*.18;
+    this.sun.color.copy(blend('#ffd9ab','#b0c5e1'));
+    this.sun.intensity=THREE.MathUtils.lerp(3.1,.6,dusk)*(1-rain*.72);
+    if(this.a.light!=='live') {
+      const center=this.sun.target.position;
+      const radius=(this.shadowSpan??20)*1.5;
+      this.sun.position.set(center.x-radius*.8,radius*.57,center.z+radius*.55);
     }
-    this.artMaterials.get('glow')?.emissive.copy(this.mats.lamp.emissive);
-    if(this.haloMaterial) this.haloMaterial.opacity=night?.38:.08;
-    if(this.poolMaterial) this.poolMaterial.opacity=night?.5:.06;
-    const glow = this.artMaterials.get('glow');
-    if (glow) glow.emissiveIntensity = night ? 1.45 : this.a.light === 'live' ? this.mats.lamp.emissiveIntensity : 0.18;
-    const red=this.artMaterials.get('lanternRed');
-    if(red) red.emissiveIntensity=night?1.3:.3;
-    const horizon=new THREE.Color('#dfbea0').lerp(new THREE.Color('#536375'),this.nightAmount);
-    this.scene.fog = new THREE.Fog(horizon,22,85);
+    this.sun.shadow.normalBias=.018;
+    this.renderer.toneMappingExposure=THREE.MathUtils.lerp(1.08,1.18,dusk);
+    const horizon=blend('#dbd7c9','#344959').lerp(new THREE.Color('#87999f'),rain*.34);
+    this.scene.background.copy(horizon);
+    // Distance haze, not focus blur: nearby tiles stay crisp while far streets lose contrast.
+    this.scene.fog=new THREE.FogExp2(horizon,THREE.MathUtils.lerp(.006,.009,dusk)+rain*.006);
     if(this.skyMaterial) {
-      this.skyMaterial.uniforms.bottom.value.copy(horizon);
-      this.skyMaterial.uniforms.top.value.set('#819bad').lerp(new THREE.Color('#122947'),this.nightAmount);
+      const uniforms=this.skyMaterial.uniforms;
+      uniforms.bottom.value.copy(horizon);
+      uniforms.top.value.copy(blend('#8baecb','#12283f')).lerp(new THREE.Color('#738d9e'),rain*.52);
+      uniforms.sunDirection.value.copy(this.sun.position).sub(this.sun.target.position).normalize();
+      uniforms.sunWarmth.value=(1-dusk)*(1-rain*.85);
     }
+    const glow=this.artMaterials.get('glow');
+    if(glow) {glow.emissive.set('#ffba63');glow.emissiveIntensity=THREE.MathUtils.lerp(.3,1.65,dusk);}
+    const red=this.artMaterials.get('lanternRed');
+    if(red)red.emissiveIntensity=THREE.MathUtils.lerp(.35,1.85,dusk);
+    if(this.haloMaterial)this.haloMaterial.opacity=THREE.MathUtils.lerp(.055,.24,dusk);
+    if(this.poolMaterial)this.poolMaterial.opacity=THREE.MathUtils.lerp(.05,.36,dusk);
   }
 
   buildSky() {
-    const night=this.a.light==='night';
     const geo=new THREE.SphereGeometry(180,32,16);
-    const mat=new THREE.ShaderMaterial({side:THREE.BackSide,depthWrite:false,uniforms:{top:{value:new THREE.Color(night?'#122947':'#819bad')},bottom:{value:new THREE.Color(night?'#536375':'#d0bea0')}},vertexShader:'varying vec3 vPos; void main(){ vPos=position; gl_Position=projectionMatrix*modelViewMatrix*vec4(position,1.); }',fragmentShader:`uniform vec3 top; uniform vec3 bottom; varying vec3 vPos; void main(){gl_FragColor=vec4(mix(bottom,top,smoothstep(0.,.65,normalize(vPos).y)),1.);
- #include <tonemapping_fragment>
- #include <colorspace_fragment>
- }`});
+    const mat=new THREE.ShaderMaterial({
+      side:THREE.BackSide,depthWrite:false,
+      uniforms:{
+        top:{value:new THREE.Color('#8baecb')},bottom:{value:new THREE.Color('#dbd7c9')},
+        sunDirection:{value:new THREE.Vector3(-.8,.57,.55).normalize()},sunWarmth:{value:1},
+      },
+      vertexShader:`varying vec3 vDirection;
+        void main(){vDirection=position;gl_Position=projectionMatrix*modelViewMatrix*vec4(position,1.);}`,
+      fragmentShader:`uniform vec3 top;uniform vec3 bottom;uniform vec3 sunDirection;
+        uniform float sunWarmth;varying vec3 vDirection;
+        void main(){
+          vec3 direction=normalize(vDirection);
+          float height=smoothstep(-.08,.72,direction.y);
+          vec3 sky=mix(bottom,top,height);
+          float alignment=max(0.,dot(direction,sunDirection));
+          float glow=pow(alignment,8.)*.18+pow(alignment,64.)*.12;
+          sky+=vec3(1.,.58,.25)*glow*sunWarmth;
+          // Subtle screen-space dither keeps the broad sky gradient from banding.
+          float grain=fract(sin(dot(gl_FragCoord.xy,vec2(12.9898,78.233)))*43758.5453);
+          gl_FragColor=vec4(sky+(grain-.5)/255.,1.);
+          #include <tonemapping_fragment>
+          #include <colorspace_fragment>
+        }`,
+    });
     this.skyMaterial=mat;
     const sky=new THREE.Mesh(geo,mat);sky.renderOrder=-100;this.world.add(sky);this.disposables.push(geo,mat);
   }
@@ -787,7 +813,7 @@ export class GptScene extends CityScene {
       this.output=new OutputPass();
       this.composer.addPass(this.renderPass);this.composer.addPass(this.bloom);this.composer.addPass(this.output);
     }
-    this.bloom.strength=.12+(this.nightAmount||0)*.08;
+    this.bloom.strength=.10+(this.nightAmount||0)*.035;
     this.composer.render();
   }
 

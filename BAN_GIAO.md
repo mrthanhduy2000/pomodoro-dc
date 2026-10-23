@@ -1,3 +1,21 @@
+> Last update: **2026-10-23 — GPT SKY LIGHT AND ATMOSPHERIC DEPTH.**
+> Separated cool skylight from warm sunlight; reduced the olive cast of the terrain and shadows.
+> Distance haze shares its colour with the procedural sky horizon. The sky glow follows the
+> actual directional sun; fixed presets position that sun relative to the existing city centre.
+> Extended only the unbuilt ground plane beyond the sky dome to remove its visible cut edge.
+> Night lighting retains readable blue-grey roofs with restrained amber windows, lantern halos
+> and pavement pools. Rain attenuates sunlight and increases haze instead of keeping clear-day
+> illumination. Live light, lamp intensity and exposure interpolate continuously.
+> Existing two lights, bloom chain, DPR, camera and every plot remain unchanged. No image
+> replaces the interactive 3D city/preview; timer, event log and progress are untouched.
+> Validation: 1,924 full-suite passes, zero failures, one expected skip; three cross-checks
+> and 44 targeted guards passed. Lint/build and 16 updated-document guards passed.
+> Browser reviewed four skins, day/night/live, rain/snow and motion without shader errors.
+> At 375px the document remains exactly 375px wide with one canvas and zero images.
+> Evidence: `/tmp/pomodoro-gpt-review/atmosphere-day.jpg` and `atmosphere-night.jpg`.
+
+---
+
 > Last update: **2026-10-23 — NATURAL STONE, WOOD AND WATER MATERIALS.**
 > Replaced the shared speckled colour-as-bump texture with deterministic 512px colour, height
 > and roughness maps. Stone has multi-scale mineral mottling, wood has warped grain and knots,

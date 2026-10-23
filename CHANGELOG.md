@@ -1,3 +1,10 @@
+## 2026-10-23 — GPT atmospheric light
+
+- Balance cool skylight against warm direct sun; reduce the terrain's olive cast.
+- Match distance haze to the procedural horizon and align sky glow with the scene sun.
+- Restrain window bloom and lantern halos; keep roof details readable at night.
+- Soften direct light during rain; preserve the two lights, DPR, camera and interactive 3D preview.
+
 # Changelog — Pomodoro DC
 
 > Đây KHÔNG phải lịch sử commit, và KHÔNG phải bản sao của `BAN_GIAO.md`. File này là bản tóm tắt

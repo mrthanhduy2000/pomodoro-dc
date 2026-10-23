@@ -90,6 +90,12 @@ share render-only alley pergolas and lantern strings. Four place-inspired skins 
 atmosphere are local presentation preferences. The labelled sample town contains no earned progress and cannot write
 sample sessions or buildings to the log. Actual plot selection still uses `cmdPlan` unchanged.
 
+GPT atmosphere uses the existing hemisphere and directional lights: cool sky fill, warm direct
+sun, restrained lamp bloom and continuous day/night interpolation. Rain softens the direct sun
+and increases distance haze. The procedural sky shares its horizon with exponential fog and
+its glow direction with the actual sun. No image background, extra light, camera change or
+additional postprocessing pass is used.
+
 ## Run it
 `npm run dev:v2` → `http://localhost:31120/v2/` (preview config "Pomodoro v2"). `npm run build`
 builds both apps. Tests live next to the code and run inside `npm test`.

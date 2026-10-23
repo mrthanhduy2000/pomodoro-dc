@@ -1,3 +1,13 @@
+## 2026-10-23 — Moving GPT street life and rendering reuse
+
+- Articulate pedestrians, basket carriers, vendors and boat occupants with independent seeded motion.
+- Keep walkers on short land corridors with eased starts, pauses, turns and return trips.
+- Batch moving people separately from architecture; pause animation offscreen and in hidden tabs.
+- Reuse procedural textures; toggle motion without rebuilding; skip unchanged motion-off renders.
+- Reuse full-resolution reflection/shadow maps between updates while retaining responsive camera views.
+- Preserve DPR, light count, detailed city, twenty-building 3D preview and every real progress anchor.
+- Prioritize the reported MacBook Air M3 lag; no unmeasured FPS improvement or iPhone result is claimed.
+
 ## 2026-10-23 — Distinct Hoi An houses and everyday life
 
 - Give houses six distinct massing/frontage compositions, including perpendicular gables and courtyards.

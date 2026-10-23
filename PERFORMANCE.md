@@ -11,6 +11,16 @@
 
 ---
 
+## GPT edition scheduling update — 2026-10-23
+
+The user reports lag on MacBook Air M3 and currently does not use iPhone. The historical
+v1 timings below are not measurements of the GPT edition. GPT now reuses procedural maps,
+separates moving-figure uploads from architecture, pauses hidden animation and skips identical
+motion-off renders. Full-resolution reflection/shadow maps are reused between 125 ms updates;
+camera movement refreshes reflection immediately. DPR, lights and city detail stay unchanged.
+Browser checks establish working animation/picking/appearance, not a measured frame-time gain.
+No new measuring tool, FPS target claim or extrapolated iPhone result was introduced.
+
 ## ⚠️ HAI LUẬT ĐÀM RA NGÀY 2026-08-20 — ĐỌC TRƯỚC MỌI THỨ KHÁC TRONG FILE NÀY
 
 Máy đích là **MacBook Air M3**, thừa sức cho khối hình học hiện tại. Vì vậy **số tam giác KHÔNG

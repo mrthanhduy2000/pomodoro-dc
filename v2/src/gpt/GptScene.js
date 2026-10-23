@@ -119,11 +119,13 @@ const UP = new THREE.Vector3(0, 1, 0);
 /** Same canvas lifecycle, picking and camera navigation as v2; a separate art layer only. */
 export class GptScene extends CityScene {
   setModel(model) {
-    const signature = JSON.stringify(model.appearance);
+    if (model.selectedPlan !== this.model?.selectedPlan) this.renderDirty=true;
+    const signature = JSON.stringify({ ...model.appearance, motion: undefined });
     if (signature !== this.appearanceSignature) {
       this.appearanceSignature = signature;
       this.signature = '';
     }
+    if (this.a && model.appearance) this.a.motion = model.appearance.motion;
     super.setModel(model);
   }
 
@@ -139,8 +141,10 @@ export class GptScene extends CityScene {
     this.plotTiles = null;
     this.batches = new Map();
     this.artMaterials = new Map();
-    this.textures = new Map();
-    this.a = this.model.appearance || DEFAULT_APPEARANCE;
+    this.textures ??= new Map();
+    this.actors = [];
+    this.actorBatches = [];
+    this.a = { ...(this.model.appearance || DEFAULT_APPEARANCE) };
     this.palette = PLACES[this.a.place] || PLACES.hoian;
     this.snow = snowIn(this.a);
     this.bounds = plotBounds(this.model.city.buildings, this.model.city.candidates);
@@ -170,6 +174,9 @@ export class GptScene extends CityScene {
     this.createWeather();
     this.fitShadow(this.bounds);
     this.applySky(true);
+    this.animatePeople(this.motionTime||0);
+    this.renderer.shadowMap.autoUpdate=false;
+    this.renderer.shadowMap.needsUpdate=true;
   }
 
   material(key) {
@@ -180,7 +187,7 @@ export class GptScene extends CityScene {
     const textureKey=key.startsWith('wall:') ? 'plaster' : key.startsWith('tile:') ? 'tile' : SURFACES.get(key)||key;
     if (['plaster','timber','tile','stone','paving'].includes(textureKey)) {
       if (!this.textures.has(textureKey)) {
-        const maps=surfaceTexture(textureKey);this.textures.set(textureKey,maps);this.disposables.push(...Object.values(maps));
+        const maps=surfaceTexture(textureKey);this.textures.set(textureKey,maps);
       }
       const maps=this.textures.get(textureKey);
       mat.map=maps.color;mat.bumpMap=maps.height;mat.roughnessMap=maps.roughness;
@@ -295,6 +302,23 @@ export class GptScene extends CityScene {
       }
     }
     this.batches.clear();
+    // Separate moving figures from buildings: uploading a hand must never upload a whole street.
+    const batches=new Map();
+    for(const actor of this.actors) {
+      actor.root.updateWorldMatrix(true,true);
+      for(const node of actor.parts) {
+        const {kind,mat}=node.userData,key=`${kind}:${mat}`;
+        if(!batches.has(key))batches.set(key,{kind,mat,nodes:[]});
+        batches.get(key).nodes.push(node);
+      }
+    }
+    for(const {kind,mat,nodes} of batches.values()) {
+      const mesh=this.instanced(GEO[kind],this.material(mat),nodes.length);
+      mesh.instanceMatrix.setUsage(THREE.DynamicDrawUsage);
+      nodes.forEach((node,i)=>mesh.setMatrixAt(i,node.matrixWorld));
+      mesh.instanceMatrix.needsUpdate=true;
+      this.actorBatches.push({mesh,nodes});
+    }
   }
 
   tree(x, z, size, seed) {
@@ -513,6 +537,17 @@ export class GptScene extends CityScene {
     };
     const dpr=this.renderer.getPixelRatio();
     this.water = new Reflector(waterGeo,{textureWidth:Math.ceil(this.canvas.clientWidth*dpr),textureHeight:Math.ceil(this.canvas.clientHeight*dpr),color:'#79998e',clipBias:.003,shader});
+    // Keep native-resolution reflection, but reuse it between updates while the camera rests.
+    const reflect=this.water.onBeforeRender;
+    const previousView=new THREE.Matrix4();
+    let reflectedAt=-Infinity;
+    this.water.onBeforeRender=(renderer,scene,camera,...args)=>{
+      const now=this.frameTime||0;
+      const moving=!previousView.equals(camera.matrixWorldInverse);
+      if(!moving && !this.reflectionDirty && (!this.a.motion || now-reflectedAt<125))return;
+      reflect.call(this.water,renderer,scene,camera,...args);
+      previousView.copy(camera.matrixWorldInverse);reflectedAt=now;this.reflectionDirty=false;
+    };
     this.water.rotation.x=-Math.PI/2; this.water.position.set(0,.018,-2);
     this.world.add(this.water); this.disposables.push(waterGeo,this.water);
     // Fixed moorings occupy the canal between the existing bridges, never building plots.
@@ -564,43 +599,90 @@ export class GptScene extends CityScene {
     boat.userData.phase=index*2.1;return boat;
   }
 
-  streetPerson(x,y,z,seed,pose='walk',heading=0,parent=null) {
+  streetPerson(x,y,z,seed,pose='walk',heading=0,parent=null,route=null) {
     const random=label=>hash01(`${seed}:${label}`);
     const shirt=['#526f7a','#a87950','#8b5650','#b6ab8e','#546b59'][Math.floor(random('shirt')*5)];
     const skin='#c69875',sitting=pose==='sit'||pose==='row',hip=sitting?.19:.3;
-    const origin=new THREE.Vector3(x,y,z),turn=new THREE.Quaternion().setFromAxisAngle(UP,heading);
-    const position=p=>new THREE.Vector3(...p).applyQuaternion(turn).add(origin).toArray();
-    const part=(kind,mat,p,scale,rotation=[0,0,0])=>{
-      const quaternion=turn.clone().multiply(new THREE.Quaternion().setFromEuler(new THREE.Euler(...rotation)));
-      if(parent) {
-        const mesh=new THREE.Mesh(GEO[kind],this.material(mat));mesh.position.set(...position(p));mesh.scale.set(...scale);mesh.quaternion.copy(quaternion);mesh.castShadow=true;mesh.receiveShadow=true;parent.add(mesh);
-      } else this.part(kind,mat,position(p),scale,[0,0,0],null,quaternion);
+    const root=new THREE.Group(),body=new THREE.Group();
+    root.position.set(x,y,z);root.rotation.y=heading;root.add(body);
+    (parent||this.world).add(root);
+    const actor={root,body,pose,route,heading,origin:root.position.clone(),phase:random('phase')*Math.PI*2,pace:.9+random('pace')*.25,parts:[],legs:[],arms:[]};
+    const joint=(owner,p)=>{const node=new THREE.Group();node.position.set(...p);owner.add(node);return node;};
+    const part=(owner,kind,mat,p,scale,rotation=[0,0,0])=>{
+      const node=new THREE.Object3D();node.position.set(...p);node.scale.set(...scale);node.rotation.set(...rotation);
+      node.userData={kind,mat};owner.add(node);actor.parts.push(node);return node;
     };
-    const bone=(mat,a,b,r)=>{
+    const bone=(owner,mat,a,b,r)=>{
       const from=new THREE.Vector3(...a),to=new THREE.Vector3(...b),direction=to.clone().sub(from);
-      const center=from.clone().add(to).multiplyScalar(.5);
-      const quaternion=new THREE.Quaternion().setFromUnitVectors(UP,direction.normalize());
-      if(parent) {
-        const mesh=new THREE.Mesh(GEO.pole,this.material(mat));mesh.position.set(...position(center.toArray()));mesh.scale.set(r,from.distanceTo(to),r);mesh.quaternion.copy(turn.clone().multiply(quaternion));mesh.castShadow=true;parent.add(mesh);
-      } else this.part('pole',mat,position(center.toArray()),[r,from.distanceTo(to),r],[0,0,0],null,turn.clone().multiply(quaternion));
+      const node=part(owner,'pole',mat,from.clone().add(to).multiplyScalar(.5).toArray(),[r,direction.length(),r]);
+      node.quaternion.setFromUnitVectors(UP,direction.normalize());return node;
     };
-    part('pole',shirt,[0,hip+.12,0],[.075,.24,.055]);
-    part('orb',skin,[0,hip+.31,.006],[.054,.066,.052]);
-    bone(skin,[0,hip+.23,0],[0,hip+.27,0],.023);
+    part(body,'pole',shirt,[0,hip+.12,0],[.075,.24,.055]);
+    const head=joint(body,[0,hip+.27,0]);actor.head=head;
+    part(head,'orb',skin,[0,.04,.006],[.054,.066,.052]);
+    bone(body,skin,[0,hip+.23,0],[0,hip+.27,0],.023);
     for(const side of [-1,1]) {
-      const stride=sitting?.17:side*(pose==='walk'?.075:.012);
-      bone('#4c514b',[side*.036,hip,0],[side*.04,sitting?.14:.16,stride],.024);
-      bone('#4c514b',[side*.04,sitting?.14:.16,stride],[side*.045,.035,stride],.02);
-      part('box','#493e34',[side*.045,.025,stride+.025],[.045,.035,.09]);
-      const elbow=[side*.09,hip+.09,pose==='carry'||pose==='row'?.12:-stride];
-      const hand=[side*.07,hip+.015,pose==='carry'||pose==='row'?.23:-stride*.9];
-      bone(shirt,[side*.063,hip+.21,0],elbow,.024);bone(skin,elbow,hand,.017);
+      const leg=joint(body,[side*.036,hip,0]),knee=joint(leg,[0,-.14,0]);
+      bone(leg,'#4c514b',[0,0,0],[0,-.14,0],.024);
+      bone(knee,'#4c514b',[0,0,0],[0,-(hip-.175),0],.02);
+      part(knee,'box','#493e34',[0,-(hip-.165),.025],[.045,.035,.09]);
+      actor.legs.push({leg,knee,side});
+      if(sitting){leg.rotation.x=-1.15;knee.rotation.x=1.15;}
+      const arm=joint(body,[side*.063,hip+.21,0]),elbow=joint(arm,[side*.023,-.12,0]);
+      bone(arm,shirt,[0,0,0],[side*.023,-.12,0],.024);
+      bone(elbow,skin,[0,0,0],[-side*.015,-.115,0],.017);
+      actor.arms.push({arm,elbow,side});
     }
-    if(random('hat')>.28)part('hat','#c8b68c',[0,hip+.386,0],[.11,.065,.11]);
-    else part('orb','#493e34',[0,hip+.354,-.008],[.057,.034,.053]);
+    if(random('hat')>.28)part(head,'hat','#c8b68c',[0,.116,0],[.11,.065,.11]);
+    else part(head,'orb','#493e34',[0,.084,-.008],[.057,.034,.053]);
     if(pose==='carry') {
-      part('taper','#a8875b',[0,hip-.015,.23],[.12,.12,.09]);
-      part('hoop','#c8b68c',[0,hip+.05,.23],[.115,.09,.075],[Math.PI/2,0,0]);
+      part(body,'taper','#a8875b',[0,hip-.015,.23],[.12,.12,.09]);
+      part(body,'hoop','#c8b68c',[0,hip+.05,.23],[.115,.09,.075],[Math.PI/2,0,0]);
+    }
+    this.actors.push(actor);
+  }
+
+  animatePeople(time) {
+    for(const actor of this.actors||[]) {
+      const {root,body,head,pose,route,phase,pace}=actor,t=time*pace+phase;
+      let walking=0;
+      if(route) {
+        // Stop, turn on the spot, then accelerate into the return trip; no teleport at the seam.
+        const duration=route.length/.24,cycle=duration*2+4,u=(t%(cycle)+cycle)%cycle;
+        const returning=u>=duration+2,travel=returning?u-duration-2:u;
+        const progress=THREE.MathUtils.clamp(travel/duration,0,1);
+        const eased=progress*progress*(3-2*progress),offset=(returning?1-eased:eased)-.5;
+        root.position.copy(actor.origin);root.position[route.axis]+=offset*route.length;
+        walking=travel<duration?Math.sin(progress*Math.PI):0;
+        const turn=THREE.MathUtils.smoothstep(u,duration+.4,duration+1.6)-THREE.MathUtils.smoothstep(u,cycle-1.6,cycle-.4);
+        root.rotation.y=actor.heading+turn*Math.PI;
+      }
+      const stride=Math.sin(t*7.2)*.42*walking;
+      body.position.y=Math.abs(Math.cos(t*7.2))*.012*walking+Math.sin(t*1.7)*.002;
+      body.rotation.z=Math.sin(t*3.6)*.025*walking;
+      body.rotation.x=pose==='vendor'?.055+Math.sin(t*.9)*.045:pose==='row'?Math.sin(t*1.4)*.06:0;
+      head.rotation.y=Math.sin(t*.57)*.14*(1-walking);
+      for(const {leg,knee,side} of actor.legs) {
+        if(pose==='sit'||pose==='row')continue;
+        leg.rotation.x=stride*side;knee.rotation.x=Math.max(0,-Math.sin(t*7.2)*side)*.45*walking;
+      }
+      for(const {arm,elbow,side} of actor.arms) {
+        if(pose==='vendor') {
+          const gesture=Math.max(0,Math.sin(t*.95+side*.9));
+          arm.rotation.x=-.25-gesture*.62;arm.rotation.z=side*(.08+gesture*.12);
+          elbow.rotation.x=-.35-gesture*.35;
+        } else if(pose==='carry'||pose==='row') {
+          arm.rotation.x=-.65+(pose==='row'?Math.sin(t*1.4)*.3:Math.sin(t*.8)*.035);
+          elbow.rotation.x=-.65;
+        } else {
+          arm.rotation.x=-stride*side*.8;elbow.rotation.x=-.12-Math.max(0,stride*side)*.25;
+        }
+      }
+      root.updateWorldMatrix(true,true);
+    }
+    for(const {mesh,nodes} of this.actorBatches||[]) {
+      for(let i=0;i<nodes.length;i+=1)mesh.setMatrixAt(i,nodes[i].matrixWorld);
+      mesh.instanceMatrix.needsUpdate=true;
     }
   }
 
@@ -654,8 +736,8 @@ export class GptScene extends CityScene {
       }
       const streetZ=c.z+(b.plot.y===-1?.79:1.58);
       const activity=hash01(`${b.planId}:street-life`);
-      this.streetPerson(c.x+(b.plot.y===-1?-1.73:-.18),.015,streetZ,`${b.planId}:visitor`,activity>.5?'carry':'walk',activity*3);
-      if(b.plot.y!==-1)this.streetPerson(c.x+.5,.015,c.z+1.68,`${b.planId}:neighbour`,'walk',-1.1);
+      this.streetPerson(c.x+(b.plot.y===-1?-1.8:0),.015,b.plot.y===-1?streetZ-.3:c.z+1.96,`${b.planId}:visitor`,activity>.5?'carry':'walk',b.plot.y===-1?0:Math.PI/2,null,{axis:b.plot.y===-1?'z':'x',length:b.plot.y===-1?.26:2.7});
+      if(b.plot.y!==-1)this.streetPerson(c.x+.45,.015,c.z+1.67,`${b.planId}:neighbour`,'idle',-1.1);
       if(b.plot.y!==-1 && activity>.48) {
         // A fruit cart, parasol and vendor occupy the existing street edge.
         const vx=c.x+.99,vz=c.z+1.48;
@@ -664,7 +746,7 @@ export class GptScene extends CityScene {
         this.beam('timber',[vx,.46,vz],[vx,1.13,vz],.018);
         this.part('hat',activity>.75?'#b47b57':'#718575',[vx,1.19,vz],[.45,.15,.4]);
         for(let fruit=0;fruit<15;fruit+=1)this.part('orb',fruit%2?'#b28d4e':'#85914c',[vx+(fruit%5-2)*.09,.65,vz+(Math.floor(fruit/5)-1)*.065],[.04,.038,.04]);
-        this.streetPerson(vx+.38,.015,vz-.12,`${b.planId}:vendor`,'carry',-.8);
+        this.streetPerson(vx+.38,.015,vz-.12,`${b.planId}:vendor`,'vendor',-.8);
       }
       if(b.plot.y===0 || b.plot.y===-1) {
         const bankZ=b.plot.y===0?-.62:-3.33,bankX=c.x+1.7;
@@ -898,6 +980,9 @@ export class GptScene extends CityScene {
     const artSkyKey = `${this.appearanceSignature}:${this.skyMinute}`;
     if (!force && this.artSkyKey === artSkyKey) return;
     this.artSkyKey = artSkyKey;
+    this.reflectionDirty=true;
+    this.renderDirty=true;
+    this.renderer.shadowMap.needsUpdate=true;
     this.nightAmount = this.a.light === 'night' ? 1 : this.a.light === 'live' ? (this.mats.lamp.emissiveIntensity-.5)/3.2 : 0;
     this.nightAmount=THREE.MathUtils.clamp(this.nightAmount,0,1);
     const dusk=this.nightAmount;
@@ -966,6 +1051,10 @@ export class GptScene extends CityScene {
   }
 
   renderScene() {
+    this.camera.updateMatrixWorld();
+    this.lastRenderedView ??= new THREE.Matrix4();
+    if(!this.a.motion && !this.fly && !this.drop && !this.model.picking && !this.renderDirty && this.lastRenderedView.equals(this.camera.matrixWorld))return;
+    this.lastRenderedView.copy(this.camera.matrixWorld);this.renderDirty=false;
     if(!this.composer) {
       this.composer=new EffectComposer(this.renderer);
       this.composer.renderTarget1.samples=4;this.composer.renderTarget2.samples=4;
@@ -979,6 +1068,7 @@ export class GptScene extends CityScene {
   }
 
   dispose() {
+    for(const maps of this.textures?.values()||[])for(const map of Object.values(maps))map.dispose();
     this.bloom?.dispose();this.output?.dispose();this.composer?.dispose();
     super.dispose();
   }
@@ -986,6 +1076,8 @@ export class GptScene extends CityScene {
   resize() {
     super.resize();
     this.composer?.setSize(this.canvas.clientWidth,this.canvas.clientHeight);
+    this.reflectionDirty=true;
+    this.renderDirty=true;
     if (this.water) this.water.getRenderTarget().setSize(Math.ceil(this.canvas.clientWidth*this.renderer.getPixelRatio()),Math.ceil(this.canvas.clientHeight*this.renderer.getPixelRatio()));
   }
 
@@ -995,10 +1087,19 @@ export class GptScene extends CityScene {
   }
 
   frame(t) {
+    // Match the base scene's cadence before any simulation work. Hidden tabs never catch up.
+    if(document.hidden || (!this.onScreen && !this.fly && !this.drop)) {this.weatherTick=t;return;}
+    if(t-this.lastFrame<1000/40)return;
+    this.frameTime=t;
     if (this.a?.motion && this.onScreen) {
-      const time = t / 1000;
+      const delta=Math.min(.05,Math.max(0,(t-(this.weatherTick||t))/1000));
+      this.motionTime=(this.motionTime||0)+delta;
+      const time = this.motionTime;
+      // Static architecture keeps its full-resolution shadow map between small actor updates.
+      if(t-(this.shadowTick||0)>=125){this.renderer.shadowMap.needsUpdate=true;this.shadowTick=t;}
       if (this.water) this.water.material.uniforms.uTime.value=time;
       for(const boat of this.boats||[]) { const phase=boat.userData.phase;boat.position.y=.055+Math.sin(time*.8+phase)*.009;boat.rotation.z=Math.sin(time*.65+phase)*.012; }
+      this.animatePeople(time);
       if (this.particles) {
         const attr = this.particles.geometry.attributes.position;
         const step = Math.min(0.05, Math.max(0, (t - (this.weatherTick || t)) / 1000));

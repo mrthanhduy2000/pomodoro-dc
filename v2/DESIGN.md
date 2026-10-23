@@ -101,9 +101,20 @@ additional postprocessing pass is used.
 
 Hoi An houses have six stable frontage compositions, selected by a suffix hash of planId.
 The variant affects massing, ridge direction, gallery/courtyard and shop displays, never plot
-coordinates or construction facts. Posed street/quay figures, vendors and boat occupants are
+coordinates or construction facts. Articulated street/quay figures, vendors and boat occupants are
 decorative; they are separate from earned residents and never write or impersonate diary records.
-Boat occupants share their hull transform.
+Boat occupants share their hull transform. Walkers follow short, fixed clear corridors with smooth
+starts, stops and on-the-spot turns; vendors reach/bend and figures breathe/look around with seeded
+phases. Moving parts use their own instanced batches, separate from architecture. Animation uses a
+paused local clock, respects reduced motion and never catches up after an offscreen/hidden pause.
+
+GPT reuses procedural surface maps across rebuilds and disposes them with the scene. Motion toggles
+update the current scene without rebuilding it. Reflections and shadow maps retain their original
+resolution but refresh at most every 125 ms while the view rests; camera changes refresh reflections
+immediately and sky/rebuild changes invalidate both. Water ripples/people keep the scene's existing
+40 Hz render cadence. With motion off, the composer skips identical views; interaction, resize,
+selection and sky changes still redraw. Native DPR, lights and building/foliage detail are unchanged.
+These are scheduling/lifecycle changes, not a measured M3 frame-time claim.
 
 Organic wear is deterministic: world-space plaster dampness, grouped clay-tile ageing,
 small roof installation offsets and irregular street planting never reseed on rebuild.

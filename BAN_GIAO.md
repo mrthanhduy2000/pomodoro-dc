@@ -1,3 +1,25 @@
+> Last update: **2026-10-23 — ARTICULATED GPT PEOPLE AND LESS REPEATED RENDERING.**
+> Walkers now have hip/knee and shoulder/elbow articulation, eased short routes, pauses and turns.
+> Street routes use clear front corridors; the canal-side route stays in the side alley on land.
+> Basket carriers retain their load; vendors reach/bend, idle figures breathe/look around, and
+> boat occupants animate inside the existing hull transform. Stable seeded phases avoid synchrony.
+> People use separate instanced batches: no building matrices are uploaded for a moving limb.
+> Animation respects reduced motion, freezes/resumes locally and pauses offscreen/in hidden tabs.
+> Keep native DPR, both lights, all houses/trees, actual progress and the twenty-building 3D preview.
+> Reuse surface maps across rebuilds; dispose at scene teardown. Motion toggles no longer rebuild.
+> Keep full-resolution water reflection/shadow maps, refreshed every 125 ms at rest; camera movement
+> refreshes reflection immediately, and scene/sky changes invalidate both. Ripples/people stay at
+> the existing render cadence. Motion-off identical views skip the postprocessing render.
+> User reports lag on MacBook Air M3; desktop is the current priority, not iPhone testing.
+> No new benchmark tool was written. Existing old v1 M3 numbers do NOT measure this GPT edition;
+> no before/after FPS or GPU timing is claimed. Local screenshots confirm moving figures, working
+> motion toggle, day/night and camera selection; no console/shader errors, one canvas, zero images.
+> Validation: 1,924 full-suite passes, zero failures, one expected skip; all three cross-checks
+> and 44 targeted guards passed; lint/build passed. Verify Ready and the new production footer SHA
+> before reporting completion; capture actual production motion frames.
+
+---
+
 > Last update: **2026-10-23 — SIX HOI AN HOUSE FRONTAGES AND EVERYDAY STREET LIFE.**
 > Added six deterministic house compositions: merchant balcony, timber tea room, tall gabled
 > tailor shop, low pottery workshop, L-shaped courtyard home and arched corner loggia.

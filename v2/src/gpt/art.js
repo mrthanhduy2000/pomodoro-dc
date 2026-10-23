@@ -1,3 +1,4 @@
+import { constructionProgress } from '../engine/city.js';
 /** Presentation only: no event creation, store writes, or changes to plot coordinates. */
 export const PLACES = {
   hoian: { name: 'Hội An', subtitle: 'Một chiều bên sông', wall: '#dfb95f', roof: '#66665b', wood: '#49382b', water: '#315f63', flower: '#b6537e', leaf: '#537c48' },
@@ -23,7 +24,7 @@ export function snowIn(a) { return a.season === 'winter' && a.place !== 'hoian';
 export function architectureOf(building) {
   const floors = building.shape === 'tower' ? 3 : building.shape === 'house' ? 1 : 2;
   const width = building.shape === 'tower' ? 1.25 : building.shape === 'house' ? 1.7 : 2.25;
-  return { floors, width, depth: 1.7, height: floors * 0.9, progress: Math.min(1, building.bricks.length / building.size) };
+  return { floors, width, depth: 1.7, height: floors * 0.9, progress: constructionProgress(building) };
 }
 /** A labelled, read-only postcard. These objects NEVER enter buildCity or the event log. */
 export function postcardCity(city) {
@@ -31,6 +32,6 @@ export function postcardCity(city) {
     [-1,-2],[0,-2],[1,-2],[-2,-1],[-2,0],[-2,1],[-2,-2],[2,-1],[2,0],[2,1],[2,-2]];
   const shapes = ['house', 'market', 'hall', 'house', 'temple', 'house', 'tower', 'market', 'house'];
   return { ...city, candidates: [], pile: [], residents: [], lanterns: [], statues: [], bricks: [],
-    buildings: spots.map(([x, y], i) => ({ planId: `postcard-${i}`, plot: { x, y }, shape: shapes[i] || (i%4===0?'market':'house'), style: 5, size: 8, bricks: Array.from({ length: 8 }, (_, j) => ({ id: `postcard-${i}-${j}`, sid: '', kind: 'plain' })) })),
+    buildings: spots.map(([x, y], i) => ({ planId: `postcard-${i}`, plot: { x, y }, shape: shapes[i] || (i%4===0?'market':'house'), style: 5, size: 8, workUnit: 'minutes', targetMinutes: 200, workMs: 12000000, bricks: Array.from({ length: 8 }, (_, j) => ({ id: `postcard-${i}-${j}`, sid: '', kind: 'plain' })) })),
   };
 }

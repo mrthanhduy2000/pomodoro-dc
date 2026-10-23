@@ -1,3 +1,25 @@
+> Last update: **2026-10-23 — M3 GPT FRAME CADENCE AND VERSIONED MINUTE CONSTRUCTION (ADR-104).**
+> Measured visible Apple M3 / ANGLE Metal, 20 sample buildings, 1100×700 CSS, forced Retina DPR2
+> (1464×1048 buffer): orbit 20.35 → 39.43 FPS; zoom 20.59 → 34.78 FPS. P95 68.2 → 42 ms and
+> 68 → 49.4 ms. This is local delivered-frame cadence, not stable 60 FPS or a production guarantee.
+> Preserve fractional 40 Hz cadence; instance glow billboards; simplify only thin boxes/distant
+> leaf curves; retain composer 4× MSAA while removing redundant canvas AA. Native DPR stays.
+> New plan events version minutes (v1): catalog size ×25; completed exact focusedMs only.
+> Pauses, breaks, cancellations and bonus bricks add no work time. FIFO overflow reaches queued
+> plans or waits in yard fragments. Historical unversioned plans/rewards/plots remain unchanged.
+> UI, classic duration bands, ledger, reports and digest share the version-aware model.
+> Hoi An adds footings, timber frames, growing masonry, rafters and partial tiles; staged materials,
+> scaffold platform workers and carriers reuse actor batches. Preview slider edits copied sample
+> progress only; real city and all 20 sample anchors remain. No backdrop image or new light.
+> Reload old clients before using minute plans; no SQL migration. Rollback must keep v1 work reader.
+> Data checks cover exact time, overflow, pauses/cancels/bonus, historical replay and digest. Doubling
+> allocated work deliberately failed conservation tests, then was restored. See PERFORMANCE.md.
+> Validation: 1,932 full-suite passes, zero failures, one expected skip; all three cross-checks
+> passed; lint/build passed. Exact drawing comparison preserves 120 completed Hoi An buildings.
+> Confirm Vercel Ready + new production SHA and capture the live 3D construction slider before reporting.
+
+---
+
 > Last update: **2026-10-23 — LIVING GPT STREETS, DISTANCE DETAIL AND PAIRED SHOP ACTIVITY.**
 > Covers all requested directions: orbit workload, purposeful street life, architecture/contact,
 > river life, warm shop spill, GPU wind and progress-derived construction activity.

@@ -2,7 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 
 import { blueprintsOf } from '../engine/catalog.js';
-import { lanternSpot, PLOT, plotBounds, residentSpot, storeyBox, statueSpot, yardSpot } from './layout.js';
+import { buildingTop, lanternSpot, PLOT, plotBounds, residentSpot, storeyBox, statueSpot, yardSpot } from './layout.js';
 
 const building = (shape, plot = { x: 0, y: 0 }) => ({ shape, plot, bricks: [] });
 const SHAPES = [...new Set(blueprintsOf(1).map((b) => b.shape))];
@@ -59,4 +59,14 @@ test('yard and statues use distinct intersections', () => {
     const s = statueSpot(bounds, i);
     assert.ok(Math.hypot(s.x - y.x, s.z - y.z) > 1, 'a statue on the brick yard');
   }
+});
+
+
+test('minute bands preserve height regardless of completed-session duration or count',()=>{
+  const make=durations=>{let offset=0;return {shape:'house',plot:{x:2,y:1},workUnit:'minutes',workMs:6000000,bricks:durations.map(minutes=>{const brick={workOffsetMs:offset,creditedMs:minutes*60000};offset+=brick.creditedMs;return brick;})};};
+  const a=make([50,50]),b=make([25,25,25,25]);
+  assert.equal(buildingTop(a),buildingTop(b));
+  assert.equal(storeyBox(a,0).h,storeyBox(b,0).h*2);
+  assert.ok(Math.abs(storeyBox(a,1).y-1.14)<1e-12);
+  assert.deepEqual([storeyBox(a,0).x,storeyBox(a,0).z],[8,4]);
 });

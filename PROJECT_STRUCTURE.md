@@ -1053,6 +1053,9 @@ v2/
                          keys.js (Space shortcut) · CityCanvas (mounts CityScene) ·
                          LazyCityCanvas (three.js as its own chunk)
 ```
+Minute construction: `engine/city.js` owns versioned work allocation/progress/stages (ADR-104);
+`city/layout.js` maps duration bands, `gpt/hoian.js` stages the kit, and the sample slider is in
+`gpt/GptEdition.jsx`. Dev-only FPS controls extend `ui/CityCanvas.jsx` and `gpt/GptScene.js`.
 Server side: `api/_lib/v2Digest.js` (pure `pickV2Nudge`, imports the v2 engine) is called by
 `api/coach-digest.js`; its test is `api/_tests/v2-digest.test.js`.
 Rules: tests sit next to their file (`*.test.js`, picked up by `npm test`); `engine/` imports no

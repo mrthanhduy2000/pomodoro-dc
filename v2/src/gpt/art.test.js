@@ -58,3 +58,14 @@ test('Hoi An kit keeps every construction phase anchored to the original plot an
     }
   }
 });
+
+
+test('minute preview phases use focused time rather than brick count and never alter earned facts',()=>{
+  const b=freeze({planId:'earned',plot:{x:2,y:-1},shape:'house',size:4,workUnit:'minutes',targetMinutes:100,workMs:3000000,bricks:[{id:'one-50-minute-session'}]});
+  assert.equal(architectureOf(b).progress,.5);
+  const sample=postcardCity({buildings:[b]});
+  sample.buildings[0].workMs=1200000;
+  assert.equal(architectureOf(sample.buildings[0]).progress,.1);
+  assert.equal(b.workMs,3000000);
+  assert.deepEqual(b.plot,{x:2,y:-1});
+});

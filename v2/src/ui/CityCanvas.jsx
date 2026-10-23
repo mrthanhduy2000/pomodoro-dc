@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 
 import { CityScene } from '../city/CityScene.js';
 
@@ -10,10 +10,15 @@ export default function CityCanvas({
   city, categories, now, picking = false, selectedPlan = null, focusSid = null, dropSound = false, onPick, interactive = true,
   className = '', onScene = null, label = 'Thành phố', Scene = CityScene, appearance = null,
 }) {
+  const [measurements,setMeasurements]=useState([]);
+  const [measuring,setMeasuring]=useState(false);
+  const benchmark=import.meta.env.DEV && interactive && appearance && new URLSearchParams(location.search).get('bench')==='gpt';
   const canvasRef = useRef(null);
   const sceneLocal = useRef(null);
   const pickRef = useRef(onPick);
   const modelRef = useRef(null);
+  const measure=mode=>{setMeasuring(true);sceneLocal.current?.startBenchmark?.(mode,result=>{setMeasurements(old=>[...old,result]);setMeasuring(false);});};
+
 
   useEffect(() => {
     pickRef.current = onPick;
@@ -39,5 +44,8 @@ export default function CityCanvas({
     sceneLocal.current?.setModel(modelRef.current);
   }, [city, categories, categoriesKey, now, picking, selectedPlan, focusSid, dropSound, appearance]);
 
-  return <canvas ref={canvasRef} className={`city-canvas ${className}`} role="img" aria-label={label} />;
+  return <><canvas ref={canvasRef} className={`city-canvas ${className}`} role="img" aria-label={label} />{benchmark && <div style={{position:'absolute',left:12,bottom:52,zIndex:20,background:'#fff',color:'#142c25',padding:10,maxWidth:'90%',fontSize:11}}>
+    <button type="button" disabled={measuring} onClick={()=>measure('orbit')}>Đo xoay 12 giây</button><button type="button" disabled={measuring} onClick={()=>measure('zoom')}>Đo thu phóng 12 giây</button>
+    <output aria-label="Kết quả FPS">{measuring?'Đang đo — giữ nguyên cửa sổ':JSON.stringify(measurements)}</output>
+  </div>}</>;
 }

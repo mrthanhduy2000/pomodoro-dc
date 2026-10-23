@@ -1,6 +1,6 @@
 import { useRef, useState } from 'react';
 
-import { brickReport } from '../engine/city.js';
+import { brickReport, constructionMinutes, constructionStage } from '../engine/city.js';
 import { eraStyle } from '../engine/catalog.js';
 import CityCanvas from './LazyCityCanvas.jsx';
 import TimerRing from './TimerRing.jsx';
@@ -65,7 +65,7 @@ function CityLine({ app, goTo, architectural = false }) {
     const b = city.current;
     return (
       <p className="city-line">
-        {architectural ? 'Phiên này hoàn thiện phần ' : 'Phiên này thành tầng '}<b>{b.bricks.length + 1}/{b.size}</b> của «{b.name}»
+        {b.workUnit==='minutes'?<><b>{Math.floor(constructionMinutes(b))}/{b.targetMinutes} phút</b> · {constructionStage(b).label} · «{b.name}»</>:<>{architectural ? 'Phiên này hoàn thiện phần ' : 'Phiên này thành tầng '}<b>{b.bricks.length + 1}/{b.size}</b> của «{b.name}»</>}
         {' '}<button type="button" className="link" onClick={() => goTo('city')}>xem</button>
       </p>
     );
@@ -200,6 +200,13 @@ function ReportLines({ report, city, architectural = false }) {
   if (report.building) {
     const b = report.building;
     const storey = report.bricks[report.bricks.length - 1].storey + 1;
+    if(b.workUnit==='minutes') {
+      const plans=[...new Set(report.contributions.map(brick=>brick.planId))];
+      for(const id of plans) {
+        const target=city.buildings.find(building=>building.planId===id);
+        if(target?.workUnit==='minutes')lines.push(['',`${target.name}: ${Math.floor(constructionMinutes(target))}/${target.targetMinutes} phút · ${constructionStage(target).label}.`]);
+      }
+    } else
     lines.push(['', report.finished ? `Xong «${b.name}» — ${b.size} phiên thành một toà nhà.` : `${architectural ? 'Phần' : 'Tầng'} ${storey}/${b.size} của «${b.name}».`]);
   } else lines.push(['', 'Viên gạch đang chờ trong kho — chọn công trình kế tiếp để đặt nó.']);
   if (report.eraUp) lines.push(['gold', `Mở kỷ ${report.eraUp.era}: ${eraStyle(report.eraUp.era).name}.`]);

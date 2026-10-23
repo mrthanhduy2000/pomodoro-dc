@@ -115,6 +115,8 @@ mostly the same thing. Now:
 Never write both for the same task. **Write reports in Vietnamese** — they are for Đàm and his
 external advisor, not for the codebase.
 
+GPT: ADR-104; FPS: `PERFORMANCE.md`.
+
 ## Platform & stack
 Main app is **web**: `https://pomodoro-dc.vercel.app` (full version, iPhone + Mac). Electron is a Mac
 companion only — it opens that URL and reads timer state from Supabase; it is **not** a separate app

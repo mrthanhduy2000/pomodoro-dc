@@ -11,7 +11,7 @@ import * as THREE from 'three';
 import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls.js';
 
 import { eraStyle, shapeOf } from '../engine/catalog.js';
-import { hash01 } from '../engine/city.js';
+import { hash01, constructionProgress } from '../engine/city.js';
 import {
   buildingTop, focusFrame, lanternSpot, overviewFrame, PLOT, plotBounds, plotCenter, residentSpot, STREET,
   statueSpot, storeyBox, storeyHeight, yardSpot,
@@ -63,10 +63,10 @@ function mix(hexA, hexB, t) {
 }
 
 export class CityScene {
-  constructor(canvas, { onPick = () => {}, interactive = true } = {}) {
+  constructor(canvas, { onPick = () => {}, interactive = true, antialias = true } = {}) {
     this.canvas = canvas;
     this.onPick = onPick;
-    this.renderer = new THREE.WebGLRenderer({ canvas, antialias: true, powerPreference: 'high-performance' });
+    this.renderer = new THREE.WebGLRenderer({ canvas, antialias, powerPreference: 'high-performance' });
     this.renderer.setPixelRatio(Math.min(2, window.devicePixelRatio || 1));
     this.renderer.shadowMap.enabled = true;
     this.renderer.shadowMap.type = THREE.PCFShadowMap;
@@ -183,7 +183,7 @@ export class CityScene {
     this.model = model;
     const { city, picking, selectedPlan } = model;
     const sig = JSON.stringify([
-      city.buildings.map((b) => [b.planId, b.plot.x, b.plot.y, b.style, b.bricks.map((x) => x.id + x.categoryId)]),
+      city.buildings.map((b) => [b.planId, b.plot.x, b.plot.y, b.style, b.workUnit, b.workMs, b.bricks.map((x) => x.id + x.categoryId)]),
       city.pile.map((b) => b.id), city.residents.length, city.lanterns.length, city.statues.length,
       city.festivalNow, picking ? city.candidates : 0, model.categoriesKey,
     ]);
@@ -316,7 +316,7 @@ export class CityScene {
 
     // Roofs on finished buildings, a scaffold + ghost storey on the one being built ----
     for (const b of city.buildings) {
-      const done = b.bricks.length >= b.size;
+      const done = constructionProgress(b) >= 1;
       if (done) this.addRoof(b);
       else this.addScaffold(b, b === city.current);
     }
@@ -439,7 +439,7 @@ export class CityScene {
     const st = eraStyle(b.style);
     const shape = shapeOf(b.shape);
     const top = buildingTop(b);
-    const k = Math.max(0.35, 1 - shape.taper * (b.bricks.length - 1));
+    const k = Math.max(0.35, 1 - shape.taper * ((b.workUnit === 'minutes' ? b.size : b.bricks.length) - 1));
     const w = shape.w * k;
     const d = shape.d * k;
     const mat = this.roofMat(st.roofColor);
@@ -617,8 +617,8 @@ export class CityScene {
 
   frame(t) {
     if (!this.onScreen && !this.fly && !this.drop) return;
-    if (t - this.lastFrame < FRAME_MS) return;
-    this.lastFrame = t;
+    if (t - this.lastFrame < (this.frameInterval ?? FRAME_MS)) return;
+    this.lastFrame = this.frameInterval ? t - ((t-this.lastFrame)%this.frameInterval) : t;
     if (this.fly) {
       const k = Math.min(1, (t - this.fly.start) / this.fly.ms);
       const e = k < 0.5 ? 4 * k * k * k : 1 - (-2 * k + 2) ** 3 / 2;

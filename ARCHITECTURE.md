@@ -1407,6 +1407,10 @@ UI (v2/src/ui) ──actions──▶ useTimerApp ──cmd*(state, now)──�
   v1 links to the edition from the sidebar and Settings; `/` and `/v2/` remain available.
 - **Storage flow**: localStorage `dc-pomodoro-v2` on each device; cloud `events_v2`. v2 never writes
   `game_state` / `timer_live`; `legacy.js` reads `game_state` once, read-only, for the history import.
+- **Minute construction (ADR-104)**: new plans version their unit (`minutes`, version 1); the pure
+  city reducer allocates exact completed `focusedMs` FIFO with lossless yard fragments. Historical
+  unversioned plans keep session/bonus semantics. Shared progress helpers drive both 3D views,
+  planner/report/ledger and return digest. No schema/event rewrite; reload old clients.
 - **City flow (stages 2–4, ADR-102)**: `buildCity(events, reduce(events, minute), minute)` derives
   bricks → buildings (FIFO, yard when nothing planned) → residents, lanterns, statues, festivals,
   era. The only stored choices are `build.plan` / `build.cancel` events (`cmdPlan` / `cmdCancelPlan`).

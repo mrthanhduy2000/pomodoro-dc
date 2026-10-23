@@ -10,6 +10,14 @@
 
 ---
 
+## 2026-10-23 — Versioned minute construction plans (ADR-104)
+
+New `build.plan.data` includes `workUnit: 'minutes', workVersion: 1`. No SQL or local data rewrite.
+Completed sessions supply exact focused milliseconds; FIFO fragments preserve overflow in the yard.
+Historical unversioned plans keep the old replay. Reload other devices/tabs before creating minute
+plans: previous clients interpret them as session plans. A rollback must retain the version-1 reader
+once those events exist. Session identities, old building positions, timer history and v1 stay intact.
+
 ## 2026-08-22 — `residentAt()` trả `travelled` thay cho `bob` (API module nội bộ)
 
 - **Đổi gì**: `src/engine/city3d/residents.js` — `residentAt(route, time)` **không còn trả trường

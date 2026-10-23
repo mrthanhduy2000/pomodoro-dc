@@ -7,7 +7,7 @@
  * Under `_lib`, so Vercel does not count it as a function.
  */
 import { reduce } from '../../v2/src/engine/timer.js';
-import { buildCity } from '../../v2/src/engine/city.js';
+import { buildCity, constructionMinutes } from '../../v2/src/engine/city.js';
 import { currentStreak, todaySummary } from '../../v2/src/engine/stats.js';
 
 const base = (title, body, tag) => ({
@@ -29,14 +29,15 @@ export function pickV2Nudge(events, now) {
   const today = todaySummary(state, now);
   const goal = city.goalToday;
   const b = city.current;
-  const left = b ? b.size - b.bricks.length : 0;
+  const minutePlan=b?.workUnit==='minutes';
+  const left = b ? minutePlan?Math.ceil(b.targetMinutes-constructionMinutes(b)):b.size-b.bricks.length : 0;
 
   if (city.welcomeBack) {
-    const where = b ? `«${b.name}» còn ${left} tầng nữa là xong.` : 'Chọn công trình kế tiếp và đặt viên gạch đầu tiên.';
+    const where = b ? `«${b.name}» còn ${left} ${minutePlan?'phút':'tầng'} nữa là xong.` : 'Chọn công trình kế tiếp và đặt viên gạch đầu tiên.';
     return { reason: 'welcome-back', payload: base('🏙️ Thành phố đang chờ', `Phiên đầu tiên hôm nay được nhân đôi gạch. ${where}`, 'dc-v2-welcome') };
   }
-  if (today.count === 0 && b && left <= 3) {
-    return { reason: 'unfinished', payload: base(`🧱 «${b.name}» còn ${left} viên`, `${left} phiên nữa là xong ${b.size} tầng. Một phiên tối nay?`, 'dc-v2-unfinished') };
+  if (today.count === 0 && b && left <= (minutePlan?75:3)) {
+    return { reason: 'unfinished', payload: base(`🧱 «${b.name}» còn ${left} ${minutePlan?'phút':'viên'}`, minutePlan?`${left} phút tập trung trong phiên hoàn thành để hoàn thiện công trình. Một phiên tối nay?`:`${left} phiên nữa là xong ${b.size} tầng. Một phiên tối nay?`, 'dc-v2-unfinished') };
   }
   if (today.count > 0 && today.count < goal && goal - today.count <= 2) {
     const n = goal - today.count;

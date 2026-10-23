@@ -51,3 +51,14 @@ test('a streak breaking tonight', () => {
   assert.equal(n.reason, 'streak');
   assert.match(n.payload.title, /Chuỗi 3 ngày/);
 });
+
+
+test('minute plans report missing focused minutes without presenting session counts as construction',()=>{
+  const p=plan(T0-MIN,'e1-0');p.data.workUnit='minutes';p.data.workVersion=1;
+  const log=[p,...session('minutes',T0)];
+  const next=pickV2Nudge(log,at17(1));
+  assert.equal(next.reason,'unfinished');
+  assert.match(next.payload.title,/75 phút/);
+  assert.doesNotMatch(next.payload.body,/75 phiên|tầng/);
+  assert.match(pickV2Nudge(log,at17(3)).payload.body,/75 phút/);
+});

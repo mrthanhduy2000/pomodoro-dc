@@ -8,8 +8,9 @@
  * device, so the city cannot drift between the laptop and the phone.
  *
  * Rules (plan "Thành phố nhật ký"):
- * - 1 completed session = 1 brick = 1 storey of the building being built. Legacy (v1) sessions
- *   are stats only: the game starts from zero.
+ * - Each completed session retains one diary brick. New versioned plans consume exact focused
+ *   milliseconds (25 minutes per catalog step); unversioned plans retain one brick per storey.
+ *   Legacy (v1) sessions are stats only: the game starts from zero.
  * - Bricks fill planned buildings first-planned-first. With nothing planned they wait in the
  *   brick yard (`pile`) and move in the moment a building is planned.
  * - 1 active day = 1 resident, living in the building that took that day's first brick.
@@ -28,6 +29,25 @@ export const GOLD_RATE = 0.08;
 export const STATUE_RATE = 0.01;
 export const WELCOME_BACK_GAP_DAYS = 2; // empty days in between that earn a double brick
 export const MAX_OPEN_PLANS = 2; // the building in progress + one queued
+export const MINUTES_PER_STEP = 25; // Immutable version-1 budget; changing it requires a new work version.
+export const CONSTRUCTION_STAGES = [
+  {key:'layout',label:'Định vị mặt bằng',at:0}, {key:'foundation',label:'Đổ móng',at:.08},
+  {key:'frame',label:'Dựng khung',at:.18}, {key:'walls',label:'Xây tường',at:.32},
+  {key:'rafters',label:'Lắp vì kèo',at:.5}, {key:'tiles',label:'Lợp ngói',at:.65},
+  {key:'finish',label:'Lắp cửa và hoàn thiện',at:.82}, {key:'garden',label:'Hoàn thiện sân và mở cửa',at:.95},
+  {key:'complete',label:'Đã hoàn thiện',at:1},
+];
+export function constructionMinutes(b) {
+  return b.workUnit==='minutes'?(b.workMs||0)/60000:b.bricks.reduce((sum,brick)=>sum+(brick.bonus?0:brick.minutes||0),0);
+}
+export function constructionProgress(b) {
+  return Math.min(1,b.workUnit==='minutes'?(b.workMs||0)/(b.targetMinutes*60000):b.bricks.length/b.size);
+}
+export function constructionStage(b) {
+  const progress=constructionProgress(b);
+  return CONSTRUCTION_STAGES.findLast(stage=>progress>=stage.at)||CONSTRUCTION_STAGES[0];
+}
+
 
 /** FNV-1a → [0, 1). Deterministic across devices and versions. */
 export function hash01(str) {
@@ -154,6 +174,8 @@ export function buildCity(events, timerState, now = Date.now()) {
     .sort((a, b) => a.endedAt - b.endedAt || (a.sid < b.sid ? -1 : 1));
   const goalAt = goalAtFactory(goalTimeline(events));
   const bricks = makeBricks(sessions);
+  const sources=new Map(bricks.map(brick=>[brick.id,brick]));
+  const focused=new Map(sessions.map(session=>[session.sid,session.focusedMs??session.minutes*60000]));
 
   const items = [
     ...events
@@ -173,6 +195,22 @@ export function buildCity(events, timerState, now = Date.now()) {
   let total = 0;
 
   const fill = (b, brick, at) => {
+    if(b.workUnit==='minutes') {
+      const availableMs=brick.bonus?0:(brick.creditedMs??focused.get(brick.sid)??0);
+      const amount=Math.min(availableMs,b.targetMinutes*60000-b.workMs);
+      const sourceId=brick.sourceId||brick.id,source=sources.get(sourceId);
+      if(source && source.planId==null){source.planId=b.planId;source.storey=b.bricks.length;}
+      if(amount>0) {
+        b.bricks.push({...brick,planId:b.planId,storey:b.bricks.length,sourceId,workOffsetMs:b.workMs,creditedMs:amount,minutes:amount/60000});
+        b.workMs+=amount;
+      }
+      if(b.workMs>=b.targetMinutes*60000){b.completedAt=at;open.splice(open.indexOf(b),1);}
+      if(availableMs>amount) {
+        const offset=(brick.minuteOffset||0)+amount;
+        return {...brick,id:`${sourceId}@${offset}`,sourceId,minuteOffset:offset,creditedMs:availableMs-amount,minutes:(availableMs-amount)/60000,planId:null};
+      }
+      return null;
+    }
     brick.planId = b.planId;
     brick.storey = b.bricks.length;
     b.bricks.push(brick);
@@ -180,6 +218,7 @@ export function buildCity(events, timerState, now = Date.now()) {
       b.completedAt = at;
       open.splice(open.indexOf(b), 1);
     }
+    return null;
   };
 
   for (const it of items) {
@@ -190,18 +229,16 @@ export function buildCity(events, timerState, now = Date.now()) {
       brick.n = total;
       brick.era = eraOf(total - 1); // the era this brick was laid in
       if (eraOf(total) > before) eraUps.push({ era: eraOf(total), at: brick.at, brickId: brick.id, sid: brick.sid });
-      const target = open[0];
-      if (target) fill(target, brick, brick.at);
-      else {
-        brick.planId = null;
-        pile.push(brick);
-      }
+      let remainder=brick;
+      while(remainder && open.length)remainder=fill(open[0],remainder,brick.at);
+      if(remainder){remainder.planId=null;pile.push(remainder);}
       continue;
     }
     const e = it.event;
     const d = e.data ?? {};
     if (e.kind === 'build.plan') {
       if (!d.planId || byPlan.has(d.planId)) continue;
+      if(d.workUnit!=null && (d.workUnit!=='minutes'||d.workVersion!==1))continue;
       const bp = blueprint(d.blueprint);
       const era = eraOf(total);
       if (!bp || bp.era > era) continue; // a future era's blueprint is not unlocked yet
@@ -211,11 +248,15 @@ export function buildCity(events, timerState, now = Date.now()) {
         plot, requested: d.plot ?? null, moved: Boolean(d.plot) && plotKey(d.plot) !== plotKey(plot),
         plannedAt: e.at, bricks: [], completedAt: null,
       };
+      if(d.workUnit==='minutes'){b.workUnit='minutes';b.targetMinutes=bp.size*MINUTES_PER_STEP;b.workMs=0;}
       buildings.push(b);
       open.push(b);
       byPlan.set(b.planId, b);
       occupied.set(plotKey(plot), b.planId);
-      while (pile.length && b.bricks.length < b.size) fill(b, pile.shift(), e.at);
+      while(pile.length && b.completedAt==null) {
+        const remainder=fill(b,pile.shift(),e.at);
+        if(remainder)pile.unshift(remainder);
+      }
     } else {
       const b = byPlan.get(d.planId);
       if (!b || b.bricks.length) continue; // only an empty plan can be withdrawn
@@ -297,6 +338,7 @@ export function brickReport(city, sid) {
   const building = main.planId ? city.buildings.find((b) => b.planId === main.planId) : null;
   const last = mine[mine.length - 1];
   return {
+    contributions: city.buildings.flatMap(b=>b.bricks.filter(brick=>brick.sid===sid)),
     bricks: mine,
     count: mine.length,
     kind: main.kind,
@@ -331,7 +373,7 @@ export function cmdPlan(city, now, { planId, blueprintKey, plot }) {
   const bp = blueprint(blueprintKey);
   if (!city.canPlan || !bp || bp.era > city.era) return null;
   if (!city.candidates.some((p) => p.x === plot?.x && p.y === plot?.y)) return null;
-  return { id: `build.plan:${planId}`, at: now, kind: 'build.plan', data: { planId, blueprint: bp.key, plot: { x: plot.x, y: plot.y } } };
+  return { id: `build.plan:${planId}`, at: now, kind: 'build.plan', data: { planId, blueprint: bp.key, plot: { x: plot.x, y: plot.y }, workUnit: 'minutes', workVersion: 1 } };
 }
 
 export function cmdCancelPlan(city, now, planId) {

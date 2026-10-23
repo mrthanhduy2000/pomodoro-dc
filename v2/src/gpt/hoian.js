@@ -1,5 +1,5 @@
 /** Hoi An-inspired architectural kit. Only draws; never changes a plot or session. */
-import { hash01 } from '../engine/city.js';
+import { hash01, constructionProgress } from '../engine/city.js';
 import { plotCenter } from '../city/layout.js';
 
 export const HOIAN_NAMES = { house: 'Nhà phố thương nhân', hall: 'Hội quán', market: 'Chợ phố Hội', tower: 'Lầu chuông', temple: 'Nhà văn hóa sân trong' };
@@ -7,7 +7,7 @@ export const HOIAN_NAMES = { house: 'Nhà phố thương nhân', hall: 'Hội qu
 export function drawHoiAnBuilding(scene, b) {
   const c = plotCenter(b.plot);
   const pick = { type: 'building', planId: b.planId };
-  const progress = Math.min(1, b.bricks.length / b.size);
+  const progress = constructionProgress(b);
   const variant = Math.floor(hash01(`${b.planId}:front`) * 4);
   const frontage=Math.floor(hash01(`${b.planId}:architecture`)*6);
   const wall = ['wall:#e5b65c', 'wall:#ddbf7b', 'wall:#dba65b', 'wall:#e8ca89'][variant];
@@ -21,6 +21,11 @@ export function drawHoiAnBuilding(scene, b) {
   const roof = (x,y,z,w,d,rise=.42) => {
     if(progress < .5) return;
     const reach=d/2;
+    if(progress<.82)for(const side of [-1,1])for(let rib=0;rib<Math.ceil(Math.min(1,(progress-.5)/.15)*9);rib+=1) {
+      const bx=x-w/2+(rib+.5)*w/9;
+      beam('timber',[bx,y+rise,z],[bx,y+.1,z+side*reach],.025);
+    }
+
     const ageAt=(col,row,side)=>{
       const px=col/5,py=row/3,ix=Math.floor(px),iy=Math.floor(py);
       const fx=px-ix,fy=py-iy,u=fx*fx*(3-2*fx),v=fy*fy*(3-2*fy);
@@ -30,7 +35,7 @@ export function drawHoiAnBuilding(scene, b) {
     for(const side of [-1,1]) {
       const height = (u) => rise*(1-u)+.1*Math.pow(u,4);
       const sag = (dx) => -.025*(1-Math.pow(dx/(w/2),2));
-      for(let row=0;row<10;row+=1) {
+      for(let row=0;row<Math.ceil(Math.max(0,Math.min(1,(progress-.65)/.17))*10);row+=1) {
         const a=row/10, u=(row+.5)/10, next=(row+1)/10;
         const slope=Math.atan2(height(a)-height(next),reach/10);
         for(let strip=0;strip<4;strip+=1) {
@@ -62,7 +67,11 @@ export function drawHoiAnBuilding(scene, b) {
   };
   const gableRoof=(x,y,z,w,d,rise=.5)=>{
     if(progress<.5)return;
-    for(const side of [-1,1])for(let row=0;row<10;row+=1) {
+    if(progress<.82)for(const side of [-1,1])for(let rib=0;rib<Math.ceil(Math.min(1,(progress-.5)/.15)*8);rib+=1) {
+      const bz=z-d/2+(rib+.5)*d/8;
+      beam('timber',[x,y+rise,bz],[x+side*w/2,y+.07,bz],.025);
+    }
+    for(const side of [-1,1])for(let row=0;row<Math.ceil(Math.max(0,Math.min(1,(progress-.65)/.17))*10);row+=1) {
       const u=(row+.5)/10,height=rise*(1-u)+.07*u*u;
       const slope=Math.atan2(rise-.14*u,w/2);
       part('box','tile',x+side*w/2*u,y+height,z,w/20+.025,.028,d,[0,0,-side*slope]);
@@ -76,14 +85,14 @@ export function drawHoiAnBuilding(scene, b) {
     beam('tile',[x,y+rise+.03,z-d/2-.025],[x,y+rise+.03,z+d/2+.025],.045);
   };
   const awning=(x,y,z,width,color)=>{
-    if(progress<.65)return;
+    if(progress<.82)return;
     for(let stripe=0;stripe<10;stripe+=1) {
       part('cloth',`cloth:${stripe%2?'#d9cdae':color}`,x+(stripe-4.5)*width/10,y,z,width/10,.14,.52,[.16,0,0]);
       part('orb',stripe%2?'#d9cdae':color,x+(stripe-4.5)*width/10,y-.055,z+.25,width/20,.06,.025);
     }
   };
   const counter=(x,y,z,width,wares)=>{
-    if(progress<.65)return;
+    if(progress<.82)return;
     box('timber',x,y,z,width,.07,.32);
     for(const side of [-1,1])box('timber',x+side*width*.4,y/2,z,.045,y,.16);
     for(let item=0;item<7;item+=1) {
@@ -94,7 +103,7 @@ export function drawHoiAnBuilding(scene, b) {
     }
   };
   const window = (x,y,z,w=.36,h=.48, shutter=true) => {
-    if(progress < .35) return;
+    if(progress < .82) return;
     box('timber',x,y,z,w+.09,h+.09,.065);
     box('glow',x,y,z+.045,w,h,.025);
     box('timber',x,y,z+.065,.025,h,.025);
@@ -182,7 +191,7 @@ export function drawHoiAnBuilding(scene, b) {
     }
   };
   const lantern = (x,y,z) => {
-    if(progress < .8) return;
+    if(progress < .95) return;
     beam('timber',[x,y+.2,z],[x,y+.06,z],.008);
     part('orb','glow',x,y,z,.085,.12,.085);
     for(let rib=0;rib<6;rib+=1) {
@@ -193,7 +202,7 @@ export function drawHoiAnBuilding(scene, b) {
     beam('#b78e42',[x,y-.12,z],[x,y-.23,z],.008);
   };
   const garden = (x,y,z,width=.6) => {
-    if(progress < .65) return;
+    if(progress < .95) return;
     box('timber',x,y-.05,z,width,.1,.16);
     for(let i=0;i<44;i+=1) {
       const u=hash01(`${b.planId}:garden:${i}`),v=hash01(`g:${i}`);
@@ -209,7 +218,36 @@ export function drawHoiAnBuilding(scene, b) {
   const courtyard = () => { box('paving',0,.09,0,3.45,.12,1.85); };
   courtyard();
   if(progress === 0) { posts([-1,1],.16,-.65,.6); posts([-1,1],.16,.65,.6); return; }
-  if(progress < .25) { body(0,-.18,1.65,1,.45); return; }
+  if(progress < .5) {
+    // Each footprint follows its finished frontage; progress adds structure, never moves the plot.
+    const houseFootprints=[[[.35,-.04,2.02,1.48,2.5],[-1.05,.09,.9,1.35,1.05]],
+      [[-.55,-.07,1.85,1.42,1.63],[1.03,.02,.93,1.15,.92]],
+      [[-.65,-.05,1.4,1.48,2.55],[.91,.01,1.26,1.28,1.05]],
+      [[-.17,-.08,2.75,1.4,1.08]], [[-.87,-.02,1.13,1.52,2.02],[.57,-.44,1.63,.66,1.15]],
+      [[0,-.05,2.91,1.38,2.1]]];
+    const footprints=b.shape==='house'?houseFootprints[frontage]:
+      b.shape==='tower'?[[0,0,.91,.95,2.3]]:b.shape==='temple'?[[0,-.48,2.3,.66,1.14]]:[[0,-.12,2.85,1.24,1.55]];
+    for(const [x,z,w,d,h] of footprints) {
+      if(progress>=.08) {
+        box('stone',x,.16,z,w+.08,.16,d+.08);
+        for(const side of [-1,1])beam('iron',[x-w/2,.25,z+side*d/2],[x+w/2,.25,z+side*d/2],.012);
+      }
+      const frame=Math.min(1,Math.max(0,(progress-.18)/.14));
+      if(frame>0) {
+        const bays=Math.max(2,Math.round(w/.6));
+        for(let i=0;i<=bays;i+=1)for(const side of [-1,1])box('timber',x-w/2+i*w/bays,.24+h*frame/2,z+side*d/2,.06,h*frame,.07);
+        for(const side of [-1,1])beam('timber',[x-w/2,.24+h*frame,z+side*d/2],[x+w/2,.24+h*frame,z+side*d/2],.035);
+      }
+      const masonry=Math.min(1,Math.max(0,(progress-.32)/.18));
+      if(masonry>0) {
+        box(wall,x,.24+h*masonry/2,z-d/2+.055,w,h*masonry,.11);
+        for(const side of [-1,1])box(wall,x+side*(w/2-.055),.24+h*masonry/2,z,.11,h*masonry,d);
+        for(let course=0;course<Math.ceil(masonry*8);course+=1)for(let brick=0;brick<Math.round(w/.22);brick+=1)
+          box('#a98565',x-w/2+.12+brick*.21,.26+course*.065,z+d/2,.19,.055,.1);
+      }
+    }
+    return;
+  }
 
   if(progress>=.65 && b.plot.y!==0 && ['house','hall','market'].includes(b.shape)) {
     // A shallow service wing belongs to this building; it is not a second earned house.

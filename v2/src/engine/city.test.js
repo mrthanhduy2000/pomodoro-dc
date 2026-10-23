@@ -4,7 +4,7 @@ import assert from 'node:assert/strict';
 import { blueprintsOf, ERA_BRICKS } from './catalog.js';
 import {
   brickReport, buildCity, candidatePlots, cmdCancelPlan, cmdPlan, GOLD_RATE, hash01, isCandidatePlot, ledger,
-  STATUE_RATE, surpriseOf,
+  STATUE_RATE, surpriseOf, constructionProgress, constructionMinutes,
 } from './city.js';
 import { reduce } from './timer.js';
 
@@ -197,4 +197,72 @@ test('a plan on a plot someone else just took lands on the NEAREST free plot (tw
   const c = city(log);
   assert.deepEqual(c.buildings.map((b) => [b.plot.x, b.plot.y]), [[0, 0], [0, -1]]);
   assert.equal(c.buildings[1].moved, true);
+});
+
+
+// Minute plans preserve completed focus milliseconds and never reinterpret old plan events.
+const minutePlan=(id,at,plot={x:0,y:0})=>({...plan(id,at,'e1-0',plot),data:{...plan(id,at).data,plot,workUnit:'minutes',workVersion:1}});
+function timedSession(sid,at,minutes,extra={}) {
+  return [
+    {id:`focus.start:${sid}`,at,kind:'focus.start',data:{sid,targetMin:minutes,categoryId:'cat_hoc_dh',goal:sid,...extra}},
+    {id:`focus.complete:${sid}`,at:at+minutes*MIN,kind:'focus.complete',data:{sid,auto:true}},
+  ];
+}
+
+test('minute construction: two 50-minute sessions equal four 25-minute sessions',()=>{
+  const run=(n,duration)=>city([minutePlan('minutes',T0-MIN),...Array.from({length:n},(_,i)=>timedSession(`m${i}`,T0+i*90*MIN,duration)).flat()]);
+  for(const c of [run(2,50),run(4,25)]) {
+    assert.equal(c.buildings[0].targetMinutes,100);
+    assert.equal(constructionMinutes(c.buildings[0]),100);
+    assert.equal(constructionProgress(c.buildings[0]),1);
+    assert.notEqual(c.buildings[0].completedAt,null);
+    assert.equal(ledger(c.buildings[0]).minutes,100);
+  }
+});
+
+test('minute construction: overflow crosses buildings or waits in the yard without losing or duplicating a millisecond',()=>{
+  const log=[minutePlan('a',T0-MIN),minutePlan('b',T0-1,{x:1,y:0}),...timedSession('first',T0,75),...timedSession('crossing',T0+90*MIN,50)];
+  const c=city(log);
+  assert.deepEqual(c.buildings.map(b=>constructionMinutes(b)),[100,25]);
+  assert.equal(c.buildings.reduce((sum,b)=>sum+ledger(b).minutes,0),125);
+  assert.equal(c.totalBricks,2,'session history and era rewards are not multiplied into fake sessions');
+  assert.equal(c.residents[0].home,'a');
+  assert.equal(c.bricks.find(b=>b.sid==='crossing').planId,'a','the primary diary association stays on its first contribution');
+  const waiting=city(log.filter(e=>e.data?.planId!=='b'));
+  assert.equal(waiting.pile.reduce((sum,b)=>sum+(b.creditedMs||0),0),25*MIN);
+  const next=minutePlan('later',T0+2*DAY,{x:1,y:0});
+  const drained=city([...log.filter(e=>e.data?.planId!=='b'),next]);
+  assert.equal(constructionMinutes(drained.buildings[1]),25);
+  assert.equal(drained.pile.length,0);
+});
+
+test('minute construction: pauses, cancelled work and welcome bonuses cannot manufacture focus minutes',()=>{
+  const log=[minutePlan('a',T0-MIN),...timedSession('a',T0,50)];
+  log[2]={...log[2],at:T0+60*MIN};
+  log.push({id:'pause',at:T0+10*MIN,kind:'focus.pause',data:{sid:'a'}},{id:'resume',at:T0+20*MIN,kind:'focus.resume',data:{sid:'a'}});
+  log.push({id:'focus.start:cancel',at:T0+90*MIN,kind:'focus.start',data:{sid:'cancel',targetMin:50}},{id:'focus.cancel:cancel',at:T0+110*MIN,kind:'focus.cancel',data:{sid:'cancel'}});
+  log.push(...timedSession('return',T0+3*DAY,25));
+  const c=city(log);
+  assert.equal(constructionMinutes(c.buildings[0]),75);
+  assert.equal(ledger(c.buildings[0]).minutes,75);
+  assert.equal(c.bricks.filter(b=>b.bonus).length,1);
+  assert.equal(c.buildings[0].completedAt,null);
+});
+
+test('minute construction: exact focus time is used instead of the rounded diary-minute display',()=>{
+  const log=[minutePlan('a',T0-MIN),...timedSession('precise',T0,50)];
+  log[2]={...log[2],at:T0+25*MIN+31000,data:{sid:'precise',auto:false}};
+  const c=city(log);
+  assert.equal(c.buildings[0].workMs,25*MIN+31000);
+  assert.equal(ledger(c.buildings[0]).minutes,(25*MIN+31000)/MIN);
+});
+
+test('minute construction: legacy buildings, session identities and original plots replay unchanged',()=>{
+  const legacy=[plan('old',T0-MIN),...Array.from({length:4},(_,i)=>timedSession(`old-${i}`,T0+i*90*MIN,50)).flat()];
+  const before=city(legacy);
+  const extended=city([...legacy,minutePlan('new',T0+DAY,{x:1,y:0}),...timedSession('new-work',T0+DAY+MIN,50)]);
+  assert.deepEqual(extended.buildings[0],before.buildings[0]);
+  assert.equal(extended.buildings[0].bricks.length,4);
+  assert.equal(constructionMinutes(extended.buildings[1]),50);
+  assert.deepEqual(extended.buildings.map(b=>b.plot),[{x:0,y:0},{x:1,y:0}]);
 });

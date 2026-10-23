@@ -1,5 +1,18 @@
 ## 2026-10-23 — Living streets with distance detail and paired shopping
 
+## 2026-10-23 — GPT M3 optimization and minute-based staged construction
+
+- Visible M3 orbit 20.35→39.43 FPS, zoom 20.59→34.78 FPS at identical Retina 2×; see PERFORMANCE.md.
+- Retain fractional cadence, instance glow billboards, reduce thin-box/distant-leaf tessellation;
+  retain full resolution, composer 4× MSAA, scene objects, lights and 3D preview.
+- Version new plans by exact completed focus minutes; preserve historical session plans. FIFO
+  overflow and exact fragment ledgers conserve work. Paused/cancelled/bonus time cannot add work.
+- Hoi An foundations/frame/walls/rafters/partial tiles, scaffold workers and sample progress slider.
+- Update classic/GPT progress, planner/report/ledger and return digest; ADR-104 documents compatibility.
+- Validation: 1,932 full-suite passes, zero failures, one expected skip; three cross-checks, lint/build
+  passed. Exact part/beam comparison preserves 120 completed Hoi An buildings.
+
+
 - Customers approach stalls, browse, exchange with sellers and leave with parcels on a shared clock.
 - Add cafe drinking and progress-derived construction workers, scaffolds and materials.
 - Preview construction on copied sample data; preserve every real event and all twenty sample plots.

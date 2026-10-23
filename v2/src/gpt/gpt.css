@@ -140,3 +140,6 @@
   .gpt-footer > span:last-child { gap: 5px; }
 }
 @media (prefers-reduced-motion: reduce) { .gpt-edition *, .gpt-edition *::before, .gpt-edition *::after { animation: none !important; transition: none !important; scroll-behavior: auto !important; } }
+
+.gpt-construction-preview { display:grid; gap:.75rem; font-size:.85rem; line-height:1.6; color:var(--gpt-ink); padding:1rem 0; }
+.gpt-construction-preview input { width:100%; accent-color:#315a4b; cursor:pointer; }

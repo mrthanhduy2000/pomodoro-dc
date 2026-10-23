@@ -73,6 +73,33 @@ roughly 44%. Titles below are the lookup key; read one with
 
 ---
 
+## ADR-104 — Version new construction by completed focus minutes; preserve historical city replay
+
+1. **Date/context:** 2026-10-23. The user requested minute-based staged construction and explicitly
+   selected credit only from completed sessions, excluding pauses/breaks/cancellations.
+2. **Problem:** changing every old plan to minutes would reinterpret earned houses, completion
+   times and resident homes. Counting rounded diary minutes could manufacture time.
+3. **Options:** reinterpret the entire log (rejected: changes history); duplicate a GPT game log
+   (rejected: diverges from shared v2); version only new plan choices (selected).
+4. **Decision:** `cmdPlan` adds `workUnit: 'minutes', workVersion: 1`. Budgets are catalog size ×25.
+   The reducer reads exact completed `focusedMs`. Unknown work versions are ignored.
+5. **Data invariant:** each credited millisecond is allocated once to a building or yard remainder;
+   no bonus creates time. Canonical session bricks/rewards/era identities remain unchanged. Allocated
+   fragments keep source id, milliseconds and offset. Unversioned plans replay exactly as before.
+6. **Presentation:** shared progress/stage helpers drive classic/GPT views and return digest. Hoi An
+   adds footings, frame, rising walls, rafters, partial tiles, finishing and scaffold workers. A
+   copied sample slider previews phases; it cannot create events. Existing plot centers stay fixed.
+7. **Compatibility:** additive plan payload, no SQL/localStorage rewrite. Reload all old clients;
+   old code does not understand minute semantics. Reverting after minute plans exist requires a
+   reader that still understands version 1, rather than silently reinterpreting those events.
+8. **Validation:** duration equivalence, exact milliseconds, overflow/yard conservation, paused and
+   cancelled work, welcome bonuses, unchanged historical buildings/plots, ledger and digest checks.
+   Doubling credited work was deliberately injected; the conservation tests failed, then restored.
+9. **Revisit:** a user explicitly requests conversion of existing open plans, new budgets, or new
+   work units. Such a change needs a new version, never an in-place reinterpretation of version 1.
+
+---
+
 ## ADR-103 — v2 hardening: a pull cursor that never jumps a committing row, a tick that does not re-read the log, and the missing everyday controls
 
 **Date**: 2026-10-05 · **Order**: *"Tiếp tục đào sâu và hoàn thiện hơn nữa… nâng cấp chất lượng tổng thể, độ hoàn thiện, logic, hiệu năng và trải nghiệm… fix toàn bộ backlog, technical debt"*. `events_v2` was checked read-only first: **still missing** (PGRST205), so nobody has a synced v2 city yet.

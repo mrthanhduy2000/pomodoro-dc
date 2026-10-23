@@ -6,7 +6,7 @@
  * A building's height IS its bricks: storey i sits at i·storeyH, one storey per session.
  */
 import { shapeOf } from '../engine/catalog.js';
-import { hash01 } from '../engine/city.js';
+import { hash01, MINUTES_PER_STEP } from '../engine/city.js';
 
 export const PLOT = 4;
 export const STREET = 0.9;
@@ -22,13 +22,16 @@ export function storeyHeight(shape) {
 export function storeyBox(building, i) {
   const s = shapeOf(building.shape);
   const h = storeyHeight(building.shape);
-  const k = Math.max(0.35, 1 - s.taper * i);
+  const brick = building.bricks[i];
+  const start = building.workUnit === 'minutes' ? (brick?.workOffsetMs ?? building.workMs) / (MINUTES_PER_STEP * 60000) : i;
+  const units = building.workUnit === 'minutes' ? (brick?.creditedMs ?? MINUTES_PER_STEP * 60000) / (MINUTES_PER_STEP * 60000) : 1;
+  const k = Math.max(0.35, 1 - s.taper * start);
   const c = plotCenter(building.plot);
-  return { x: c.x, y: h * i + h / 2, z: c.z, w: s.w * k, h: h * 0.9, d: s.d * k };
+  return { x: c.x, y: h * (start + units / 2), z: c.z, w: s.w * k, h: h * units * 0.9, d: s.d * k };
 }
 
 /** Height of the top of a building with `n` storeys (where the roof sits). */
-export function buildingTop(building, n = building.bricks.length) {
+export function buildingTop(building, n = building.workUnit === 'minutes' ? building.workMs / (MINUTES_PER_STEP * 60000) : building.bricks.length) {
   return storeyHeight(building.shape) * n;
 }
 
@@ -113,7 +116,7 @@ export function overviewFrame(bounds) {
 /** Camera framing for one building: close, from the south-east, a little above its top. */
 export function focusFrame(building) {
   const c = plotCenter(building.plot);
-  const top = buildingTop(building, Math.max(1, building.bricks.length));
+  const top = buildingTop(building, Math.max(1, building.workUnit === 'minutes' ? building.workMs / (MINUTES_PER_STEP * 60000) : building.bricks.length));
   const y = Math.max(0.8, top * 0.6);
   return { target: { x: c.x, y, z: c.z }, position: { x: c.x + 5.2, y: y + 4.2, z: c.z + 6.4 } };
 }

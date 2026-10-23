@@ -11,6 +11,34 @@
 
 ---
 
+## GPT measured orbit/zoom on Apple M3 — 2026-10-23
+
+Controlled visible-browser comparison: local development GPT edition, 20 identical sample buildings,
+Hoi An/summer/clear/golden, motion on, CSS viewport 1100×700. Benchmark explicitly forces Retina
+DPR 2 (canvas buffer 1464×1048); normal production DPR policy is unchanged. GPU reports
+`ANGLE (Apple, ANGLE Metal Renderer: Apple M3, Unspecified Version)`; CPU brand confirms Apple M3.
+Existing dev scene measurement handle now has dev-only DOM controls (`?bench=gpt`), not another
+measurement script. Each run takes 12 s, discards 2 s warmup, observes 10 s of delivered frame
+intervals. Orbit uses a sinusoidal .85-radian sweep; zoom uses a ±30% radius sweep. Both start at
+camera [1.2,6.024,6.4], target [-4,1.824,0]. Hidden/resized/paused runs invalidate the capture.
+
+| Movement | Before FPS | After FPS | Before P95 interval | After P95 interval | Frames >50 ms, before → after |
+|---|---:|---:|---:|---:|---:|
+| Orbit | 20.35 | 39.43 | 68.2 ms | 42.0 ms | 91 → 8 |
+| Zoom | 20.59 | 34.78 | 68.0 ms | 49.4 ms | 78 → 14 |
+
+Before = commit 33664ad plus identical dev measurement hooks. After = optimized implementation.
+Raw local records: `/tmp/pomodoro-gpt-fps/before-visible.json`, `after-visible.json`; same-buffer
+screenshots alongside them. These are delivered-frame cadence measurements, not GPU timer results,
+not production guarantees and not stable 60 FPS. Worst frames remain 66.1/78.4 ms after optimization.
+Hidden-browser exploratory results are excluded from this table.
+
+Fixes: preserve fractional 40 Hz cadence (a hard 25 ms gate had quantized 60 Hz callbacks to 30 Hz);
+batch glow sprites into instanced camera-facing quads; use untessellated boxes for sub-.09 thin
+parts and fewer curve segments only on existing distant leaf sprays; disable redundant final-canvas
+MSAA while retaining the composer 4× MSAA. Resolution, objects/plots, close foliage, reflection/shadow
+map resolution, both lights, motion and actual 3D preview remain. No claim about iPhone performance.
+
 ## GPT edition scheduling update — 2026-10-23
 
 The user reports lag on MacBook Air M3 and currently does not use iPhone. The historical

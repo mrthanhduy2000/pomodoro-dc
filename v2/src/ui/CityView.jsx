@@ -1,7 +1,7 @@
 import { useCallback, useMemo, useState } from 'react';
 
 import { blueprintsOf, ERAS, eraStyle } from '../engine/catalog.js';
-import { ledger } from '../engine/city.js';
+import { ledger, constructionProgress, constructionMinutes, constructionStage, MINUTES_PER_STEP } from '../engine/city.js';
 import { dayKey } from '../engine/stats.js';
 import CityCanvas from './LazyCityCanvas.jsx';
 import { hoursMinutes, shortDay, timeOfDay } from './format.js';
@@ -17,6 +17,7 @@ function Progress({ value, max, label }) {
 }
 
 function Storeys({ building, categories }) {
+  if(building.workUnit==='minutes')return <Progress value={building.workMs} max={building.targetMinutes*60000} label={`Tiến độ: ${Math.floor(constructionMinutes(building))}/${building.targetMinutes} phút`} />;
   return (
     <div className="storeys" aria-label={`${building.bricks.length} trên ${building.size} tầng`}>
       {Array.from({ length: building.size }, (_, i) => {
@@ -46,7 +47,7 @@ export function BlueprintPicker({ era, onChoose, onCancel }) {
           <button type="button" key={bp.key} className="blueprint" onClick={() => onChoose(bp)}>
             <span className="blueprint__icon" aria-hidden="true">{SHAPE_ICON[bp.shape]}</span>
             <span className="blueprint__name">{bp.name}</span>
-            <span className="blueprint__size">{bp.size} phiên</span>
+            <span className="blueprint__size">{bp.size * MINUTES_PER_STEP} phút</span>
           </button>
         ))}
       </div>
@@ -61,7 +62,7 @@ export function Detail({ pick, city, categories, onFocus, onClose, architectural
     const b = city.buildings.find((x) => x.planId === pick.planId);
     if (!b) return null;
     const l = ledger(b);
-    const done = b.bricks.length >= b.size;
+    const done = constructionProgress(b) >= 1;
     return (
       <section className="card detail">
         <div className="detail__head">
@@ -69,7 +70,7 @@ export function Detail({ pick, city, categories, onFocus, onClose, architectural
           <button type="button" className="icon-btn" onClick={onClose} aria-label="Đóng">✕</button>
         </div>
         <h3>{b.name}</h3>
-        <p className="muted">Kỷ {b.style} · {eraStyle(b.style).name} · {done ? 'đã xong' : `đang xây ${b.bricks.length}/${b.size}`}</p>
+        <p className="muted">Kỷ {b.style} · {eraStyle(b.style).name} · {done ? 'đã xong' : b.workUnit==='minutes'?`${Math.floor(constructionMinutes(b))}/${b.targetMinutes} phút · ${constructionStage(b).label}`:`đang xây ${b.bricks.length}/${b.size} phiên (kế hoạch cũ)`}</p>
         <Storeys building={b} categories={categories} />
         {l.from && (
           <p>
@@ -108,7 +109,7 @@ export function Detail({ pick, city, categories, onFocus, onClose, architectural
         </div>
         <h3>{shortDay(dayKey(brick.at))} · {timeOfDay(brick.at)}</h3>
         <p>
-          {c && <span className="tag" style={{ '--chip': c.color }}>{c.label}</span>} {brick.minutes} phút
+          {c && <span className="tag" style={{ '--chip': c.color }}>{c.label}</span>} {Number(brick.minutes.toFixed(2))} phút
           {brick.bonus ? ' · gạch thưởng chào mừng trở lại' : ''}
         </p>
         {brick.goal && <p>“{brick.goal}”</p>}
@@ -147,7 +148,7 @@ export default function CityView({ app }) {
   const [planning, setPlanning] = useState(false);
   const [scene, setScene] = useState(null);
   const style = eraStyle(city.era);
-  const finished = city.buildings.filter((b) => b.bricks.length >= b.size).length;
+  const finished = city.buildings.filter((b) => constructionProgress(b) >= 1).length;
 
   const place = useCallback((plot) => {
     if (!choosing) return;
@@ -167,7 +168,7 @@ export default function CityView({ app }) {
 
   const selectedPlan = pick?.type === 'building' ? pick.planId : pick?.brick?.planId ?? null;
   const needChoice = !city.current && !choosing;
-  const remaining = city.current ? city.current.size - city.current.bricks.length : 0;
+  const remaining = city.current ? city.current.workUnit==='minutes'?Math.ceil(city.current.targetMinutes-constructionMinutes(city.current)):city.current.size-city.current.bricks.length : 0;
   const nextEra = ERAS[Math.min(ERAS.length, city.era)] ?? null;
 
   const header = useMemo(() => [
@@ -228,7 +229,7 @@ export default function CityView({ app }) {
               <span className="eyebrow">Đang xây</span>
               <h3>{city.current.name}</h3>
               <Storeys building={city.current} categories={categories} />
-              <p className="muted">{city.current.bricks.length}/{city.current.size} tầng · còn {remaining} phiên nữa là xong.</p>
+              <p className="muted">{city.current.workUnit==='minutes'?`${Math.floor(constructionMinutes(city.current))}/${city.current.targetMinutes} phút · ${constructionStage(city.current).label}`:`${city.current.bricks.length}/${city.current.size} phiên (kế hoạch cũ)`} · còn {remaining} {city.current.workUnit==='minutes'?'phút':'phiên'} nữa là xong.</p>
               {city.queued.map((q) => (
                 <p key={q.planId} className="small">
                   Tiếp theo: «{q.name}»{' '}
@@ -245,7 +246,7 @@ export default function CityView({ app }) {
           ) : needChoice ? (
             <>
               {city.pile.length > 0 && <p className="yard-note">{city.pile.length} viên gạch đang chờ trong kho — sẽ vào công trình kế tiếp được chọn.</p>}
-              {city.buildings.length === 0 && <p className="muted">Thành phố bắt đầu từ một ô đất trống. Mỗi phiên xong là một tầng nhà.</p>}
+              {city.buildings.length === 0 && <p className="muted">Thành phố bắt đầu từ một ô đất trống. Phút tập trung trong phiên đã hoàn thành sẽ xây dần từng công trình.</p>}
               <BlueprintPicker era={city.era} onChoose={(bp) => setChoosing(bp)} />
             </>
           ) : (

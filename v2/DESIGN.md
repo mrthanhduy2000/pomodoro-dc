@@ -5,23 +5,38 @@
 > Architecture decisions: **ADR-101** (stage 1), **ADR-102** (stages 2–4). Current status: `START_HERE.md`.
 
 ## The one rule
-**Every session becomes ONE visible object — dated, in a fixed place, never lost.** The city is
-Đàm's work diary, built from bricks. Anything that does not serve this rule is out.
+**Every completed session keeps its dated diary identity and notes, never lost.** The city is
+Đàm's work diary. New minute plans may split one session's credited time across fixed buildings;
+historical plans retain their original one-brick allocation (ADR-104).
 
 ## Game rules (built 2026-10-03, ADR-102 — exact numbers in `v2/src/engine/city.js`)
 | Piece | Rule |
 |---|---|
 | Brick | 1 completed session = 1 brick. Colour = category, size = length. Carries date, time, note. Tap to read it back. |
-| Building | Đàm **chooses** the next building and **its plot**. It needs 4 / 8 / 12 bricks and keeps a ledger ("3/10 → 7/10 · mostly «Học» · 'ôn chương 4'"). |
+| Building | Đàm **chooses** the next building and **its plot**. New plans need 100 / 200 / 300 completed focus minutes; unversioned historical plans need 4 / 8 / 12 bricks and keeps a ledger ("3/10 → 7/10 · mostly «Học» · 'ôn chương 4'"). |
 | Resident | 1 active day = 1 resident, living in the house built that day. Tap → "Thứ Ba 12/10: 5 phiên, 2 giờ 05". |
 | Full day | Daily goal (default 4, editable). Reached → that day's lantern burns all night. A streak is an avenue of lanterns. |
 | Era = chapter | 70 bricks open an era (10 eras, one roof silhouette each). The city **grows outward and never resets**; old districts keep their old architecture, like tree rings. |
 | Surprise | ~8% of sessions give a special brick; ~1% a statue/landmark; a weekly goal unlocks a weekend festival. |
 | After a session | The camera flies 2–3 s to where the brick lands, with a sound, then a short summary. |
 | Coming back | Absence costs nothing; the city just dims. The first session after ≥2 days away gives double bricks and the residents return. Push names the unfinished thing ("«Chợ phiên» còn 2 viên"). |
-| Dropped | Resources, RP, refined materials, crystals, relics, ranks, crises, prestige, skill tree, cancel penalties. One unit only: the brick. |
+| Dropped | Resources, RP, refined materials, crystals, relics, ranks, crises, prestige, skill tree, cancel penalties. Diary identity remains the brick; new construction uses completed focus minutes. |
 
 Cancelling gives no brick and **costs nothing**. Penalties build anxiety, not pull.
+
+## Minute construction (2026-10-23, ADR-104)
+New `build.plan` events carry `workUnit: 'minutes', workVersion: 1`. The immutable catalog size
+multiplied by `MINUTES_PER_STEP` (25) gives the budget: house 100, hall/market 200, tower/temple 300
+minutes. Only completed nonlegacy sessions credit exact `focusedMs`; pause, break, cancellation
+and welcome-back bonus bricks give no construction time. Canonical diary bricks, resident homes,
+surprises, eras and daily goals retain their original rules. Allocated fragments carry source id,
+credited milliseconds and work offset. Overflow fills the queued building or waits in the yard.
+Old unversioned plans replay their original session rules, including bonuses; no events are rewritten.
+Both v2 views and the return digest read the same version-aware progress helpers. Clients must
+reload before creating/interpreting minute plans; no SQL or stored-state migration is needed.
+Hoi An phases: layout → foundation → timber frame → masonry → rafters → partial tiling → doors
+and finishing → garden/opening. Scaffold workers/materials follow progress and use existing actor
+batches and motion policy. Preview slider changes copied sample data only, keeping all 20 anchors.
 
 ## Stages and gates (do not skip a gate)
 0. **Prepare** — done.
@@ -91,9 +106,9 @@ houses/halls/markets have shallow service wings inside their own plot, clear of 
 Hoi An paving excludes the navigation margin without changing camera bounds; perimeter trees
 and fine layered crowns soften the open edge. Four place-inspired skins and seasonal
 atmosphere are local presentation preferences. The labelled twenty-building sample town contains no earned progress and cannot write
-sample sessions or buildings to the log. A sample-only construction toggle truncates a copied
-sample building's bricks, exposing workers/scaffolding without changing the real log or sample
-anchors. Leaving the sample resets this toggle. Actual plot selection still uses `cmdPlan` unchanged.
+sample sessions or buildings to the log. A sample-only construction slider changes a copied
+sample building's minute progress, exposing workers/scaffolding without changing the real log or sample
+anchors. Leaving the sample resets this toggle. Actual plot selection still uses the shared `cmdPlan` validation.
 
 GPT atmosphere uses the existing hemisphere and directional lights: cool sky fill, warm direct
 sun, restrained lamp bloom and continuous day/night interpolation. Rain softens the direct sun
@@ -125,7 +140,7 @@ remains pending until refreshed. Sky/rebuild changes invalidate both immediately
 selection and sky changes still redraw. Native DPR and light count are unchanged; architecture keeps full detail at every distance.
 Foliage batches partition into original close leaf sprays and seeded coarser distant sprays, with
 17/19-world-unit hysteresis. View classification is throttled and matrices upload only when a
-partition changes. This is a rendering implementation, not a measured M3 frame-time claim.
+partition changes. See `PERFORMANCE.md` for the controlled Apple M3 orbit/zoom comparison at Retina 2×.
 
 Organic wear is deterministic: world-space plaster dampness, grouped clay-tile ageing,
 small roof installation offsets and irregular street planting never reseed on rebuild.

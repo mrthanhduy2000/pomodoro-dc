@@ -153,6 +153,17 @@ export function drawHoiAnBuilding(scene, b) {
   if(progress === 0) { posts([-1,1],.16,-.65,.6); posts([-1,1],.16,.65,.6); return; }
   if(progress < .25) { body(0,-.18,1.65,1,.45); return; }
 
+  if(progress>=.65 && b.plot.y!==0 && ['house','hall','market'].includes(b.shape)) {
+    // A shallow service wing belongs to this building; it is not a second earned house.
+    box(wall,0,.57,-1.16,2.65,.8,.42);
+    roof(0,1.03,-1.14,2.88,.59,.2);
+    for(const dx of [-.86,0,.86]) {
+      box('timber',dx,.61,-1.386,.36,.43,.035);
+      box('glow',dx,.61,-1.41,.28,.35,.012);
+      for(const offset of [-.07,.07])box('timber',dx+offset,.61,-1.424,.018,.35,.018);
+    }
+    for(const dx of [-1.3,1.3])garden(dx,.34,-1.08,.24);
+  }
   switch(b.shape) {
     case 'house': {
       // A full merchant frontage: two unequal wings, recessed shop bays and inhabited upper rooms.

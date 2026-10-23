@@ -4,6 +4,7 @@ import { RenderPass } from 'three/addons/postprocessing/RenderPass.js';
 import { UnrealBloomPass } from 'three/addons/postprocessing/UnrealBloomPass.js';
 import { OutputPass } from 'three/addons/postprocessing/OutputPass.js';
 import { Reflector } from 'three/addons/objects/Reflector.js';
+import { mergeGeometries } from 'three/addons/utils/BufferGeometryUtils.js';
 import { RoundedBoxGeometry } from 'three/addons/geometries/RoundedBoxGeometry.js';
 
 import { CityScene } from '../city/CityScene.js';
@@ -28,6 +29,24 @@ const leafPos=leafGeometry.attributes.position;
 for(let i=0;i<leafPos.count;i+=1) leafPos.setZ(i,Math.sin(leafPos.getY(i)*Math.PI)*.055);
 leafGeometry.computeVertexNormals();
 GEO.leaf = leafGeometry;
+// Shared leaf sprays preserve the fine silhouette without rebuilding every leaf per tree.
+for(let color=0;color<3;color+=1) {
+  const leaves=[];
+  for(let i=0;i<310;i+=1) {
+    if((i<80?0:i%3)!==color)continue;
+    const u=hash01(`spray:${i}:u`),v=hash01(`spray:${i}:v`),theta=u*Math.PI*2;
+    const radius=Math.sqrt(v)*(i<80?.2:.38);
+    const matrix=new THREE.Matrix4().compose(
+      new THREE.Vector3(Math.cos(theta)*radius,(hash01(`spray:${i}:y`)-.4)*.38,Math.sin(theta)*radius),
+      new THREE.Quaternion().setFromEuler(new THREE.Euler(u*5,v*6,theta)),
+      new THREE.Vector3(.055+v*.025,.08+u*.04,.075),
+    );
+    leaves.push(leafGeometry.clone().applyMatrix4(matrix));
+  }
+  GEO[`leafSpray${color}`]=mergeGeometries(leaves);
+  leaves.forEach(leaf=>leaf.dispose());
+}
+
 
 // Deterministic, locally generated material relief: no remote assets or loading dependencies.
 function surfaceTexture(kind) {
@@ -89,14 +108,6 @@ const SURFACES=new Map([
   ...['#70503b','#a57c53','#af8c58'].map(key=>[key,'timber']),
 ]);
 
-const canopy = new THREE.SphereGeometry(1,18,12);
-const canopyPos=canopy.attributes.position;
-for(let i=0;i<canopyPos.count;i+=1) {
-  const x=canopyPos.getX(i),y=canopyPos.getY(i),z=canopyPos.getZ(i);
-  const r=1+.13*Math.sin(x*12+y*6)*Math.cos(z*11)+.08*Math.sin(y*18+z*4);
-  canopyPos.setXYZ(i,x*r,y*r,z*r);
-}
-canopy.computeVertexNormals(); GEO.canopy=canopy;
 const archShape=new THREE.Shape();
 archShape.moveTo(-.5,-.5); archShape.lineTo(.5,-.5); archShape.lineTo(.5,0);
 archShape.absarc(0,0,.5,0,Math.PI,false); archShape.lineTo(-.5,-.5);
@@ -285,7 +296,7 @@ export class GptScene extends CityScene {
   }
 
   tree(x, z, size, seed) {
-    if(this.a.place==='hoian' && hash01(`palm:${seed}`)>.7) {
+    if(this.a.place==='hoian' && !seed.startsWith('street-edge:') && hash01(`palm:${seed}`)>.7) {
       // Curved trunks and feathered fronds give the riverside a second tree silhouette.
       const height=size*(2.5+hash01(`palm-height:${seed}`)*.65);
       const bendX=(hash01(`palm-x:${seed}`)-.3)*.4,bendZ=(hash01(`palm-z:${seed}`)-.5)*.35;
@@ -321,31 +332,30 @@ export class GptScene extends CityScene {
       const angle=root*1.6+hash01(seed)*2;
       this.beam('timber',[x,.2,z],[x+Math.cos(angle)*.22,.03,z+Math.sin(angle)*.22],.026*size);
     }
-    for(let branch=0;branch<7;branch+=1) {
+    for(let branch=0;branch<9;branch+=1) {
       const angle=branch*2.4+hash01(seed)*5+(hash01(`${seed}:angle:${branch}`)-.5)*1.25;
-      const reach=.65+hash01(`${seed}:reach:${branch}`)*.85;
+      const reach=.8+hash01(`${seed}:reach:${branch}`)*.8;
       const bx=x+leanX+Math.cos(angle)*size*.48*reach,bz=z+leanZ+Math.sin(angle)*size*.46*reach;
-      const by=height*(.52+branch*.07+hash01(`${seed}:b${branch}`)*.08);
+      const by=height*(.66+hash01(`${seed}:b${branch}`)*.28);
       this.beam('timber',[x+leanX*.6,height*.51,z+leanZ*.6],[bx,by,bz],.024*size);
-      for(let twig=0;twig<4;twig+=1) {
+      for(let twig=0;twig<5;twig+=1) {
         const a=angle+twig*1.8,r=size*(.16+hash01(`${seed}:twig:${branch}:${twig}`)*.35);
         const ex=bx+Math.cos(a)*r,ez=bz+Math.sin(a)*r,ey=by+(hash01(`${seed}:tw:${branch}:${twig}`)-.4)*size*.45;
         this.beam('timber',[bx,by,bz],[ex,ey,ez],.011*size);
-        if(hash01(`${seed}:core:${branch}:${twig}`)>.6) this.part('canopy',`foliage:${colors[(branch+twig)%3]}`,[ex,ey,ez],[size*.11*reach,size*.08,size*.11],[twig*.3,branch,.2]);
-        for(let i=0;i<260;i+=1) {
-          const u=hash01(`${seed}:${branch}:${twig}:${i}u`),v=hash01(`${seed}:${branch}:${twig}:${i}v`);
-          const theta=u*Math.PI*2,radius=Math.sqrt(v)*size*.38;
-          const px=ex+Math.cos(theta)*radius,pz=ez+Math.sin(theta)*radius;
-          const py=ey+(hash01(`${seed}:${branch}:${twig}:ly:${i}`)-.4)*size*.38;
-          this.part('leaf',`foliage:${colors[i%3]}`,[px,py,pz],[size*(.045+v*.025),size*(.07+u*.04),size*.07],[u*5,v*6,theta]);
+        for(let color=0;color<3;color+=1) {
+          this.part(`leafSpray${color}`,`foliage:${colors[color]}`,[ex,ey,ez],[size,size,size],[0,a,0]);
         }
       }
     }
   }
 
   buildLandscape() {
-    const b = this.bounds;
     const dense=this.a.place==='hoian';
+    // plotBounds includes a one-plot navigation margin. It is not an extra paved plaza.
+    const b=dense && this.model.city.buildings.length ? {
+      minX:this.bounds.minX+1,maxX:this.bounds.maxX-1,
+      minY:this.bounds.minY+1,maxY:this.bounds.maxY-1,
+    }:this.bounds;
     const padding=dense?0:1;
     const span = Math.max(48, (b.maxX - b.minX + 5) * PLOT, (b.maxY - b.minY + 5) * PLOT);
     this.part('box', this.snow ? '#d7dfd8' : '#6d8077', [0, -0.17, 0], [span * 8, 0.25, span * 8]);
@@ -472,6 +482,14 @@ export class GptScene extends CityScene {
         }
       }
     }
+    if(dense && this.model.city.buildings.length) {
+      for(let x=b.minX;x<=b.maxX;x+=1) {
+        const seed=`street-edge:${x}:${b.maxY}`;
+        this.tree(x*PLOT-1.3,(b.maxY+.5)*PLOT+.35,1.05+hash01(seed)*.25,seed);
+        this.tree(x*PLOT+.65,(b.maxY+.5)*PLOT+.5,1+hash01(`${seed}:back`)*.2,`${seed}:back`);
+        this.tree(x*PLOT+.5,(b.minY-.5)*PLOT-.35,1.05+hash01(`${seed}:near`)*.22,`${seed}:near`);
+      }
+    }
     const waterGeo = new THREE.PlaneGeometry(span*2, 2.05);
     const shader = {
       ...Reflector.ReflectorShader,
@@ -551,13 +569,20 @@ export class GptScene extends CityScene {
       const c=plotCenter(b.plot),next=byPlot.get(`${b.plot.x+1},${b.plot.y}`);
       if(next && next.bricks.length/next.size>=.65) {
         // Neighbouring earned frontages share a real planted pergola over the alley.
-        const x=c.x+PLOT/2,z=c.z+.88;
-        for(const dx of [-.33,.33]) this.beam('timber',[x+dx,.04,z],[x+dx,1.85,z],.033);
-        for(let i=0;i<6;i+=1) this.beam('timber',[x-.5,1.84,z-.3+i*.12],[x+.5,1.84,z-.3+i*.12],.02);
+        const x=c.x+PLOT/2,z=c.z+(b.plot.y===-1?.2:.88);
+        for(const dx of [-.38,.38]) for(const dz of [-.55,.55]) this.beam('timber',[x+dx,.04,z+dz],[x+dx,1.85,z+dz],.033);
+        for(let course=0;course<8;course+=1) {
+          const u=(course+.5)/8,rz=z-.64+u*1.28,ry=2.03-u*.25;
+          this.part('box','tile',[x,ry,rz],[1.14,.035,.18],[.19,0,0]);
+          for(let tile=0;tile<13;tile+=1) this.part('roofTile','tile:#68716a',[x-.52+tile*.086,ry+.03,rz],[.029,.18,.029],[Math.PI/2+.19,0,0]);
+        }
+        this.part('box','timber',[x,1.02,z-.35],[.75,.055,.23]);
+        for(let jar=0;jar<4;jar+=1)this.part('taper',jar%2?'#b98855':'#c8b98d',[x+(jar-1.5)*.16,1.12,z-.35],[.055,.14,.055]);
+        for(let i=0;i<6;i+=1) this.beam('timber',[x-.5,1.84,z-.6+i*.24],[x+.5,1.84,z-.6+i*.24],.02);
         for(let i=0;i<90;i+=1) {
           const u=hash01(`${b.planId}:trellis:${i}`),v=hash01(`trellis:${i}`);
-          this.part('leaf','foliage:#536e3f',[x+(u-.5)*1.1,1.86-v*.18,z+(v-.5)*.65],[.1,.15,.1],[u*3,v*5,u]);
-          if(i%3===0) this.part('orb','#b93678',[x+(u-.5)*1.1,1.87-v*.2,z+(v-.5)*.65],[.04,.03,.04]);
+          this.part('leaf','foliage:#536e3f',[x+(u-.5)*1.1,2.08-v*.19,z+(v-.5)*1.2],[.1,.15,.1],[u*3,v*5,u]);
+          if(i%3===0) this.part('orb','#b93678',[x+(u-.5)*1.1,2.09-v*.2,z+(v-.5)*1.2],[.04,.03,.04]);
         }
         for(let i=0;i<14;i+=1) {
           const u=i/14,v=(i+1)/14;
@@ -574,6 +599,16 @@ export class GptScene extends CityScene {
       const x=c.x+1.57,z=c.z+.65;
       this.part('taper','#a56c48',[x,.25,z],[.13,.35,.13]);
       for(let leaf=0;leaf<15;leaf+=1) this.part('leaf','foliage:#587642',[x+Math.sin(leaf)*.14,.43+hash01(`pot:${leaf}`)*.22,z+Math.cos(leaf)*.13],[.12,.25,.12],[leaf,.6,leaf]);
+      if(b.plot.y!==-1 && b.shape!=='tower') {
+        const tx=c.x-.82,tz=c.z+1.62;
+        this.part('pole','timber',[tx,.36,tz],[.2,.04,.2]);
+        this.beam('iron',[tx,.06,tz],[tx,.34,tz],.017);
+        for(const side of [-1,1]) {
+          this.part('box','timber',[tx+side*.35,.2,tz],[.2,.04,.18]);
+          for(const dx of [-.06,.06])this.beam('timber',[tx+side*.35+dx,.02,tz],[tx+side*.35+dx,.2,tz],.014);
+        }
+        this.part('taper','#b98855',[tx,.42,tz],[.04,.07,.04]);
+      }
       if(b.shape==='house') {
         for(const wheel of [-.2,.2]) this.part('orb','iron',[c.x-1.27+wheel,.21,c.z+.95],[.14,.14,.022]);
         this.beam('iron',[c.x-1.47,.21,c.z+.95],[c.x-1.19,.45,c.z+.95],.013);

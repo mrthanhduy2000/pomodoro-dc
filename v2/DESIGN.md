@@ -86,8 +86,11 @@ Both Focus and City use real three.js architecture. "Xem trước 3D" opens a la
 sample with five selectable building types. No illustrative background replaces the city.
 GPT renders the same bricks as construction details plus independently selectable mosaic tiles,
 with unchanged plot centers. Hoi An frontages fill more of each plot; adjacent developed buildings
-share render-only alley pergolas and lantern strings. Four place-inspired skins and seasonal
-atmosphere are local presentation preferences. The labelled sample town contains no earned progress and cannot write
+share render-only tiled alley passages, planted pergolas and lantern strings. Developed
+houses/halls/markets have shallow service wings inside their own plot, clear of the canal.
+Hoi An paving excludes the navigation margin without changing camera bounds; perimeter trees
+and fine layered crowns soften the open edge. Four place-inspired skins and seasonal
+atmosphere are local presentation preferences. The labelled twenty-building sample town contains no earned progress and cannot write
 sample sessions or buildings to the log. Actual plot selection still uses `cmdPlan` unchanged.
 
 GPT atmosphere uses the existing hemisphere and directional lights: cool sky fill, warm direct
@@ -98,7 +101,9 @@ additional postprocessing pass is used.
 
 Organic wear is deterministic: world-space plaster dampness, grouped clay-tile ageing,
 small roof installation offsets and irregular street planting never reseed on rebuild.
-Broadleaf branches and palm fronds vary by their existing planting seed.
+Broadleaf branches and palm fronds vary by their existing planting seed. Broadleaf twigs use
+three shared merged leaf sprays (one per foliage tone), keeping fine leaves without rebuilding
+individual leaf transforms per tree.
 
 ## Run it
 `npm run dev:v2` → `http://localhost:31120/v2/` (preview config "Pomodoro v2"). `npm run build`

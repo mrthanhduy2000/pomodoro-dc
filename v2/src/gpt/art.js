@@ -27,9 +27,10 @@ export function architectureOf(building) {
 }
 /** A labelled, read-only postcard. These objects NEVER enter buildCity or the event log. */
 export function postcardCity(city) {
-  const spots = [[-1, 0], [0, 0], [1, 0], [-1, -1], [0, -1], [1, -1], [0, 1], [-1, 1], [1, 1]];
+  const spots = [[-1, 0], [0, 0], [1, 0], [-1, -1], [0, -1], [1, -1], [0, 1], [-1, 1], [1, 1],
+    [-1,-2],[0,-2],[1,-2],[-2,-1],[-2,0],[-2,1],[-2,-2],[2,-1],[2,0],[2,1],[2,-2]];
   const shapes = ['house', 'market', 'hall', 'house', 'temple', 'house', 'tower', 'market', 'house'];
   return { ...city, candidates: [], pile: [], residents: [], lanterns: [], statues: [], bricks: [],
-    buildings: spots.map(([x, y], i) => ({ planId: `postcard-${i}`, plot: { x, y }, shape: shapes[i], style: 5, size: 8, bricks: Array.from({ length: 8 }, (_, j) => ({ id: `postcard-${i}-${j}`, sid: '', kind: 'plain' })) })),
+    buildings: spots.map(([x, y], i) => ({ planId: `postcard-${i}`, plot: { x, y }, shape: shapes[i] || (i%4===0?'market':'house'), style: 5, size: 8, bricks: Array.from({ length: 8 }, (_, j) => ({ id: `postcard-${i}-${j}`, sid: '', kind: 'plain' })) })),
   };
 }

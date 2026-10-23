@@ -1,3 +1,12 @@
+## 2026-10-23 — Connected streets and fuller tree crowns
+
+- Remove the extra paved navigation margin from Hoi An while preserving camera bounds.
+- Add deeper tiled alley links, shared shop shelves and developed-building service wings.
+- Fill the street perimeter with seeded planting and add cafe seating clear of the canal.
+- Layer broadleaf crowns with overlapping branches, dark inner leaves and fine outer leaves.
+- Expand the labelled sample neighbourhood from nine to twenty buildings; preserve real progress.
+- Preserve building anchors, progress and interactive 3D previews.
+
 ## 2026-10-23 — Organic Hoi An streets
 
 - Weather plaster in world space and expose small seeded brick patches on solid side walls.

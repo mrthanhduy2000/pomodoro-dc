@@ -1,3 +1,24 @@
+> Last update: **2026-10-23 — CONNECTED HOI AN FRONTAGES AND FULL GREEN CANOPIES.**
+> Hoi An paving no longer covers plotBounds' extra navigation margin. Camera/shadow framing
+> still uses the unmodified plotBounds. Outer street planting softens the exposed perimeter without adding houses.
+> Developed neighbouring plots share deeper tiled passages with planted roofs, jars and shelves.
+> Developed houses, halls and markets gain a shallow service wing within their own plot, except
+> row zero where the rear touches the fixed canal. Front cafe seating skips canal-side row -1.
+> Broadleaf crowns overlap more uneven branches, dense dark inner leaves and fine outer leaves;
+> no illustrative backdrop or new light. Shared leaf-spray geometry retains 310 detailed leaves
+> per twig cluster without rebuilding each leaf transform on appearance changes.
+> Seasonal foliage and original planting seeds remain.
+> All building anchors, real progress, plan choices, picking, timer and event data are unchanged.
+> Interactive preview grows from nine to twenty labelled sample buildings. The original nine
+> keep their ids/plots; all five types remain. Extra sample objects never enter the real log.
+> Canal-side tiled links are set back onto the quay; added seating skips that row.
+> Validation: 1,924 full-suite passes, zero failures, one expected skip; all three cross-checks
+> and 44 targeted guards passed; lint/build passed. Browser reviewed day/night and winter, preview/earned
+> navigation and 375px layout (375px document, one canvas, zero images), without shader errors.
+> Evidence: `/tmp/pomodoro-gpt-review/dense-day.jpg` and `dense-night.jpg`.
+
+---
+
 > Last update: **2026-10-23 — ORGANIC HOI AN WALLS, ROOFS, TREES AND CURBS.**
 > Plaster now uses world-space colour/relief plus low damp marks and broad weathering instead
 > of repeating the same full texture on every wall. Seeded exposed-brick patches occupy only

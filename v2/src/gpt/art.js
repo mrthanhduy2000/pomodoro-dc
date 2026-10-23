@@ -27,6 +27,32 @@ export function architectureOf(building) {
   const width = building.shape === 'tower' ? 1.25 : building.shape === 'house' ? 1.7 : 2.25;
   return { floors, width, depth: 1.7, height: floors * 0.9, progress: constructionProgress(building) };
 }
+export function crossingDeck(z) {
+  return .22+Math.sin(Math.max(0,Math.min(1,(z+3.14)/2.28))*Math.PI)*.35;
+}
+/** Compile a closed, pause-aware pedestrian journey once; frame sampling allocates nothing. */
+export function streetJourney(points, speed=.24) {
+  let duration=0,distance=0;
+  const segments=[];
+  for(let i=0;i<points.length;i++) {
+    const a=points[i],b=points[(i+1)%points.length],length=Math.hypot(b[0]-a[0],b[1]-a[1],(b[2]||0)-(a[2]||0));
+    const pause=a[3]||0;
+    segments.push({a,b,start:duration,pause,travel:length/speed,length,distance});
+    duration+=pause+length/speed;distance+=length;
+  }
+  return {segments,duration};
+}
+export function journeyAt(journey,time,out={}) {
+  const u=((time%journey.duration)+journey.duration)%journey.duration;
+  const s=journey.segments.find(segment=>u<segment.start+segment.pause+segment.travel)||journey.segments.at(-1);
+  const elapsed=u-s.start,progress=Math.max(0,Math.min(1,(elapsed-s.pause)/Math.max(.001,s.travel)));
+  const eased=progress*progress*(3-2*progress);
+  out.x=s.a[0]+(s.b[0]-s.a[0])*eased;out.z=s.a[1]+(s.b[1]-s.a[1])*eased;
+  out.y=(s.a[2]||0)+((s.b[2]||0)-(s.a[2]||0))*eased;
+  out.distance=s.distance+s.length*eased;out.walking=elapsed<s.pause?0:Math.sin(progress*Math.PI);
+  out.heading=Math.atan2(s.b[0]-s.a[0],s.b[1]-s.a[1]);out.waiting=elapsed<s.pause;
+  return out;
+}
 /** A labelled, read-only postcard. These objects NEVER enter buildCity or the event log. */
 export function postcardCity(city, heritage = false) {
   const spots = [[-1, 0], [0, 0], [1, 0], [-1, -1], [0, -1], [1, -1], [0, 1], [-1, 1], [1, 1],

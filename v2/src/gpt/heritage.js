@@ -101,9 +101,15 @@ export function drawHeritageBuilding(kit, building, progress) {
       break;
     }
     case 'ha-chuacau-v1': {
-      // A local channel stays within this plot; the city's river and every old plot stay fixed.
-      box('#396e70',0,.165,0,.67,.015,1.77);
-      for(const side of [-1,1])box('stone',side*.49,.2,0,.22,.16,1.77);
+      // Open water extends past the bridge into its local inlet; old plots/river never move.
+      box('#396e70',0,.165,0,.67,.015,2.7);
+      for(const side of [-1,1]) {
+        for(let stone=0;stone<11;stone++)box(stone%3?'stone':'#738471',side*.49,.2,-1.24+stone*.245,.22,.16,.23);
+        for(let step=0;step<4;step++)box('stone',side*(1.35+step*.11),.43-step*.07,0,.115,.09,.8);
+        // Clear stone paths connect both landward ends; never terminate against a wall.
+        box('paving',side*1.72,.19,.64,.23,.05,.67);
+      }
+      for(let ripple=0;ripple<9;ripple++)box('#75988b',Math.sin(ripple*2.1)*.16,.177,-1.2+ripple*.29,.12,.002,.013);
       for(const x of [-1.08,-.36,.36,1.08])for(const z of [-.39,.39])box('stone',x,.3,z,.16,.28,.19);
       for(let board=0;board<24;board++)box(timber,-1.38+(board+.5)*2.76/24,.48,0,.109,.07,.86);
       columns([-1.24,-.74,-.25,.25,.74,1.24],-.44,1.02);

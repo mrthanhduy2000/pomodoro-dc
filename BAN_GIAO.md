@@ -1,3 +1,30 @@
+> Last update: **2026-10-24 — CONNECTED GPT QUARTER AND MEASURED M3 ORBIT.**
+> User authorized the whole proposed riverside direction, including GPT camera improvements.
+> Existing earned/sample anchors, keys, budgets, log and terrain-progress independence remain.
+> Fixed public covered crossing now has timber deck, clay courses, land approaches and adjoining
+> shrine; two walkers follow its actual arched deck. This is fixed street scenery, not a free
+> completed landmark. The buildable Chua Cau retains its own plot/local inlet and new end paths;
+> do not claim this is a geographic reconstruction or silently move it onto the public crossing.
+> Developed houses gain side lanes/drains, thresholds, connected canopies and usable rear yards.
+> Completed non-shrine waterfront plots gain cargo/porters/landing boards. Carriers fetch and
+> deliver along compiled closed routes with pauses; customers step toward stalls and leave with
+> parcels. No decorative activity changes earned residents, rewards or session facts.
+> One boat mooring shifts x=3.6 to 4.2, with ropes/occupants, to clear shrine supports; no house moves.
+> GPT close view scores twelve approaches against roofs/crowns; “Dạo bờ sông” / “Qua cầu” use
+> the water corridor. Classic camera presets remain unchanged. All previews remain real 3D.
+> Fine foliage batches partition into 8-unit cells; refresh culling spheres only after LOD changes
+> with wind margin. Existing geometry/distance thresholds remain. Orbit shadow refresh: 350 ms,
+> idle 125 ms; reflection retains its 80/125 ms schedule and native target size.
+> Measured Apple M3 Metal, visible laptop 1440x790, DPR2 / buffer 2104x1228, same 20-building scene:
+> orbit 17.57 → 34.16 FPS, P95 80.5 → 59.9 ms; zoom 23.21 → 35.19 FPS, P95 78.9 → 60.2 ms.
+> Frames >50 ms: 110 → 27 / 68 → 24. Worst after 83.1 / 73.1 ms; not stable 40/60 FPS.
+> Release numbers are fresh-load confirmation, not the earlier ~39 FPS run. See PERFORMANCE.md.
+> Validation: 1,936 full-suite passes, zero failures, one expected skip; three cross-checks pass.
+> All 43 focused journey/data/doc guards and lint/build pass. Confirm production Ready/new SHA.
+> Never run focus on localhost; sample, placement/cancel and pure fixtures suffice.
+
+---
+
 > Last update: **2026-10-23 — DOCUMENTED, BUILDABLE HOI AN LANDMARKS AND CRAFT LIFE.**
 > Seven additive stable blueprint keys: Tan Ky, Phung Hung, Phuc Kien, Chua Cau, Hoi An market,
 > Thanh Ha pottery workshop and Kim Bong carpentry workshop. Source-linked feature/life notes are

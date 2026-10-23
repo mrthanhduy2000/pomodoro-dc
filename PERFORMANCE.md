@@ -11,6 +11,32 @@
 
 ---
 
+## Connected GPT quarter on Apple M3 — 2026-10-24
+
+Same visible local browser, 20 heritage-sample buildings, Hoi An/summer/clear/golden, motion on.
+Laptop viewport 1440×790 CSS; scene buffer 2104×1228, forced Retina DPR2 through the existing
+dev measurement controls. GPU: ANGLE Apple M3 Metal. Both runs start at camera [8.6,4.4,-1.7],
+target [0,.7,-2], using “Dạo bờ sông”. Each captures 12 s, discards 2 s; all runs valid.
+
+| Movement | Before FPS | After FPS | P95 interval before → after | Frames >50 ms before → after |
+|---|---:|---:|---:|---:|
+| Orbit | 17.57 | 34.16 | 80.5 → 59.9 ms | 110 → 27 |
+| Zoom | 23.21 | 35.19 | 78.9 → 60.2 ms | 68 → 24 |
+
+Before = new quarter art with the previous whole-city foliage batches and 125 ms shadow refresh.
+After = spatial foliage cells and refreshed culling bounds; shadow
+refresh during orbit is at most every 350 ms, idle 125 ms. Reflection keeps its native size and
+80/125 ms schedule. Close leaves,
+existing distance thresholds, architectural geometry, materials, both lights, native DPR and
+composer 4x MSAA remain. Final carry-pose cleanup does not change the measured scene contents.
+Worst after frames are 83.1/73.1 ms; this is delivered-frame cadence under the scene's 40 Hz cap,
+not stable 60 FPS or a guarantee for every city size. Do not compare directly with the older
+1100×700 sample below. Raw local records: `/tmp/pomodoro-quarter/before.json`, `final-release.json`.
+An earlier hot-reload capture reached 39.48/39.06 FPS (`after.json`); it is not the release claim.
+A fresh-load variant that delayed reflection on shadow frames fell to 26.67/26.57 FPS
+(`final-fresh.json`) and was removed. The table reports the final fresh-load confirmation,
+not the best observed run. It remains a single-device local comparison, not a thermal study.
+
 ## GPT measured orbit/zoom on Apple M3 — 2026-10-23
 
 Controlled visible-browser comparison: local development GPT edition, 20 identical sample buildings,

@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { architectureOf, PLACES, SEASONS, postcardCity } from './art.js';
+import { architectureOf, PLACES, SEASONS, postcardCity, streetJourney, journeyAt } from './art.js';
 import { HOIAN_BLUEPRINTS } from '../engine/catalog.js';
 import { buildCity, ledger } from '../engine/city.js';
 import { reduce } from '../engine/timer.js';
@@ -103,4 +103,23 @@ test('new waterfront model fitting preserves the original plot centre and only s
   assert.equal(matrix.elements[0],1);assert.equal(matrix.elements[5],1);assert.ok(matrix.elements[10]>0&&matrix.elements[10]<1);
   assert.ok(-4+1.3*matrix.elements[10]<=-3.08,'ground props stay behind the fixed north quay');
   const before=JSON.stringify(matrix);fitHeritageQuay(matrix,null);assert.equal(JSON.stringify(matrix),before);
+});
+
+
+test('compiled street journeys pause, close without teleporting, and preserve their source positions',()=>{
+  const points=freeze([[2.12,-3.68,.015,2],[2.12,-2,.62,1],[2.12,-.38,.015,2],[2.12,-2,.62,0]]);
+  const before=JSON.stringify(points),journey=streetJourney(points),out={};
+  assert.equal(journeyAt(journey,0,out),out,'frame sampling reuses its caller-owned pose');
+  assert.deepEqual([out.x,out.z,out.y],[2.12,-3.68,.015]);
+  assert.equal(out.walking,0);
+  journeyAt(journey,1,out);assert.deepEqual([out.x,out.z],[2.12,-3.68],'waiting feet remain planted');
+  for(const segment of journey.segments)for(const t of [segment.start,segment.start+segment.pause]) {
+    const a=journeyAt(journey,t-.0001),b=journeyAt(journey,t+.0001);
+    assert.ok(Math.hypot(a.x-b.x,a.y-b.y,a.z-b.z)<.001,'no teleport at a pause or the closed-loop seam');
+  }
+  for(let n=-50;n<100;n++) {
+    journeyAt(journey,n*.73,out);assert.ok([out.x,out.y,out.z,out.heading,out.distance].every(Number.isFinite));
+    assert.ok(out.z>=-3.68&&out.z<=-.38&&out.x===2.12,'the crossing route stays in its clear walking lane');
+  }
+  assert.equal(JSON.stringify(points),before);
 });

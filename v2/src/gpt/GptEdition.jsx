@@ -94,6 +94,7 @@ function CityWorkspace({ app, appearance, sample, onSampleChange }) {
         <div className="gpt-scene-caption"><span className="gpt-live-dot" /><span>{sample ? 'Phố mẫu · không tính vào tiến độ' : `${city.buildings.length} công trình · ${city.totalBricks} viên gạch`}</span></div>
         <div className="gpt-camera-tools">
           <button type="button" onClick={() => scene?.frameCity(appearance.motion ? 900 : 0)} title="Đưa máy ảnh về toàn cảnh">Toàn cảnh</button>
+          {appearance.place==='hoian' && <><button type="button" onClick={()=>scene?.viewQuarter('river',appearance.motion?1000:0)}>Dạo bờ sông</button><button type="button" onClick={()=>scene?.viewQuarter('bridge',appearance.motion?1000:0)}>Qua cầu</button></>}
           <button type="button" onClick={() => { onSampleChange(!sample); setPick(null); setBlueprint(null); setPreviewWork(false); }}>{sample ? 'Thành phố của tôi' : 'Xem trước 3D'}</button>
         </div>
         {blueprint && <div className="gpt-placement"><b>Đặt {heritageOf(blueprint.key)?blueprint.name:names[blueprint.shape].toLowerCase()}</b><span>Chọn một ô đất sáng trong thành phố.</span><div className="row"><button type="button" className="btn btn--primary" onClick={() => place(city.candidates[0])}>Chọn ô gần nhất</button><button type="button" className="btn" onClick={() => setBlueprint(null)}>Huỷ</button></div></div>}

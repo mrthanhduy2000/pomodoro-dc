@@ -1,3 +1,17 @@
+## 2026-10-24 — Connected GPT riverside quarter and smoother M3 navigation
+
+- Detailed public covered crossing, stone approaches/shrine and deck-following pedestrians;
+  buildable Chua Cau keeps its plot with clearer inlet/approaches.
+- Connect developed frontages through side lanes, thresholds, canopies and working rear yards;
+  completed waterfront buildings activate cargo/porters. Construction carriers fetch/deliver;
+  customers approach vendors away from the through-walking lane.
+- Add river/bridge camera tools and obstruction-aware GPT close views; preserve classic presets,
+  all earned/sample plot coordinates, real 3D preview and completed-focus-minute progression.
+- Spatially cull unchanged fine foliage; reduce repeated native-resolution shadow renders during orbit.
+  Same-scene Apple M3 comparison: orbit 17.57→34.16 FPS, zoom 23.21→35.19 FPS, DPR2, final fresh-load confirmation.
+  See PERFORMANCE.md for conditions, raw evidence and remaining worst frames.
+- No schema, event, reward, texture-resolution, light-count or historical plot change.
+
 ## 2026-10-23 — Living streets with distance detail and paired shopping
 
 ## 2026-10-23 — Buildable Hoi An places, source notes and local craft activity

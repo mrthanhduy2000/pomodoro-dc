@@ -13,7 +13,7 @@ import { hash01, constructionProgress } from '../engine/city.js';
 import { heritageOf } from '../engine/catalog.js';
 import { fitHeritageQuay } from './heritage.js';
 import { drawHoiAnBuilding } from './hoian.js';
-import { architectureOf, DEFAULT_APPEARANCE, PLACES, snowIn } from './art.js';
+import { architectureOf, DEFAULT_APPEARANCE, PLACES, snowIn, streetJourney, journeyAt, crossingDeck } from './art.js';
 
 const GEO = {
   detailBox: new THREE.BoxGeometry(1,1,1),
@@ -163,6 +163,41 @@ export class GptScene extends CityScene {
     super.setModel(model);
   }
 
+  /** GPT-only framing: choose a clear approach instead of a fixed view through the next roof. */
+  focusBuilding(planId, ms=1400) {
+    const b=this.model?.city.buildings.find(item=>item.planId===planId);
+    if(!b)return;
+    const c=plotCenter(b.plot),craft=['ha-thanhha-v1','ha-kimbong-v1','ha-cho-v1'].includes(b.key);
+    const target={x:c.x,y:b.shape==='tower'?1.65:craft?.78:1.15,z:c.z};
+    const radius=b.shape==='tower'?5.2:craft?4.15:4.6,eye=b.shape==='tower'?3.8:craft?1.8:2.85;
+    let best=null;
+    for(let i=0;i<12;i++) {
+      const angle=(i-5.5)*Math.PI/18,position={x:c.x+Math.sin(angle)*radius,y:eye,z:c.z+Math.cos(angle)*radius};
+      let score=0;
+      for(const other of this.model.city.buildings) {
+        if(other.planId===planId||constructionProgress(other)<.18)continue;
+        const p=plotCenter(other.plot),dx=position.x-c.x,dz=position.z-c.z;
+        const u=Math.max(0,Math.min(1,((p.x-c.x)*dx+(p.z-c.z)*dz)/(dx*dx+dz*dz)));
+        const clearance=Math.hypot(p.x-c.x-dx*u,p.z-c.z-dz*u);
+        if(u>.16 && clearance<1.65 && target.y+(position.y-target.y)*u<3.2)score+=(1.65-clearance)*5;
+      }
+      for(const crown of this.treeCrowns||[]) {
+        const dx=position.x-c.x,dy=position.y-target.y,dz=position.z-c.z;
+        const u=Math.max(0,Math.min(1,((crown.x-c.x)*dx+(crown.y-target.y)*dy+(crown.z-c.z)*dz)/(dx*dx+dy*dy+dz*dz)));
+        const distance=Math.hypot(crown.x-c.x-dx*u,crown.y-target.y-dy*u,crown.z-c.z-dz*u);
+        if(u>.12 && distance<crown.r)score+=(crown.r-distance)*4;
+      }
+      score+=Math.abs(angle)*.07;
+      if(!best||score<best.score)best={position,target,score};
+    }
+    this.flyTo(best,ms);this.renderDirty=true;
+  }
+
+  viewQuarter(mode,ms=1000) {
+    const frames={river:{target:{x:0,y:.7,z:-2},position:{x:8.6,y:4.4,z:-1.7}},bridge:{target:{x:2,y:.85,z:-2},position:{x:-4.2,y:3.7,z:-1.8}}};
+    if(frames[mode]){this.flyTo(frames[mode],ms);this.renderDirty=true;}
+  }
+
   rebuild() {
     this.clearWorld();
     // Preserve the 40 Hz budget, carrying fractional frame time instead of dropping alternate 60 Hz callbacks.
@@ -181,6 +216,7 @@ export class GptScene extends CityScene {
     this.artMaterials = new Map();
     this.textures ??= new Map();
     this.actors = [];
+    this.treeCrowns = [];
     this.trades = [];
     this.detailBatches = [];
     this.detailView = null;
@@ -361,8 +397,19 @@ export class GptScene extends CityScene {
     this.disposables.push(glowTexture,this.haloMaterial,this.poolMaterial,poolGeometry,haloGeometry);
     for (const { kind, geo, mat, parts } of this.batches.values()) {
       if(kind.startsWith('leafSpray')) {
-        const near=this.instanced(geo,mat,parts.length),far=this.instanced(GEO[`${kind}Distant`],mat,parts.length);
-        this.detailBatches.push({near,far,parts});continue;
+        // Spatial crown batches can be culled behind the camera in both view and shadow passes.
+        const cells=new Map();
+        for(const part of parts) {
+          const e=part.matrix.elements,key=`${Math.floor(e[12]/8)},${Math.floor(e[14]/8)}`;
+          if(!cells.has(key))cells.set(key,[]);
+          cells.get(key).push(part);
+        }
+        for(const cluster of cells.values()) {
+          const near=this.instanced(geo,mat,cluster.length),far=this.instanced(GEO[`${kind}Distant`],mat,cluster.length);
+          near.frustumCulled=true;far.frustumCulled=true;
+          this.detailBatches.push({near,far,parts:cluster});
+        }
+        continue;
       }
       const mesh = this.instanced(geo, mat, parts.length, { pick: parts.some((p) => p.pick) ? parts.map((p) => p.pick) : null });
       parts.forEach((p, i) => mesh.setMatrixAt(i, p.matrix));
@@ -423,6 +470,7 @@ export class GptScene extends CityScene {
         else far.setMatrixAt(fi++,part.matrix);
       }
       near.count=ni;far.count=fi;detailChanged=true;
+      for(const mesh of [near,far])if(mesh.count){mesh.computeBoundingSphere();mesh.boundingSphere.radius+=.04;}
       near.instanceMatrix.needsUpdate=true;far.instanceMatrix.needsUpdate=true;
     }
     if(detailChanged){this.renderer.shadowMap.needsUpdate=true;this.reflectionDirty=true;}
@@ -432,6 +480,7 @@ export class GptScene extends CityScene {
     if(this.a.place==='hoian' && !seed.startsWith('street-edge:') && hash01(`palm:${seed}`)>.7) {
       // Curved trunks and feathered fronds give the riverside a second tree silhouette.
       const height=size*(2.5+hash01(`palm-height:${seed}`)*.65);
+      this.treeCrowns.push({x,y:height,z,r:size*1.2});
       const bendX=(hash01(`palm-x:${seed}`)-.3)*.4,bendZ=(hash01(`palm-z:${seed}`)-.5)*.35;
       for(let i=0;i<9;i+=1) {
         const u=i/9,v=(i+1)/9;
@@ -475,11 +524,57 @@ export class GptScene extends CityScene {
         const a=angle+twig*1.8,r=size*(.16+hash01(`${seed}:twig:${branch}:${twig}`)*.35);
         const ex=bx+Math.cos(a)*r,ez=bz+Math.sin(a)*r,ey=by+(hash01(`${seed}:tw:${branch}:${twig}`)-.4)*size*.45;
         this.beam('timber',[bx,by,bz],[ex,ey,ez],.011*size);
+        this.treeCrowns.push({x:ex,y:ey,z:ez,r:size*.55});
         for(let color=0;color<3;color+=1) {
           this.part(`leafSpray${color}`,`foliage:${colors[color]}`,[ex,ey,ez],[size,size,size],[0,a,0]);
         }
       }
     }
+  }
+
+  buildCoveredCrossing(x) {
+    // Fixed public crossing and approaches: independent of plans, focus time and completion.
+    for(const end of [-1,1]) {
+      const z=-2+end*1.25;
+      for(let step=0;step<4;step++)this.part('box','stone',[x,.13-step*.028,z+end*step*.13],[.84,.12,.15]);
+      for(const side of [-1,1]) {
+        this.part('box','stone',[x+side*.48,.27,z],[.16,.42,.35]);
+        this.part('pole','timber',[x+side*.48,.71,z],[.035,.52,.035]);
+        this.part('orb','glow',[x+side*.48,.93,z],[.065,.1,.065]);
+      }
+    }
+    for(let board=0;board<31;board++) {
+      const z=-3.14+board*.076,y=crossingDeck(z);
+      this.part('box','timber',[x,y,z],[.72,.055,.071]);
+    }
+    for(const side of [-1,1]) {
+      for(let bay=0;bay<6;bay++) {
+        const z=-3.08+bay*.432;
+        this.beam('timber',[x+side*.36,.28,z],[x+side*.36,1.45,z],.032);
+        this.beam('timber',[x+side*.36,1.15,z],[x+side*.25,1.43,z+.16],.018);
+      }
+      this.part('box','timber',[x+side*.36,.7,-2],[.045,.2,2.3]);
+      for(let bar=0;bar<30;bar++)this.beam('timber',[x+side*.36,.8,-3.12+bar*.077],[x+side*.36,1.15,-3.12+bar*.077],.01);
+      // Individually curved courses, staggered grey clay and sculpted ridge ends.
+      for(let row=0;row<8;row++) {
+        const u=(row+.5)/8,y=1.76-u*.39+.07*Math.pow(u,4);
+        this.part('box','tile',[x+side*u*.6,y,-2],[.108,.035,2.8],[0,0,-side*.52]);
+      }
+      for(let row=0;row<8;row++)for(let tile=0;tile<33;tile++) {
+        const u=(row+.5)/8,wear=hash01(`crossing:${side}:${row}:${tile}`),y=1.78-u*.39+.07*Math.pow(u,4);
+        this.part('roofTile',wear>.8?'tile:#7c7765':'tile:#505b57',[x+side*u*.6,y,-3.33+tile*.083],[.029,.09,.029],[0,0,Math.PI/2-side*.52]);
+      }
+      for(const z of [-3.36,-.64])this.beam('tile',[x,1.79,z],[x+side*.63,1.48,z],.037);
+    }
+    this.beam('tile',[x,1.83,-3.42],[x,1.83,-.58],.05);
+    // Adjoining quiet shrine stands above the water, clear of the crossing's walking lane.
+    for(const z of [-2.4,-1.6])this.part('box','stone',[x+.78,.18,z],[.23,.48,.24]);
+    this.part('box','timber',[x+.78,.5,-2],[.83,.09,1.02]);
+    this.part('box','wall:#c8ab76',[x+1.12,.95,-2],[.09,.85,.94]);
+    for(const z of [-2.46,-1.54])this.part('box','wall:#c8ab76',[x+.78,.95,z],[.77,.85,.07]);
+    this.part('box','timber',[x+.9,.8,-2],[.29,.42,.53]);
+    for(const side of [-1,1])this.part('box','tile',[x+.78,1.5,-2+side*.26],[1.02,.06,.64],[side*.42,0,0]);
+    this.beam('tile',[x+.24,1.65,-2],[x+1.32,1.65,-2],.035);
   }
 
   buildLandscape() {
@@ -594,7 +689,7 @@ export class GptScene extends CityScene {
           const z = -3.16 + i * 0.232;
           const y = 0.12 + Math.sin((i / 10) * Math.PI) * 0.35;
           this.part('box', 'stone', [bx, y, z], [0.84, 0.16, 0.225]);
-          for (const side of [-1, 1]) {
+          if(!(dense && x===0))for (const side of [-1, 1]) {
             if (i % 2 === 0) {
               this.beam('stone', [bx + side * 0.38, y, z], [bx + side * 0.38, y + 0.42, z], 0.045);
               this.part('orb','stone',[bx+side*.38,y+.45,z],[.06,.06,.06]);
@@ -602,17 +697,8 @@ export class GptScene extends CityScene {
             if (i < 10) this.beam('stone', [bx + side * 0.38, y + 0.38, z], [bx + side * 0.38, 0.5 + Math.sin(((i + 1) / 10) * Math.PI) * 0.35, z + 0.232], 0.035);
           }
         }
-        if(x===0 && this.a.place==='hoian') {
-          // A covered footbridge is fixed street scenery, never a planned building.
-          for(const side of [-1,1]) {
-            for(const z of [-2.95,-2,-1.05]) this.beam('timber',[bx+side*.37,.25,z],[bx+side*.37,1.28,z],.04);
-            this.part('box','tile',[bx+side*.29,1.4,-2],[.68,.065,2.65],[0,0,side*.5]);
-            this.beam('timber',[bx+side*.58,1.25,-3.3],[bx+side*.58,1.25,-.7],.035);
-            for(let course=0;course<18;course+=1) this.beam('tile',[bx,1.58,-3.25+course*.145],[bx+side*.59,1.26,-3.25+course*.145],.023);
-            for(const z of [-2.85,-1.15]) this.part('orb','glow',[bx+side*.48,1.04,z],[.08,.12,.08]);
-          }
-          this.beam('tile',[bx,1.59,-3.34],[bx,1.59,-.66],.045);
-        }
+        if(x===0 && this.a.place==='hoian')this.buildCoveredCrossing(bx);
+
       }
     }
     if(dense && this.model.city.buildings.length) {
@@ -659,7 +745,7 @@ export class GptScene extends CityScene {
     this.world.add(this.water); this.disposables.push(waterGeo,this.water);
     // Fixed moorings occupy the canal between the existing bridges, never building plots.
     this.boats=[];
-    for(const [i,bx] of [.1,3.6,-3.1].entries()) {
+    for(const [i,bx] of [.1,4.2,-3.1].entries()) {
       const boat=this.buildRiverBoat(i);
       const bz=i===1?-2.5:i===2?-1.55:-2.05;
       boat.position.set(bx,.055,bz);boat.rotation.y=i===1?-.13:i===2?.12:.06;
@@ -755,9 +841,10 @@ export class GptScene extends CityScene {
     } else if(random('hat')>.28)part(head,'hat','#c8b68c',[0,.116,0],[.11,.065,.11]);
     else part(head,'orb','#493e34',[0,.084,-.008],[.057,.034,.053]);
     if(pose==='carry') {
-      part(body,'taper','#a8875b',[0,hip-.015,.23],[.12,.12,.09]);
-      part(body,'hoop','#c8b68c',[0,hip+.05,.23],[.115,.09,.075],[Math.PI/2,0,0]);
-      if(builder)for(let brick=0;brick<3;brick+=1)part(body,'box','#a98565',[(brick-1)*.06,hip+.06,.23],[.055,.04,.11]);
+      const load=joint(body,[0,hip-.015,.23]);
+      part(load,'taper','#a8875b',[0,0,0],[.12,.12,.09]);
+      part(load,'hoop','#c8b68c',[0,.065,0],[.115,.09,.075],[Math.PI/2,0,0]);
+      if(builder)for(let brick=0;brick<3;brick+=1)part(load,'box','#a98565',[(brick-1)*.06,.075,0],[.055,.04,.11]);
     }
     if(pose==='customer') {
       actor.parcel=joint(body,[0,hip-.015,.2]);
@@ -805,6 +892,7 @@ export class GptScene extends CityScene {
       if(actor.trade && pose==='customer') {
         const trade=actor.trade,u=trade.u;
         root.position.copy(actor.origin);root.position.x+=trade.offset*trade.length;
+        root.position.z+=trade.offset*(trade.depth||0);
         walking=trade.walking;gait=trade.offset*trade.length*14;
         const faceStall=THREE.MathUtils.smoothstep(u,8,9.5),leave=THREE.MathUtils.smoothstep(u,13,14),reset=THREE.MathUtils.smoothstep(u,24,26);
         root.rotation.y=Math.PI/2+(trade.heading-Math.PI/2)*faceStall+(-Math.PI/2-trade.heading)*leave+Math.PI*reset;
@@ -820,6 +908,14 @@ export class GptScene extends CityScene {
         walking=travel<duration?Math.sin(progress*Math.PI):0;gait=eased*route.length*14;
         const turn=THREE.MathUtils.smoothstep(u,duration+.4,duration+1.6)-THREE.MathUtils.smoothstep(u,cycle-1.6,cycle-.4);
         root.rotation.y=actor.heading+turn*Math.PI;
+      }
+      if(actor.journey) {
+        const trip=journeyAt(actor.journey,time+phase,actor.tripState ||= {});
+        root.position.set(trip.x,trip.y,trip.z);
+        if(actor.onCrossing && trip.z>=-3.14 && trip.z<=-.86)root.position.y=crossingDeck(trip.z)+.04;
+        const delta=Math.atan2(Math.sin(trip.heading-root.rotation.y),Math.cos(trip.heading-root.rotation.y));
+        root.rotation.y+=delta*Math.min(1,(time-(actor.lastJourneyTime??time))*6);
+        actor.lastJourneyTime=time;walking=trip.walking;gait=trip.distance*14;
       }
       const stride=Math.sin(gait)*.42*walking;
       body.position.y=Math.abs(Math.cos(gait))*.012*walking+Math.sin(t*1.7)*.002;
@@ -878,12 +974,19 @@ export class GptScene extends CityScene {
   buildStreetscape() {
     const buildings=this.model.city.buildings;
     const byPlot=new Map(buildings.map(b=>[`${b.plot.x},${b.plot.y}`,b]));
+    // The public crossing has a real continuous route, including the arched deck height.
+    if(buildings.some(b=>constructionProgress(b)>=1))for(const side of [-1,1]) {
+      const walker=this.streetPerson(2+side*.12,.015,-3.7,`crossing:walker:${side}`,'walk');
+      walker.onCrossing=true;
+      walker.journey=streetJourney([[2+side*.12,-3.68,.015,1],[2+side*.12,-3.14,.27,0],[2+side*.12,-2,.62,1],[2+side*.12,-.82,.27,0],[2+side*.12,-.38,.015,2],[2+side*.12,-.82,.27,0],[2+side*.12,-2,.62,0],[2+side*.12,-3.14,.27,0]]);
+    }
     for(const b of buildings) {
       const progress=constructionProgress(b);
       if(progress>0 && progress<1)this.buildWorksite(b);
       if(progress<.65) continue;
       const heritage=heritageOf(b.key),quiet=['ha-chuacau-v1','ha-phuckien-v1'].includes(b.key),craft=['ha-thanhha-v1','ha-kimbong-v1'].includes(b.key);
       const c=plotCenter(b.plot),next=byPlot.get(`${b.plot.x+1},${b.plot.y}`);
+      if(progress>=.82)this.buildFrontageConnections(b,next);
       if(next && !heritage && !heritageOf(next.key) && constructionProgress(next)>=.65) {
         // Neighbouring earned frontages share a real planted pergola over the alley.
         const x=c.x+PLOT/2,z=c.z+(b.plot.y===-1?.2:.88);
@@ -935,7 +1038,7 @@ export class GptScene extends CityScene {
       const streetZ=c.z+(b.plot.y===-1?.79:1.58);
       const activity=hash01(`${b.planId}:street-life`),hasVendor=!quiet && !craft && b.plot.y!==-1 && (b.shape==='market'||activity>.48) && progress>=1;
       if(!hasVendor && !craft)this.streetPerson(c.x+(b.plot.y===-1?-1.8:0),.015,b.plot.y===-1?streetZ-.3:c.z+1.96,`${b.planId}:visitor`,activity>.5?'carry':'walk',b.plot.y===-1?0:Math.PI/2,null,{axis:b.plot.y===-1?'z':'x',length:b.plot.y===-1?.26:2.7});
-      if(!quiet && !craft && b.plot.y!==-1 && b.shape!=='tower')this.streetPerson(c.x-.47,.015,c.z+1.62,`${b.planId}:neighbour`,b.key==='ha-cho-v1'?'eat':'sit',Math.PI/2);
+      if(progress>=1 && !quiet && !craft && b.plot.y!==-1 && b.shape!=='tower')this.streetPerson(c.x-.47,.015,c.z+1.62,`${b.planId}:neighbour`,b.key==='ha-cho-v1'?'eat':'sit',Math.PI/2);
       if(craft && progress>=1) {
         if(b.key==='ha-thanhha-v1') {
           const potter=this.streetPerson(c.x-.72,.015,c.z+.42,`${b.planId}:potter`,'potter');
@@ -960,7 +1063,7 @@ export class GptScene extends CityScene {
         this.beam('timber',[vx,.46,vz],[vx,1.13,vz],.018);
         this.part('hat',activity>.75?'#b47b57':'#718575',[vx,1.19,vz],[.45,.15,.4]);
         for(let fruit=0;fruit<15;fruit+=1)this.part('orb',fruit%2?'#b28d4e':'#85914c',[vx+(fruit%5-2)*.09,.65,vz+(Math.floor(fruit/5)-1)*.065],[.04,.038,.04]);
-        const trade={phase:hash01(`${b.planId}:trade`)*26,length:2.29,heading:Math.atan2(.33,-.6)};
+        const trade={phase:hash01(`${b.planId}:trade`)*26,length:2.29,depth:-.27,heading:Math.atan2(.33,-.33)};
         this.trades.push(trade);
         const seller=this.streetPerson(vx+.38,.015,vz-.12,`${b.planId}:vendor`,'vendor',Math.atan2(-.33,.6));
         const customer=this.streetPerson(c.x-1.3,.015,c.z+1.96,`${b.planId}:customer`,'customer',Math.PI/2);
@@ -970,7 +1073,16 @@ export class GptScene extends CityScene {
         const bankZ=b.plot.y===0?-.62:-3.33,bankX=c.x+1.7;
         this.part('taper','#a8875b',[bankX,.19,bankZ],[.13,.22,.11]);
         this.part('hoop','#c8b68c',[bankX,.31,bankZ],[.13,.1,.08],[Math.PI/2,0,0]);
-        this.streetPerson(bankX+.11,.015,bankZ+(b.plot.y===0?.28:-.28),`${b.planId}:quay`,'carry',b.plot.y===0?Math.PI:0);
+        if(progress>=1 && !quiet) {
+          const toward=b.plot.y===0?1:-1;
+          const porter=this.streetPerson(bankX+.11,.015,bankZ+toward*.28,`${b.planId}:quay`,'carry');
+          porter.journey=streetJourney([[bankX+.11,bankZ+toward*.28,.015,3],[bankX-.65,bankZ+toward*.28,.015,0],[bankX-1.05,bankZ+toward*.17,.015,3],[bankX-.65,bankZ+toward*.28,.015,0]]);
+          for(let basket=0;basket<3;basket++) {
+            this.part('taper',basket%2?'#99774e':'#b19566',[bankX-.05+basket*.18,.14,bankZ+toward*.12],[.075,.21,.075]);
+            this.part('hoop','#c8b68c',[bankX-.05+basket*.18,.25,bankZ+toward*.12],[.071,.071,.023],[Math.PI/2,0,0]);
+          }
+          if(b.plot.x%2!==0)for(let plank=0;plank<5;plank++)this.part('box','timber',[c.x+1.5,.12,bankZ-toward*(.04+plank*.07)],[.6,.04,.063]);
+        }
         if(activity>.5) {
           const toward=b.plot.y===0?-1:1;
           this.beam('timber',[bankX-.14,.5,bankZ],[bankX+.1,.74,bankZ+toward*.45],.008);
@@ -992,6 +1104,43 @@ export class GptScene extends CityScene {
     }
   }
 
+  buildFrontageConnections(b,next) {
+    const c=plotCenter(b.plot),quiet=['ha-chuacau-v1','ha-phuckien-v1'].includes(b.key);
+    // A side lane, drain and settled threshold join the house to its public pavement.
+    if(!quiet && b.plot.y!==-1) {
+      const lane=c.x+1.76;
+      for(let slab=0;slab<9;slab++) {
+        const z=c.z-.62+slab*.26,wear=hash01(`${b.planId}:lane:${slab}`);
+        this.part('box',wear>.5?'paving':'stone',[lane,.027+(wear-.5)*.008,z],[.34,.035,.247],[0,(wear-.5)*.025,0]);
+        this.part('box','#657461',[lane-.2,.012,z],[.026,.018,.25]);
+      }
+      for(let step=0;step<3;step++)this.part('box','stone',[c.x,.055+step*.035,c.z+1.18-step*.12],[.62,.07,.15]);
+    }
+    if(!quiet && b.shape==='house' && b.plot.y!==0 && b.plot.y!==-1 && constructionProgress(b)>=.95) {
+      // A usable rear yard, with a low boundary and working objects, rather than empty grass.
+      this.part('box','paving',[c.x,.025,c.z-1.66],[2.8,.04,.45]);
+      for(const side of [-1,1]) {
+        this.part('box','wall:#bbad83',[c.x+side*1.49,.27,c.z-1.53],[.08,.48,.65]);
+        this.part('box','tile',[c.x+side*1.49,.53,c.z-1.53],[.14,.05,.71]);
+      }
+      this.part('vase','tile:#a97850',[c.x-.94,.23,c.z-1.65],[.12,.39,.12]);
+      for(let wood=0;wood<6;wood++)this.part('box','timber',[c.x+.71,.07+wood*.035,c.z-1.65],[.62,.03,.2],[0,wood*.025,0]);
+      this.beam('timber',[c.x-.7,.03,c.z-1.77],[c.x-.6,.72,c.z-1.71],.012);
+      for(let twig=0;twig<7;twig++)this.beam('#a58e64',[c.x-.7,.03,c.z-1.77],[c.x-.77+twig*.022,.18,c.z-1.77],.005);
+    }
+    if(!next||quiet||['ha-chuacau-v1','ha-phuckien-v1'].includes(next.key)||constructionProgress(next)<.82||b.plot.y===-1)return;
+    // Link existing earned frontages only; no decorative houses or unearned building facts.
+    const x=c.x+2,z=c.z+.82;
+    for(const side of [-1,1]) {
+      this.beam('timber',[x+side*.27,.04,z],[x+side*.27,1.72,z],.025);
+      this.beam('timber',[x+side*.27,1.42,z],[x,1.72,z],.015);
+    }
+    this.part('cloth','cloth:#b8a67d',[x,1.8,z],[.77,.08,.5],[.08,0,0]);
+    this.part('orb','glow',[x,1.45,z+.03],[.065,.09,.065]);
+    this.beam('timber',[x,1.72,z+.03],[x,1.54,z+.03],.008);
+    for(let paving=0;paving<4;paving++)this.part('box','paving',[x+(paving-1.5)*.19,.028,z],[.18,.03,.57]);
+  }
+
   buildWorksite(b) {
     const c=plotCenter(b.plot),x=c.x+1.74,z=c.z+.05;
     const progress=constructionProgress(b),elevated=progress>=.5 && progress<.82;
@@ -1006,7 +1155,10 @@ export class GptScene extends CityScene {
     for(let row=0;row<3;row+=1)for(let brick=0;brick<3;brick+=1)this.part('box',progress>=.65?'tile':'stone',[x-.1+brick*.09,.05+row*.055,z-.65],[.08,.05,.15]);
     this.part('taper','stone',[x-.03,.12,z-.9],[.1,.18,.1]);
     this.streetPerson(x-.02,elevated?.548:.015,z-.3,`${b.planId}:builder`,'work',Math.PI/2);
-    if(progress>=.32)this.streetPerson(x-.08,.015,z+.95,`${b.planId}:carrier`,'carry',Math.PI,null,{axis:'z',length:.45});
+    if(progress>=.32) {
+      const carrier=this.streetPerson(x-.08,.015,z+.95,`${b.planId}:carrier`,'carry');
+      carrier.journey=streetJourney([[x-.08,z+.8,.015,3],[x-.08,z+.38,.015,0],[x-.08,z-.48,.015,4],[x-.08,z+.38,.015,0]]);
+    }
 
   }
 
@@ -1373,7 +1525,9 @@ export class GptScene extends CityScene {
       const time = this.motionTime;
       this.windTime.value=time;
       // Static architecture keeps its full-resolution shadow map between small actor updates.
-      if(t-(this.shadowTick||0)>=125){this.renderer.shadowMap.needsUpdate=true;this.shadowTick=t;}
+      this.camera.updateMatrixWorld();
+      const orbiting=this.lastRenderedView && !this.lastRenderedView.equals(this.camera.matrixWorld);
+      if(t-(this.shadowTick||0)>=(orbiting?350:125)){this.renderer.shadowMap.needsUpdate=true;this.shadowTick=t;}
       if (this.water) this.water.material.uniforms.uTime.value=time;
       for(const boat of this.boats||[]) { const phase=boat.userData.phase;boat.position.y=.055+Math.sin(time*.8+phase)*.009;boat.rotation.z=Math.sin(time*.65+phase)*.012;boat.position.x=boat.userData.mooringX+Math.sin(time*.45+phase)*.015;boat.position.z=boat.userData.mooringZ+Math.sin(time*.57+phase)*.012;if(boat.userData.oar)boat.userData.oar.rotation.y=Math.sin(time*1.4)*.16; }
       this.animatePeople(time);

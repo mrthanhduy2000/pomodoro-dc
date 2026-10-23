@@ -1396,7 +1396,8 @@ UI (v2/src/ui) ──actions──▶ useTimerApp ──cmd*(state, now)──�
 - **GPT edition (2026-10-22)**: `/v2/?edition=gpt` selects a lazy presentation layer in
   `v2/src/gpt/`. It shares `useTimerApp`, the event log, FocusPanel, StatsView and SettingsView;
   there is no second timer or database. `GptScene` inherits canvas lifecycle, picking and camera
-  navigation from `CityScene`, and draws architectural completion parts on unchanged plot centers.
+  navigation from `CityScene`, specializes GPT detail/quarter framing, and draws architectural
+  completion parts on unchanged plot centers.
   Both Focus and City render the actual three.js scene. A labelled read-only 3D sample
   previews completed architecture; it supports selection and camera navigation without events.
   GPT uses CityScene.renderScene with a multisampled composer, bloom and one final OutputPass;

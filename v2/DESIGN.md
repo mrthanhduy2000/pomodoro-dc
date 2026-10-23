@@ -113,8 +113,8 @@ anchors. Leaving the sample resets this toggle. Actual plot selection still uses
 GPT atmosphere uses the existing hemisphere and directional lights: cool sky fill, warm direct
 sun, restrained lamp bloom and continuous day/night interpolation. Rain softens the direct sun
 and increases distance haze. The procedural sky shares its horizon with exponential fog and
-its glow direction with the actual sun. No image background, extra light, camera change or
-additional postprocessing pass is used.
+its glow direction with the actual sun. No image background, extra light or additional postprocessing pass is used.
+GPT camera navigation has its own user-authorized quarter/detail views; classic presets stay unchanged.
 
 Hoi An houses have six stable frontage compositions, selected by a suffix hash of planId.
 The variant affects massing, ridge direction, gallery/courtyard and shop displays, never plot
@@ -191,6 +191,41 @@ beyond 20 units sample poses at 15 Hz. Tiny shoes, hat brims and tools share the
 Only changed, contiguous matrix ranges upload; pose sampling never hides actors or scene objects,
 and resolution stays unchanged. This is an implementation improvement, not a new measured
 FPS claim. Reduced-motion/paused clocks and map/light resolutions retain the existing behavior.
+
+## Connected riverside quarter (2026-10-24)
+
+The fixed public covered crossing at world x=2 now has a timber deck, clay tile courses,
+stone approaches and an adjoining quiet shrine above the existing river. It is street scenery,
+not a free completed buildable landmark or a geographic assertion about Hoi An. The separate
+buildable Chua Cau keeps its immutable plot, with a longer local inlet and stone approach paths.
+This distinction avoids moving earned buildings or making river terrain depend on completion.
+Existing and sample plot anchors, blueprint keys, minute costs and diary facts remain unchanged.
+
+Developed frontages join their paving through settled thresholds, side lanes/drains, shared
+canopies and rear yards with low boundaries, jars and working objects. Connections require
+existing neighbouring buildings; they do not invent extra earned houses. Shore plots keep the
+fixed channel clear. One mooring shifts from x=3.6 to 4.2 to clear the new public shrine supports;
+boats, occupants and their ropes use the same mooring coordinates.
+
+Two decorative walkers cross the public bridge with deck-following feet. Quay porters and
+construction carriers follow compiled closed journeys with pauses at collection/delivery points;
+walking phases use travelled distance. Shop customers leave the street edge, approach the vendor,
+exchange and depart with a parcel. Completed non-shrine waterfront plots activate local cargo
+baskets, landing boards and moving porters; unfinished plots retain workers instead. All of this
+is presentation derived from construction progress, never a second economy or an event write.
+`art.js` compiles/samples journeys without per-frame route allocations. Paused/reduced-motion
+behavior remains shared with the existing scene clock.
+
+The inspector's close view chooses among twelve approaches using neighbouring roofs and tree
+twig-cluster crowns; low workshop views reveal work below the porch roof. City tools add “Dạo bờ sông” and “Qua cầu” along the clear water corridor; overview,
+classic edition and building coordinates stay unchanged. These are chosen views, not a new
+first-person mode or an exact historic map.
+
+Fine foliage remains identical at the existing distance thresholds but batches partition into
+8-unit spatial cells. Their bounds recompute only when the near/far partition changes, with a
+wind margin, allowing normal view/shadow frustum culling. During orbit, full-resolution shadow
+updates run at most every 350 ms (idle: 125 ms). Reflection keeps its existing 80/125 ms schedule. Resolution, close geometry, lights, materials and 4x MSAA
+are unchanged. See PERFORMANCE.md for the same-scene Apple M3 before/after capture.
 
 ## Run it
 `npm run dev:v2` → `http://localhost:31120/v2/` (preview config "Pomodoro v2"). `npm run build`

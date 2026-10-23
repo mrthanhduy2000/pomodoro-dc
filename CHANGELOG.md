@@ -1,5 +1,22 @@
 ## 2026-10-23 — Living streets with distance detail and paired shopping
 
+## 2026-10-23 — Buildable Hoi An places, source notes and local craft activity
+
+- Add seven immutable landmark/workshop blueprint keys with source-linked architecture/life notes;
+  preserve every historical blueprint, plot and completed-focus-minute rule.
+- Distinct staged timber courtyard house, balcony house, assembly gate/sanctuary, covered bridge,
+  food market, pottery shed/kiln and open woodworking shed; reuse the existing Hoi An kit.
+- Preview-to-build placement and a read-only collection derived from finished real landmarks.
+- Paired pottery work, carving/carrying and diners; keep random cafe/cart activity off shrine plots.
+- Distance-derived walking gait, far pose sampling and changed-range matrix uploads; no DPR/light
+  reduction or new measured FPS claim. Sources and interpretation limits: v2/DESIGN.md.
+- New waterfront models/actors fit behind the fixed quay around their original plot centres;
+  tiny actor tools/shoes use shared thin-part geometry.
+- Validation: 1,934 full-suite passes, zero failures, one expected skip; three cross-checks and
+  42 focused checks pass, including final quay fitting; lint/build pass. Historical art parity
+  covers 520 building/phase cases. Identity/budget/anchor mutants correctly fail without source edits.
+
+
 ## 2026-10-23 — GPT M3 optimization and minute-based staged construction
 
 - Visible M3 orbit 20.35→39.43 FPS, zoom 20.59→34.78 FPS at identical Retina 2×; see PERFORMANCE.md.

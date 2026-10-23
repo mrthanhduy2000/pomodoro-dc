@@ -1407,6 +1407,10 @@ UI (v2/src/ui) ──actions──▶ useTimerApp ──cmd*(state, now)──�
   v1 links to the edition from the sidebar and Settings; `/` and `/v2/` remain available.
 - **Storage flow**: localStorage `dc-pomodoro-v2` on each device; cloud `events_v2`. v2 never writes
   `game_state` / `timer_live`; `legacy.js` reads `game_state` once, read-only, for the history import.
+- **Hoi An catalog (2026-10-23)**: seven additive immutable blueprint keys live in
+  `engine/catalog.js`; existing plan payload/reducer handles them without a new event or migration.
+  `gpt/heritage.js` composes the shared Hoi An kit and construction footprints. Source notes and
+  collection state are read-only projections; old blueprint models and plots remain unchanged.
 - **Minute construction (ADR-104)**: new plans version their unit (`minutes`, version 1); the pure
   city reducer allocates exact completed `focusedMs` FIFO with lossless yard fragments. Historical
   unversioned plans keep session/bonus semantics. Shared progress helpers drive both 3D views,

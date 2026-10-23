@@ -1053,6 +1053,9 @@ v2/
                          keys.js (Space shortcut) · CityCanvas (mounts CityScene) ·
                          LazyCityCanvas (three.js as its own chunk)
 ```
+Hoi An choices: `engine/catalog.js` stores seven stable heritage blueprint keys and source metadata;
+`gpt/heritage.js` draws their distinct staged forms through the shared Hoi An kit. The inspector
+links sources and derives collection progress in `gpt/GptEdition.jsx`.
 Minute construction: `engine/city.js` owns versioned work allocation/progress/stages (ADR-104);
 `city/layout.js` maps duration bands, `gpt/hoian.js` stages the kit, and the sample slider is in
 `gpt/GptEdition.jsx`. Dev-only FPS controls extend `ui/CityCanvas.jsx` and `gpt/GptScene.js`.

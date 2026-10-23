@@ -153,6 +153,45 @@ feed the existing warm ground-pool batch, adding no light or postprocessing pass
 seeded settlement, ropes sag, boats remain within their fixed moorings, and the rower's oar shares
 its animation frequency.
 
+## Documented Hoi An choices (2026-10-23)
+
+`engine/catalog.js` adds seven immutable `ha-*-v1` blueprint keys, available from era 1. The
+existing `build.plan.data.blueprint` field persists the choice: no new event kind, stored reward,
+SQL or conversion of old plans. Old `eN-slot` choices retain their original names, budgets and art.
+New landmarks keep their Hoi An architecture even if the user changes the surrounding place skin.
+`gpt/heritage.js` composes the existing Hoi An kit (shared roof tiles/materials/instancing); its
+footprints also drive foundation/frame/masonry phases. All models fit the existing fixed plots.
+New waterfront models and their craft actors shorten depth around the same plot centre so ground
+props remain behind the existing quay; old models and the river never move.
+They are explicitly labelled interpretive miniatures, not surveyed replicas or a geographic map.
+Chua Cau has a local channel inside its plot: it does not reroute the real scene river or old houses.
+
+| Choice | Minutes | Documented characteristic and source |
+|---|---:|---|
+| Tan Ky | 100 | Timber house and open light well: [Da Nang tourism](https://danangfantasticity.com/en/kien-truc/nha-co-tan-ky). |
+| Phung Hung | 100 | Upper timber balcony: [Hoi An heritage portal](https://hoianworldheritage.org.vn/vi/news/Diem-di-tich/Nha-co-Phung-Hung-12.hwh). |
+| Phuc Kien | 200 | Three-entry gate, courtyard and sanctuary: [Da Nang tourism](https://danangfantasticity.com/hoi-quan-phuc-kien). |
+| Chua Cau | 300 | Covered timber crossing, stone supports and adjoining shrine: [Da Nang tourism](https://danangfantasticity.com/en/kien-truc/chua-cau). |
+| Hoi An market | 200 | Food stalls and cao lau: [Hoi An heritage portal](https://www.hoianworldheritage.org.vn/vi/news/am-thuc/cac-dia-chi-thuong-thuc-cao-lau-hoi-an-ngon-2332.hwh). |
+| Thanh Ha workshop | 200 | Wheel, drying pottery, kiln; paired craft work: [Hoi An heritage portal](https://hoianworldheritage.org.vn/vi/news/Du-lich-Hoi-An/ve-mien-co-tich-gom-thanh-ha-2767.hwh). |
+| Kim Bong workshop | 200 | Carving, woodworking and boat repair: [Hoi An heritage portal](https://www.hoianworldheritage.org.vn/vi/news/Thong-bao/thong-tin-khai-truong-hoat-dong-huong-dan-tham-quan-tai-lang-moc-kim-bong-2679.hwh). |
+
+The workshop models represent local craft traditions, not a claim to reproduce a specific named
+private workshop. Dates, exact dimensions, inscriptions and legends are not invented. The inspector
+links each choice to its source. The read-only sample swaps only the first seven render models,
+keeping all twenty original sample IDs/plot anchors. Preview → build opens the normal plot picker;
+it cannot write a plan until the user places it. Collection completion is derived from real finished
+blueprint keys only; sample progress cannot unlock anything. Reload older clients for the new keys.
+
+Craft actors replace the ordinary vendor/tea figures at workshops. Thanh Ha has a wheel-turning
+potter and helper; Kim Bong has carving and carrying; the market has eating gestures with bowls
+and chopsticks. Shrine plots do not receive random food carts or cafe seating. Walking phases
+follow route distance instead of running during stops. Nearby actors keep scene cadence; figures
+beyond 20 units sample poses at 15 Hz. Tiny shoes, hat brims and tools share the same thin-part geometry policy as architecture.
+Only changed, contiguous matrix ranges upload; pose sampling never hides actors or scene objects,
+and resolution stays unchanged. This is an implementation improvement, not a new measured
+FPS claim. Reduced-motion/paused clocks and map/light resolutions retain the existing behavior.
+
 ## Run it
 `npm run dev:v2` → `http://localhost:31120/v2/` (preview config "Pomodoro v2"). `npm run build`
 builds both apps. Tests live next to the code and run inside `npm test`.

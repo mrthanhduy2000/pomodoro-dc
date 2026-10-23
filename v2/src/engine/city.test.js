@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 
-import { blueprintsOf, ERA_BRICKS } from './catalog.js';
+import { blueprintsOf, ERA_BRICKS, HOIAN_BLUEPRINTS, blueprint } from './catalog.js';
 import {
   brickReport, buildCity, candidatePlots, cmdCancelPlan, cmdPlan, GOLD_RATE, hash01, isCandidatePlot, ledger,
   STATUE_RATE, surpriseOf, constructionProgress, constructionMinutes,
@@ -265,4 +265,24 @@ test('minute construction: legacy buildings, session identities and original plo
   assert.equal(extended.buildings[0].bricks.length,4);
   assert.equal(constructionMinutes(extended.buildings[1]),50);
   assert.deepEqual(extended.buildings.map(b=>b.plot),[{x:0,y:0},{x:1,y:0}]);
+});
+
+
+test('Hoi An choices persist exact blueprint identities, minute budgets and fixed plots without reinterpreting old plans',()=>{
+  const contracts=[['ha-tanky-v1','house',4],['ha-phunghung-v1','house',4],['ha-phuckien-v1','hall',8],['ha-chuacau-v1','temple',12],['ha-cho-v1','market',8],['ha-thanhha-v1','market',8],['ha-kimbong-v1','hall',8]];
+  for(const [key,shape,size] of contracts)assert.deepEqual([blueprint(key)?.key,blueprint(key)?.shape,blueprint(key)?.size],[key,shape,size],'released choices must never change shape or minute budget');
+  const historic=[plan('old',T0-MIN),...Array.from({length:4},(_,i)=>session(`old${i}`,T0+i*30*MIN)).flat()];
+  const before=city(historic).buildings[0];
+  for(const bp of HOIAN_BLUEPRINTS) {
+    assert.equal(blueprint(bp.key).name,bp.name);
+    const command=cmdPlan(city(historic),T0+DAY,{planId:bp.key,blueprintKey:bp.key,plot:{x:1,y:0}});
+    assert.ok(command);
+    const log=[...historic,command,...Array.from({length:bp.size},(_,i)=>timedSession(`work-${i}`,T0+DAY+MIN+i*30*MIN,25)).flat()];
+    const after=city(log),built=after.buildings[1];
+    assert.deepEqual(after.buildings[0],before);
+    assert.equal(built.key,bp.key);assert.equal(built.name,bp.name);
+    assert.equal(constructionMinutes(built),bp.size*25);assert.equal(constructionProgress(built),1);
+    assert.deepEqual(built.plot,{x:1,y:0});
+    assert.equal(after.totalBricks,4+bp.size);
+  }
 });

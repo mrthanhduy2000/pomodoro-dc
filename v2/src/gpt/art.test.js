@@ -1,6 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { architectureOf, PLACES, SEASONS, postcardCity } from './art.js';
+import { HOIAN_BLUEPRINTS } from '../engine/catalog.js';
 import { buildCity, ledger } from '../engine/city.js';
 import { reduce } from '../engine/timer.js';
 import { plotCenter, PLOT } from '../city/layout.js';
@@ -68,4 +69,38 @@ test('minute preview phases use focused time rather than brick count and never a
   assert.equal(architectureOf(sample.buildings[0]).progress,.1);
   assert.equal(b.workMs,3000000);
   assert.deepEqual(b.plot,{x:2,y:-1});
+});
+
+
+test('every documented Hoi An choice stays local and read-only at all minute construction stages',async()=>{
+  const {drawHoiAnBuilding}=await import('./hoian.js');
+  const earned=freeze({buildings:[{planId:'real',plot:{x:7,y:4}}]});
+  const before=JSON.stringify(earned),sample=postcardCity(earned,true);
+  assert.equal(sample.buildings.length,20);
+  assert.deepEqual(sample.buildings.map(b=>b.plot),postcardCity(earned).buildings.map(b=>b.plot));
+  assert.deepEqual(sample.buildings.slice(0,7).map(b=>b.key),HOIAN_BLUEPRINTS.map(b=>b.key));
+  for(const bp of HOIAN_BLUEPRINTS)for(let percent=0;percent<=100;percent+=5) {
+    const b=freeze({key:bp.key,planId:bp.key,shape:bp.shape,plot:{x:2,y:3},size:bp.size,workUnit:'minutes',targetMinutes:bp.size*25,workMs:bp.size*25*60000*percent/100,bricks:[]});
+    const original=JSON.stringify(b),parts=[];
+    drawHoiAnBuilding({part:(...args)=>parts.push(args),beam:()=>{},shopPools:[]},b);
+    assert.deepEqual(parts.find(p=>p[1]==='paving')[2],[8,.09,12]);
+    for(const part of parts) {
+      assert.ok(part[2].every(Number.isFinite));assert.ok(part[3].every(value=>Number.isFinite(value)&&value>0),`${bp.key} has invalid geometry`);
+      assert.ok(Math.abs(part[2][0]-8)<1.9&&Math.abs(part[2][2]-12)<1.5,`${bp.key} escapes its original plot`);
+      assert.equal(part[5].planId,b.planId);
+    }
+    assert.equal(JSON.stringify(b),original);
+  }
+  assert.equal(JSON.stringify(earned),before);
+});
+
+
+test('new waterfront model fitting preserves the original plot centre and only shortens depth',async()=>{
+  const {fitHeritageQuay}=await import('./heritage.js');
+  const matrix={elements:[1,0,0,0,0,1,0,0,0,0,1,0,8,2,-4,1]};
+  fitHeritageQuay(matrix,-4);
+  assert.deepEqual(matrix.elements.slice(12,15),[8,2,-4]);
+  assert.equal(matrix.elements[0],1);assert.equal(matrix.elements[5],1);assert.ok(matrix.elements[10]>0&&matrix.elements[10]<1);
+  assert.ok(-4+1.3*matrix.elements[10]<=-3.08,'ground props stay behind the fixed north quay');
+  const before=JSON.stringify(matrix);fitHeritageQuay(matrix,null);assert.equal(JSON.stringify(matrix),before);
 });

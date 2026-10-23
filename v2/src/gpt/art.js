@@ -1,3 +1,4 @@
+import { HOIAN_BLUEPRINTS } from '../engine/catalog.js';
 import { constructionProgress } from '../engine/city.js';
 /** Presentation only: no event creation, store writes, or changes to plot coordinates. */
 export const PLACES = {
@@ -27,11 +28,15 @@ export function architectureOf(building) {
   return { floors, width, depth: 1.7, height: floors * 0.9, progress: constructionProgress(building) };
 }
 /** A labelled, read-only postcard. These objects NEVER enter buildCity or the event log. */
-export function postcardCity(city) {
+export function postcardCity(city, heritage = false) {
   const spots = [[-1, 0], [0, 0], [1, 0], [-1, -1], [0, -1], [1, -1], [0, 1], [-1, 1], [1, 1],
     [-1,-2],[0,-2],[1,-2],[-2,-1],[-2,0],[-2,1],[-2,-2],[2,-1],[2,0],[2,1],[2,-2]];
   const shapes = ['house', 'market', 'hall', 'house', 'temple', 'house', 'tower', 'market', 'house'];
   return { ...city, candidates: [], pile: [], residents: [], lanterns: [], statues: [], bricks: [],
-    buildings: spots.map(([x, y], i) => ({ planId: `postcard-${i}`, plot: { x, y }, shape: shapes[i] || (i%4===0?'market':'house'), style: 5, size: 8, workUnit: 'minutes', targetMinutes: 200, workMs: 12000000, bricks: Array.from({ length: 8 }, (_, j) => ({ id: `postcard-${i}-${j}`, sid: '', kind: 'plain' })) })),
+    buildings: spots.map(([x, y], i) => {
+      const bp=heritage?HOIAN_BLUEPRINTS[i]:null,size=bp?.size||8;
+      return { planId:`postcard-${i}`,plot:{x,y},key:bp?.key,name:bp?.name,shape:bp?.shape||shapes[i]||(i%4===0?'market':'house'),style:5,size,workUnit:'minutes',targetMinutes:size*25,workMs:size*25*60000,
+        bricks:Array.from({length:size},(_,j)=>({id:`postcard-${i}-${j}`,sid:'',kind:'plain'})) };
+    }),
   };
 }

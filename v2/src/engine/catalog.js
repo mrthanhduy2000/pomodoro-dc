@@ -78,7 +78,21 @@ export function blueprintsOf(eraN) {
   return GRAMMAR.map((g) => ({ key: `e${style.n}-${g.slot}`, era: style.n, name: names[g.slot], shape: g.shape, size: g.size }));
 }
 
+/** Stable, additive choices. Never rename/rebudget a released key: old plans replay by key. */
+export const HOIAN_BLUEPRINTS = Object.freeze([
+  { key:'ha-tanky-v1', era:1, name:'Nhà cổ Tấn Ký', shape:'house', size:4, feature:'Nhà gỗ sâu, giếng trời và sân trong.', life:'Nhà ở và không gian buôn bán của gia đình thương nhân.', source:'https://danangfantasticity.com/en/kien-truc/nha-co-tan-ky' },
+  { key:'ha-phunghung-v1', era:1, name:'Nhà cổ Phùng Hưng', shape:'house', size:4, feature:'Hai tầng, ban công gỗ rộng và mái ngói.', life:'Nếp nhà thương nhân, sinh hoạt gắn với phố buôn.', source:'https://hoianworldheritage.org.vn/vi/news/Diem-di-tich/Nha-co-Phung-Hung-12.hwh' },
+  { key:'ha-phuckien-v1', era:1, name:'Hội quán Phúc Kiến', shape:'hall', size:8, feature:'Cổng tam quan, sân trước, chính điện và mái trang trí.', life:'Không gian tín ngưỡng và sinh hoạt cộng đồng.', source:'https://danangfantasticity.com/hoi-quan-phuc-kien' },
+  { key:'ha-chuacau-v1', era:1, name:'Chùa Cầu', shape:'temple', size:12, feature:'Cầu có mái, mặt gỗ, trụ đá và gian thờ bên cầu.', life:'Lối qua lại và nơi thờ Bắc Đế Trấn Vũ; có tượng khỉ và chó ở hai đầu cầu.', source:'https://danangfantasticity.com/en/kien-truc/chua-cau' },
+  { key:'ha-cho-v1', era:1, name:'Chợ Hội An', shape:'market', size:8, feature:'Dãy chợ mái ngói, quầy hàng và khu ăn uống.', life:'Mua bán thực phẩm, ăn cao lầu và các món địa phương.', source:'https://www.hoianworldheritage.org.vn/vi/news/am-thuc/cac-dia-chi-thuong-thuc-cao-lau-hoi-an-ngon-2332.hwh' },
+  { key:'ha-thanhha-v1', era:1, name:'Xưởng gốm Thanh Hà', shape:'market', size:8, feature:'Bàn xoay, sân phơi gốm và khu lò nung.', life:'Chuốt gốm, phụ bàn xoay và trưng bày sản phẩm.', source:'https://hoianworldheritage.org.vn/vi/news/Du-lich-Hoi-An/ve-mien-co-tich-gom-thanh-ha-2767.hwh' },
+  { key:'ha-kimbong-v1', era:1, name:'Xưởng mộc Kim Bồng', shape:'hall', size:8, feature:'Xưởng mở, bàn thợ, khung gỗ và chi tiết ghe.', life:'Chạm khắc, chế tác mộc và đóng, sửa ghe thuyền.', source:'https://www.hoianworldheritage.org.vn/vi/news/Thong-bao/thong-tin-khai-truong-hoat-dong-huong-dan-tham-quan-tai-lang-moc-kim-bong-2679.hwh' },
+].map(Object.freeze));
+export const heritageOf = key => HOIAN_BLUEPRINTS.find(bp=>bp.key===key) ?? null;
+
 export function blueprint(key) {
+  const heritage=heritageOf(key);
+  if(heritage)return heritage;
   const m = /^e(\d+)-(\d)$/.exec(String(key));
   if (!m) return null;
   const era = Number(m[1]);

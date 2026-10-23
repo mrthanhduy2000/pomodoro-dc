@@ -1,5 +1,6 @@
 /** Hoi An-inspired architectural kit. Only draws; never changes a plot or session. */
 import { hash01, constructionProgress } from '../engine/city.js';
+import { drawHeritageBuilding, heritageFootprints } from './heritage.js';
 import { plotCenter } from '../city/layout.js';
 
 export const HOIAN_NAMES = { house: 'Nhà phố thương nhân', hall: 'Hội quán', market: 'Chợ phố Hội', tower: 'Lầu chuông', temple: 'Nhà văn hóa sân trong' };
@@ -225,8 +226,8 @@ export function drawHoiAnBuilding(scene, b) {
       [[-.65,-.05,1.4,1.48,2.55],[.91,.01,1.26,1.28,1.05]],
       [[-.17,-.08,2.75,1.4,1.08]], [[-.87,-.02,1.13,1.52,2.02],[.57,-.44,1.63,.66,1.15]],
       [[0,-.05,2.91,1.38,2.1]]];
-    const footprints=b.shape==='house'?houseFootprints[frontage]:
-      b.shape==='tower'?[[0,0,.91,.95,2.3]]:b.shape==='temple'?[[0,-.48,2.3,.66,1.14]]:[[0,-.12,2.85,1.24,1.55]];
+    const footprints=heritageFootprints(b.key)||(b.shape==='house'?houseFootprints[frontage]:
+      b.shape==='tower'?[[0,0,.91,.95,2.3]]:b.shape==='temple'?[[0,-.48,2.3,.66,1.14]]:[[0,-.12,2.85,1.24,1.55]]);
     for(const [x,z,w,d,h] of footprints) {
       if(progress>=.08) {
         box('stone',x,.16,z,w+.08,.16,d+.08);
@@ -248,6 +249,8 @@ export function drawHoiAnBuilding(scene, b) {
     }
     return;
   }
+
+  if(drawHeritageBuilding({box,part,beam,roof,gableRoof,body,window,posts,rail,garden,lantern,awning,counter},b,progress))return;
 
   if(progress>=.65 && b.plot.y!==0 && ['house','hall','market'].includes(b.shape)) {
     // A shallow service wing belongs to this building; it is not a second earned house.

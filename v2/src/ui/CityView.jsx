@@ -1,6 +1,6 @@
 import { useCallback, useMemo, useState } from 'react';
 
-import { blueprintsOf, ERAS, eraStyle } from '../engine/catalog.js';
+import { blueprintsOf, ERAS, eraStyle, heritageOf } from '../engine/catalog.js';
 import { ledger, constructionProgress, constructionMinutes, constructionStage, MINUTES_PER_STEP } from '../engine/city.js';
 import { dayKey } from '../engine/stats.js';
 import CityCanvas from './LazyCityCanvas.jsx';
@@ -70,7 +70,7 @@ export function Detail({ pick, city, categories, onFocus, onClose, architectural
           <button type="button" className="icon-btn" onClick={onClose} aria-label="Đóng">✕</button>
         </div>
         <h3>{b.name}</h3>
-        <p className="muted">Kỷ {b.style} · {eraStyle(b.style).name} · {done ? 'đã xong' : b.workUnit==='minutes'?`${Math.floor(constructionMinutes(b))}/${b.targetMinutes} phút · ${constructionStage(b).label}`:`đang xây ${b.bricks.length}/${b.size} phiên (kế hoạch cũ)`}</p>
+        <p className="muted">{heritageOf(b.key)?'Hội An · Địa danh thật':`Kỷ ${b.style} · ${eraStyle(b.style).name}`} · {done ? 'đã xong' : b.workUnit==='minutes'?`${Math.floor(constructionMinutes(b))}/${b.targetMinutes} phút · ${constructionStage(b).label}`:`đang xây ${b.bricks.length}/${b.size} phiên (kế hoạch cũ)`}</p>
         <Storeys building={b} categories={categories} />
         {l.from && (
           <p>

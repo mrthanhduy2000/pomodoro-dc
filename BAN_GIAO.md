@@ -1,3 +1,30 @@
+> Last update: **2026-10-23 — DOCUMENTED, BUILDABLE HOI AN LANDMARKS AND CRAFT LIFE.**
+> Seven additive stable blueprint keys: Tan Ky, Phung Hung, Phuc Kien, Chua Cau, Hoi An market,
+> Thanh Ha pottery workshop and Kim Bong carpentry workshop. Source-linked feature/life notes are
+> in the catalog and v2/DESIGN.md. Interpretive plot-sized models, not surveyed replicas/map.
+> Reuse the existing build.plan blueprint field, minute budgets, kit/materials/instancing and
+> construction phases. No SQL/event rewrite, new reward system or replacement of earned houses.
+> New landmark keys retain their architecture under surrounding style changes; old keys keep art.
+> The first seven read-only sample models demonstrate the choices; twenty sample IDs/anchors stay.
+> Preview-to-build opens the normal placement picker. Collection progress derives only from real
+> finished landmarks. Reload old clients before using new catalog keys; no stored data migration.
+> Thanh Ha potter/helper, Kim Bong carver/carrier and market diners replace generic activity.
+> Shrine plots avoid random cafe/cart scenes. Walking gait follows distance; far poses sample at
+> 15 Hz past 20 units, while near poses retain cadence. Upload only changed contiguous matrix ranges.
+> Thin shoes/brims/tools now share architecture's low-tessellation small-part policy. New waterfront
+> models/actors fit behind the fixed quay around unchanged plot centres; no river/old house moves.
+> Native DPR, map resolution, lights, 40 Hz scene cadence, paused clocks and 3D preview remain.
+> No new FPS comparison is claimed: the new sample has different architecture from the prior run.
+> Exact pre/post drawing parity passed for 520 historical building/phase cases. Wrong-blueprint
+> replay deliberately failed the new key/budget guard in an isolated mutant (source untouched).
+> Validation: 1,934 full-suite passes, zero failures, one expected skip; three cross-checks passed.
+> All 42 focused checks pass after final edits, including the additional quay-centre guard.
+> Released budgets and quay centres also failed their isolated mutants as intended; lint/build pass.
+> Preview → placement → cancel keeps real counts at zero. Verify Vercel Ready/new live SHA and
+> capture actual 3D landmark/workshop views before reporting completion.
+
+---
+
 > Last update: **2026-10-23 — M3 GPT FRAME CADENCE AND VERSIONED MINUTE CONSTRUCTION (ADR-104).**
 > Measured visible Apple M3 / ANGLE Metal, 20 sample buildings, 1100×700 CSS, forced Retina DPR2
 > (1464×1048 buffer): orbit 20.35 → 39.43 FPS; zoom 20.59 → 34.78 FPS. P95 68.2 → 42 ms and

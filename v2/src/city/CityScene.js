@@ -183,7 +183,7 @@ export class CityScene {
     this.model = model;
     const { city, picking, selectedPlan } = model;
     const sig = JSON.stringify([
-      city.buildings.map((b) => [b.planId, b.plot.x, b.plot.y, b.style, b.workUnit, b.workMs, b.bricks.map((x) => x.id + x.categoryId)]),
+      city.buildings.map((b) => [b.planId, b.plot.x, b.plot.y, b.style, b.key, b.workUnit, b.workMs, b.bricks.map((x) => x.id + x.categoryId)]),
       city.pile.map((b) => b.id), city.residents.length, city.lanterns.length, city.statues.length,
       city.festivalNow, picking ? city.candidates : 0, model.categoriesKey,
     ]);

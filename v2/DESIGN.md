@@ -99,6 +99,12 @@ and increases distance haze. The procedural sky shares its horizon with exponent
 its glow direction with the actual sun. No image background, extra light, camera change or
 additional postprocessing pass is used.
 
+Hoi An houses have six stable frontage compositions, selected by a suffix hash of planId.
+The variant affects massing, ridge direction, gallery/courtyard and shop displays, never plot
+coordinates or construction facts. Posed street/quay figures, vendors and boat occupants are
+decorative; they are separate from earned residents and never write or impersonate diary records.
+Boat occupants share their hull transform.
+
 Organic wear is deterministic: world-space plaster dampness, grouped clay-tile ageing,
 small roof installation offsets and irregular street planting never reseed on rebuild.
 Broadleaf branches and palm fronds vary by their existing planting seed. Broadleaf twigs use

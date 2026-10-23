@@ -8,13 +8,15 @@ export function drawHoiAnBuilding(scene, b) {
   const c = plotCenter(b.plot);
   const pick = { type: 'building', planId: b.planId };
   const progress = Math.min(1, b.bricks.length / b.size);
-  const variant = Math.floor(hash01(`front:${b.planId}`) * 4);
+  const variant = Math.floor(hash01(`${b.planId}:front`) * 4);
+  const frontage=Math.floor(hash01(`${b.planId}:architecture`)*6);
   const wall = ['wall:#e5b65c', 'wall:#ddbf7b', 'wall:#dba65b', 'wall:#e8ca89'][variant];
   const tiles = ['tile:#505b57','tile:#68716a','tile:#7c7765','tile:#595346'];
   const random = (label) => hash01(`${b.planId}:${label}`);
+  const mirror=b.shape==='house' && random('mirror')>.5?-1:1;
   const shutterColor = ['#4f6555','#786247','#476466','#705043'][variant];
-  const part = (kind, mat, x, y, z, w, h, d, rotation = [0, 0, 0]) => scene.part(kind, mat, [c.x+x, y, c.z+z], [w,h,d], rotation, pick);
-  const beam = (mat, a, to, radius=.025) => scene.beam(mat, [c.x+a[0],a[1],c.z+a[2]], [c.x+to[0],to[1],c.z+to[2]], radius, pick);
+  const part = (kind, mat, x, y, z, w, h, d, rotation = [0, 0, 0]) => scene.part(kind, mat, [c.x+mirror*x, y, c.z+z], [w,h,d], [rotation[0],mirror*rotation[1],mirror*rotation[2]], pick);
+  const beam = (mat, a, to, radius=.025) => scene.beam(mat, [c.x+mirror*a[0],a[1],c.z+a[2]], [c.x+mirror*to[0],to[1],c.z+to[2]], radius, pick);
   const box = (mat,x,y,z,w,h,d) => part('box',mat,x,y,z,w,h,d);
   const roof = (x,y,z,w,d,rise=.42) => {
     if(progress < .5) return;
@@ -55,6 +57,39 @@ export function drawHoiAnBuilding(scene, b) {
     beam('tile',[x-w/2-.025,y+rise+.04,z],[x+w/2+.025,y+rise+.04,z],.055);
     if(b.shape !== 'house' && b.shape !== 'market') for(const end of [-1,1]) {
       beam('tile',[x+end*w*.36,y+rise+.04,z],[x+end*w*.48,y+rise+.14,z],.035);
+    }
+  };
+  const gableRoof=(x,y,z,w,d,rise=.5)=>{
+    if(progress<.5)return;
+    for(const side of [-1,1])for(let row=0;row<10;row+=1) {
+      const u=(row+.5)/10,height=rise*(1-u)+.07*u*u;
+      const slope=Math.atan2(rise-.14*u,w/2);
+      part('box','tile',x+side*w/2*u,y+height,z,w/20+.025,.028,d,[0,0,-side*slope]);
+      const count=Math.round(d/.085);
+      for(let col=0;col<count;col+=1) {
+        const wear=random(`gable:${row}:${col}:${side}`);
+        part('roofTile',tiles[(variant+(wear>.8?1:0))%4],x+side*w/2*u,y+height+.025,z-d/2+(col+.5)*d/count,.03,w/18,.03,[0,0,Math.PI/2-side*slope]);
+      }
+    }
+    for(const end of [-1,1])for(let j=0;j<7;j+=1)box(wall,x,y+rise*j/7,z+end*(d/2-.04),w*(1-j/7),rise/7+.01,.055);
+    beam('tile',[x,y+rise+.03,z-d/2-.025],[x,y+rise+.03,z+d/2+.025],.045);
+  };
+  const awning=(x,y,z,width,color)=>{
+    if(progress<.65)return;
+    for(let stripe=0;stripe<10;stripe+=1) {
+      part('box',stripe%2?'#d9cdae':color,x+(stripe-4.5)*width/10,y,z,width/10,.025,.52,[.16,0,0]);
+      part('orb',stripe%2?'#d9cdae':color,x+(stripe-4.5)*width/10,y-.055,z+.25,width/20,.06,.025);
+    }
+  };
+  const counter=(x,y,z,width,wares)=>{
+    if(progress<.65)return;
+    box('timber',x,y,z,width,.07,.32);
+    for(const side of [-1,1])box('timber',x+side*width*.4,y/2,z,.045,y,.16);
+    for(let item=0;item<7;item+=1) {
+      const px=x+(item-3)*width/8;
+      if(wares==='cloth') {
+        for(let fold=0;fold<3;fold+=1)box(['#557c80','#a75e4d','#c9b38c'][(item+fold)%3],px,y+.055+fold*.028,z,.11,.025,.21);
+      } else part('taper',item%2?'#a97f5a':'#c8b98d',px,y+.12,z,.055,.16,.055);
     }
   };
   const window = (x,y,z,w=.36,h=.48, shutter=true) => {
@@ -166,6 +201,75 @@ export function drawHoiAnBuilding(scene, b) {
   }
   switch(b.shape) {
     case 'house': {
+      if(frontage===1) {
+        // Low tea room with an open timber gallery and a small upper retreat.
+        body(-.55,-.07,1.85,1.42,1.63);roof(-.55,1.8,-.04,2.1,1.7,.37);
+        body(1.03,.02,.93,1.15,.92);roof(1.03,1.09,.03,1.15,1.43,.26);
+        for(const dx of [-1.16,-.57,.02])window(dx,1.4,.66,.28,.38,false);
+        posts([-1.35,-.55,.25],.16,1.06,.94);rail(-.55,1.35,1.08,1.85);
+        roof(-.55,1.12,.94,2.05,.55,.15);
+        counter(-.55,.48,.75,1.35,'pottery');garden(1.36,.27,.79,.3);
+        for(const dx of [-1.15,.05,1.04])lantern(dx,.96,1.14);
+        break;
+      }
+      if(frontage===2) {
+        // A narrow, tall tailor's shop turns its ridge toward the street.
+        body(-.65,-.05,1.4,1.48,2.55);gableRoof(-.65,2.72,-.02,1.7,1.7,.56);
+        body(.91,.01,1.26,1.28,1.05);roof(.91,1.22,.02,1.5,1.55,.27);
+        window(-.65,2.21,.72,.56,.5);window(-.65,1.51,.72,.56,.43,false);
+        awning(-.65,1.09,.97,1.65,'#557c80');counter(.91,.53,.88,1.06,'cloth');
+        if(progress>=.65) {
+          for(let roll=0;roll<5;roll+=1)part('pole',['#557c80','#a75e4d','#c9b38c'][roll%3],.5+roll*.18,.74,.66,.045,.75,.045,[0,0,(roll-2)*.08]);
+          box('timber',.31,1.72,.87,.32,.48,.06);
+          for(let mark=0;mark<4;mark+=1)box('#c9b38c',.31,1.58+mark*.085,.91,.19,.018,.012);
+        }
+        lantern(-1.3,1.21,1.05);garden(1.46,.27,.62,.26);
+        break;
+      }
+      if(frontage===3) {
+        // Single-storey pottery workshop: broad shelves and unequal intersecting roofs.
+        body(-.17,-.08,2.75,1.4,1.08);roof(-.17,1.25,-.04,3.05,1.65,.36);
+        gableRoof(.87,1.32,.02,.93,1.58,.34);
+        awning(-.48,1.03,1,2.1,'#a75e4d');counter(-.49,.46,.86,1.85,'pottery');
+        if(progress>=.65)for(let shelf=0;shelf<3;shelf+=1) {
+          box('timber',1.18,.39+shelf*.21,.75,.54,.035,.2);
+          for(let jar=0;jar<4;jar+=1)part('taper',jar%2?'#b58d5e':'#d1ba91',.98+jar*.13,.48+shelf*.21,.77,.04,.12,.04);
+        }
+        lantern(-1.4,.96,.94);lantern(.42,.96,.94);garden(-1.55,.25,.58,.22);
+        break;
+      }
+      if(frontage===4) {
+        // L-shaped dwelling leaves a planted courtyard and an off-centre timber gate.
+        body(-.87,-.02,1.13,1.52,2.02);gableRoof(-.87,2.19,-.02,1.4,1.74,.44);
+        body(.57,-.44,1.63,.66,1.15);roof(.57,1.32,-.43,1.86,.91,.32);
+        window(-.87,1.69,.76,.46,.43);window(.58,.77,-.08,.46,.43,false);
+        if(progress>=.65) {
+          box('stone',.62,.22,.53,.96,.09,.7);
+          part('taper','#b78054',.66,.34,.53,.16,.28,.16);
+          for(let leaf=0;leaf<50;leaf+=1) {
+            const u=random(`court:${leaf}`);part('leaf','foliage:#587642',.66+Math.sin(leaf)*.19,.48+u*.35,.53+Math.cos(leaf)*.18,.08,.18,.08,[leaf,u*4,u]);
+          }
+          box(wall,.53,.42,1.06,1.65,.49,.08);
+        }
+        posts([.12,.91],.16,1.13,.85);roof(.52,1.03,1.1,1.04,.42,.22);
+        lantern(.15,.84,1.19);garden(-1.48,.27,.62,.26);
+        break;
+      }
+      if(frontage===5) {
+        // Broad corner house uses an arched loggia instead of a long timber balcony.
+        const upper=1.88+random('corner-height')*.3;
+        body(0,-.05,2.91,1.38,upper);roof(0,upper+.17,-.02,3.22,1.65,.42);
+        for(const dx of [-.94,0,.94]) {
+          window(dx,upper-.35,.67,.43,.48,false);
+          if(progress>=.65) {
+            part('arch','timber',dx,.67,.77,.69,.92,.08);
+            box('stone',dx,.17,.92,.73,.12,.38);
+          }
+          lantern(dx,1.22,.99);
+        }
+        roof(0,1.24,.93,3.2,.5,.14);garden(-1.37,.33,1.08,.27);garden(1.37,.33,1.08,.27);
+        break;
+      }
       // A full merchant frontage: two unequal wings, recessed shop bays and inhabited upper rooms.
       const flip=variant%2 ? -1:1;
       const mainX=flip*-.43, wingX=flip*1.05;

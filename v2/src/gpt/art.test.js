@@ -42,7 +42,7 @@ test('GPT presentation preserves existing session identities, notes, plots and p
 test('Hoi An kit keeps every construction phase anchored to the original plot and preserves its facts', async () => {
   const { drawHoiAnBuilding } = await import('./hoian.js');
   for (const shape of ['house','hall','market','tower','temple']) {
-    for (let seed=0;seed<8;seed+=1) for (let count=0;count<=12;count+=1) {
+    for (let seed=0;seed<(shape==='house'?24:8);seed+=1) for (let count=0;count<=12;count+=1) {
       const b=freeze({planId:`original-${shape}-${seed}`,plot:{x:-3,y:2},shape,size:12,bricks:Array.from({length:count},(_,i)=>({id:`session-${i}`,goal:'Preserve my diary'}))});
       const original=JSON.stringify(b);
       const parts=[];

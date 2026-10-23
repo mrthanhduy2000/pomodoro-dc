@@ -1,3 +1,25 @@
+> Last update: **2026-10-23 — SIX HOI AN HOUSE FRONTAGES AND EVERYDAY STREET LIFE.**
+> Added six deterministic house compositions: merchant balcony, timber tea room, tall gabled
+> tailor shop, low pottery workshop, L-shaped courtyard home and arched corner loggia.
+> Independent mirroring, plaster/shutter palettes and corner-house height variation reduce repeats.
+> Hoi An facade/material selection now hashes a suffix after planId. Prefix-first hashing of
+> sequential sample ids had placed whole rows in the same variant bucket. Engine hashing and
+> every stored id/plot remain untouched. Gabled roofs have individual perpendicular tile courses.
+> Developed streets gain posed pedestrians, basket carriers, fruit carts/parasol vendors and
+> open bicycle wheels/spokes. Developed canal-side plots gain basket/rod details and quay figures.
+> Hoi An boats carry seated/rowing figures parented to their existing hulls, so bobbing stays
+> coherent. Decorative figures are not earned residents and never open or create diary records.
+> Preview still has twenty sample buildings; real progress, plots, picking and timer unchanged.
+> The coordinate/fact guard now covers 24 house seeds, including every frontage, at all 13 stages.
+> Validation: 1,924 full-suite passes, zero failures, one expected skip; all three cross-checks
+> and 44 targeted guards passed; lint/build passed. Browser reviewed all five building types,
+> day/night and winter, with no shader errors; 375px remains exactly 375px wide, one canvas,
+> zero images. Evidence: `/tmp/pomodoro-gpt-review/lively-day.jpg` and `lively-night.jpg`.
+> The journal guard required rotation: 17 older changelog entries were preserved verbatim in
+> `docs/archive/CHANGELOG_2026-10-23.md`; no history was removed.
+
+---
+
 > Last update: **2026-10-23 — CONNECTED HOI AN FRONTAGES AND FULL GREEN CANOPIES.**
 > Hoi An paving no longer covers plotBounds' extra navigation margin. Camera/shadow framing
 > still uses the unmodified plotBounds. Outer street planting softens the exposed perimeter without adding houses.

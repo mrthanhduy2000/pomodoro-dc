@@ -14,6 +14,8 @@ import { drawHoiAnBuilding } from './hoian.js';
 import { architectureOf, DEFAULT_APPEARANCE, PLACES, snowIn } from './art.js';
 
 const GEO = {
+  hat: new THREE.ConeGeometry(1,1,18),
+  hoop: new THREE.TorusGeometry(1,.075,6,24),
   box: new RoundedBoxGeometry(1, 1, 1, 2, 0.04),
   orb: new THREE.SphereGeometry(1, 12, 9),
   pole: new THREE.CylinderGeometry(1, 1, 1, 10),
@@ -558,7 +560,48 @@ export class GptScene extends CityScene {
         add(GEO.box,this.material('#af8c58'),[0,y,z],[.67,.025,.045],[z*.7,0,0]);
       }
     }
+    if(this.a.place==='hoian')this.streetPerson(index===0?.33:-.35,.01,0,`boat-person:${index}`,index===0?'row':'sit',Math.PI/2,boat);
     boat.userData.phase=index*2.1;return boat;
+  }
+
+  streetPerson(x,y,z,seed,pose='walk',heading=0,parent=null) {
+    const random=label=>hash01(`${seed}:${label}`);
+    const shirt=['#526f7a','#a87950','#8b5650','#b6ab8e','#546b59'][Math.floor(random('shirt')*5)];
+    const skin='#c69875',sitting=pose==='sit'||pose==='row',hip=sitting?.19:.3;
+    const origin=new THREE.Vector3(x,y,z),turn=new THREE.Quaternion().setFromAxisAngle(UP,heading);
+    const position=p=>new THREE.Vector3(...p).applyQuaternion(turn).add(origin).toArray();
+    const part=(kind,mat,p,scale,rotation=[0,0,0])=>{
+      const quaternion=turn.clone().multiply(new THREE.Quaternion().setFromEuler(new THREE.Euler(...rotation)));
+      if(parent) {
+        const mesh=new THREE.Mesh(GEO[kind],this.material(mat));mesh.position.set(...position(p));mesh.scale.set(...scale);mesh.quaternion.copy(quaternion);mesh.castShadow=true;mesh.receiveShadow=true;parent.add(mesh);
+      } else this.part(kind,mat,position(p),scale,[0,0,0],null,quaternion);
+    };
+    const bone=(mat,a,b,r)=>{
+      const from=new THREE.Vector3(...a),to=new THREE.Vector3(...b),direction=to.clone().sub(from);
+      const center=from.clone().add(to).multiplyScalar(.5);
+      const quaternion=new THREE.Quaternion().setFromUnitVectors(UP,direction.normalize());
+      if(parent) {
+        const mesh=new THREE.Mesh(GEO.pole,this.material(mat));mesh.position.set(...position(center.toArray()));mesh.scale.set(r,from.distanceTo(to),r);mesh.quaternion.copy(turn.clone().multiply(quaternion));mesh.castShadow=true;parent.add(mesh);
+      } else this.part('pole',mat,position(center.toArray()),[r,from.distanceTo(to),r],[0,0,0],null,turn.clone().multiply(quaternion));
+    };
+    part('pole',shirt,[0,hip+.12,0],[.075,.24,.055]);
+    part('orb',skin,[0,hip+.31,.006],[.054,.066,.052]);
+    bone(skin,[0,hip+.23,0],[0,hip+.27,0],.023);
+    for(const side of [-1,1]) {
+      const stride=sitting?.17:side*(pose==='walk'?.075:.012);
+      bone('#4c514b',[side*.036,hip,0],[side*.04,sitting?.14:.16,stride],.024);
+      bone('#4c514b',[side*.04,sitting?.14:.16,stride],[side*.045,.035,stride],.02);
+      part('box','#493e34',[side*.045,.025,stride+.025],[.045,.035,.09]);
+      const elbow=[side*.09,hip+.09,pose==='carry'||pose==='row'?.12:-stride];
+      const hand=[side*.07,hip+.015,pose==='carry'||pose==='row'?.23:-stride*.9];
+      bone(shirt,[side*.063,hip+.21,0],elbow,.024);bone(skin,elbow,hand,.017);
+    }
+    if(random('hat')>.28)part('hat','#c8b68c',[0,hip+.386,0],[.11,.065,.11]);
+    else part('orb','#493e34',[0,hip+.354,-.008],[.057,.034,.053]);
+    if(pose==='carry') {
+      part('taper','#a8875b',[0,hip-.015,.23],[.12,.12,.09]);
+      part('hoop','#c8b68c',[0,hip+.05,.23],[.115,.09,.075],[Math.PI/2,0,0]);
+    }
   }
 
   buildStreetscape() {
@@ -609,8 +652,39 @@ export class GptScene extends CityScene {
         }
         this.part('taper','#b98855',[tx,.42,tz],[.04,.07,.04]);
       }
+      const streetZ=c.z+(b.plot.y===-1?.79:1.58);
+      const activity=hash01(`${b.planId}:street-life`);
+      this.streetPerson(c.x+(b.plot.y===-1?-1.73:-.18),.015,streetZ,`${b.planId}:visitor`,activity>.5?'carry':'walk',activity*3);
+      if(b.plot.y!==-1)this.streetPerson(c.x+.5,.015,c.z+1.68,`${b.planId}:neighbour`,'walk',-1.1);
+      if(b.plot.y!==-1 && activity>.48) {
+        // A fruit cart, parasol and vendor occupy the existing street edge.
+        const vx=c.x+.99,vz=c.z+1.48;
+        this.part('box','timber',[vx,.39,vz],[.58,.45,.3]);
+        for(const side of [-1,1])this.part('hoop','iron',[vx+side*.22,.15,vz+.17],[.12,.12,.12]);
+        this.beam('timber',[vx,.46,vz],[vx,1.13,vz],.018);
+        this.part('hat',activity>.75?'#b47b57':'#718575',[vx,1.19,vz],[.45,.15,.4]);
+        for(let fruit=0;fruit<15;fruit+=1)this.part('orb',fruit%2?'#b28d4e':'#85914c',[vx+(fruit%5-2)*.09,.65,vz+(Math.floor(fruit/5)-1)*.065],[.04,.038,.04]);
+        this.streetPerson(vx+.38,.015,vz-.12,`${b.planId}:vendor`,'carry',-.8);
+      }
+      if(b.plot.y===0 || b.plot.y===-1) {
+        const bankZ=b.plot.y===0?-.62:-3.33,bankX=c.x+1.7;
+        this.part('taper','#a8875b',[bankX,.19,bankZ],[.13,.22,.11]);
+        this.part('hoop','#c8b68c',[bankX,.31,bankZ],[.13,.1,.08],[Math.PI/2,0,0]);
+        this.streetPerson(bankX+.11,.015,bankZ+(b.plot.y===0?.28:-.28),`${b.planId}:quay`,'carry',b.plot.y===0?Math.PI:0);
+        if(activity>.5) {
+          const toward=b.plot.y===0?-1:1;
+          this.beam('timber',[bankX-.14,.5,bankZ],[bankX+.1,.74,bankZ+toward*.45],.008);
+          this.beam('iron',[bankX+.1,.74,bankZ+toward*.45],[bankX+.1,.06,bankZ+toward*.52],.002);
+        }
+      }
       if(b.shape==='house') {
-        for(const wheel of [-.2,.2]) this.part('orb','iron',[c.x-1.27+wheel,.21,c.z+.95],[.14,.14,.022]);
+        for(const wheel of [-.2,.2]) {
+          this.part('hoop','iron',[c.x-1.27+wheel,.21,c.z+.95],[.14,.14,.14]);
+          for(let spoke=0;spoke<8;spoke+=1) {
+            const angle=spoke*Math.PI/4;
+            this.beam('iron',[c.x-1.27+wheel,.21,c.z+.95],[c.x-1.27+wheel+Math.sin(angle)*.14,.21+Math.cos(angle)*.14,c.z+.95],.004);
+          }
+        }
         this.beam('iron',[c.x-1.47,.21,c.z+.95],[c.x-1.19,.45,c.z+.95],.013);
         this.beam('iron',[c.x-1.19,.45,c.z+.95],[c.x-1.07,.21,c.z+.95],.013);
         this.part('box','timber',[c.x-1.22,.46,c.z+.95],[.12,.035,.08]);

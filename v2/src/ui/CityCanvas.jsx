@@ -8,7 +8,7 @@ import { CityScene } from '../city/CityScene.js';
  */
 export default function CityCanvas({
   city, categories, now, picking = false, selectedPlan = null, focusSid = null, dropSound = false, onPick, interactive = true,
-  className = '', onScene = null, label = 'Thành phố', Scene = CityScene, appearance = null, placementBlueprint = null,
+  className = '', onScene = null, label = 'Thành phố', Scene = CityScene, appearance = null, placementBlueprint = null, placementSites = null,
 }) {
   const [measurements,setMeasurements]=useState([]);
   const [measuring,setMeasuring]=useState(false);
@@ -40,9 +40,9 @@ export default function CityCanvas({
   const categoriesKey = useMemo(() => [...categories.values()].map((c) => `${c.id}${c.color}`).join('|'), [categories]);
 
   useEffect(() => {
-    modelRef.current = { city, categories, categoriesKey, now, picking, selectedPlan, focusSid, dropSound, appearance, placementBlueprint };
+    modelRef.current = { city, categories, categoriesKey, now, picking, selectedPlan, focusSid, dropSound, appearance, placementBlueprint, placementSites };
     sceneLocal.current?.setModel(modelRef.current);
-  }, [city, categories, categoriesKey, now, picking, selectedPlan, focusSid, dropSound, appearance, placementBlueprint]);
+  }, [city, categories, categoriesKey, now, picking, selectedPlan, focusSid, dropSound, appearance, placementBlueprint, placementSites]);
 
   return <><canvas ref={canvasRef} className={`city-canvas ${className}`} role="img" aria-label={label} />{benchmark && <div style={{position:'absolute',left:12,bottom:52,zIndex:20,background:'#fff',color:'#142c25',padding:10,maxWidth:'90%',fontSize:11}}>
     <button type="button" disabled={measuring} onClick={()=>measure('orbit')}>Đo xoay 12 giây</button><button type="button" disabled={measuring} onClick={()=>measure('zoom')}>Đo thu phóng 12 giây</button>

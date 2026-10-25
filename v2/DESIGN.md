@@ -107,8 +107,8 @@ Only the separate “Hội An mở rộng · tương lai” button inside My Cit
 a read-only 48-building regional study with variable widths, depths and compound courtyards.
 It separates old town, western Thanh Ha, southern Kim Bong/Cam Kim and eastern Cam Thanh.
 Its creek feeds the wider river; district buttons frame each area. Relative geography and areas
-are interpretive, not surveyed coordinates or actual metres. Free footprints currently apply
-only to this future study; real earned plans retain the shared versioned grid contract.
+are interpretive, not surveyed coordinates or actual metres. New GPT Hoi An plans now persist version-2 parcels (ADR-107). Existing plans retain their
+original grid contract. The future regional study remains read-only and opt-in.
 Neither preview can create sessions, assets or construction credit. The small sample retains
 its construction slider/workers; the future study has no fake earned placement candidates.
 
@@ -188,3 +188,36 @@ new event, progress reinterpretation or deletion is introduced.
 builds both apps. Tests live next to the code and run inside `npm test`.
 One-off on Supabase: run `supabase/v2_events.sql` in the SQL editor — until then v2 says
 "Chưa bật đồng bộ", stores locally only, and Settings offers *copy SQL · open editor · check again*.
+
+## Real Hoi An parcels (2026-10-25, ADR-107)
+
+Research and dated Maps panorama observations are in `docs/HOI_AN_PARCELS.md`. They guide new
+original geometry, not imported Google images. Proportions are game units, never surveyed metres.
+`engine/parcels.js` owns immutable profiles, fixed district street axes, continuous frontage
+intervals, physical clearance, water exclusion and conservative legacy-cell reservations.
+Named old-town monuments stay in old town; pottery is in Thanh Ha and carpentry in Kim Bong.
+Generic buildings can choose among four districts. Frontage width and depth depend on blueprint.
+
+GPT planning passes an explicit site to shared `cmdPlan`; it writes workVersion 2 with site version 1,
+district, centre, dimensions and orientation. Replay preserves original requested site, uses the
+next clear same-district interval for a concurrent collision, and never reinterprets old plans.
+Shared cell ownership survives cancellation of one adjacent parcel. Released minute costs and
+exact completed-focus allocation are unchanged. No new SQL, timer or reward contract.
+Old clients skip unsupported workVersion-2 plans; reload before using parcel plans.
+
+GPT transforms the kit, picking, mosaics and worksites consistently. Construction workers retain
+human proportions rather than being stretched to the lot. Buildings gain parcel-edge walls,
+front pavement and rear service access; detailed ground never fills the entire district rectangle.
+Optional parcel street commerce is capped at the latest 60 plots; all canonical buildings and
+resident records remain. The old twenty-building preview remains available; its separate parcel
+sample calls the same pure candidate geometry and cannot write events or progress. Its phase
+slider still demonstrates construction. The full regional study stays behind its existing button.
+
+Expanded parcel scenes use coarse twenty-unit cells only for large static batches; compact
+historical scenes keep their original path. Bounds include wind margin and picks follow each
+instance. Shadow refresh is captured before the composer so water can defer reflection one frame
+rather than sharing the expensive shadow frame. During meaningful camera motion only fullscreen
+soft bloom is suspended; it returns after 100 ms settled, including reduced-motion mode. Emissive
+lamps, billboard halos, pools, native DPR, 4x MSAA and map resolutions remain. Original plaster
+noise/maps are retained after a rejected weather-lookup experiment. See PERFORMANCE.md for final
+measured limitations; no universal 60 FPS claim.

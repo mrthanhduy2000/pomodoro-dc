@@ -5,11 +5,26 @@ import { HOIAN_BLUEPRINTS } from '../engine/catalog.js';
 import { buildCity, ledger } from '../engine/city.js';
 import { reduce } from '../engine/timer.js';
 import { plotCenter, PLOT } from '../city/layout.js';
+import { parcelPostcardCity } from './art.js';
+import { validParcel, parcelsOverlap } from '../engine/parcels.js';
 
 function freeze(value) {
   if (value && typeof value === 'object') { Object.freeze(value); Object.values(value).forEach(freeze); }
   return value;
 }
+
+test('real-parcel preview uses valid canonical footprints, stays read-only and preserves old presentation identity',()=>{
+  const source=freeze({buildings:[{planId:'museum',plot:{x:2,y:1},bricks:[{id:'earned'}]}],totalBricks:1});
+  const before=JSON.stringify(source),preview=parcelPostcardCity(source),shown=projectGptCity(preview);
+  assert.equal(preview.buildings.length,20);assert.equal(preview.totalBricks,0);
+  for(let i=0;i<preview.buildings.length;i++) {
+    const b=preview.buildings[i];assert.ok(validParcel(b.site,b.key));
+    assert.equal(shown.buildings[i].site,b.site);assert.equal(shown.buildings[i].bricks,b.bricks);
+    assert.equal(shown.buildings[i].world.yaw,b.site.yaw);
+    for(const other of preview.buildings.slice(0,i))assert.ok(!parcelsOverlap(b.site,other.site));
+  }
+  assert.equal(projectGptCity(shown),shown);assert.equal(JSON.stringify(source),before);
+});
 
 test('GPT presentation preserves existing session identities, notes, plots and progress across every style', () => {
   const at = Date.parse('2026-10-22T02:00:00Z');

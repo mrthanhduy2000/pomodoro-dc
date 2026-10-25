@@ -115,7 +115,7 @@ mostly the same thing. Now:
 Never write both for the same task. **Write reports in Vietnamese** — they are for Đàm and his
 external advisor, not for the codebase.
 
-GPT: `v2/DESIGN.md`.
+GPT parcels: `v2/DESIGN.md`.
 
 ## Platform & stack
 Main app is **web**: `https://pomodoro-dc.vercel.app` (full version, iPhone + Mac). Electron is a Mac

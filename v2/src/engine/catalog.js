@@ -1,8 +1,9 @@
 /**
  * catalog.js — eras (chapters) and blueprints of the diary city. Pure data, no logic.
  *
- * One building = one plot. A building's height is its bricks: each completed session adds one
- * storey ("band"), coloured by that session's category — so a finished building can be READ.
+ * Legacy buildings occupy one plot; versioned GPT plans may reserve a larger parcel.
+ * Historical brick plans add one category-coloured band per completed session. New minute plans
+ * use exact completed-focus work; the city reducer owns both replay contracts.
  * `size` is how many bricks it takes (4 · 8 · 12). `shape` drives the 3D massing; `roof` belongs to
  * the ERA, so a district keeps the look of the chapter it was built in (tree rings, plan §Era).
  */

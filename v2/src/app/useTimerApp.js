@@ -138,9 +138,9 @@ export function useTimerApp() {
     if (act(cmdEndBreak(st, t))) cancelPush(breakJobKey(st.active.sid));
   }, [act]);
 
-  const planBuilding = useCallback((blueprintKey, plot) => {
+  const planBuilding = useCallback((blueprintKey, plot, site) => {
     const t = Date.now();
-    return act(cmdPlan(cityAt(t), t, { planId: newEventId('p').slice(2), blueprintKey, plot }));
+    return act(cmdPlan(cityAt(t), t, { planId: newEventId('p').slice(2), blueprintKey, plot, site }));
   }, [act]);
 
   const cancelPlan = useCallback((planId) => {

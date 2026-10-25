@@ -1443,3 +1443,11 @@ UI (v2/src/ui) ──actions──▶ useTimerApp ──cmd*(state, now)──�
    nhưng phải NÊU RÕ đó là sửa bug (không lẫn vào phần "chỉ di chuyển code").
 6. **Phát hiện nợ kỹ thuật mới trong lúc làm** → xử lý luôn nếu rủi ro thấp, nếu không phải ghi
    vào `TECH_DEBT.md` (không được để chỉ tồn tại trong hội thoại rồi mất khi phiên kết thúc).
+
+### Versioned real parcels (2026-10-25, ADR-107)
+`v2/src/engine/parcels.js` is pure and imports catalog data only. Shared city commands/replay use it
+for version-2 minute plans with persisted site geometry. Legacy grid plans retain the original path;
+reservation ownership protects later legacy candidates and survives partial cancellation.
+GPT projects site dimensions into its shared building/worker/pick transforms. `art.js` re-exports
+the existing river address mapping from the pure parcel module; there is one implementation.
+Research/proportion limits: `docs/HOI_AN_PARCELS.md`. No log/schema migration or second economy.

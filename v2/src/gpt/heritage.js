@@ -13,7 +13,8 @@ const FOOTPRINTS={
     'ha-thanhha-v1':[[-.66,-.3,1.31,1.12,1.04],[.85,-.57,.78,.73,.91]],
     'ha-kimbong-v1':[[0,-.5,2.5,.68,1.15]],
   };
-export function heritageFootprints(key) {
+export function heritageFootprints(key,site=null) {
+  if(site&&key==='ha-tanky-v1')return [[0,.92,3.25,.66,1.38],[0,-.94,3.25,.62,1.28],[-1.48,-.01,.28,1.2,1.18],[1.48,-.01,.28,1.2,1.18]];
   return Object.hasOwn(FOOTPRINTS,key)?FOOTPRINTS[key]:null;
 }
 
@@ -44,16 +45,24 @@ export function drawHeritageBuilding(kit, building, progress) {
   switch(building.key) {
     case 'ha-tanky-v1': {
       // Two roofed blocks and side galleries leave an actual open-air light well.
-      body(0,.48,2.22,.66,1.38);roof(0,1.55,.48,2.5,.95,.39);
-      body(0,-.73,2.22,.62,1.28);roof(0,1.45,-.73,2.5,.9,.34);
+      const frontage=building.site?3.25:2.22,sideX=building.site?1.48:.97,roofW=building.site?3.5:2.5;
+      const frontZ=building.site?.92:.48,backZ=building.site?-.94:-.73,faceZ=building.site?1.27:.83;
+      body(0,frontZ,frontage,.66,1.38);roof(0,1.55,frontZ,roofW,.95,.39);
+      body(0,backZ,frontage,.62,1.28);roof(0,1.45,backZ,roofW,.9,.34);
       for(const side of [-1,1]) {
-        body(side*.97,-.14,.28,.6,1.18);roof(side*.97,1.35,-.14,.46,.85,.12);
-        lattice(side*.67,.77,.85,.4,.65);
+        body(side*sideX,building.site?-.01:-.14,.28,building.site?1.2:.6,1.18);roof(side*sideX,1.35,building.site?-.01:-.14,.46,building.site?1.5:.85,.12);
+        lattice(side*.67,.77,building.site?1.29:.85,.4,.65);
       }
-      box('paving',0,.18,-.14,1.6,.06,.6);
-      columns([-.95,-.32,.32,.95],.83,1.25);
+      box('paving',0,.18,building.site?-.01:-.14,building.site?2.6:1.6,.06,building.site?1.1:.6);
+      columns(building.site?[-1.48,-.5,.5,1.48]:[-.95,-.32,.32,.95],faceZ,1.25);
       if(finish)for(const x of [-.14,.14])part('pole',timber,x,1.08,.875,.038,.02,.038,[Math.PI/2,0,0]);
-      sign(0,1.23,.87,.85);window(0,.78,-1.055,.6,.58,false);
+      sign(0,1.23,building.site?1.31:.87,.85);
+      if(building.site){
+        // Deep merchant parcel: rear service doorway, not another street-facing shop window.
+        box(timber,0,.63,-1.265,.56,.91,.045);
+        for(const side of [-1,1])box(timber,side*.31,.64,-1.29,.035,.96,.04);
+        box('stone',0,.22,-1.34,.72,.09,.22);
+      }else window(0,.78,-1.055,.6,.58,false);
       if(finish){box(timber,-.48,.45,.54,.6,.045,.35);pots(-.55,-.64,3);}
       if(open)garden(.68,.24,-.14,.3);
       break;

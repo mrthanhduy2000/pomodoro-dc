@@ -1,4 +1,5 @@
-import { HOIAN_BLUEPRINTS } from '../engine/catalog.js';
+import { riverSite, parcelCandidates } from '../engine/parcels.js';
+import { HOIAN_BLUEPRINTS, blueprintsOf, blueprint } from '../engine/catalog.js';
 import { constructionProgress } from '../engine/city.js';
 /** Presentation only: no event creation, store writes, or changes to plot coordinates. */
 export const PLACES = {
@@ -30,17 +31,15 @@ export function architectureOf(building) {
 export function bridgeWalkHeight(z) {
   return .33-.315*Math.max(0,Math.min(1,(Math.abs(z+2)-1.53)/.39));
 }
-/** Stable, collision-free crossing addresses; never derived from city size or plan order. */
-export function riverSite(plot) {
-  const signed=n=>n>=0?2*n:-2*n-1;
-  const x=signed(plot.x),y=signed(plot.y),index=(x+y)*(x+y+1)/2+y;
-  const slot=index%2===0?index/2:-(index+1)/2;
-  return {x:2+slot*8,z:-2};
-}
+export { riverSite } from '../engine/parcels.js';
 /** Render-only relocation explicitly requested for Chua Cau; the reducer/log remain untouched. */
 export function projectGptCity(city) {
   let changed=false;
   const buildings=city.buildings.map(b=>{
+    if(b.site && !b.world) {
+      changed=true;
+      return {...b,riverBridge:b.key==='ha-chuacau-v1',world:{sx:b.key==='ha-chuacau-v1'?1:b.site.width/3.8,sy:1,sz:b.key==='ha-chuacau-v1'?1:b.site.depth/3.2,yaw:b.site.yaw,district:b.site.district}};
+    }
     if(b.key!=='ha-chuacau-v1'||b.riverBridge)return b;
     changed=true;
     const site=city.presentationSample&&b.planId==='postcard-3'?{x:2,z:-2}:riverSite(b.plot);
@@ -100,4 +99,15 @@ export function postcardCity(city, heritage = false) {
         bricks:Array.from({length:size},(_,j)=>({id:`postcard-${i}-${j}`,sid:'',kind:'plain'})) };
     }),
   };
+}
+
+/** Exercise the same real parcel geometry without commands, session credit or stored plans. */
+export function parcelPostcardCity(city) {
+  const sample=postcardCity(city,true),buildings=[];
+  for(const b of sample.buildings) {
+    const key=b.key||blueprintsOf(1).find(bp=>bp.shape===b.shape).key;
+    const site=parcelCandidates({buildings},key)[0],bp=blueprint(key);
+    buildings.push({...b,key,site,size:bp.size,targetMinutes:bp.size*25,workMs:bp.size*25*60000,bricks:b.bricks.slice(0,bp.size),workVersion:2,plot:{x:site.x/4,y:site.z/4}});
+  }
+  return {...sample,buildings,current:null,queued:[],totalBricks:0,parcelSample:true};
 }

@@ -73,6 +73,36 @@ roughly 44%. Titles below are the lookup key; read one with
 
 ---
 
+## ADR-107 — Version new real-city parcels; freeze all historical grid plans
+
+1. **Date/context:** 2026-10-25. The user explicitly requests real earned buildings on individual
+   parcels, historical buildings unchanged, and Google Street View/document research before code.
+2. **Evidence:** Maps community panoramas at Chua Cau (December 2024) and Tan Ky (May 2018), plus
+   official heritage descriptions, establish attached street fronts, deep shop-house plots,
+   intermediate light wells, rear service access and larger religious compounds. They do not
+   establish cadastral dimensions. Images stay in task evidence, never app textures/backgrounds.
+3. **Options:** reinterpret old grid positions (rejected); retain render-only future study
+   (insufficient); add explicit versioned parcel choices to new plans (chosen).
+4. **Contract:** `build.plan` with `workUnit: minutes`, `workVersion: 2` and `site.version: 1`
+   stores district, world centre, width, depth and orientation. Exact minute costs remain released
+   catalog costs. Old plans without sites replay through the original placement path unchanged.
+5. **Placement:** pure `engine/parcels.js` generates continuous street-front intervals from
+   profile-specific footprints, validates land/water and rectangle clearance, and reserves
+   intersecting legacy cells. Later legacy commands cannot overlap an accepted parcel.
+6. **Concurrency:** ordered replay keeps the earlier site; a conflicting later parcel deterministically
+   takes the next valid site in the same district. Original requested site is retained. Cancelling
+   an empty plan releases every reserved cell; completed work never disappears on cancellation.
+7. **Rendering:** GPT reads canonical site geometry and shares transforms across buildings,
+   construction props, mosaics, residents and picks. Sparse parcel paving/access replaces rectangular
+   empty-grid expansion. Old city and both previews remain separate; no synthetic sessions/events.
+8. **Compatibility:** old workVersion-1 clients skip version-2 plans, rather than invent positions.
+   Reload clients before new parcel building. No SQL/schema/log migration or timer/reward change.
+9. **Validation/trade-off:** adversarial replay/overlap/cancellation/minute conservation and old
+   city identity guards; real 3D preview/placement-cancel and M3 orbit/zoom. Layout is interpretive
+   game geography, not surveyed sites. District street axes are fixed independently of progress.
+
+---
+
 ## ADR-106 — Opt-in regional future study and a city-free focus homepage
 
 1. **Date/context:** 2026-10-25. The user requests geographically informed districts, variable

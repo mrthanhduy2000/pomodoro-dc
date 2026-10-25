@@ -235,7 +235,7 @@ export function drawHoiAnBuilding(scene, b) {
       [[-.65,-.05,1.4,1.48,2.55],[.91,.01,1.26,1.28,1.05]],
       [[-.17,-.08,2.75,1.4,1.08]], [[-.87,-.02,1.13,1.52,2.02],[.57,-.44,1.63,.66,1.15]],
       [[0,-.05,2.91,1.38,2.1]], [[-.66,-.1,1.46,1.34,2.12],[.88,-.4,1.18,.73,1.03]], [[0,-.42,2.77,.75,1.12]]];
-    const footprints=heritageFootprints(b.key)||(b.shape==='house'?houseFootprints[frontage]:
+    const footprints=heritageFootprints(b.key,b.site)||(b.shape==='house'?houseFootprints[frontage]:
       b.shape==='tower'?[[0,0,.91,.95,2.3]]:b.shape==='temple'?[[0,-.48,2.3,.66,1.14]]:[[0,-.12,2.85,1.24,1.55]]);
     for(const [x,z,w,d,h] of footprints) {
       if(progress>=.08) {
@@ -259,6 +259,10 @@ export function drawHoiAnBuilding(scene, b) {
     return;
   }
 
+  if(b.site&&!b.riverBridge){
+    // Party walls define the parcel edge; roofs and the light well remain separate volumes.
+    for(const side of [-1,1])box(wall,side*1.77,.53,0,.055,.72,2.85);
+  }
   if(drawHeritageBuilding({box,part,beam,roof,gableRoof,body,window,posts,rail,garden,lantern,awning,counter},b,progress))return;
 
   if(progress>=.65 && b.plot.y!==0 && ['house','hall','market'].includes(b.shape)) {

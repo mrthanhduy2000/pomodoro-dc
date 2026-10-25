@@ -23,6 +23,7 @@
 import { blueprint, ERA_BRICKS } from './catalog.js';
 import { compareEvents, DEFAULT_PREFS } from './timer.js';
 import { dayIndex, dayKey } from './stats.js';
+import { validParcel, parcelAvailable, parcelCandidates, parcelCells, parcelProfile } from './parcels.js';
 
 const DAY_MS = 24 * 60 * 60 * 1000;
 export const GOLD_RATE = 0.08;
@@ -190,6 +191,7 @@ export function buildCity(events, timerState, now = Date.now()) {
   const open = [];
   const byPlan = new Map();
   const occupied = new Map();
+  const parcelOwners = new Map();
   const pile = [];
   const eraUps = [];
   let total = 0;
@@ -238,21 +240,30 @@ export function buildCity(events, timerState, now = Date.now()) {
     const d = e.data ?? {};
     if (e.kind === 'build.plan') {
       if (!d.planId || byPlan.has(d.planId)) continue;
-      if(d.workUnit!=null && (d.workUnit!=='minutes'||d.workVersion!==1))continue;
+      if(d.workUnit!=null && (d.workUnit!=='minutes'||![1,2].includes(d.workVersion)))continue;
+      if(d.workVersion===2&&(d.workUnit!=='minutes'||!validParcel(d.site,d.blueprint)))continue;
+      if(d.site&&d.workVersion!==2)continue;
       const bp = blueprint(d.blueprint);
       const era = eraOf(total);
       if (!bp || bp.era > era) continue; // a future era's blueprint is not unlocked yet
-      const plot = placePlot(d.plot, occupied);
+      const site=d.workVersion===2?(parcelAvailable(d.site,buildings)?{...d.site}:parcelCandidates({buildings},bp.key,d.site.district,1)[0]):null;
+      if(d.workVersion===2&&!site)continue;
+      const plot = site?{x:site.x/4,y:site.z/4}:placePlot(d.plot, occupied);
       const b = {
         planId: d.planId, key: bp.key, name: bp.name, shape: bp.shape, size: bp.size, style: bp.era,
         plot, requested: d.plot ?? null, moved: Boolean(d.plot) && plotKey(d.plot) !== plotKey(plot),
         plannedAt: e.at, bricks: [], completedAt: null,
       };
+      if(site){b.site=site;b.requestedSite={...d.site};b.workVersion=2;b.reservedPlots=parcelCells(site);b.name=parcelProfile(bp.key).name;}
       if(d.workUnit==='minutes'){b.workUnit='minutes';b.targetMinutes=bp.size*MINUTES_PER_STEP;b.workMs=0;}
       buildings.push(b);
       open.push(b);
       byPlan.set(b.planId, b);
-      occupied.set(plotKey(plot), b.planId);
+      for(const cell of b.reservedPlots||[plot]) {
+        const key=plotKey(cell);
+        if(b.site){if(!parcelOwners.has(key))parcelOwners.set(key,new Set());parcelOwners.get(key).add(b.planId);}
+        if(!occupied.has(key))occupied.set(key,b.planId);
+      }
       while(pile.length && b.completedAt==null) {
         const remainder=fill(b,pile.shift(),e.at);
         if(remainder)pile.unshift(remainder);
@@ -263,7 +274,11 @@ export function buildCity(events, timerState, now = Date.now()) {
       buildings.splice(buildings.indexOf(b), 1);
       open.splice(open.indexOf(b), 1);
       byPlan.delete(b.planId);
-      occupied.delete(plotKey(b.plot));
+      for(const cell of b.reservedPlots||[b.plot]) {
+        const key=plotKey(cell),owners=parcelOwners.get(key);owners?.delete(b.planId);
+        if(occupied.get(key)===b.planId){if(owners?.size)occupied.set(key,owners.values().next().value);else occupied.delete(key);}
+        if(owners&&!owners.size)parcelOwners.delete(key);
+      }
     }
   }
 
@@ -369,9 +384,13 @@ export function ledger(building) {
 
 /* ---------- commands ---------- */
 
-export function cmdPlan(city, now, { planId, blueprintKey, plot }) {
+export function cmdPlan(city, now, { planId, blueprintKey, plot, site }) {
   const bp = blueprint(blueprintKey);
   if (!city.canPlan || !bp || bp.era > city.era) return null;
+  if(site) {
+    if(!validParcel(site,bp.key)||!parcelAvailable(site,city.buildings))return null;
+    return {id:`build.plan:${planId}`,at:now,kind:'build.plan',data:{planId,blueprint:bp.key,plot:{x:site.x/4,y:site.z/4},workUnit:'minutes',workVersion:2,site:{...site}}};
+  }
   if (!city.candidates.some((p) => p.x === plot?.x && p.y === plot?.y)) return null;
   return { id: `build.plan:${planId}`, at: now, kind: 'build.plan', data: { planId, blueprint: bp.key, plot: { x: plot.x, y: plot.y }, workUnit: 'minutes', workVersion: 1 } };
 }

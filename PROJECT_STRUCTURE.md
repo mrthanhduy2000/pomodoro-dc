@@ -1301,3 +1301,10 @@ separate from canonical grid plans and opens only inside My City. `art.js` owns 
 Chua Cau site projection and commerce clock; `heritage.js` draws ten source-linked choices.
 `engine/stats.js::journalEntries` filters shared records; `ui/StatsView.jsx` bounds displayed rows.
 Focus mounts no renderer. See ADR-105/106 and `v2/DESIGN.md` for the data boundary.
+
+### Real parcel placement (2026-10-25)
+`v2/src/engine/parcels.js` + `parcels.test.js`: version-1 physical profiles, district street axes,
+collision and frontage candidates, shared river sites, legacy reservation cells. `city.js` owns
+versioned event replay and reference-counted reservation release. `useTimerApp.js` passes explicit
+sites to the shared command. `docs/HOI_AN_PARCELS.md` records dated imagery and primary sources.
+`gpt/art.js::parcelPostcardCity` supplies read-only validation imagery using the real parcel geometry.

@@ -1,3 +1,19 @@
+## 2026-10-26 — Real Hoi An parcel plans, backed by Street View and heritage research
+
+- Add persisted district/width/depth/orientation for new GPT construction; keep every old plan path.
+- Validate clearance and water; reserve legacy cells with shared ownership and safe cancellation.
+- Keep exact completed-focus minute accounting, released costs, original IDs and historical facts.
+- Add sparse frontage paving, party walls, rear service access and a clearer Tan Ky light well.
+- Keep workers proportional under parcel transforms; bound optional street activity.
+- Preserve the old 3D preview; add a read-only parcel sample using real candidate geometry.
+- Record dated Google community panorama observations and primary documents without shipping images.
+- Add coarse static visibility cells for expanded parcel scenes and stagger map updates.
+- Suspend only fullscreen bloom during camera motion; restore after settling, with native sharpness/MSAA retained.
+- Remove legacy-era subtitles from generic Hoi An construction choices.
+- Final parcel capture: orbit39.96 / zoom24.58 FPS; zoom stutter remains documented in PERFORMANCE.md.
+- Validation: 1,946 full-suite passes, zero failures, one expected skip; three cross-checks, 58 focused checks and lint/build pass.
+- No SQL, event rewrite, new economy, reduced pixel resolution or extra light.
+
 ## 2026-10-25 — Regional GPT Hoi An, city-only 3D and searchable journal
 
 - Remove homepage/completion 3D; add lightweight real progress, seven-day minutes and streak.

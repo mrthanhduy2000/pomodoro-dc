@@ -1,3 +1,33 @@
+## GPT real-parcel release investigation — 2026-10-26
+
+Apple M3 Metal in the visible local browser, 1440x790 CSS viewport, native DPR2,
+2104x1228 drawing buffer. Twenty read-only parcel-sample buildings, Hoi An summer,
+clear golden light, motion on. Existing 12-second controls discard the first two seconds.
+Both modes start at camera [14.8,4.4,-1.7], target [6.2,.7,-2]. No builds/tests during captures.
+
+| Same final geography | Orbit FPS / P95 / worst / >50 ms | Zoom FPS / P95 / worst / >50 ms |
+|---|---|---|
+| Static spatial cells, original effects scheduling | 39.93 / 43.2 / 45.7 / 0 | 19.63 / 74.5 / 80.4 / 98 |
+| Staggered full-resolution shadow/reflection | 40.02 / 42.5 / 46.4 / 0 | 19.80 / 68.0 / 75.3 / 101 |
+| Release: staggered maps plus navigation-aware bloom | **39.96 / 43.3 / 47.0 / 0** | **24.58 / 61.0 / 85.9 / 72** |
+
+The final capture reaches the existing 40 Hz cap while orbiting; zoom still stutters and
+is NOT accepted as uniformly smooth. Adaptive bloom improves zoom average in these captures,
+but the worst frame does not improve. This is one device/local sample, not a production guarantee.
+Native pixels, composer 4x MSAA, reflection/shadow dimensions, building geometry and lights stay.
+Only the soft fullscreen bloom is omitted while navigating and restored after 100 ms settled;
+emissive lamps, local halos and ground light pools remain. Coarse 20-unit static visibility cells
+apply only to expanded parcel scenes and preserve per-instance picks and conservative wind bounds.
+Reflection refresh is deferred when a full shadow refresh is due, without changing map resolution.
+
+The compact historical 20-building sample separately measured 38.82/40.02 FPS orbit/zoom at
+camera [8.6,4.4,-1.7], target [0,.7,-2]. It is a different layout and camera: do not use it to claim
+that expanded parcels have no performance cost. Earlier parcel layouts likewise are not final
+same-scene comparisons. A procedural weather-lookup experiment regressed and was removed.
+No reflection-scissor or reduced-resolution experiment was shipped. Further zoom work remains.
+Raw captures: task visualization folder `hoi-an-parcels/fps-final-layout.json`,
+`fps-final-scheduled.json`, `fps-release.json`, and `fps-old-scene.json`.
+
 ## GPT regional/living-city investigation — 2026-10-25
 
 Focus and its completion panel now mount zero 3D canvases. Leaving City disposes the renderer;

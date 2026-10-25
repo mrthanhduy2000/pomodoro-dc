@@ -8,8 +8,9 @@ import { Detail } from '../ui/CityView.jsx';
 import StatsView from '../ui/StatsView.jsx';
 import SettingsView from '../ui/SettingsView.jsx';
 import { hoursMinutes } from '../ui/format.js';
-import { PLACES, SEASONS, postcardCity, readAppearance, snowIn, riverCandidates } from './art.js';
+import { PLACES, SEASONS, postcardCity, parcelPostcardCity, readAppearance, snowIn } from './art.js';
 import { futureCity, DISTRICTS } from './world.js';
+import { parcelCandidates, parcelProfile, PARCEL_DISTRICTS } from '../engine/parcels.js';
 import { HOIAN_NAMES } from './hoian.js';
 import './gpt.css';
 
@@ -46,7 +47,7 @@ function BlueprintChoices({ city, onChoose, names = SHAPES, heritage = false }) 
   return <div className="gpt-blueprints">{choices.map((bp) => (
     <button key={bp.key} type="button" onClick={() => onChoose(bp)}>
       <span className={`gpt-house-icon gpt-house-icon--${bp.shape}`} aria-hidden="true">⌂</span>
-      <span><b>{heritageOf(bp.key)?bp.name:names[bp.shape]}</b><small>{bp.size * MINUTES_PER_STEP} phút · {heritageOf(bp.key)?bp.feature:bp.name}</small></span><span aria-hidden="true">↗</span>
+      <span><b>{heritageOf(bp.key)?bp.name:names[bp.shape]}</b><small>{bp.size * MINUTES_PER_STEP} phút{heritageOf(bp.key)?` · ${bp.feature}`:heritage?'':` · ${bp.name}`}</small></span><span aria-hidden="true">↗</span>
     </button>
   ))}</div>;
 }
@@ -55,8 +56,10 @@ function CityWorkspace({ app, appearance, sample, onSampleChange }) {
   const [pick, setPick] = useState(null);
   const [blueprint, setBlueprint] = useState(null);
   const [planning, setPlanning] = useState(false);
+  const [district,setDistrict]=useState('oldtown');
   const [scene, setScene] = useState(null);
   const [previewWork, setPreviewWork] = useState(false);
+  const [previewParcels,setPreviewParcels]=useState(false);
   const [previewPercent, setPreviewPercent] = useState(35);
   useEffect(()=>{
     if(sample==='full'&&scene?.model?.city.futurePlan)scene.viewDistrict(DISTRICTS[0],0);
@@ -66,30 +69,33 @@ function CityWorkspace({ app, appearance, sample, onSampleChange }) {
     const timeout=setTimeout(()=>setRenderedPreview(previewPercent),120);
     return ()=>clearTimeout(timeout);
   },[previewPercent]);
-  useEffect(()=>{
-    if(blueprint?.key==='ha-chuacau-v1')scene?.frameCity(appearance.motion?900:0);
-  },[blueprint?.key,scene,appearance.motion]);
   const city = app.city;
+  const sites=useMemo(()=>blueprint&&appearance.place==='hoian'?parcelCandidates(city,blueprint.key,district):null,[blueprint,city,district,appearance.place]);
+  useEffect(()=>{if(sites?.length&&scene)scene.frameCity(appearance.motion?700:0);},[sites,scene,appearance.motion]);
   const names = appearance.place === 'hoian' ? HOIAN_NAMES : SHAPES;
   const shownCity = useMemo(() => {
     if(!sample)return city;
-    const town=sample==='full'?futureCity(city):postcardCity(city,appearance.place==='hoian');
+    const town=sample==='full'?futureCity(city):previewParcels&&appearance.place==='hoian'?parcelPostcardCity(city):postcardCity(city,appearance.place==='hoian');
     if(!previewWork||sample==='full')return town;
     const target=pick?.planId||town.buildings[0].planId;
     return {...town,buildings:town.buildings.map(b=>b.planId===target?{...b,workMs:b.targetMinutes*60000*renderedPreview/100,bricks:b.bricks.slice(0,Math.ceil(b.size*renderedPreview/100))}:b)};
-  }, [sample, city, previewWork, renderedPreview, pick?.planId, appearance.place]);
+  }, [sample, city, previewWork, renderedPreview, pick?.planId, appearance.place,previewParcels]);
+  useEffect(()=>{
+    if(sample===true&&previewParcels&&scene?.model?.city.parcelSample)scene.focusBuilding(scene.model.city.buildings[0].planId,0);
+  },[sample,previewParcels,scene]);
   const current = city.current;
   const remaining = current ? current.workUnit==='minutes' ? Math.ceil(current.targetMinutes-constructionMinutes(current)) : current.size-current.bricks.length : 0;
   const collected = new Set(city.buildings.filter(b=>constructionProgress(b)>=1 && heritageOf(b.key)).map(b=>b.key));
   const previewChoices=appearance.place==='hoian'?HOIAN_BLUEPRINTS.map(bp=>({id:bp.key,name:bp.name,building:shownCity.buildings.find(b=>b.key===bp.key)})):Object.entries(names).map(([shape,name])=>({id:shape,name,building:shownCity.buildings.find(b=>b.shape===shape)}));
   const chosenBuilding=city.buildings.find(b=>b.planId===pick?.planId);
-  const choose = (bp) => { onSampleChange(false); setPick(null); setBlueprint(bp); };
-  const place = (plot) => {
-    if (blueprint && plot && app.planBuilding(blueprint.key, plot)) { setBlueprint(null); setPlanning(false); }
+  const choose = (bp) => { onSampleChange(false); setPick(null); setDistrict(parcelProfile(bp.key)?.districts[0]||'oldtown'); setBlueprint(bp); };
+  const place = (plot,site=null) => {
+    if (blueprint && (plot||site) && app.planBuilding(blueprint.key, plot,site)) { setBlueprint(null); setPlanning(false); }
   };
   const select = (p) => {
     if (sample) { setPick(p?.planId ? p : null); return; }
-    if (blueprint && p?.type === 'plot') place(p.plot);
+    if(blueprint && p?.type==='parcel')place(null,p.site);
+    else if (blueprint && p?.type === 'plot'&&!sites) place(p.plot);
     else if (!blueprint) setPick(p && p.type !== 'plot' ? p : null);
   };
   const selectedPlan = pick?.planId || pick?.brick?.planId || null;
@@ -97,15 +103,16 @@ function CityWorkspace({ app, appearance, sample, onSampleChange }) {
   return (
     <div className="gpt-city-workspace">
       <div className="gpt-city-stage">
-        <Scene key={sample==='full'?'future':sample?'sample':'earned'} city={shownCity} categories={app.state.categories} now={app.cityNow} appearance={appearance} onPick={select} onScene={setScene} picking={Boolean(blueprint)} placementBlueprint={blueprint?.key} selectedPlan={selectedPlan} label={sample==='full'?'Hội An mở rộng, quy hoạch tham khảo không phải thành tích thật':sample ? 'Phố mẫu kiến trúc, không phải thành tích thật' : 'Thành phố từ các phiên tập trung của bạn'} />
+        <Scene key={sample==='full'?'future':sample?'sample':'earned'} city={shownCity} categories={app.state.categories} now={app.cityNow} appearance={appearance} onPick={select} onScene={setScene} picking={Boolean(blueprint)} placementBlueprint={blueprint?.key} placementSites={sites} selectedPlan={selectedPlan} label={sample==='full'?'Hội An mở rộng, quy hoạch tham khảo không phải thành tích thật':sample ? 'Phố mẫu kiến trúc, không phải thành tích thật' : 'Thành phố từ các phiên tập trung của bạn'} />
         <div className="gpt-scene-caption"><span className="gpt-live-dot" /><span>{sample==='full'?'Hội An mở rộng · quy hoạch tham khảo':sample ? 'Phố mẫu · không tính vào tiến độ' : `${city.buildings.length} công trình · ${city.totalBricks} viên gạch`}</span></div>
         <div className="gpt-camera-tools">
           <button type="button" onClick={() => scene?.frameCity(appearance.motion ? 900 : 0)} title="Đưa máy ảnh về toàn cảnh">Toàn cảnh</button>
           {appearance.place==='hoian' && <><button type="button" onClick={()=>scene?.viewQuarter('river',appearance.motion?1000:0)}>Dạo bờ sông</button><button type="button" onClick={()=>scene?.viewQuarter('bridge',appearance.motion?1000:0)}>Qua cầu</button><button type="button" onClick={()=>scene?.viewQuarter('market',appearance.motion?1000:0)}>Ghé chợ</button></>}
           {!sample && appearance.place==='hoian' && <button type="button" onClick={()=>{onSampleChange('full');setPick(null);setBlueprint(null);setPreviewWork(false);}}>Hội An mở rộng · tương lai</button>}
+          {sample===true&&appearance.place==='hoian'&&<button type="button" aria-pressed={previewParcels} onClick={()=>{setPreviewParcels(!previewParcels);setPick(null);setPreviewWork(false);}}>{previewParcels?'Về phố mẫu cũ':'Xem mẫu khu đất riêng'}</button>}
           <button type="button" onClick={() => { onSampleChange(!sample); setPick(null); setBlueprint(null); setPreviewWork(false); }}>{sample ? 'Thành phố của tôi' : 'Xem trước 3D'}</button>
         </div>
-        {blueprint && <div className="gpt-placement"><b>Đặt {heritageOf(blueprint.key)?blueprint.name:names[blueprint.shape].toLowerCase()}</b><span>{blueprint.key==='ha-chuacau-v1'?'Chọn vị trí sáng bắc qua lạch nước.':'Chọn một ô đất sáng trong thành phố.'}</span><div className="row"><button type="button" className="btn btn--primary" onClick={() => place(blueprint.key==='ha-chuacau-v1'?riverCandidates(city.candidates)[0]:city.candidates[0])}>Chọn ô gần nhất</button><button type="button" className="btn" onClick={() => setBlueprint(null)}>Huỷ</button></div></div>}
+        {blueprint && <div className="gpt-placement"><b>{heritageOf(blueprint.key)?blueprint.name:names[blueprint.shape]}</b>{sites?<><span>Chọn khu đất sáng theo mặt bằng công trình.</span><label>Khu vực <select aria-label="Khu vực xây công trình" value={district} onChange={event=>setDistrict(event.target.value)}>{PARCEL_DISTRICTS.filter(item=>parcelProfile(blueprint.key).districts.includes(item.id)).map(item=><option key={item.id} value={item.id}>{item.name}</option>)}</select></label><div className="gpt-parcel-options">{sites.map((site,i)=><button type="button" className="btn" key={`${site.x}:${site.z}`} onClick={()=>place(null,site)}>Xây tại khu đất {i+1}</button>)}</div><small>Diện tích mô phỏng trong trò chơi, không phải số đo địa chính của di tích.</small></>:<><span>Chọn một ô đất sáng.</span><button type="button" className="btn" onClick={()=>place(city.candidates[0])}>Chọn ô gần nhất</button></>}<button type="button" className="btn" onClick={()=>setBlueprint(null)}>Huỷ</button></div>}
       </div>
       <aside className="gpt-city-inspector">
         {sample ? (

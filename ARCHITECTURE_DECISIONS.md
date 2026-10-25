@@ -73,6 +73,62 @@ roughly 44%. Titles below are the lookup key; read one with
 
 ---
 
+## ADR-106 — Opt-in regional future study and a city-free focus homepage
+
+1. **Date/context:** 2026-10-25. The user requests geographically informed districts, variable
+   areas, no city on the homepage, and the future city behind a button inside My City.
+2. **Problem:** resizing historical grid plans would change earned geography; mounting 3D on
+   Focus also consumes resources while the user only needs the timer.
+3. **Options:** migrate all plots (rejected); permanently display a speculative complete city
+   (rejected); separate read-only regional projection and mount 3D only in City (chosen).
+4. **Decision:** `gpt/world.js` authors district coordinates and nonuniform world transforms.
+   `futureCity` produces labelled render-only models, no candidate placements or earned assets.
+   It opens only from the explicit future button inside the real City workspace.
+5. **Data invariant:** shared plans, minute budgets, records and coordinates remain canonical.
+   ADR-105 is the only existing-landmark presentation relocation. No future model enters commands.
+6. **Geography:** distinguish old town, western Thanh Ha, southern Cam Kim/Kim Bong and eastern
+   Cam Thanh. Chua Cau crosses a tributary creek feeding the wider river. Sources are linked;
+   relative coordinates and areas are interpretive, never claimed as GPS, surveyed metres or replicas.
+7. **Lifecycle:** Focus uses a lightweight seven-day summary and building progress; City lazily
+   mounts the real 3D renderer. Journal shares pure filters and bounded rendering with classic v2.
+8. **Validation:** frozen-source deterministic projection, unique IDs, varied footprints, relative
+   district ordering; browser check homepage zero canvases and future mode only after its button.
+9. **Trade-off/revisit:** free footprints currently belong to the future study. Building real
+   earned plans outside the historical grid needs a separate versioned placement contract.
+
+---
+
+## ADR-105 — User-authorized GPT river sites for Chua Cau, without rewriting diary history
+
+1. **Date/context:** 2026-10-24. The user explicitly rejected the land-plot bridge and requested
+   a historically informed water crossing and better placement. This authorizes moving this
+   landmark's GPT presentation only; all other existing building coordinates remain locked.
+2. **Problem:** the shared event reducer stores integral land plots. A bridge rendered in that
+   plot cannot span the scene's actual channel; a free decorative duplicate does not fix it.
+3. **Options:** rewrite old plan coordinates/events (rejected: diary/data risk); keep a land
+   miniature plus free street bridge (rejected by user); a reversible GPT-only site projection
+   with placement previews/picking/camera/workers using the same site (chosen).
+4. **Decision:** pure `riverSite`/`projectGptCity` in `gpt/art.js` derive stable river crossing
+   slots from each bridge's original integer plot using an injective signed-pair address.
+   The labelled postcard uses a fixed demonstration site. No earned bridge can displace another
+   when later plans arrive. Non-bridge building objects/positions remain identical.
+5. **Data invariant:** source events, plan IDs, original plots, minutes, brick IDs and ledger facts
+   never change. Projected objects retain `sourcePlot`; classic reads the unmodified city.
+6. **Presentation:** rotated Chua Cau spans the existing channel, with landward approaches and
+   an adjoining shrine. Remove the free covered duplicate. New bridge placement highlights the
+   projected water site but returns the original candidate to the unchanged command validator.
+   Derived occupants/workers/mosaics/picking/focus share that projection; terrain stays fixed.
+7. **Compatibility:** no schema, migration, new event or altered released blueprint budget.
+   Reverting the presentation restores old visuals without changing any progress.
+8. **Validation:** frozen-log replay, non-bridge object identity, stable unique sites after append,
+   site/picking agreement and unchanged budget/ledger checks; deliberately break site stability
+   to prove the new guard detects displacement. Browser-check construction and preview-to-place.
+9. **Trade-off/revisit:** this is a stylized channel district, not surveyed geographic coordinates.
+   River addresses can extend the viewing bounds for distant plots. A future canonical world-map
+   placement system needs its own version and migration design; do not silently alter this mapping.
+
+---
+
 ## ADR-104 — Version new construction by completed focus minutes; preserve historical city replay
 
 1. **Date/context:** 2026-10-23. The user requested minute-based staged construction and explicitly

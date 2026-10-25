@@ -2,13 +2,14 @@ import { lazy, Suspense, useEffect, useMemo, useState } from 'react';
 
 import { constructionProgress, constructionMinutes, constructionStage, MINUTES_PER_STEP } from '../engine/city.js';
 import { blueprintsOf, HOIAN_BLUEPRINTS, heritageOf } from '../engine/catalog.js';
-import { todaySummary } from '../engine/stats.js';
+import { todaySummary, lastDays, currentStreak } from '../engine/stats.js';
 import { FocusPanel } from '../ui/FocusView.jsx';
 import { Detail } from '../ui/CityView.jsx';
 import StatsView from '../ui/StatsView.jsx';
 import SettingsView from '../ui/SettingsView.jsx';
 import { hoursMinutes } from '../ui/format.js';
-import { PLACES, SEASONS, postcardCity, readAppearance, snowIn } from './art.js';
+import { PLACES, SEASONS, postcardCity, readAppearance, snowIn, riverCandidates } from './art.js';
+import { futureCity, DISTRICTS } from './world.js';
 import { HOIAN_NAMES } from './hoian.js';
 import './gpt.css';
 
@@ -57,17 +58,23 @@ function CityWorkspace({ app, appearance, sample, onSampleChange }) {
   const [scene, setScene] = useState(null);
   const [previewWork, setPreviewWork] = useState(false);
   const [previewPercent, setPreviewPercent] = useState(35);
+  useEffect(()=>{
+    if(sample==='full'&&scene?.model?.city.futurePlan)scene.viewDistrict(DISTRICTS[0],0);
+  },[sample,scene]);
   const [renderedPreview, setRenderedPreview] = useState(35);
   useEffect(()=>{
     const timeout=setTimeout(()=>setRenderedPreview(previewPercent),120);
     return ()=>clearTimeout(timeout);
   },[previewPercent]);
+  useEffect(()=>{
+    if(blueprint?.key==='ha-chuacau-v1')scene?.frameCity(appearance.motion?900:0);
+  },[blueprint?.key,scene,appearance.motion]);
   const city = app.city;
   const names = appearance.place === 'hoian' ? HOIAN_NAMES : SHAPES;
   const shownCity = useMemo(() => {
     if(!sample)return city;
-    const town=postcardCity(city,appearance.place==='hoian');
-    if(!previewWork)return town;
+    const town=sample==='full'?futureCity(city):postcardCity(city,appearance.place==='hoian');
+    if(!previewWork||sample==='full')return town;
     const target=pick?.planId||town.buildings[0].planId;
     return {...town,buildings:town.buildings.map(b=>b.planId===target?{...b,workMs:b.targetMinutes*60000*renderedPreview/100,bricks:b.bricks.slice(0,Math.ceil(b.size*renderedPreview/100))}:b)};
   }, [sample, city, previewWork, renderedPreview, pick?.planId, appearance.place]);
@@ -90,18 +97,19 @@ function CityWorkspace({ app, appearance, sample, onSampleChange }) {
   return (
     <div className="gpt-city-workspace">
       <div className="gpt-city-stage">
-        <Scene key={sample ? 'sample' : 'earned'} city={shownCity} categories={app.state.categories} now={app.cityNow} appearance={appearance} onPick={select} onScene={setScene} picking={Boolean(blueprint)} selectedPlan={selectedPlan} label={sample ? 'Phố mẫu kiến trúc, không phải thành tích thật' : 'Thành phố từ các phiên tập trung của bạn'} />
-        <div className="gpt-scene-caption"><span className="gpt-live-dot" /><span>{sample ? 'Phố mẫu · không tính vào tiến độ' : `${city.buildings.length} công trình · ${city.totalBricks} viên gạch`}</span></div>
+        <Scene key={sample==='full'?'future':sample?'sample':'earned'} city={shownCity} categories={app.state.categories} now={app.cityNow} appearance={appearance} onPick={select} onScene={setScene} picking={Boolean(blueprint)} placementBlueprint={blueprint?.key} selectedPlan={selectedPlan} label={sample==='full'?'Hội An mở rộng, quy hoạch tham khảo không phải thành tích thật':sample ? 'Phố mẫu kiến trúc, không phải thành tích thật' : 'Thành phố từ các phiên tập trung của bạn'} />
+        <div className="gpt-scene-caption"><span className="gpt-live-dot" /><span>{sample==='full'?'Hội An mở rộng · quy hoạch tham khảo':sample ? 'Phố mẫu · không tính vào tiến độ' : `${city.buildings.length} công trình · ${city.totalBricks} viên gạch`}</span></div>
         <div className="gpt-camera-tools">
           <button type="button" onClick={() => scene?.frameCity(appearance.motion ? 900 : 0)} title="Đưa máy ảnh về toàn cảnh">Toàn cảnh</button>
-          {appearance.place==='hoian' && <><button type="button" onClick={()=>scene?.viewQuarter('river',appearance.motion?1000:0)}>Dạo bờ sông</button><button type="button" onClick={()=>scene?.viewQuarter('bridge',appearance.motion?1000:0)}>Qua cầu</button></>}
+          {appearance.place==='hoian' && <><button type="button" onClick={()=>scene?.viewQuarter('river',appearance.motion?1000:0)}>Dạo bờ sông</button><button type="button" onClick={()=>scene?.viewQuarter('bridge',appearance.motion?1000:0)}>Qua cầu</button><button type="button" onClick={()=>scene?.viewQuarter('market',appearance.motion?1000:0)}>Ghé chợ</button></>}
+          {!sample && appearance.place==='hoian' && <button type="button" onClick={()=>{onSampleChange('full');setPick(null);setBlueprint(null);setPreviewWork(false);}}>Hội An mở rộng · tương lai</button>}
           <button type="button" onClick={() => { onSampleChange(!sample); setPick(null); setBlueprint(null); setPreviewWork(false); }}>{sample ? 'Thành phố của tôi' : 'Xem trước 3D'}</button>
         </div>
-        {blueprint && <div className="gpt-placement"><b>Đặt {heritageOf(blueprint.key)?blueprint.name:names[blueprint.shape].toLowerCase()}</b><span>Chọn một ô đất sáng trong thành phố.</span><div className="row"><button type="button" className="btn btn--primary" onClick={() => place(city.candidates[0])}>Chọn ô gần nhất</button><button type="button" className="btn" onClick={() => setBlueprint(null)}>Huỷ</button></div></div>}
+        {blueprint && <div className="gpt-placement"><b>Đặt {heritageOf(blueprint.key)?blueprint.name:names[blueprint.shape].toLowerCase()}</b><span>{blueprint.key==='ha-chuacau-v1'?'Chọn vị trí sáng bắc qua lạch nước.':'Chọn một ô đất sáng trong thành phố.'}</span><div className="row"><button type="button" className="btn btn--primary" onClick={() => place(blueprint.key==='ha-chuacau-v1'?riverCandidates(city.candidates)[0]:city.candidates[0])}>Chọn ô gần nhất</button><button type="button" className="btn" onClick={() => setBlueprint(null)}>Huỷ</button></div></div>}
       </div>
       <aside className="gpt-city-inspector">
         {sample ? (
-          <><span className="eyebrow">Xem trước thành phố 3D</span><h2>{sampleBuilding ? (sampleBuilding.name||names[sampleBuilding.shape]) : 'Một nơi để\nmuốn trở về.'}</h2><p className="muted">{sampleBuilding ? (previewWork?'Công trình mẫu đang xây. Thợ và vật liệu chỉ minh họa, không tính vào tiến độ.':'Mẫu công trình hoàn thiện. Bạn có thể ngắm các mặt của ngôi nhà trong không gian 3D.') : `Ngắm thử phố ${PLACES[appearance.place].name}. Những công trình mẫu không tính vào tiến độ của bạn.`}</p>{sampleBuilding && <button type="button" className="btn" onClick={() => scene?.focusBuilding(sampleBuilding.planId, appearance.motion ? 1000 : 0)}>Xem gần công trình ↗</button>}<button type="button" className="btn" aria-pressed={previewWork} onClick={()=>{setPreviewWork(!previewWork);setPreviewPercent(35);if(!selectedPlan){const id=shownCity.buildings[0].planId;setPick({type:'building',planId:id});scene?.focusBuilding(id,appearance.motion?800:0);}}}>{previewWork?'Xem nhà đã hoàn thiện':'Xem giai đoạn đang xây'}</button>{previewWork && sampleBuilding && <label className="gpt-construction-preview">{Math.round(constructionMinutes(sampleBuilding))}/{sampleBuilding.targetMinutes} phút · {constructionStage(sampleBuilding).label}<input type="range" min="0" max="100" step="1" aria-label="Tiến độ thi công mẫu" value={previewPercent} onChange={e=>setPreviewPercent(Number(e.target.value))} /></label>}{sampleBuilding && heritageOf(sampleBuilding.key) && city.canPlan && <button type="button" className="btn btn--primary" onClick={()=>choose(heritageOf(sampleBuilding.key))}>Xây mẫu này · {heritageOf(sampleBuilding.key).size*MINUTES_PER_STEP} phút</button>}<HeritageNote building={sampleBuilding} /><div className="gpt-preview-types">{previewChoices.map(({id,name,building})=> {
+          <><span className="eyebrow">{sample==='full'?'Hội An mở rộng · bản nghiên cứu':'Xem trước thành phố 3D'}</span><h2>{sampleBuilding ? (sampleBuilding.name||names[sampleBuilding.shape]) : 'Một nơi để\nmuốn trở về.'}</h2><p className="muted">{sample==='full'?'Bố trí theo khu vực và địa danh; diện tích công trình khác nhau. Đây là tỷ lệ khái quát, không phải bản đồ đo đạc hay tiến độ thật.':sampleBuilding ? (previewWork?'Công trình mẫu đang xây. Thợ và vật liệu chỉ minh họa, không tính vào tiến độ.':'Mẫu công trình hoàn thiện. Bạn có thể ngắm các mặt của ngôi nhà trong không gian 3D.') : `Ngắm thử phố ${PLACES[appearance.place].name}. Những công trình mẫu không tính vào tiến độ của bạn.`}</p>{sampleBuilding && <button type="button" className="btn" onClick={() => scene?.focusBuilding(sampleBuilding.planId, appearance.motion ? 1000 : 0)}>Xem gần công trình ↗</button>}{sample==='full'&&<div className="gpt-districts">{DISTRICTS.map(district=><button key={district.id} type="button" className="btn" onClick={()=>scene?.viewDistrict(district,appearance.motion?1100:0)}>{district.name} ↗</button>)}<details><summary>Địa lý và nguồn tham khảo</summary>{DISTRICTS.map(district=><p key={district.id}><b>{district.name}</b> · {district.note} <a href={district.source} target="_blank" rel="noreferrer">Nguồn ↗</a></p>)}</details></div>}<button type="button" className="btn" hidden={sample==='full'} aria-pressed={previewWork} onClick={()=>{setPreviewWork(!previewWork);setPreviewPercent(35);if(!selectedPlan){const id=shownCity.buildings[0].planId;setPick({type:'building',planId:id});scene?.focusBuilding(id,appearance.motion?800:0);}}}>{previewWork?'Xem nhà đã hoàn thiện':'Xem giai đoạn đang xây'}</button>{previewWork && sampleBuilding && <label className="gpt-construction-preview">{Math.round(constructionMinutes(sampleBuilding))}/{sampleBuilding.targetMinutes} phút · {constructionStage(sampleBuilding).label}<input type="range" min="0" max="100" step="1" aria-label="Tiến độ thi công mẫu" value={previewPercent} onChange={e=>setPreviewPercent(Number(e.target.value))} /></label>}{sampleBuilding && heritageOf(sampleBuilding.key) && city.canPlan && <button type="button" className="btn btn--primary" onClick={()=>choose(heritageOf(sampleBuilding.key))}>Xây mẫu này · {heritageOf(sampleBuilding.key).size*MINUTES_PER_STEP} phút</button>}<HeritageNote building={sampleBuilding} /><div className="gpt-preview-types">{previewChoices.map(({id,name,building})=> {
             return building && <button key={id} type="button" aria-pressed={sampleBuilding?.planId===building.planId} onClick={()=> { setPick({type:'building',planId:building.planId}); scene?.focusBuilding(building.planId,appearance.motion?1000:0); }}>{name}<span aria-hidden="true">↗</span></button>;
           })}</div><button type="button" className="btn btn--primary" onClick={() => { setPick(null); setPreviewWork(false); onSampleChange(false); }}>Xây thành phố của tôi</button><div className="gpt-inspector-note">Phút tập trung của phiên đã hoàn thành sẽ xây móng, dựng khung, lợp mái và hoàn thiện ngôi nhà.</div></>
         ) : pick ? <><HeritageNote building={chosenBuilding} /><Detail pick={pick} city={city} categories={app.state.categories} onFocus={(id) => scene?.focusBuilding(id, appearance.motion ? 1000 : 0)} onClose={() => setPick(null)} architectural /></> : (
@@ -118,16 +126,26 @@ function CityWorkspace({ app, appearance, sample, onSampleChange }) {
   );
 }
 
+function NoCityPreview() { return null; }
+
+function FocusCompanion({app,onCity}) {
+  const days=lastDays(app.state,app.now,7),max=Math.max(1,...days.map(day=>day.minutes));
+  const building=app.city.current;
+  return <aside className="gpt-focus-companion"><span className="eyebrow">Nhịp của bạn</span><h2>Từng phút.<br /><em>Thành một điều đáng nhớ.</em></h2>
+    <div className="gpt-week-strip" aria-label="Thời gian tập trung 7 ngày">{days.map(day=><div key={day.key} title={`${day.key}: ${day.minutes} phút`}><span style={{height:`${Math.max(3,day.minutes/max*100)}%`}} /><small>{new Date(`${day.key}T12:00:00+07:00`).toLocaleDateString('vi-VN',{weekday:'short'})}</small></div>)}</div>
+    <p>{currentStreak(app.state,app.now)} ngày liên tiếp · {days.reduce((sum,day)=>sum+day.minutes,0)} phút trong 7 ngày</p>
+    <div className="gpt-build-summary"><span className="eyebrow">Công trình đang xây</span><h3>{building?.name||'Một góc phố đang chờ bạn'}</h3>{building&&<><div className="gpt-progress"><span style={{width:`${constructionProgress(building)*100}%`}} /></div><p>{constructionStage(building).label} · {building.workUnit==='minutes'?`${Math.floor(constructionMinutes(building))}/${building.targetMinutes} phút`:`${building.bricks.length}/${building.size} phiên`}</p></>}<button type="button" className="btn" onClick={onCity}>Thành phố của tôi ↗</button></div>
+  </aside>;
+}
+
 export default function GptEdition({ app, sync }) {
   const [tab, setTab] = useState('focus');
   const [appearance, setAppearance] = useState(readAppearance);
-  const [sample, setSample] = useState(app.city.buildings.length === 0);
+  const [sample, setSample] = useState(false);
   const [reduced, setReduced] = useState(() => window.matchMedia('(prefers-reduced-motion: reduce)').matches);
   const today = todaySummary(app.state, app.now);
   const place = PLACES[appearance.place];
-  const focusAppearance = useMemo(() => ({ ...appearance, motion: appearance.motion && !reduced && !app.state.active }), [appearance, reduced, app.state.active]);
   const cityAppearance = useMemo(() => ({ ...appearance, motion: appearance.motion && !reduced }), [appearance, reduced]);
-  const focusCity = useMemo(() => app.city.buildings.length ? app.city : postcardCity(app.city,appearance.place==='hoian'), [app.city, appearance.place]);
   useEffect(() => { try { localStorage.setItem('dc-gpt-appearance', JSON.stringify(appearance)); } catch { /* Rendering still works without local preference storage. */ } }, [appearance]);
   useEffect(() => {
     const mq = window.matchMedia('(prefers-reduced-motion: reduce)');
@@ -143,14 +161,14 @@ export default function GptEdition({ app, sync }) {
         <div className="gpt-header-end">{['missing-table', 'error'].includes(sync.state) && <button className="link" type="button" onClick={() => setTab('settings')}>Chỉ lưu trên máy</button>}<span className={`sync-dot sync-dot--${sync.state}`} title={sync.detail || sync.state} /><a href="/" title="Quay về phiên bản gốc">Bản gốc ↗</a><a href="/v2/" title="Cùng dữ liệu v2, giao diện cũ">V2 ↗</a></div>
       </header>
       <main className="gpt-main">
-        {(tab === 'focus' || tab === 'city') && <div className="gpt-location-bar"><div><span className="eyebrow">{tab === 'focus' ? 'Không gian tập trung' : 'Thành phố nhật ký'}</span><label><select aria-label="Phong cách thành phố" value={appearance.place} onChange={(e) => setAppearance({ ...appearance, place: e.target.value })}>{Object.entries(PLACES).map(([id, p]) => <option key={id} value={id}>{p.name}</option>)}</select><span className="gpt-location-subtitle">{place.subtitle}</span></label></div><Atmosphere value={appearance} onChange={setAppearance} /></div>}
+        {tab === 'city' && <div className="gpt-location-bar"><div><span className="eyebrow">{tab === 'focus' ? 'Không gian tập trung' : 'Thành phố nhật ký'}</span><label><select aria-label="Phong cách thành phố" value={appearance.place} onChange={(e) => setAppearance({ ...appearance, place: e.target.value })}>{Object.entries(PLACES).map(([id, p]) => <option key={id} value={id}>{p.name}</option>)}</select><span className="gpt-location-subtitle">{place.subtitle}</span></label></div><Atmosphere value={appearance} onChange={setAppearance} /></div>}
         {tab === 'focus' && <div className={`gpt-focus-layout${app.justDone && !app.state.active ? ' gpt-focus-done' : ''}`}>
           <section className="gpt-focus-panel">
             {!app.state.active && !app.justDone && <h1>Một phiên nhỏ.<br /><em>Một góc phố mới.</em></h1>}
-            <FocusPanel app={app} goTo={setTab} CityRenderer={Scene} appearance={focusAppearance} architectural />
+            <FocusPanel app={app} goTo={setTab} CityRenderer={NoCityPreview} architectural />
             <div className="gpt-today"><span>Hôm nay <b>{today.count}/{app.state.prefs.dailyGoal} phiên</b></span><span>{hoursMinutes(today.minutes)}</span></div>
           </section>
-          <div className="gpt-focus-scene"><Scene city={focusCity} categories={app.state.categories} now={app.cityNow} appearance={focusAppearance} interactive={false} label={`Góc phố ${place.name}`} /><div className="gpt-focus-postcard"><span className="eyebrow">{app.city.buildings.length ? 'Thành phố của bạn' : 'Phố mẫu · chưa tính vào tiến độ'}</span><h2>{place.subtitle}</h2><button type="button" onClick={() => setTab('city')}>Ghé thăm thành phố <span aria-hidden="true">↗</span></button></div><span className="gpt-season-label">{SEASONS[appearance.season]} · {snowIn(appearance) ? 'Tuyết nhẹ' : appearance.weather === 'rain' ? 'Mưa nhẹ' : appearance.light === 'night' ? 'Lên đèn' : 'Yên bình'}</span></div>
+          <FocusCompanion app={app} onCity={()=>{setSample(false);setTab('city');}} />
         </div>}
         {tab === 'city' && <CityWorkspace app={app} appearance={cityAppearance} sample={sample} onSampleChange={setSample} />}
         {tab === 'stats' && <div className="gpt-inner-page"><span className="eyebrow">Những điều bạn đã làm được</span><h1>Nhật ký tập trung</h1><StatsView app={app} /></div>}

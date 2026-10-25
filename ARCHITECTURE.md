@@ -1397,8 +1397,8 @@ UI (v2/src/ui) ──actions──▶ useTimerApp ──cmd*(state, now)──�
   `v2/src/gpt/`. It shares `useTimerApp`, the event log, FocusPanel, StatsView and SettingsView;
   there is no second timer or database. `GptScene` inherits canvas lifecycle, picking and camera
   navigation from `CityScene`, specializes GPT detail/quarter framing, and draws architectural
-  completion parts on unchanged plot centers.
-  Both Focus and City render the actual three.js scene. A labelled read-only 3D sample
+  completion parts on unchanged plot centers, except the authorized Chua Cau river projection (ADR-105).
+  Only City mounts the actual three.js scene; Focus has a lightweight progress companion. A labelled read-only 3D sample
   previews completed architecture; it supports selection and camera navigation without events.
   GPT uses CityScene.renderScene with a multisampled composer, bloom and one final OutputPass;
   the base edition keeps its direct renderer. No illustrative backdrop replaces the city.
@@ -1408,10 +1408,11 @@ UI (v2/src/ui) ──actions──▶ useTimerApp ──cmd*(state, now)──�
   v1 links to the edition from the sidebar and Settings; `/` and `/v2/` remain available.
 - **Storage flow**: localStorage `dc-pomodoro-v2` on each device; cloud `events_v2`. v2 never writes
   `game_state` / `timer_live`; `legacy.js` reads `game_state` once, read-only, for the history import.
-- **Hoi An catalog (2026-10-23)**: seven additive immutable blueprint keys live in
+- **Hoi An catalog (2026-10-23)**: ten additive immutable blueprint keys live in
   `engine/catalog.js`; existing plan payload/reducer handles them without a new event or migration.
   `gpt/heritage.js` composes the shared Hoi An kit and construction footprints. Source notes and
   collection state are read-only projections; old blueprint models and plots remain unchanged.
+- **Regional study (ADR-106)**: `gpt/world.js` creates opt-in render-only district models with variable footprints. It never migrates earned plots or writes events. `engine/stats.js::journalEntries` supplies shared bounded journal UI filters/totals.
 - **Minute construction (ADR-104)**: new plans version their unit (`minutes`, version 1); the pure
   city reducer allocates exact completed `focusedMs` FIFO with lossless yard fragments. Historical
   unversioned plans keep session/bonus semantics. Shared progress helpers drive both 3D views,

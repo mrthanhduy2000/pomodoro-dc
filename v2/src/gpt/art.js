@@ -27,8 +27,43 @@ export function architectureOf(building) {
   const width = building.shape === 'tower' ? 1.25 : building.shape === 'house' ? 1.7 : 2.25;
   return { floors, width, depth: 1.7, height: floors * 0.9, progress: constructionProgress(building) };
 }
-export function crossingDeck(z) {
-  return .22+Math.sin(Math.max(0,Math.min(1,(z+3.14)/2.28))*Math.PI)*.35;
+export function bridgeWalkHeight(z) {
+  return .33-.315*Math.max(0,Math.min(1,(Math.abs(z+2)-1.53)/.39));
+}
+/** Stable, collision-free crossing addresses; never derived from city size or plan order. */
+export function riverSite(plot) {
+  const signed=n=>n>=0?2*n:-2*n-1;
+  const x=signed(plot.x),y=signed(plot.y),index=(x+y)*(x+y+1)/2+y;
+  const slot=index%2===0?index/2:-(index+1)/2;
+  return {x:2+slot*8,z:-2};
+}
+/** Render-only relocation explicitly requested for Chua Cau; the reducer/log remain untouched. */
+export function projectGptCity(city) {
+  let changed=false;
+  const buildings=city.buildings.map(b=>{
+    if(b.key!=='ha-chuacau-v1'||b.riverBridge)return b;
+    changed=true;
+    const site=city.presentationSample&&b.planId==='postcard-3'?{x:2,z:-2}:riverSite(b.plot);
+    return {...b,sourcePlot:b.plot,riverBridge:true,plot:{x:site.x/4,y:site.z/4}};
+  });
+  return changed?{...city,buildings}:city;
+}
+export function riverCandidates(candidates) {
+  return candidates.slice().sort((a,b)=>Math.abs(riverSite(a).x)-Math.abs(riverSite(b).x)||a.x-b.x||a.y-b.y).slice(0,3);
+}
+/** Scene-local commerce: finite stock, alternating buyers, payment, handover and replenishment. */
+export function tradeAt(time,phase,out={}) {
+  const clock=Math.max(0,time+phase),round=Math.floor(clock/44),u=clock%44;
+  const smooth=(a,b)=>{const p=Math.max(0,Math.min(1,(u-a)/(b-a)));return p*p*(3-2*p);};
+  const approach=smooth(0,10),depart=smooth(23,35);
+  out.u=u;out.active=round%2;out.offset=approach-depart;
+  out.walking=u<10?Math.sin(u/10*Math.PI):u>=23&&u<35?Math.sin((u-23)/12*Math.PI):0;
+  out.greet=smooth(10,12)*(1-smooth(22,23));
+  out.exchange=smooth(17,20)*(1-smooth(22,23));
+  out.payment=smooth(16,19);out.handover=smooth(19,23);out.restock=round%6===5&&u>=36;
+  out.stock=6-round%6-(u>=21?1:0);
+  if(out.restock)out.stock=Math.floor(smooth(36,43)*6);
+  return out;
 }
 /** Compile a closed, pause-aware pedestrian journey once; frame sampling allocates nothing. */
 export function streetJourney(points, speed=.24) {
@@ -58,7 +93,7 @@ export function postcardCity(city, heritage = false) {
   const spots = [[-1, 0], [0, 0], [1, 0], [-1, -1], [0, -1], [1, -1], [0, 1], [-1, 1], [1, 1],
     [-1,-2],[0,-2],[1,-2],[-2,-1],[-2,0],[-2,1],[-2,-2],[2,-1],[2,0],[2,1],[2,-2]];
   const shapes = ['house', 'market', 'hall', 'house', 'temple', 'house', 'tower', 'market', 'house'];
-  return { ...city, candidates: [], pile: [], residents: [], lanterns: [], statues: [], bricks: [],
+  return { ...city, presentationSample:true, candidates: [], pile: [], residents: [], lanterns: [], statues: [], bricks: [],
     buildings: spots.map(([x, y], i) => {
       const bp=heritage?HOIAN_BLUEPRINTS[i]:null,size=bp?.size||8;
       return { planId:`postcard-${i}`,plot:{x,y},key:bp?.key,name:bp?.name,shape:bp?.shape||shapes[i]||(i%4===0?'market':'house'),style:5,size,workUnit:'minutes',targetMinutes:size*25,workMs:size*25*60000,

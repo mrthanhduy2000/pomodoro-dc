@@ -1,3 +1,35 @@
+> Last update: **2026-10-25 — CITY-ONLY 3D, REGIONAL HOI AN AND LIVING COMMERCE.**
+> The user authorized geography, larger variable footprints, history, lower lag, journal and
+> useful default-edition features. Focus now mounts zero 3D canvases, including completion.
+> My City starts with real earned plans. Its future button alone opens a labelled 48-building
+> regional study: old town, western Thanh Ha, southern Kim Bong/Cam Kim, eastern Cam Thanh.
+> `gpt/world.js` owns free presentation footprints; real plans still use historical grid rules.
+> Relative geography/areas are interpretive, not GPS or surveyed replicas. Do not migrate old plots.
+> ADR-105 authorizes Chua Cau alone to project across the actual channel using stable injective
+> river sites. Original integer plot, ID, minutes and log remain unchanged; other houses do not move.
+> Picks, placement highlights, camera, deck mosaics, workers and bridge walkers share the site.
+> Remove the earlier free bridge duplicate. The future study uses its own creek/river geometry.
+> Added Quang Trieu, Quan Cong and Cam Pho: ten additive sourced blueprints; old budgets unchanged.
+> Models gain differentiated courtyard/axial/pavilion forms, book/dining house variants and six
+> human archetypes. Two buyers alternate payment/handover; six shelf items exhaust and replenish.
+> Commerce is scene-local, paused and read-only, never a saved economy or synthetic focus reward.
+> Close earned residents keep real picks; distant crowd is lighter. No focus session was started.
+> Retain measured existing foliage cells and bounds refresh; reject additional roof-cell batching.
+> Visible close actors retain cadence; far poses 15 Hz, offscreen 8 Hz; goods upload separately.
+> Measured bounded 40 Hz cadence retained; native DPR/MSAA/map resolutions and lights unchanged.
+> Journal shares accent-insensitive/date/category/status filters, complete totals and 40-row pages.
+> Default pure 15/25/52/90 presets, recent goals, streak and seven-day minutes adapted into GPT.
+> Confirmed fresh Apple M3 Metal, 1440x790 / buffer2104x1228 / DPR2, same 20-model scene:
+> orbit 40.03 FPS, P95 42.6 ms, worst45.0; zoom40.07, P95 42.6, worst46.4; both >50 ms=0.
+> Earlier captures varied and extra roof-cell/uncapped experiments regressed, so were removed.
+> No stable60 claim or 48-building regional FPS comparison. See PERFORMANCE.md.
+> Guards: new river-site stability deliberately fails an isolated mutant; real source untouched.
+> Preview/placement-cancel and journal filters verified without creating a real focus session.
+> Validation: 1,940 full-suite passes, zero failures, one expected skip; all three cross-checks
+> pass. All 52 focused data/art/doc checks and final lint/build pass. Confirm Ready/SHA on release.
+
+---
+
 > Last update: **2026-10-24 — CONNECTED GPT QUARTER AND MEASURED M3 ORBIT.**
 > User authorized the whole proposed riverside direction, including GPT camera improvements.
 > Existing earned/sample anchors, keys, budgets, log and terrain-progress independence remain.

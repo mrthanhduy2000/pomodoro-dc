@@ -93,139 +93,95 @@ code — stop and rethink before adding more. Stage 5 needs sync ON first (else 
 8. **The tick never re-reads the log**: `advance(written, now)`; re-reduce only when `events` change.
 9. **One shortcut: Space** (start · pause · resume). Discovery is a `title`, never text on screen.
 
-## GPT visual edition (2026-10-22)
+## GPT visual edition (2026-10-25, ADR-105/106)
 
-Opt in at `/v2/?edition=gpt` from the original app or the v2 header. It shares v2 data and
-commands; this is not the stage-5 cutover. The classic view keeps the storey representation.
-Both Focus and City use real three.js architecture. "Xem trước 3D" opens a labelled, read-only
-sample with five selectable building types. No illustrative background replaces the city.
-GPT renders the same bricks as construction details plus independently selectable mosaic tiles,
-with unchanged plot centers. Hoi An frontages fill more of each plot; adjacent developed buildings
-share render-only tiled alley passages, planted pergolas and lantern strings. Developed
-houses/halls/markets have shallow service wings inside their own plot, clear of the canal.
-Hoi An paving excludes the navigation margin without changing camera bounds; perimeter trees
-and fine layered crowns soften the open edge. Four place-inspired skins and seasonal
-atmosphere are local presentation preferences. The labelled twenty-building sample town contains no earned progress and cannot write
-sample sessions or buildings to the log. A sample-only construction slider changes a copied
-sample building's minute progress, exposing workers/scaffolding without changing the real log or sample
-anchors. Leaving the sample resets this toggle. Actual plot selection still uses the shared `cmdPlan` validation.
+Opt in at `/v2/?edition=gpt`. The shared v2 log, timer, commands and exact completed-focus
+minute accounting remain canonical. Focus has no 3D canvas, including the completion screen.
+Its lightweight companion shows seven-day minutes, streak and current construction progress.
+The city renderer mounts lazily only in City. Original v1 quick focus durations (15/25/52/90)
+are reused as pure constants, with 50/current preference retained. Recent completed goals offer
+suggestions; Space and category preferences retain shared behavior.
 
-GPT atmosphere uses the existing hemisphere and directional lights: cool sky fill, warm direct
-sun, restrained lamp bloom and continuous day/night interpolation. Rain softens the direct sun
-and increases distance haze. The procedural sky shares its horizon with exponential fog and
-its glow direction with the actual sun. No image background, extra light or additional postprocessing pass is used.
-GPT camera navigation has its own user-authorized quarter/detail views; classic presets stay unchanged.
+City starts with the earned city. “Xem trước 3D” opens the labelled twenty-building sample.
+Only the separate “Hội An mở rộng · tương lai” button inside My City opens `gpt/world.js`:
+a read-only 48-building regional study with variable widths, depths and compound courtyards.
+It separates old town, western Thanh Ha, southern Kim Bong/Cam Kim and eastern Cam Thanh.
+Its creek feeds the wider river; district buttons frame each area. Relative geography and areas
+are interpretive, not surveyed coordinates or actual metres. Free footprints currently apply
+only to this future study; real earned plans retain the shared versioned grid contract.
+Neither preview can create sessions, assets or construction credit. The small sample retains
+its construction slider/workers; the future study has no fake earned placement candidates.
 
-Hoi An houses have six stable frontage compositions, selected by a suffix hash of planId.
-The variant affects massing, ridge direction, gallery/courtyard and shop displays, never plot
-coordinates or construction facts. Articulated street/quay figures, vendors and boat occupants are
-decorative; they are separate from earned residents and never write or impersonate diary records.
-Boat occupants share their hull transform. Walkers follow short, fixed clear corridors with smooth
-starts, stops and on-the-spot turns; vendors reach/bend and figures breathe/look around with seeded
-phases. Completed market stalls and selected street carts share a customer/seller clock: approach,
-browse, exchange, leave with a parcel, then return. Existing walkers become customers rather than
-adding a second crowd. Cafe occupants drink from cups; unfinished earned buildings gain worksite
-scaffolding, timber, buckets and an articulated worker. These are progress-derived scenery only.
-Moving parts use their own instanced batches, separate from architecture. Animation uses a
-paused local clock, respects reduced motion and never catches up after an offscreen/hidden pause.
+### Historical choices and placement
 
-GPT reuses procedural surface maps across rebuilds and disposes GPU textures with the scene.
-Immutable CPU canvases for the five surface roles survive scene mounts, avoiding repeated pixel
-generation when switching screens; they do not retain old renderer-owned GPU resources. Motion toggles
-update the current scene without rebuilding it. Reflections and shadow maps retain their original
-resolution but refresh at most every 125 ms while the view rests. Moving-camera reflections refresh
-at most every 80 ms rather than rendering the whole city on every orbit frame; the last camera view
-remains pending until refreshed. Sky/rebuild changes invalidate both immediately. Water ripples/people keep the scene's existing
-40 Hz render cadence. With motion off, the composer skips identical views; interaction, resize,
-selection and sky changes still redraw. Native DPR and light count are unchanged; architecture keeps full detail at every distance.
-Foliage batches partition into original close leaf sprays and seeded coarser distant sprays, with
-17/19-world-unit hysteresis. View classification is throttled and matrices upload only when a
-partition changes. See `PERFORMANCE.md` for the controlled Apple M3 orbit/zoom comparison at Retina 2×.
+Ten additive `ha-*-v1` keys use the existing blueprint field and released minute budgets.
+Old keys, events and non-bridge building positions are unchanged. Heritage remains identifiable
+under other surrounding styles. Models are interpretations built with shared materials/instancing.
 
-Organic wear is deterministic: world-space plaster dampness, grouped clay-tile ageing,
-small roof installation offsets and irregular street planting never reseed on rebuild.
-Broadleaf branches and palm fronds vary by their existing planting seed. Broadleaf twigs use
-three shared merged leaf sprays (one per foliage tone), keeping fine leaves without rebuilding
-individual leaf transforms per tree. A shared GPU wind clock gently moves leaves and cloth;
-reduced motion freezes it. Cloth awnings/curtains and alley laundry use shared geometry. Open door
-panels, settled apron stones, moss and staggered eaves connect houses to paving. Shop ceiling strips
-feed the existing warm ground-pool batch, adding no light or postprocessing pass. Quay steps have
-seeded settlement, ropes sag, boats remain within their fixed moorings, and the rower's oar shares
-its animation frequency.
-
-## Documented Hoi An choices (2026-10-23)
-
-`engine/catalog.js` adds seven immutable `ha-*-v1` blueprint keys, available from era 1. The
-existing `build.plan.data.blueprint` field persists the choice: no new event kind, stored reward,
-SQL or conversion of old plans. Old `eN-slot` choices retain their original names, budgets and art.
-New landmarks keep their Hoi An architecture even if the user changes the surrounding place skin.
-`gpt/heritage.js` composes the existing Hoi An kit (shared roof tiles/materials/instancing); its
-footprints also drive foundation/frame/masonry phases. All models fit the existing fixed plots.
-New waterfront models and their craft actors shorten depth around the same plot centre so ground
-props remain behind the existing quay; old models and the river never move.
-They are explicitly labelled interpretive miniatures, not surveyed replicas or a geographic map.
-Chua Cau has a local channel inside its plot: it does not reroute the real scene river or old houses.
-
-| Choice | Minutes | Documented characteristic and source |
+| Choice | Minutes | Primary source |
 |---|---:|---|
-| Tan Ky | 100 | Timber house and open light well: [Da Nang tourism](https://danangfantasticity.com/en/kien-truc/nha-co-tan-ky). |
-| Phung Hung | 100 | Upper timber balcony: [Hoi An heritage portal](https://hoianworldheritage.org.vn/vi/news/Diem-di-tich/Nha-co-Phung-Hung-12.hwh). |
-| Phuc Kien | 200 | Three-entry gate, courtyard and sanctuary: [Da Nang tourism](https://danangfantasticity.com/hoi-quan-phuc-kien). |
-| Chua Cau | 300 | Covered timber crossing, stone supports and adjoining shrine: [Da Nang tourism](https://danangfantasticity.com/en/kien-truc/chua-cau). |
-| Hoi An market | 200 | Food stalls and cao lau: [Hoi An heritage portal](https://www.hoianworldheritage.org.vn/vi/news/am-thuc/cac-dia-chi-thuong-thuc-cao-lau-hoi-an-ngon-2332.hwh). |
-| Thanh Ha workshop | 200 | Wheel, drying pottery, kiln; paired craft work: [Hoi An heritage portal](https://hoianworldheritage.org.vn/vi/news/Du-lich-Hoi-An/ve-mien-co-tich-gom-thanh-ha-2767.hwh). |
-| Kim Bong workshop | 200 | Carving, woodworking and boat repair: [Hoi An heritage portal](https://www.hoianworldheritage.org.vn/vi/news/Thong-bao/thong-tin-khai-truong-hoat-dong-huong-dan-tham-quan-tai-lang-moc-kim-bong-2679.hwh). |
+| Tan Ky | 100 | [Da Nang tourism](https://danangfantasticity.com/en/kien-truc/nha-co-tan-ky) |
+| Phung Hung | 100 | [Hoi An heritage](https://hoianworldheritage.org.vn/vi/news/Diem-di-tich/Nha-co-Phung-Hung-12.hwh) |
+| Phuc Kien | 200 | [Da Nang tourism](https://danangfantasticity.com/hoi-quan-phuc-kien) |
+| Chua Cau | 300 | [Da Nang tourism](https://danangfantasticity.com/en/kien-truc/chua-cau) |
+| Hoi An market | 200 | [Local food heritage](https://www.hoianworldheritage.org.vn/vi/news/am-thuc/cac-dia-chi-thuong-thuc-cao-lau-hoi-an-ngon-2332.hwh) |
+| Thanh Ha pottery | 200 | [Heritage portal](https://hoianworldheritage.org.vn/vi/news/Du-lich-Hoi-An/ve-mien-co-tich-gom-thanh-ha-2767.hwh) |
+| Kim Bong carpentry | 200 | [Heritage portal](https://www.hoianworldheritage.org.vn/vi/news/Thong-bao/thong-tin-khai-truong-hoat-dong-huong-dan-tham-quan-tai-lang-moc-kim-bong-2679.hwh) |
+| Quang Trieu | 200 | [Official monument record](https://hoianheritage.net/uploads/download/hq-05-hoi-quan-quang-dong.pdf) |
+| Quan Cong | 300 | [Official monument record](https://hoianheritage.net/uploads/download/m-01-quan-cong-mieu.pdf) |
+| Cam Pho | 200 | [Official heritage record](https://hoianheritage.danang.gov.vn/vi/di-san-van-hoa/Dinh/dinh-cam-pho-so-52-duong-nguyen-thi-minh-khai-phuong-cam-pho-224.html) |
 
-The workshop models represent local craft traditions, not a claim to reproduce a specific named
-private workshop. Dates, exact dimensions, inscriptions and legends are not invented. The inspector
-links each choice to its source. The read-only sample swaps only the first seven render models,
-keeping all twenty original sample IDs/plot anchors. Preview → build opens the normal plot picker;
-it cannot write a plan until the user places it. Collection completion is derived from real finished
-blueprint keys only; sample progress cannot unlock anything. Reload older clients for the new keys.
+Quang Trieu has stone gates, lateral halls and courtyard; Quan Cong uses axial roofed halls
+and red frontage; Cam Pho includes a four-sided front pavilion and East/West houses. No invented
+inscriptions or uncertain founding dates. Workshop models represent local traditions, not private
+workshop replicas. Source-linked architecture/life notes remain in the inspector.
 
-Craft actors replace the ordinary vendor/tea figures at workshops. Thanh Ha has a wheel-turning
-potter and helper; Kim Bong has carving and carrying; the market has eating gestures with bowls
-and chopsticks. Shrine plots do not receive random food carts or cafe seating. Walking phases
-follow route distance instead of running during stops. Nearby actors keep scene cadence; figures
-beyond 20 units sample poses at 15 Hz. Tiny shoes, hat brims and tools share the same thin-part geometry policy as architecture.
-Only changed, contiguous matrix ranges upload; pose sampling never hides actors or scene objects,
-and resolution stays unchanged. This is an implementation improvement, not a new measured
-FPS claim. Reduced-motion/paused clocks and map/light resolutions retain the existing behavior.
+By explicit user authorization, Chua Cau alone receives a GPT-only river-site projection.
+`riverSite` uses an injective signed-pair address from the original integer plot; later plans
+cannot displace it. `projectGptCity` preserves `sourcePlot`, IDs, budgets, bricks and all other
+building object identities. Placement highlights, picking, camera, workers and deck mosaics
+use the same projected site; commands still receive valid original candidates. Classic reads
+unmodified plots. The earlier free decorative duplicate is removed. The actual landmark spans
+the scene channel with five masonry supports, timber deck, pale half walls, tiled roofs,
+attached shrine and landward steps. Its two walkers follow its deck. No Buddha/inscriptions
+are invented. Terrain remains independent of earned progress. Detailed pavement loops use original land bounds;
+distant river addresses receive local landings instead of generating empty plots across the gap.
 
-## Connected riverside quarter (2026-10-24)
+### Living streets and rendering
 
-The fixed public covered crossing at world x=2 now has a timber deck, clay tile courses,
-stone approaches and an adjoining quiet shrine above the existing river. It is street scenery,
-not a free completed buildable landmark or a geographic assertion about Hoi An. The separate
-buildable Chua Cau keeps its immutable plot, with a longer local inlet and stone approach paths.
-This distinction avoids moving earned buildings or making river terrain depend on completion.
-Existing and sample plot anchors, blueprint keys, minute costs and diary facts remain unchanged.
+Eight seeded frontage families vary massing, galleries, book displays, dining verandas and
+courtyards. Existing connections retain settled thresholds, lanes, drains, rear yards and shared
+canopies. Quay cargo, porters, pottery and carpentry use compiled routes/gestures. Six human
+archetypes vary silhouette, height, skin, hair/headgear and apron; the latest 24 earned residents
+use articulated figures and real resident picks, while the remaining bounded crowd uses lighter
+figures. Decorative activity never writes rewards or impersonates historical records.
 
-Developed frontages join their paving through settled thresholds, side lanes/drains, shared
-canopies and rear yards with low boundaries, jars and working objects. Connections require
-existing neighbouring buildings; they do not invent extra earned houses. Shore plots keep the
-fixed channel clear. One mooring shifts from x=3.6 to 4.2 to clear the new public shrine supports;
-boats, occupants and their ropes use the same mooring coordinates.
+Market commerce uses a shared 44-second cycle: two alternating buyers approach, browse, pay,
+receive a bag and leave. Six finite shelf items decrease on handover and replenish after six
+sales. Coin, parcel and shelf changes are animated with the seller response. This is scene-local
+activity, not a saved economy. Goods have their own upload ticks so updating a parcel does not
+force every distant seller joint to upload. Paused/reduced-motion clocks never catch up.
 
-Two decorative walkers cross the public bridge with deck-following feet. Quay porters and
-construction carriers follow compiled closed journeys with pauses at collection/delivery points;
-walking phases use travelled distance. Shop customers leave the street edge, approach the vendor,
-exchange and depart with a parcel. Completed non-shrine waterfront plots activate local cargo
-baskets, landing boards and moving porters; unfinished plots retain workers instead. All of this
-is presentation derived from construction progress, never a second economy or an event write.
-`art.js` compiles/samples journeys without per-frame route allocations. Paused/reduced-motion
-behavior remains shared with the existing scene clock.
+Keep native DPR, full reflection/shadow resolution, two lights and four-sample MSAA. Warm sun,
+cool sky fill, procedural sky/fog, deterministic plaster/stone/wood maps, water ripples, bloom
+and organic roof wear remain real 3D. No background image replaces the city. Regional haze scales
+for its larger viewing distances. No additional light or postprocessing pass is introduced.
 
-The inspector's close view chooses among twelve approaches using neighbouring roofs and tree
-twig-cluster crowns; low workshop views reveal work below the porch roof. City tools add “Dạo bờ sông” and “Qua cầu” along the clear water corridor; overview,
-classic edition and building coordinates stay unchanged. These are chosen views, not a new
-first-person mode or an exact historic map.
+Foliage retains original near geometry, 17/19-unit hysteresis, existing eight-unit cells and
+bounds refresh after repartition. Additional roof batching and incremental LOD experiments were
+rejected after same-art measurements regressed. Close visible actors keep render cadence,
+distant visible poses sample at 15 Hz and offscreen poses at 8 Hz. Only changed matrix ranges
+upload. Rendering keeps its measured bounded 40 Hz cadence. Moving shadow refresh remains
+350 ms, reflections 80 ms; both idle at 125 ms.
+See `PERFORMANCE.md` for measured results and limitations, rather than assuming stable 60 FPS.
 
-Fine foliage remains identical at the existing distance thresholds but batches partition into
-8-unit spatial cells. Their bounds recompute only when the near/far partition changes, with a
-wind margin, allowing normal view/shadow frustum culling. During orbit, full-resolution shadow
-updates run at most every 350 ms (idle: 125 ms). Reflection keeps its existing 80/125 ms schedule. Resolution, close geometry, lights, materials and 4x MSAA
-are unchanged. See PERFORMANCE.md for the same-scene Apple M3 before/after capture.
+### Journal
+
+Shared `engine/stats.js::journalEntries` filters settled history by accent-insensitive goal,
+category, status and Vietnam-calendar dates. Totals cover every matching row; UI initially renders
+40 and offers more. A 28-day chart drills into a date; 7/28/90/all/custom ranges and legacy badges
+preserve real records. Deferred search/memoization avoid per-second timer work. No history edit,
+new event, progress reinterpretation or deletion is introduced.
 
 ## Run it
 `npm run dev:v2` → `http://localhost:31120/v2/` (preview config "Pomodoro v2"). `npm run build`

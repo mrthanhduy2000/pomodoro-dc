@@ -2,6 +2,9 @@
 import { heritageOf } from '../engine/catalog.js';
 
 const FOOTPRINTS={
+    'ha-quangtrieu-v1':[[0,-.7,2.1,.55,1.3],[-1.04,-.04,.42,.8,.9],[1.04,-.04,.42,.8,.9]],
+    'ha-quancong-v1':[[0,-.77,2.14,.48,1.35],[0,.48,2.3,.45,1.1]],
+    'ha-campho-v1':[[0,-.72,2.24,.58,1.3],[-1.05,-.02,.4,.84,1.04],[1.05,-.02,.4,.84,1.04]],
     'ha-tanky-v1':[[0,.48,2.22,.66,1.38],[0,-.73,2.22,.62,1.28],[-.97,-.14,.28,.6,1.18],[.97,-.14,.28,.6,1.18]],
     'ha-phunghung-v1':[[0,-.1,2.44,1.35,2.1]],
     'ha-phuckien-v1':[[0,-.64,2.42,.64,1.4],[-1.16,-.06,.3,.65,.8],[1.16,-.06,.3,.65,.8]],
@@ -101,43 +104,81 @@ export function drawHeritageBuilding(kit, building, progress) {
       break;
     }
     case 'ha-chuacau-v1': {
-      // Open water extends past the bridge into its local inlet; old plots/river never move.
-      box('#396e70',0,.165,0,.67,.015,2.7);
+      // The GPT site spans the actual channel. Legacy kit callers retain their local inlet.
+      if(!building.riverBridge) {
+        box('#396e70',0,.165,0,.67,.015,2.7);
+        for(const side of [-1,1])box('stone',side*.49,.2,0,.22,.16,2.7);
+      }
+      for(const x of [-1.35,-.675,0,.675,1.35])for(const z of [-.28,.28])box('stone',x,.08,z,.16,.42,.2);
+      for(let bay=0;bay<4;bay++)for(const z of [-.34,.34])for(let stone=0;stone<8;stone++) {
+        const at=u=>[-1.35+bay*.675+u*.675,.02+Math.sin(u*Math.PI)*.2,z];
+        beam('stone',at(stone/8),at((stone+1)/8),.046);
+      }
+      for(let board=0;board<32;board++)box(timber,-1.53+(board+.5)*3.06/32,.32,0,.091,.075,.63);
+      posts([-1.4,-.7,0,.7,1.4],.33,-.32,1.19);
+      posts([-1.4,-.7,0,.7,1.4],.33,.32,1.19);
+      roof(0,1.48,0,3.4,.87,.29);
+      for(const z of [-.34,.34]) {
+        box('wall:#c3bbb0',0,.58,z,2.87,.33,.07);
+        box(timber,0,.78,z,2.92,.045,.07);
+        if(finish)for(let bar=0;bar<29;bar++)box(timber,-1.38+bar*2.76/28,1.01,z,.019,.41,.026);
+      }
+      for(const x of [-.46,.46])box('stone',x,.08,-.78,.17,.42,.2);
+      box('stone',0,.28,-.65,1.31,.08,.65);
+      box('wall:#c3bbb0',0,.79,-.925,1.24,1.08,.07);
+      for(const x of [-.6,.6])box('wall:#c3bbb0',x,.79,-.65,.07,1.08,.55);
+      for(const x of [-.49,.49])box(timber,x,.86,-.35,.055,1.15,.055);
+      box(timber,0,.49,-.73,.73,.11,.22);
+      box('#9b5b42',0,.79,-.88,.42,.47,.035);
+      box('#b7a06a',0,.79,-.852,.17,.25,.012);
+      roof(0,1.25,-.65,1.56,.8,.28);
       for(const side of [-1,1]) {
-        for(let stone=0;stone<11;stone++)box(stone%3?'stone':'#738471',side*.49,.2,-1.24+stone*.245,.22,.16,.23);
-        for(let step=0;step<4;step++)box('stone',side*(1.35+step*.11),.43-step*.07,0,.115,.09,.8);
-        // Clear stone paths connect both landward ends; never terminate against a wall.
-        box('paving',side*1.72,.19,.64,.23,.05,.67);
-      }
-      for(let ripple=0;ripple<9;ripple++)box('#75988b',Math.sin(ripple*2.1)*.16,.177,-1.2+ripple*.29,.12,.002,.013);
-      for(const x of [-1.08,-.36,.36,1.08])for(const z of [-.39,.39])box('stone',x,.3,z,.16,.28,.19);
-      for(let board=0;board<24;board++)box(timber,-1.38+(board+.5)*2.76/24,.48,0,.109,.07,.86);
-      columns([-1.24,-.74,-.25,.25,.74,1.24],-.44,1.02);
-      columns([-1.24,-.74,-.25,.25,.74,1.24],.44,1.02);
-      roof(0,1.49,0,2.85,1.12,.43);
-      for(const x of [-1.32,1.32])roof(x,1.31,0,.52,1.4,.2);
-      body(0,-.79,1.3,.51,1.1);roof(0,1.27,-.79,1.57,.8,.35);
-      for(const z of [-.45,.45]) {
-        box(timber,0,.7,z,2.55,.28,.055);
-        if(finish)for(let bar=0;bar<24;bar++)box(timber,-1.24+bar*2.48/23,1.03,z,.025,.38,.03);
-      }
-      if(finish)for(const side of [-1,1]) {
-        box('stone',side*1.53,.21,0,.26,.16,.85);
-        // Paired timber guardians: dogs and monkeys, without invented inscriptions or legends.
-        for(const z of [-.35,.35]) {
-          part('orb',timber,side*1.45,.59,z,.06,.09,.055);
-          part('orb',timber,side*1.45,.71,z,.043,.046,.044);
-          if(side===1) {
-            part('orb',timber,1.5,.695,z,.035,.018,.024);
-            for(const dz of [-.03,.03])box(timber,1.48,.53,z+dz,.025,.11,.025);
-          } else for(const dz of [-.04,.04]) {
-            part('orb',timber,-1.42,.55,z+dz,.04,.04,.027);
-            beam(timber,[-1.45,.66,z+dz],[-1.4,.57,z+dz],.012);
-          }
+        roof(side*1.5,1.39,0,.46,.99,.2);
+        for(let step=0;step<6;step++)box('stone',side*(1.48+step*.078),.29-step*.049,0,.105,.09,.69);
+        for(const z of [-.3,.3]) {
+          box('wall:#c3bbb0',side*1.52,.81,z,.16,1.03,.13);
+          box('wall:#b78d73',side*1.52,1.45,z,.21,.055,.19);
+        }
+        for(let stone=0;stone<9;stone++) {
+          const at=u=>[side*1.53,.92+Math.sin(u*Math.PI)*.27,Math.cos(u*Math.PI)*.26];
+          beam('wall:#c3bbb0',at(stone/9),at((stone+1)/9),.045);
+        }
+        if(finish)for(const z of [-.28,.28]) {
+          part('orb',timber,side*1.45,.69,z,.047,.075,.045);
+          part('orb',timber,side*1.45,.79,z,.036,.04,.037);
+          if(side===1)part('orb',timber,1.49,.775,z,.03,.015,.021);
+          else for(const dz of [-.03,.03])part('orb',timber,-1.42,.65,z+dz,.03,.03,.022);
         }
       }
-      sign(0,1.36,.59,.77);
+      sign(0,1.4,.46,.73);
+      if(finish)for(const x of [-.55,.55])box('#b5ad91',x,1.8,0,.11,.022,.055);
       break;
+    }
+    case 'ha-quangtrieu-v1': {
+      body(0,-.7,2.1,.55,1.3);roof(0,1.47,-.7,2.5,.83,.42);
+      for(const side of [-1,1]){body(side*1.04,-.04,.42,.8,.9);roof(side*1.04,1.07,-.04,.65,1.05,.22);}
+      box('paving',0,.18,.05,1.56,.06,.96);
+      for(const x of [-1.12,-.37,.37,1.12]){box('stone',x,.8,1,.12,1.21,.17);box('wall:#bc8468',x,1.29,1,.22,.08,.24);}
+      for(const x of [-.75,0,.75])roof(x,1.36,1,.86,.43,.23);
+      if(finish){part('pole','stone',0,.28,.11,.28,.15,.28);part('pole','#587c71',0,.36,.11,.23,.018,.23);sign(0,1.23,1.15,.65);}
+      break;
+    }
+    case 'ha-quancong-v1': {
+      body(0,-.77,2.14,.48,1.35);roof(0,1.52,-.77,2.54,.75,.38);
+      body(0,.48,2.3,.45,1.1);roof(0,1.27,.48,2.67,.75,.31);
+      for(const side of [-1,1])box('wall:#b5735e',side*1.14,.71,-.12,.09,1.05,.75);
+      box('paving',0,.18,-.1,1.99,.055,.65);
+      for(const x of [-.95,-.32,.32,.95])box('wall:#9f5547',x,.75,.77,.13,1.1,.12);
+      sign(0,1.16,.84,.76);if(finish)for(const x of [-.65,.65]){part('pole','stone',x,.29,.99,.13,.17,.13);part('orb','stone',x,.43,.99,.08,.09,.07);}
+      break;
+    }
+    case 'ha-campho-v1': {
+      body(0,-.72,2.24,.58,1.3);roof(0,1.47,-.72,2.64,.85,.35);
+      for(const side of [-1,1]){body(side*1.05,-.02,.4,.84,1.04);roof(side*1.05,1.21,-.02,.65,1.1,.2);}
+      box('paving',0,.2,.57,1.68,.08,1.06);posts([-.63,.63],.23,.23,.94);posts([-.63,.63],.23,.96,.94);
+      if(progress>=.65)part('hip','tile',0,1.34,.6,1.19,.45,.82);
+      for(const x of [-.82,.82])for(const z of [.03,1.18])beam('tile',[x,1.12,z],[0,1.59,.6],.025);
+      sign(0,1.05,1.01,.75);break;
     }
     case 'ha-cho-v1': {
       for(const x of [-.77,.77]) {

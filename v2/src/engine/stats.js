@@ -115,3 +115,19 @@ export function retention(state, now, weeks = 4) {
     daysSinceLast: days.length ? today - days[days.length - 1] : null,
   };
 }
+
+
+/** Filter a journal without mutating the cached completed list or canonical session records. */
+export function journalEntries(state,{query='',category='',status='completed',from='',to=''}={}) {
+  const fold=text=>String(text||'').normalize('NFD').replace(/\p{M}/gu,'').replace(/đ/gi,'d').toLowerCase();
+  const needle=fold(query.trim());
+  const rows=[...state.sessions.values()].filter(session=>{
+    if(!['completed','cancelled'].includes(session.status)||!Number.isFinite(session.endedAt))return false;
+    if(status!=='all'&&session.status!==status)return false;
+    if(category&&session.categoryId!==category)return false;
+    const day=dayKey(session.endedAt);
+    return (!from||day>=from)&&(!to||day<=to)&&(!needle||fold(session.goal).includes(needle));
+  }).sort((a,b)=>b.endedAt-a.endedAt||a.sid.localeCompare(b.sid));
+  return {rows,count:rows.length,minutes:rows.reduce((sum,s)=>sum+(Number(s.minutes)||0),0),days:new Set(rows.map(s=>dayKey(s.endedAt))).size,
+    completed:rows.filter(s=>s.status==='completed').length,cancelled:rows.filter(s=>s.status==='cancelled').length};
+}

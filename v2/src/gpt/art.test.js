@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { architectureOf, PLACES, SEASONS, postcardCity, streetJourney, journeyAt } from './art.js';
+import { architectureOf, PLACES, SEASONS, postcardCity, streetJourney, journeyAt, projectGptCity, riverSite, riverCandidates, tradeAt } from './art.js';
 import { HOIAN_BLUEPRINTS } from '../engine/catalog.js';
 import { buildCity, ledger } from '../engine/city.js';
 import { reduce } from '../engine/timer.js';
@@ -78,7 +78,7 @@ test('every documented Hoi An choice stays local and read-only at all minute con
   const before=JSON.stringify(earned),sample=postcardCity(earned,true);
   assert.equal(sample.buildings.length,20);
   assert.deepEqual(sample.buildings.map(b=>b.plot),postcardCity(earned).buildings.map(b=>b.plot));
-  assert.deepEqual(sample.buildings.slice(0,7).map(b=>b.key),HOIAN_BLUEPRINTS.map(b=>b.key));
+  assert.deepEqual(sample.buildings.slice(0,HOIAN_BLUEPRINTS.length).map(b=>b.key),HOIAN_BLUEPRINTS.map(b=>b.key));
   for(const bp of HOIAN_BLUEPRINTS)for(let percent=0;percent<=100;percent+=5) {
     const b=freeze({key:bp.key,planId:bp.key,shape:bp.shape,plot:{x:2,y:3},size:bp.size,workUnit:'minutes',targetMinutes:bp.size*25,workMs:bp.size*25*60000*percent/100,bricks:[]});
     const original=JSON.stringify(b),parts=[];
@@ -122,4 +122,53 @@ test('compiled street journeys pause, close without teleporting, and preserve th
     assert.ok(out.z>=-3.68&&out.z<=-.38&&out.x===2.12,'the crossing route stays in its clear walking lane');
   }
   assert.equal(JSON.stringify(points),before);
+});
+
+
+test('Chua Cau river sites preserve diary facts and all other buildings; later plans never move an existing site',()=>{
+  const ordinary=freeze({planId:'home',key:'e1-0',plot:{x:0,y:0},bricks:[{id:'earned-sid'}]});
+  const bridge=freeze({planId:'real-bridge',key:'ha-chuacau-v1',plot:{x:-1,y:-1},workMs:18000000,targetMinutes:300,bricks:[{id:'real-focus'}]});
+  const city=freeze({buildings:[ordinary,bridge],candidates:[{x:1,y:0}],totalBricks:2});
+  const before=JSON.stringify(city),projected=projectGptCity(city),moved=projected.buildings[1];
+  assert.equal(projected.buildings[0],ordinary,'no other museum building may move or be rewritten');
+  assert.equal(moved.bricks,bridge.bricks);assert.equal(moved.workMs,bridge.workMs);assert.equal(moved.planId,bridge.planId);
+  assert.equal(moved.sourcePlot,bridge.plot);assert.equal(moved.plot.y,-.5,'the crossing spans the actual fixed channel');
+  const appended=projectGptCity({...city,buildings:[{...bridge,planId:'later',plot:{x:2,y:3}},...city.buildings]});
+  assert.deepEqual(appended.buildings.find(b=>b.planId===bridge.planId).plot,moved.plot);
+  assert.equal(projectGptCity(projected),projected,'repeated render projection is idempotent');
+  const seen=new Set();
+  for(let x=-6;x<=6;x++)for(let y=-6;y<=6;y++) {
+    const site=riverSite({x,y});assert.equal(site.z,-2);assert.ok(!seen.has(site.x),'distinct original plans get distinct water crossings');seen.add(site.x);
+  }
+  assert.deepEqual(riverSite({x:0,y:0}),{x:2,z:-2});
+  const choices=riverCandidates(city.candidates);assert.equal(choices[0],city.candidates[0],'picking returns the original valid candidate');
+  assert.equal(JSON.stringify(city),before,'render-only placement cannot edit old events, land plots or minutes');
+});
+
+test('local commerce transfers finite stock only on handover, alternates buyers and replenishes without writing history',()=>{
+  const out={};assert.equal(tradeAt(0,0,out),out);
+  assert.equal(out.stock,6);assert.equal(out.active,0);
+  assert.equal(tradeAt(18,0).stock,6,'payment does not yet remove the merchandise');
+  assert.equal(tradeAt(22,0).stock,5,'handover removes exactly one item');
+  assert.equal(tradeAt(44,0).active,1,'next buyer takes a turn');assert.equal(tradeAt(44,0).stock,5);
+  assert.equal(tradeAt(5*44+25,0).stock,0,'six completed sales exhaust a shelf');
+  assert.equal(tradeAt(5*44+40,0).restock,true);assert.ok(tradeAt(5*44+40,0).stock>0);
+  assert.equal(tradeAt(6*44,0).stock,6,'new batch of goods is available');
+  for(let i=0;i<1000;i++) {tradeAt(i*.37,9,out);assert.ok(out.stock>=0&&out.stock<=6);assert.ok(out.handover>=0&&out.handover<=1);}
+});
+
+
+test('future regional study has varied free footprints and never changes earned city facts', async () => {
+  const {futureCity,DISTRICTS}=await import('./world.js');
+  const source=freeze({buildings:[{planId:'earned',plot:{x:1,y:2}}],residents:[{id:'real'}],totalBricks:17});
+  const before=JSON.stringify(source),future=futureCity(source);
+  assert.equal(JSON.stringify(source),before);assert.equal(future.totalBricks,0);
+  assert.equal(future.buildings.length,48);assert.equal(future.candidates.length,0);
+  assert.equal(new Set(future.buildings.map(b=>b.planId)).size,48);
+  assert.ok(new Set(future.buildings.map(b=>b.world.sx*b.world.sz)).size>5);
+  assert.ok(future.buildings.some(b=>!Number.isInteger(b.plot.x)));
+  const regions=Object.fromEntries(DISTRICTS.map(d=>[d.id,d]));
+  assert.ok(regions.thanhha.x<regions.oldtown.x&&regions.camthanh.x>regions.oldtown.x);
+  assert.ok(regions.kimbong.z>regions.oldtown.z);
+  assert.deepEqual(futureCity(source),future,'projection is deterministic');
 });

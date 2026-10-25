@@ -10,7 +10,8 @@ export function drawHoiAnBuilding(scene, b) {
   const pick = { type: 'building', planId: b.planId };
   const progress = constructionProgress(b);
   const variant = Math.floor(hash01(`${b.planId}:front`) * 4);
-  const frontage=Math.floor(hash01(`${b.planId}:architecture`)*6);
+  const originalFrontage=Math.floor(hash01(`${b.planId}:architecture`)*6);
+  const frontage=hash01(`${b.planId}:street-type`)>.68?6+Math.floor(hash01(`${b.planId}:new-front`)*2):originalFrontage;
   const wall = ['wall:#e5b65c', 'wall:#ddbf7b', 'wall:#dba65b', 'wall:#e8ca89'][variant];
   const tiles = ['tile:#505b57','tile:#68716a','tile:#7c7765','tile:#595346'];
   const random = (label) => hash01(`${b.planId}:${label}`);
@@ -217,7 +218,15 @@ export function drawHoiAnBuilding(scene, b) {
     for(let i=0;i<12;i+=1) beam('timber',[x-w/2+i*w/11,y-.32,z],[x-w/2+i*w/11,y,z],.012);
   };
   const courtyard = () => { box('paving',0,.09,0,3.45,.12,1.85); };
-  courtyard();
+  if(!b.riverBridge)courtyard();
+  if(b.riverBridge && progress<.5) {
+    for(const x of [-1.35,-.68,0,.68,1.35])for(const z of [-.26,.26]) {
+      if(progress>=.08)box('stone',x,-.13+Math.min(1,progress/.18)*.21,z,.16,Math.max(.015,Math.min(1,progress/.18)*.42),.19);
+      if(progress>=.18)box('timber',x,.33+(progress-.18)*1.86,z,.055,Math.max(.04,(progress-.18)*3.72),.055);
+    }
+    for(const x of [-1.65,1.65])box('stone',x,.17,0,.28,.13,.7);
+    return;
+  }
   if(progress === 0) { posts([-1,1],.16,-.65,.6); posts([-1,1],.16,.65,.6); return; }
   if(progress < .5) {
     // Each footprint follows its finished frontage; progress adds structure, never moves the plot.
@@ -225,7 +234,7 @@ export function drawHoiAnBuilding(scene, b) {
       [[-.55,-.07,1.85,1.42,1.63],[1.03,.02,.93,1.15,.92]],
       [[-.65,-.05,1.4,1.48,2.55],[.91,.01,1.26,1.28,1.05]],
       [[-.17,-.08,2.75,1.4,1.08]], [[-.87,-.02,1.13,1.52,2.02],[.57,-.44,1.63,.66,1.15]],
-      [[0,-.05,2.91,1.38,2.1]]];
+      [[0,-.05,2.91,1.38,2.1]], [[-.66,-.1,1.46,1.34,2.12],[.88,-.4,1.18,.73,1.03]], [[0,-.42,2.77,.75,1.12]]];
     const footprints=heritageFootprints(b.key)||(b.shape==='house'?houseFootprints[frontage]:
       b.shape==='tower'?[[0,0,.91,.95,2.3]]:b.shape==='temple'?[[0,-.48,2.3,.66,1.14]]:[[0,-.12,2.85,1.24,1.55]]);
     for(const [x,z,w,d,h] of footprints) {
@@ -265,6 +274,34 @@ export function drawHoiAnBuilding(scene, b) {
   }
   switch(b.shape) {
     case 'house': {
+      if(frontage===6) {
+        // Narrow book/stationery shop beside a recessed courtyard gallery.
+        body(-.66,-.1,1.46,1.34,2.12);gableRoof(-.66,2.29,-.1,1.7,1.59,.38);
+        body(.88,-.4,1.18,.73,1.03);roof(.88,1.2,-.4,1.43,.97,.24);
+        window(-.66,1.83,.59,.61,.56);awning(-.66,1.05,.88,1.65,'#a18b60');
+        counter(-.66,.47,.69,1.17,'cloth');
+        if(progress>=.82)for(let shelf=0;shelf<3;shelf++) {
+          box('timber',-1.15,.38+shelf*.22,.59,.23,.032,.39);
+          for(let book=0;book<6;book++)box(['#756d53','#a27559','#69817b'][book%3],-1.2+book*.027,.47+shelf*.22,.64,.02,.13,.11);
+        }
+        posts([.36,1.4],.17,.67,.96);roof(.88,1.22,.62,1.3,.42,.13);
+        rail(.88,.61,.79,.83);garden(.88,.23,.1,.43);lantern(-.04,1.05,.9);
+        break;
+      }
+      if(frontage===7) {
+        // Low three-bay eating house with a real shaded front veranda and raised dining floor.
+        body(0,-.42,2.77,.75,1.12);roof(0,1.29,-.42,3.07,1.03,.31);
+        box('timber',0,.19,.43,2.79,.055,.94);posts([-1.27,-.43,.43,1.27],.18,.94,.95);
+        roof(0,1.25,.65,3.1,.78,.17);window(-.85,.79,-.03,.34,.43);window(.85,.79,-.03,.34,.43);
+        for(const x of [-.79,.72]) {
+          box('timber',x,.4,.53,.48,.045,.39);
+          for(const side of [-1,1]){box('timber',x+side*.27,.23,.53,.16,.04,.2);box('timber',x+side*.27,.12,.53,.06,.2,.15);}
+          if(progress>=.95){part('bowl','#c7b795',x,.46,.53,.065,.05,.065);part('taper','#9f794e',x+.15,.46,.53,.025,.07,.025);}
+          lantern(x,1.03,1.02);
+        }
+        garden(-1.43,.25,.78,.22);garden(1.43,.25,.78,.22);
+        break;
+      }
       if(frontage===1) {
         // Low tea room with an open timber gallery and a small upper retreat.
         body(-.55,-.07,1.85,1.42,1.63);roof(-.55,1.8,-.04,2.1,1.7,.37);

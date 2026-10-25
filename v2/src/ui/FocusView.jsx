@@ -1,12 +1,13 @@
-import { useRef, useState } from 'react';
+import { useMemo, useRef, useState } from 'react';
 
 import { brickReport, constructionMinutes, constructionStage } from '../engine/city.js';
 import { eraStyle } from '../engine/catalog.js';
 import CityCanvas from './LazyCityCanvas.jsx';
+import { QUICK_FOCUS_PRESETS } from '../../../src/engine/breaks.js';
 import TimerRing from './TimerRing.jsx';
 import { clock, hoursMinutes } from './format.js';
 import { useSpaceKey } from './keys.js';
-import { lastDays, todaySummary } from '../engine/stats.js';
+import { completedSessions, lastDays, todaySummary } from '../engine/stats.js';
 
 function visibleCategories(state) {
   return [...state.categories.values()].filter((c) => !c.hidden);
@@ -85,7 +86,9 @@ function IdlePanel({ app, goTo, architectural = false }) {
   const [categoryId, setCategoryId] = useState(() => (cats.some((c) => c.id === last?.categoryId) ? last.categoryId : cats[0]?.id ?? null));
   const [goal, setGoal] = useState('');
   const [minutes, setMinutes] = useState(() => last?.targetMin || state.prefs.focusMin);
-  const presets = [...new Set([25, 50, state.prefs.focusMin, minutes])].sort((a, b) => a - b);
+  const presets = [...new Set([...(architectural?QUICK_FOCUS_PRESETS.map(p=>p.focusMinutes):[25]),50,state.prefs.focusMin,minutes])].sort((a, b) => a - b);
+  const completed=completedSessions(state);
+  const recentGoals=useMemo(()=>[...new Set(completed.slice(-30).reverse().map(s=>s.goal?.trim()).filter(Boolean))].slice(0,8),[completed]);
   const form = useRef(null);
   useSpaceKey(() => form.current?.requestSubmit());
 
@@ -130,8 +133,9 @@ function IdlePanel({ app, goTo, architectural = false }) {
         ))}
       </div>
 
-      <input className="goal" value={goal} onChange={(e) => setGoal(e.target.value)} placeholder="Phiên này làm gì? (không bắt buộc)" maxLength={140} />
+      <input className="goal" value={goal} onChange={(e) => setGoal(e.target.value)} placeholder="Phiên này làm gì? (không bắt buộc)" aria-label="Mục tiêu phiên tập trung" list={architectural?'gpt-recent-goals':undefined} maxLength={140} />
 
+      {architectural && <datalist id="gpt-recent-goals">{recentGoals.map(text=><option key={text} value={text} />)}</datalist>}
       <button type="submit" className="btn btn--primary btn--big" title="Phím cách">Bắt đầu tập trung</button>
     </form>
   );

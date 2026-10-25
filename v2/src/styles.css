@@ -201,3 +201,19 @@ p { margin: 8px 0; line-height: 1.45; }
 .cat-row__color { width: 34px; height: 30px; padding: 0; border: 1px solid var(--line); border-radius: 8px; background: none; cursor: pointer; }
 .cat-row__label, .cat-add input { min-width: 0; border: 1px solid var(--line); background: var(--bg); color: var(--ink); border-radius: 10px; padding: 7px 10px; font: inherit; }
 .cat-add { display: grid; grid-template-columns: 1fr auto; gap: 8px; }
+
+/* Shared journal controls use each edition's existing color variables. */
+.journal-rhythm { display:flex; justify-content:space-between; flex-wrap:wrap; gap:10px; color:var(--muted); font-size:13px; }
+.journal-chart .bars__col { padding:0; border:0; background:none; cursor:pointer; min-width:0; }
+.journal-tools { display:grid; grid-template-columns:2fr 1fr 1fr 1fr; gap:14px; }
+.journal-tools label,.journal-dates label { display:grid; gap:8px; font-size:12px; color:var(--muted); }
+.journal-tools input,.journal-tools select,.journal-dates input { width:100%; min-width:0; color:var(--ink); background:var(--card); border:1px solid var(--line); padding:10px; border-radius:8px; font:inherit; }
+.journal-dates { display:flex; gap:16px; margin-top:16px; }
+.journal-total { padding:24px 0; display:flex; align-items:baseline; gap:20px; flex-wrap:wrap; border-bottom:1px solid var(--line); }
+.journal-total strong { font:30px Georgia,serif; color:var(--accent); }
+.journal-total>span { color:var(--muted); font-size:12px; }
+.journal-day h2 { font:21px Georgia,serif; margin:26px 0 12px; }
+.journal-day .list__what { display:flex; gap:10px; align-items:center; flex-wrap:wrap; min-width:0; overflow-wrap:anywhere; }
+.journal-day small { color:var(--muted); font-size:11px; }
+@media(max-width:900px) { .journal-tools { grid-template-columns:1fr 1fr; } }
+@media(max-width:740px) { .journal-tools { grid-template-columns:1fr; } .journal-total { gap:12px; } }

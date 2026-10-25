@@ -1053,7 +1053,7 @@ v2/
                          keys.js (Space shortcut) · CityCanvas (mounts CityScene) ·
                          LazyCityCanvas (three.js as its own chunk)
 ```
-Hoi An choices: `engine/catalog.js` stores seven stable heritage blueprint keys and source metadata;
+Hoi An choices: `engine/catalog.js` stores ten stable heritage blueprint keys and source metadata;
 `gpt/heritage.js` draws their distinct staged forms through the shared Hoi An kit. The inspector
 links sources and derives collection progress in `gpt/GptEdition.jsx`.
 Minute construction: `engine/city.js` owns versioned work allocation/progress/stages (ADR-104);
@@ -1294,3 +1294,10 @@ Reopening something means moving it back out of the archive — never duplicatin
    `ARCHITECTURE_DECISIONS.md` (223k) · `CHANGELOG.md` (154k) · `docs/LESSONS_3D.md` (152k) ·
    `BAN_GIAO.md` (134k, chỉ `head -60`) · `PERFORMANCE.md` (98k). Dùng `grep -n`, `sed -n 'A,Bp'`,
    hoặc `node scripts/doc-budget.mjs --map <file>` để lấy mục lục + khoảng dòng.
+
+### GPT regional presentation (2026-10-25)
+`v2/src/gpt/world.js` owns the read-only authored regional study and district metadata. It is
+separate from canonical grid plans and opens only inside My City. `art.js` owns the authorized
+Chua Cau site projection and commerce clock; `heritage.js` draws ten source-linked choices.
+`engine/stats.js::journalEntries` filters shared records; `ui/StatsView.jsx` bounds displayed rows.
+Focus mounts no renderer. See ADR-105/106 and `v2/DESIGN.md` for the data boundary.

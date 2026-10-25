@@ -2,7 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 
 import { reduce } from './timer.js';
-import { currentStreak, dayKey, lastDays, retention, todaySummary } from './stats.js';
+import { currentStreak, dayKey, lastDays, retention, todaySummary, journalEntries } from './stats.js';
 import { legacyEvents } from './legacyImport.js';
 
 const MIN = 60_000;
@@ -72,4 +72,19 @@ test('today summary and the 7-day strip only count completed sessions', () => {
   assert.equal(strip.length, 7);
   assert.equal(strip.at(-1).key, '2026-10-03');
   assert.equal(strip.at(-1).count, 2);
+});
+
+
+test('journal filters Vietnam dates, accents and settled statuses without truncating totals or mutating history', () => {
+  const sessions=new Map(Array.from({length:85},(_,i)=>[String(i),Object.freeze({sid:String(i),goal:'Đọc sách Hội An',categoryId:'study',status:'completed',minutes:25,endedAt:Date.parse('2026-10-03T17:10:00Z')+i})]));
+  sessions.set('cancel',Object.freeze({sid:'cancel',goal:'Đọc sách',categoryId:'study',status:'cancelled',minutes:2,endedAt:Date.parse('2026-10-03T16:50:00Z')}));
+  sessions.set('active',Object.freeze({sid:'active',status:'running',endedAt:null}));
+  const before=JSON.stringify([...sessions]);
+  const result=journalEntries({sessions},{query:'doc sach hoi an',category:'study',from:'2026-10-04',to:'2026-10-04'});
+  assert.equal(result.count,85);assert.equal(result.minutes,2125);assert.equal(result.days,1);
+  assert.equal(result.rows[0].sid,'84');
+  assert.equal(journalEntries({sessions},{from:'2026-10-03',to:'2026-10-03'}).count,0);
+  assert.equal(journalEntries({sessions},{status:'all'}).cancelled,1);
+  assert.equal(journalEntries({sessions},{status:'cancelled'}).minutes,2);
+  assert.equal(JSON.stringify([...sessions]),before);
 });

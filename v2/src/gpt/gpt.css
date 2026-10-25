@@ -153,3 +153,21 @@
 .gpt-collection>div { display:flex; flex-wrap:wrap; gap:.35rem; }
 .gpt-collection>div>span { background:#eeece5; padding:.25rem .45rem; border-radius:6px; color:#77786d; }
 .gpt-collection .is-collected { color:#275247; background:#e2eadc; }
+
+/* Warm editorial focus/diary: cream and forest green, serif titles, quiet flat surfaces. */
+.gpt-focus-layout { max-width:1120px; margin:28px auto 12px; grid-template-columns:minmax(320px,1fr) minmax(280px,.9fr); height:calc(100dvh - 150px); }
+.gpt-focus-companion { background:var(--accent-soft); padding:42px; display:flex; flex-direction:column; justify-content:center; border-left:1px solid var(--line); }
+.gpt-focus-companion h2 { font:36px/1.25 Georgia,serif; font-weight:400; margin:8px 0 32px; }
+.gpt-focus-companion h2 em { color:var(--accent); font-weight:400; }
+.gpt-focus-companion p { color:var(--muted); font-size:12px; line-height:1.7; }
+.gpt-week-strip { display:flex; gap:15px; height:94px; margin:0 0 26px; }
+.gpt-week-strip>div { height:100%; flex:1; display:flex; align-items:flex-end; position:relative; }
+.gpt-week-strip>div>span { width:100%; background:var(--accent); opacity:.65; border-radius:5px 5px 0 0; }
+.gpt-week-strip small { position:absolute; top:calc(100% + 8px); width:100%; text-align:center; color:var(--muted); font-size:10px; }
+.gpt-build-summary { margin-top:25px; padding-top:25px; border-top:1px solid #bbc9b5; }
+.gpt-build-summary h3 { font:23px/1.35 Georgia,serif; margin:8px 0 14px; }
+.gpt-build-summary .btn { background:var(--card); color:var(--accent); }
+.gpt-districts { display:grid; gap:8px; margin:18px 0; }
+.gpt-districts details { font-size:12px; color:var(--muted); line-height:1.65; }
+@media(max-width:900px) { .gpt-focus-companion { padding:26px; } }
+@media(max-width:740px) { .gpt-focus-layout { height:auto; max-height:none; margin-top:18px; display:flex; flex-direction:column; } .gpt-focus-companion { border-left:0; border-top:1px solid var(--line); } }

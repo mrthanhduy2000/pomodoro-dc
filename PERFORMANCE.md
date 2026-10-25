@@ -1,3 +1,32 @@
+## GPT regional/living-city investigation — 2026-10-25
+
+Focus and its completion panel now mount zero 3D canvases. Leaving City disposes the renderer;
+the regional study opens only inside My City. This removes ongoing 3D work during focus/journal
+without reducing city detail. Detailed terrain uses original land bounds; distant bridge sites
+receive local landings rather than generating thousands of empty paved plots across the gap.
+
+Exploratory same-art captures: visible Apple M3 Metal, 1440x790 CSS, DPR2, buffer 2104x1228,
+camera [8.6,4.4,-1.7], target [0,.7,-2], twenty sample buildings. Existing 12-second controls
+exclude the first two seconds. No tests/builds ran during these captures.
+
+| Configuration | Orbit FPS / P95 / worst / >50 ms | Zoom FPS / P95 / worst / >50 ms |
+|---|---|---|
+| Previous LOD/pacing with new art | 40.00 / 39.0 / 40.6 / 0 | 37.52 / 46.3 / 78.8 / 11 |
+| Extra roof cells/incremental LOD, bounded cadence (rejected) | 34.29 / 58.7 / 81.4 / 30 | 35.38 / 56.5 / 76.8 / 22 |
+| Old LOD/pacing retained, first capture | 32.19 / 58.9 / 81.0 / 26 | 35.29 / 52.9 / 69.3 / 18 |
+| Final fresh-load confirmation, after background validation finished | **40.03 / 42.6 / 45.0 / 0** | **40.07 / 42.6 / 46.4 / 0** |
+
+Final confirmation reaches the existing 40 Hz cap in both modes; zoom improves versus the
+first control and neither confirmed run has >50 ms frames. Orbit average is unchanged. Never
+claim stable 60 FPS, a universal speedup or identical behavior for every larger city. Earlier
+captures varied materially; no specific thermal/background cause was established. The uncapped
+navigation and extra roof-cell experiments were removed after regressions. A resized-window
+zoom was invalid and excluded. Raw temporary evidence: `/tmp/hoi-an-fps-*.json`; confirmed JSON
+is also in the task visualization folder. The terrain-loop fix does not alter this sample geometry.
+Native DPR, 4x MSAA, two lights and map resolutions remain unchanged. Separate goods uploads and
+8 Hz offscreen poses bound animation work; visible close figures retain cadence. The regional
+48-building study is a different scene and has no same-scene performance comparison.
+
 # Ngân sách hiệu năng — Thành Phố 3D
 
 > **Đây là bản ghi CHÍNH THỨC của bộ số đo trên máy thật.** File kết quả gốc

@@ -1,3 +1,17 @@
+## 2026-10-25 — Regional GPT Hoi An, city-only 3D and searchable journal
+
+- Remove homepage/completion 3D; add lightweight real progress, seven-day minutes and streak.
+- Add opt-in regional future study with 48 render-only variable footprints and four district views.
+- Move only GPT Chua Cau onto actual water via stable presentation sites; keep original plan facts.
+- Add source-linked Quang Trieu, Quan Cong and Cam Pho; refine covered bridge and distinct homes.
+- Add varied people, alternating buyers, finite shelf stock, coin/bag transfers and restocking.
+- Sample offscreen poses, separate goods uploads and keep the measured existing LOD/navigation path.
+- Add shared journal search/date/status/category filters, full totals and bounded list rendering.
+- Adapt pure default focus presets/recent goals without changing timer or exact construction credit.
+- Confirmed M3 native-resolution 20-building capture: orbit40.03 / zoom40.07 FPS; no frames >50 ms in either run. Earlier regressing experiments removed; not a stable60 claim.
+- Validation: 1,940 full-suite passes, zero failures, one expected skip; three cross-checks and 52 focused checks pass; lint/build pass. River-site invariant fails its isolated displacement mutant.
+- No schema, event rewrite, synthetic sessions, image replacement or reduced pixel resolution.
+
 ## 2026-10-24 — Connected GPT riverside quarter and smoother M3 navigation
 
 - Detailed public covered crossing, stone approaches/shrine and deck-following pedestrians;

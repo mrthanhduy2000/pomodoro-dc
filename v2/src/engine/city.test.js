@@ -269,7 +269,7 @@ test('minute construction: legacy buildings, session identities and original plo
 
 
 test('Hoi An choices persist exact blueprint identities, minute budgets and fixed plots without reinterpreting old plans',()=>{
-  const contracts=[['ha-tanky-v1','house',4],['ha-phunghung-v1','house',4],['ha-phuckien-v1','hall',8],['ha-chuacau-v1','temple',12],['ha-cho-v1','market',8],['ha-thanhha-v1','market',8],['ha-kimbong-v1','hall',8]];
+  const contracts=[['ha-tanky-v1','house',4],['ha-phunghung-v1','house',4],['ha-phuckien-v1','hall',8],['ha-chuacau-v1','temple',12],['ha-cho-v1','market',8],['ha-thanhha-v1','market',8],['ha-kimbong-v1','hall',8],['ha-quangtrieu-v1','hall',8],['ha-quancong-v1','temple',12],['ha-campho-v1','hall',8]];
   for(const [key,shape,size] of contracts)assert.deepEqual([blueprint(key)?.key,blueprint(key)?.shape,blueprint(key)?.size],[key,shape,size],'released choices must never change shape or minute budget');
   const historic=[plan('old',T0-MIN),...Array.from({length:4},(_,i)=>session(`old${i}`,T0+i*30*MIN)).flat()];
   const before=city(historic).buildings[0];

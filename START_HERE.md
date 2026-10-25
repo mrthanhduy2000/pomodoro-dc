@@ -29,9 +29,9 @@ live here:
 
 ## Where we are
 
-- **GPT EDITION (2026-10-22):** `/v2/?edition=gpt`; entry in v1 sidebar/Settings and v2 header.
+- **GPT (2026-10-25):** `/v2/?edition=gpt`; entry in v1/v2.
   Same v2 log. New plans use completed focus minutes (ADR-104); old plans keep sessions.
-  See `v2/DESIGN.md`; M3 FPS: `PERFORMANCE.md`.
+  City-only 3D and opt-in regional study: `v2/DESIGN.md` (ADR-105/106); FPS: `PERFORMANCE.md`.
 
 Production branch `main` carries **both** work streams (merged 2026-08-28 on Đàm's direct order).
 ⚠️ Phase 21 therefore shipped **before** Đàm reviewed its screenshots — the "waiting on Đàm's eyes"

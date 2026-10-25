@@ -51,3 +51,23 @@ are reference-counted so cancelling one parcel cannot expose a neighbouring buil
 
 Google reference screenshots remain outside the app repository. Source notes, dates, limitations
 and original procedural geometry are reproducible without a Google API key or external image load.
+
+
+## Phung Hung follow-up — 2026-10-26 (before model changes)
+
+Opened Google Maps at the monument (15.8771915,108.3258009). Its Street View entry first
+opened an ordinary interior photograph: Hop To, April 2023. The pano API resolved community
+panorama `CIHM0ogKEICAgIDMrYv_gAE`, Celine Sais, January 2020, but the image is distorted and
+Maps reports no continuous Street View coverage. Do not infer dimensions from that panorama.
+A separate place-gallery photograph by Ping Jeng shows a street of attached two-storey timber
+frontages: capture label August 2026, contributor panel September 2026, photo ID
+`CIABIhDhtttlI0IbiMai8NSq00rr`. Observe frontage continuity, dark shutters, tiled low awnings
+and stone column bases; the entire street photograph is not an isolated measured elevation.
+Screenshots with attribution/date remain in the task visualization folder, outside app assets.
+
+The [official Phung Hung monument description](https://hoianworldheritage.org.vn/vi/news/Diem-di-tich/Nha-co-Phung-Hung-12.hwh)
+identifies 4 Nguyen Thi Minh Khai, a deep timber merchant house, broad upper galleries,
+stone-based timber columns and a four-direction middle roof between two-direction front/rear
+roofs. Those structural distinctions guide the new-parcel kit. Its three model volumes and
+column count are interpretive, not an exact measured reconstruction or a current furnishing survey.
+Legacy non-parcel geometry and all parcel dimensions/positions remain unchanged.

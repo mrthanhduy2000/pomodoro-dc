@@ -1,3 +1,14 @@
+## 2026-10-26 — Inspect parcel position and area before building
+
+- Move real-city placement into the inspector, preserving the 3D view.
+- Select among five sites before committing; show frontage/depth/area in explicit game units.
+- Frame the selected site and draw boundaries, entrance and bounded building footprint blocks.
+- Refine only the new-parcel Phung Hung kit from dated Maps imagery and heritage documentation:
+  three roofed volumes, four-direction middle roof, upper galleries, column bases and shutters.
+- Preserve historical building geometry, persisted plans, minute accounting and all 3D previews.
+- FPS measurement deferred at the user's request; no new smoothness claim.
+- Validation: 1,946 full-suite passes, zero failures, one expected skip; three cross-checks, 52 focused checks, lint/build pass. Fifty legacy model/stage output comparisons remain identical.
+
 ## 2026-10-26 — Real Hoi An parcel plans, backed by Street View and heritage research
 
 - Add persisted district/width/depth/orientation for new GPT construction; keep every old plan path.

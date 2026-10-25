@@ -221,3 +221,15 @@ soft bloom is suspended; it returns after 100 ms settled, including reduced-moti
 lamps, billboard halos, pools, native DPR, 4x MSAA and map resolutions remain. Original plaster
 noise/maps are retained after a rejected weather-lookup experiment. See PERFORMANCE.md for final
 measured limitations; no universal 60 FPS claim.
+
+
+### Parcel inspection follow-up (2026-10-26)
+
+Candidate controls select a read-only site rather than writing a plan. The inspector shows its
+frontage, depth and area in game units. A single explicit build action calls the existing command.
+Only the selected site is rendered and framed, with entrance/boundary/footprint blocks; switching
+sites does not create events or multiply full architectural previews. The selected-site camera
+key is stable across unrelated timer/UI updates. The original small/full samples remain separate.
+Phung Hung's new-parcel-only kit has a deep three-volume sequence, hip middle roof, upper timber
+gallery and stone-based posts, based on the dated survey in docs/HOI_AN_PARCELS.md. Legacy kit
+geometry and persisted footprint versions stay unchanged. FPS measurement is deferred by request.

@@ -90,8 +90,6 @@
 .gpt-house-icon { font: 38px Georgia, serif; width: 36px; color: #9d8462; line-height: 1; }
 .gpt-house-icon--tower { transform: scaleX(.7); }
 .gpt-house-icon--hall, .gpt-house-icon--temple { color: #657b62; }
-.gpt-placement { position: absolute; bottom: 65px; left: 20px; right: 20px; background: #fbf9f2f5; border: 1px solid var(--line); padding: 18px; border-radius: 12px; display: grid; gap: 12px; font-size: 13px; box-shadow: 0 6px 30px #243b3320; }
-.gpt-placement > span { color: var(--muted); font-size: 12px; }
 .gpt-city-inspector .detail { background: transparent; border: 0; padding: 0; box-shadow: none; }
 .gpt-city-inspector .detail h3 { font: 27px Georgia, serif; }
 .gpt-queued { display: flex; gap: 12px; justify-content: space-between; font-size: 12px; }
@@ -172,7 +170,17 @@
 @media(max-width:900px) { .gpt-focus-companion { padding:26px; } }
 @media(max-width:740px) { .gpt-focus-layout { height:auto; max-height:none; margin-top:18px; display:flex; flex-direction:column; } .gpt-focus-companion { border-left:0; border-top:1px solid var(--line); } }
 
-.gpt-parcel-options { display:flex; flex-wrap:wrap; gap:7px; margin:10px 0; }
-.gpt-placement label { display:flex; align-items:center; gap:12px; font-size:13px; }
-.gpt-placement select { font:inherit; color:var(--ink); background:var(--card); border:1px solid var(--line); padding:7px 12px; border-radius:8px; }
-.gpt-placement small { color:var(--muted); font-size:11px; }
+.gpt-parcel-options { display:grid; grid-template-columns:repeat(5,1fr); gap:7px; margin-top:8px; }
+.gpt-parcel-options .btn { padding:10px 0; }
+.gpt-parcel-sites > span { font-size:12px; color:var(--muted); }
+.gpt-parcel-options .btn[aria-pressed="true"] { background:var(--accent); color:var(--card); border-color:var(--accent); }
+.gpt-parcel-planner { display:grid; gap:12px; }
+.gpt-parcel-planner h2 { margin:0; font-size:28px; }
+.gpt-parcel-planner > p { margin:0; font-size:12px; }
+.gpt-parcel-planner > label { display:grid; gap:8px; font-size:13px; }
+.gpt-parcel-planner select { width:100%; font:inherit; color:var(--ink); background:var(--card); border:1px solid var(--line); padding:10px; border-radius:8px; }
+.gpt-parcel-dimensions { display:grid; grid-template-columns:repeat(3,1fr); gap:8px; padding:14px 0; margin:0; border-block:1px solid var(--line); }
+.gpt-parcel-dimensions dt { color:var(--muted); font-size:12px; }
+.gpt-parcel-dimensions dd { margin:5px 0 0; font-family:Georgia,serif; font-size:23px; }
+.gpt-parcel-dimensions dd small { display:block; font:10px -apple-system,sans-serif; color:var(--muted); margin-top:3px; }
+.gpt-parcel-scale { color:var(--muted); font-size:11px; line-height:1.5; }

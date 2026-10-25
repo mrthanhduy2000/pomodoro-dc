@@ -15,6 +15,7 @@ const FOOTPRINTS={
   };
 export function heritageFootprints(key,site=null) {
   if(site&&key==='ha-tanky-v1')return [[0,.92,3.25,.66,1.38],[0,-.94,3.25,.62,1.28],[-1.48,-.01,.28,1.2,1.18],[1.48,-.01,.28,1.2,1.18]];
+  if(site&&key==='ha-phunghung-v1')return [[0,.86,3.1,.72,2.1],[0,-.18,3.1,.9,1.65],[0,-1.1,3.1,.56,1.35]];
   return Object.hasOwn(FOOTPRINTS,key)?FOOTPRINTS[key]:null;
 }
 
@@ -68,6 +69,54 @@ export function drawHeritageBuilding(kit, building, progress) {
       break;
     }
     case 'ha-phunghung-v1': {
+      if(building.site) {
+        // Documented merchant-house sequence: two-storey front, four-direction middle roof,
+        // lower rear block. Parcel-only detail leaves released historical models untouched.
+        for(const [x,z,w,d,h] of heritageFootprints(building.key,building.site))body(x,z,w,d,h);
+        roof(0,2.27,.86,3.45,1.05,.43);
+        roof(0,1.52,-1.1,3.43,.82,.29);
+        const roofW=3.43,roofD=1.14,rise=.42,roofY=1.82,roofZ=-.18;
+        if(progress>=.82) {
+          // ConeGeometry's four-sided base spans sqrt(2), and its origin is the centre.
+          part('hip','tile',0,roofY+rise/2,roofZ,roofW/Math.SQRT2,rise,roofD/Math.SQRT2);
+          for(const side of [-1,1])for(let face=0;face<2;face++) {
+            const run=(face?roofW:roofD)/2,across=face?roofD:roofW,slope=Math.atan2(rise,run);
+            for(let row=0;row<7;row++) {
+              const end=(row+1)/7,count=Math.max(1,Math.floor(across*end/.13));
+              for(let col=0;col<count;col++) {
+                const along=((col+.5)/count-.5)*across*end,start=Math.max(row/7,Math.abs(along)/(across/2)),u=(start+end)/2;
+                part('roofTile','tile:#63695d',face?side*run*u:along,roofY+rise*(1-u)+.015,roofZ+(face?along:side*run*u),.024,Math.hypot(run,rise)*(end-start)+.015,.024,face?[0,0,Math.PI/2-side*slope]:[Math.PI/2+side*slope,0,0]);
+              }
+            }
+          }
+        }
+        if(progress>=.5)for(const side of [-1,1])for(const end of [-1,1])
+          beam(progress>=.82?'tile':timber,[side*roofW/2,roofY,roofZ+end*roofD/2],[0,roofY+rise,roofZ],.025);
+        box(timber,0,1.21,1.08,3.35,.085,.56);
+        for(const x of [-1.45,-.72,0,.72,1.45]) {
+          box('stone',x,.25,1.27,.16,.18,.16);
+          posts([x],.34,1.27,1.85);
+          beam(timber,[x,1.91,1.27],[x,2.15,1.06],.025);
+        }
+        roof(0,1.16,1.17,3.45,.43,.13);
+        if(finish) {
+          rail(0,1.57,1.34,3.24);
+          for(const side of [-1,1]) {
+            box(timber,side*1.61,1.21,.67,.17,.075,.92);
+            beam(timber,[side*1.61,1.57,.23],[side*1.61,1.57,1.34],.022);
+            for(let i=0;i<7;i++)beam(timber,[side*1.61,1.24,.26+i*.17],[side*1.61,1.57,.26+i*.17],.012);
+          }
+          for(const x of [-1.02,0,1.02]) {
+            lattice(x,1.78,1.25,.49,.58);
+            for(const side of [-1,1])part('box','#443d30',x+side*.3,1.78,1.29,.14,.6,.035,[0,side*.32,0]);
+          }
+          counter(-.68,.48,1.05,.86,'cloth');
+          sign(0,1.05,1.3,1.05);
+          lantern(-1.38,1.81,1.23);lantern(1.38,1.81,1.23);
+          for(const x of [-.8,.8])lattice(x,.68,-1.39,.46,.65);
+        }
+        break;
+      }
       body(0,-.1,2.44,1.35,2.1);roof(0,2.27,-.1,2.83,1.7,.43);
       box(timber,0,1.15,.82,2.66,.09,.65);
       columns([-1.16,-.58,0,.58,1.16],1.06,1.02);

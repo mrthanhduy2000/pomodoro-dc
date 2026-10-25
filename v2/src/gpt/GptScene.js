@@ -11,7 +11,7 @@ import { CityScene } from '../city/CityScene.js';
 import { plotBounds, plotCenter, PLOT } from '../city/layout.js';
 import { hash01, constructionProgress, candidatePlots } from '../engine/city.js';
 import { heritageOf } from '../engine/catalog.js';
-import { fitHeritageQuay } from './heritage.js';
+import { fitHeritageQuay, heritageFootprints } from './heritage.js';
 import { drawHoiAnBuilding } from './hoian.js';
 import { architectureOf, DEFAULT_APPEARANCE, PLACES, snowIn, streetJourney, journeyAt, projectGptCity, riverSite, riverCandidates, tradeAt, bridgeWalkHeight } from './art.js';
 
@@ -155,6 +155,11 @@ export class GptScene extends CityScene {
     super(canvas,{...options,antialias:false});
     this.controls.minDistance=2.2;
   }
+  focusParcel(site,ms=700) {
+    const radius=Math.max(5,Math.hypot(site.width,site.depth)*.9),angle=site.yaw+.35;
+    this.flyTo({target:{x:site.x,y:.2,z:site.z},position:{x:site.x+Math.sin(angle)*radius,y:Math.max(5,radius*.75),z:site.z+Math.cos(angle)*radius}},ms);
+    this.renderDirty=true;
+  }
   setModel(model) {
     model={...model,city:projectGptCity(model.city)};
     if(model.placementBlueprint!==this.model?.placementBlueprint||JSON.stringify(model.placementSites)!==JSON.stringify(this.model?.placementSites))this.signature='';
@@ -262,7 +267,22 @@ export class GptScene extends CityScene {
     this.buildSky();
     for (const b of this.model.city.buildings) this.buildHouse(b);
     if(this.model.city.futurePlan)this.buildFutureLife();else if(this.a.place==='hoian'){this.buildStreetscape();this.buildParcelLife();}
-    if(this.model.picking&&this.model.placementSites)for(const site of this.model.placementSites)this.part('box','candidate',[site.x,.09,site.z],[site.width,.08,site.depth],[0,0,0],{type:'parcel',site});
+    if(this.model.picking&&this.model.placementSites)for(const site of this.model.placementSites) {
+      const pick={type:'parcel',site},bridge=this.model.placementBlueprint==='ha-chuacau-v1';
+      const front=site.z+(bridge?1:Math.cos(site.yaw))*site.depth/2;
+      this.part('box','candidate',[site.x,.09,site.z],[site.width,.08,site.depth],[0,0,0],pick);
+      // A bounded floor plan makes the actual land area and street-facing entrance readable.
+      for(const side of [-1,1]) {
+        this.part('box','#45695c',[site.x+side*site.width/2,.15,site.z],[.045,.05,site.depth],[0,0,0],pick);
+        this.part('box','#45695c',[site.x,.15,site.z+side*site.depth/2],[site.width,.05,.045],[0,0,0],pick);
+      }
+      this.part('box','#e0d8b8',[site.x,.18,front],[Math.min(1.2,site.width*.4),.07,.24],[0,0,0],pick);
+      if(bridge)this.part('box','#e0d8b8',[site.x,.18,site.z-site.depth/2],[Math.min(1.2,site.width*.4),.07,.24],[0,0,0],pick);
+      const sx=bridge?1:site.width/3.8,sz=bridge?1:site.depth/3.2,cos=Math.cos(site.yaw),sin=Math.sin(site.yaw);
+      for(const [x,z,w,d] of heritageFootprints(this.model.placementBlueprint,site)||[[0,0,3,2]]) {
+        this.part('box','#8e9b86',[site.x+x*sx*cos+z*sz*sin,.17,site.z-x*sx*sin+z*sz*cos],[w*sx,.075,d*sz],[0,site.yaw,0],pick);
+      }
+    }
     if (this.model.picking&&!this.model.placementSites) {
       for (const plot of this.model.placementBlueprint==='ha-chuacau-v1'?riverCandidates(this.model.city.candidates):this.model.city.candidates) {
         const bridge=this.model.placementBlueprint==='ha-chuacau-v1';

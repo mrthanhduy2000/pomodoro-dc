@@ -1,3 +1,23 @@
+> Last update: **2026-10-26 — INSPECT REAL PARCELS BEFORE BUILDING; PHUNG HUNG FOLLOW-UP.**
+> User deferred FPS measurement: no new benchmark or speed claim in this round.
+> Maps survey before geometry: Phung Hung community pano Jan 2020 is distorted/coverage-limited;
+> interior photo Apr 2023 and street photo captured Aug 2026 (panel Sep 2026) were inspected.
+> Primary heritage description and date limits: docs/HOI_AN_PARCELS.md.
+> New-parcel Phung Hung gains front/rear gable volumes and a four-direction middle roof,
+> broad timber upper gallery, stone column bases, dark shutters and cloth counter.
+> Historical non-parcel kit and every persisted footprint/position remain unchanged.
+> Real-city placement now previews one selected parcel, footprint blocks, entrance and boundaries.
+> Camera follows selection; candidate buttons only select. Only the explicit build button writes.
+> Planner is in the inspector, not over the scene; dimensions/area are labelled game units.
+> Old/future previews and phase slider remain. No synthetic sessions/plans or database changes.
+> Static selection is read-only. Native resolution/lights/render scheduling remain unchanged.
+> Validation: full suite 1,946 passes / zero failures / one expected skip; three cross-checks,
+> 52 focused checks, lint and build pass. Fifty legacy heritage/stage output comparisons match HEAD.
+> Initial doc-limit failure was corrected; the complete suite was rerun green.
+> Local UI checked site switching, district switching, cancel and phase slider without a real write.
+
+---
+
 > Last update: **2026-10-26 — REAL PARCEL PLANS AFTER STREET VIEW SURVEY (ADR-107).**
 > Research preceded code: Google Maps community panoramas at Chua Cau (captured Dec 2024) and
 > Tan Ky interior (May 2018), cross-checked with primary heritage documents. Source/date limits:

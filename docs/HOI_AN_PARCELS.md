@@ -94,3 +94,34 @@ Primary sources checked before code:
 The new-parcel-only kit interprets those elements with original procedural geometry. It preserves
 site.version1 dimensions and the entire legacy non-parcel kit. Neither decorative scale/column
 counts nor foliage are claimed to be measured replicas. No Google asset is included in the app.
+
+
+## Quan Cong Mieu follow-up — 2026-10-26 (before model changes)
+
+Verified the monument at 24 Tran Phu, opposite Hoi An market. Google Maps official Street View
+was opened and rotated: December 2021, pano `T_eBl61PBpUdwnLuU1HdkQ`. The camera label says
+19 Tran Phu (the road capture location), not a replacement postal address for the monument.
+It shows a continuous three-bay frontage, red columns, round green lattice windows, painted
+central timber doors, stone threshold drums, low ironwork and pale glazed ridge ornaments.
+An independent frontage image by Anh Hung, September 2019, corroborates the same facade.
+Screenshots retain attribution/date in the task visualization folder, not app assets.
+
+The listing's first community panorama (G Hine, January 2020) shows a different nearby courtyard.
+Its interior photo by Stephen Rush (December 2016) cannot be confidently matched from the image
+alone. Neither is used to infer this model's courtyard furniture, deity likeness or current state.
+Do not treat every photograph attached to a Maps listing as a verified photograph of the monument.
+
+Primary documents consulted before geometry:
+- [Monument dossier, dated 30 September 1991](https://hoianheritage.net/uploads/download/m-01-quan-cong-mieu.pdf),
+  page 2: three-bay street block, two connecting galleries around an open court, rear transverse
+  hall, timber frame and glazed ceramic roof decoration. This is historical documentation, not a
+  current measured plan. Its inventory supports a bell, drum and incense vessels; the model's
+  exact placements are interpretive.
+- [Heritage Centre entry](https://hoianheritage.net/vi/di-san-van-hoa/Mieu/mieu-quan-cong-chua-ong-trung-han-cung-so-24-duong-tran-phu-phuong-minh-an-255.html)
+  confirms identity/location, restoration history and distinctive frame.
+- [Official heritage portal, July 2025](https://www.hoianworldheritage.org.vn/vi/news/Du-lich-Hoi-An/le-via-quan-cong-o-hoi-an-2915.hwh)
+  describes its living religious/community role. No deity likeness or festival is invented here.
+
+Only the new-parcel kit changes. The four-volume footprint drives the open architecture and
+construction/placement previews; the saved 5.8x7.2 game-unit site, orientation and 300-minute cost
+remain unchanged. Existing non-parcel kit and all saved plans/history are preserved.

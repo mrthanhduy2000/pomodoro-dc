@@ -1,3 +1,14 @@
+## 2026-10-26 — Quan Cong Mieu's own street block and courtyard
+
+- Survey verified official Street View and monument documentation before new-parcel geometry.
+- Reject misattributed Maps images; record source identities/dates and historical-document limits.
+- Add a shared four-volume plan: three-bay street room, side galleries and rear hall around a court.
+- Add circular green lattice windows, door eyes, painted hinged leaves, glazed roof crests,
+  stone thresholds and interpreted bell/drum/incense furnishings using existing static parts.
+- Preserve legacy kits, sites, minute accounting, all previews, native resolution and rendering policies.
+- FPS remains deferred; no new speed claim or reference-photo asset.
+- Validation: 1,946 full-suite passes, zero failures, one expected skip; three cross-checks, 52 focused checks, lint/build and 50 legacy output comparisons pass.
+
 ## 2026-10-26 — Quang Trieu courtyard and gate on real parcels
 
 - Survey dated Google Maps community 360 imagery before geometry, cross-check primary heritage sources.

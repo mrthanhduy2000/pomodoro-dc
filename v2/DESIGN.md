@@ -244,3 +244,16 @@ roof and lower side roofs. The static ceramic dragon pool is original bounded ge
 plain water-coloured surface; it adds no Reflector, light or animation loop. Native pixels,
 instancing and current rendering policies remain. Legacy geometry, site versions/dimensions and
 completed-focus credit remain unchanged. FPS measurement stays deferred by request.
+
+
+### Quan Cong Mieu parcel kit (2026-10-26)
+
+Verified Street View and the 1991 monument dossier precede implementation; references and rejected
+misattributions are recorded in docs/HOI_AN_PARCELS.md. Only new-parcel geometry changes. The shared
+four-volume footprint supplies construction, placement and architecture: a pass-through three-bay
+street block, two galleries and a rear hall around an open court. Circular lattice windows,
+hinged painted doors, door eyes and glazed ridge crests distinguish the street facade. Bell,
+drum and incense furniture are static inventory-based interpretations, without an invented deity
+likeness. Circular vertical motifs compensate the shared world-width transform instead of becoming
+ovals. All saved site versions, dimensions/orientations and the 300-minute cost remain. Legacy
+geometry and previews are unchanged; native pixels/lights/render scheduling stay. FPS is deferred.

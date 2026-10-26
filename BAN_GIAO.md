@@ -1,3 +1,24 @@
+> Last update: **2026-10-26 — QUAN CONG MIEU PARCEL KIT AFTER VERIFIED STREET SURVEY.**
+> User explicitly requested this monument, old buildings/previews preserved, FPS deferred.
+> Research preceded geometry: official Google Street View Dec 2021, rotated, pano
+> T_eBl61PBpUdwnLuU1HdkQ; frontage photo Sep 2019 corroborates. Camera address19 != monument24.
+> Rejected a mislocated community courtyard and an unverified interior photo from the Maps listing.
+> The 1991 four-page monument dossier supplies the three-bay street block, court/galleries,
+> rear transverse hall and inventory; contemporary context is cross-checked with heritage sources.
+> Source/date limits: docs/HOI_AN_PARCELS.md. No current measured-replica claim.
+> Only new-parcel Quan Cong geometry changes: four shared footprint volumes, open street passage,
+> round green lattice windows, hinged painted timber doors and paired door eyes, glazed crests,
+> rear ritual table, static bell/drum/urn. No deity likeness or festival is invented.
+> Legacy geometry and all saved sites/areas/orientations/history remain; cost stays300 completed minutes.
+> Native pixels/lights/render scheduling unchanged; no new FPS run or speed claim.
+> Original procedural art only; no reference image asset in the app.
+> Validation: 1,946 full-suite passes, zero failures, one expected skip; three cross-checks,
+> 52 focused checks, lint/build pass; 50 legacy heritage/stage outputs match previous HEAD.
+> Browser checked old/parcel samples, circular proportions, courtyard, phase slider, site switch/cancel;
+> zero captured errors. No focus or test building plan was created.
+
+---
+
 > Last update: **2026-10-26 — QUANG TRIEU PARCEL COURTYARD AFTER DATED 360 SURVEY.**
 > User's continue accepted the prior Quang Trieu proposal; FPS remains deferred.
 > Maps verified 176 Tran Phu, Hoi An (not the namesake in HCMC). Entrance community panorama:

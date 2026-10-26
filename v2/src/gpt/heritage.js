@@ -17,6 +17,7 @@ export function heritageFootprints(key,site=null) {
   if(site&&key==='ha-tanky-v1')return [[0,.92,3.25,.66,1.38],[0,-.94,3.25,.62,1.28],[-1.48,-.01,.28,1.2,1.18],[1.48,-.01,.28,1.2,1.18]];
   if(site&&key==='ha-phunghung-v1')return [[0,.86,3.1,.72,2.1],[0,-.18,3.1,.9,1.65],[0,-1.1,3.1,.56,1.35]];
   if(site&&key==='ha-quangtrieu-v1')return [[0,-.96,3,.66,1.42],[-1.43,-.02,.55,1.35,1.02],[1.43,-.02,.55,1.35,1.02]];
+  if(site&&key==='ha-quancong-v1')return [[0,.88,3.15,.66,1.25],[0,-.99,3.05,.66,1.48],[-1.37,-.055,.58,1.21,.95],[1.37,-.055,.58,1.21,.95]];
   return Object.hasOwn(FOOTPRINTS,key)?FOOTPRINTS[key]:null;
 }
 
@@ -318,6 +319,102 @@ export function drawHeritageBuilding(kit, building, progress) {
       break;
     }
     case 'ha-quancong-v1': {
+      if(building.site) {
+        const vermilion='wall:#a54b42',cream='#cec7aa',green='#426b58',bronze='#8c7851';
+        const widthScale=building.world?.sx??1;
+        const footprints=heritageFootprints(building.key,building.site),face=footprints[0][1]+footprints[0][3]/2;
+        box('paving',0,.16,-.04,3.42,.07,2.9);
+        // The street block is a room with a passage, not an isolated assembly-hall gateway.
+        for(const [i,[x,z,w,d,h]] of footprints.slice(0,2).entries()) {
+          box('stone',x,.21,z,w+.08,.14,d+.08);
+          box(timber,x,.3,z,w,.045,d);
+          if(i===0)for(const side of [-1,1])box(vermilion,side*(w+.95)/4,.22+h/2,z-d/2+.045,(w-.95)/2,h,.09);
+          else box(vermilion,x,.22+h/2,z-d/2+.045,w,h,.09);
+          for(const side of [-1,1])box(vermilion,x+side*(w/2-.045),.22+h/2,z,.09,h,d);
+          for(const at of [-.46,-.15,.15,.46]) {
+            const px=x+at*w,front=z+d/2;
+            part('pole','stone',px,.27,front,.065,.13,.065);
+            part('pole',vermilion,px,.32+(h-.12)/2,front,.042,h-.12,.042);
+            box(timber,px,.22+h,front,.17,.075,.16);
+            beam(timber,[px,.08+h,front],[px,.22+h,front+.12],.02);
+          }
+          box(timber,x,.18+h,z+d/2,w,.12,.12);
+          roof(x,.23+h,z,w+.35,d+.34,.38);
+          if(finish) {
+            const ridge=.23+h+.42;
+            for(const offset of [-1.05,0,1.05])for(const side of [-1,1]) {
+              const point=u=>[x+offset+side*(.04+.27*u),ridge+.12*Math.sin(u*Math.PI)+.05*u,z];
+              for(let j=0;j<6;j++)beam('#9aab9b',point(j/6),point((j+1)/6),.018);
+            }
+            part('hoop',cream,x,ridge+.15,z,.065/widthScale,.065,.065);
+          }
+        }
+        for(const [x,z,w,d,h] of footprints.slice(2)) {
+          const side=Math.sign(x),inner=x-side*(w/2-.025);
+          box(vermilion,x+side*(w/2-.045),.22+h/2,z,.09,h,d);
+          box(timber,x,.25,z,w,.06,d);
+          for(let i=0;i<4;i++)posts([inner],.28,z-d/2+.07+i*(d-.14)/3,h-.08);
+          gableRoof(x,.23+h,z,w+.25,d+.28,.22);
+        }
+        for(let step=0;step<2;step++)box('stone',0,.09+step*.07,face+.24-step*.1,3.25-step*.1,.08,.22);
+        if(finish) {
+          // Round lattice windows and the paired door eyes identify the verified street facade.
+          for(const side of [-1,1]) {
+            const x=side*1.035;
+            box('#334b42',x,.75,face+.014,.84,.97,.055);
+            for(const dx of [-.4,.4])box(cream,x+dx,.75,face+.05,.026,.96,.025);
+            for(const y of [.27,1.23])box(cream,x,y,face+.05,.81,.025,.025);
+            // Preserve circular vertical motifs under the parcel's wider horizontal transform.
+            part('pole','#253c35',x,.84,face+.05,.288/widthScale,.023,.288,[Math.PI/2,0,0]);
+            part('hoop',cream,x,.84,face+.075,.31/widthScale,.31,.31);
+            for(let i=-3;i<=3;i++) {
+              const dx=i*.075,half=Math.sqrt(.285*.285-dx*dx);
+              box(green,x+dx/widthScale,.84,face+.078,.017/widthScale,half*2,.025);
+            }
+            for(let i=-2;i<=2;i++) {
+              const dy=i*.085,half=Math.sqrt(.285*.285-dy*dy);
+              box(green,x,.84+dy,face+.078,half*2/widthScale,.016,.025);
+            }
+            for(const dx of [-.23,0,.23]) {
+              box('#b7a65d',x+dx,.4,face+.057,.18,.19,.018);
+              box('#596e66',x+dx,.4,face+.07,.13,.14,.018);
+            }
+            // Painted timber leaves open on their hinges; inlay follows each leaf rigidly.
+            const angle=open?1.05:0,point=(u,y,depth=0)=>[side*(.45-u*Math.cos(angle)+depth*Math.sin(angle)),y,face+u*Math.sin(angle)+depth*Math.cos(angle)];
+            const centre=point(.23,.77);
+            part('box',vermilion,...centre,.46,1.06,.05,[0,side*angle,0]);
+            const curl=u=>point(.23+.075*Math.sin(u*Math.PI*4),.36+.8*u,.033);
+            for(let j=0;j<14;j++)beam('#c1c7aa',curl(j/14),curl((j+1)/14),.01);
+            const head=curl(.93);part('orb','#c1c7aa',...head,.028,.023,.018);
+            part('pole',cream,side*.52,1.34,face+.075,.051/widthScale,.025,.051,[Math.PI/2,0,0]);
+            for(let j=0;j<6;j++) {
+              const a=j*Math.PI/3;
+              beam('#897a57',[side*.52,1.34,face+.092],[side*.52+Math.cos(a)*.04/widthScale,1.34+Math.sin(a)*.04,face+.092],.006);
+            }
+            part('pole','stone',side*.49,.34,face+.21,.11,.055,.16,[Math.PI/2,0,0]);
+            for(let j=0;j<8;j++)box('#76483d',side*(.43+j*.145),.46,face+.27,.013,.4,.02);
+            for(const y of [.29,.61])box('#76483d',side*.99,y,face+.27,1.14,.022,.022);
+            lantern(side*1.04,1.28,face+.1);
+          }
+          sign(0,1.37,face+.07,.82);
+          // Dossier inventory, interpreted at model scale; no unverified deity likeness.
+          box(timber,0,.43,-1.05,1.02,.22,.26);
+          box(vermilion,0,.96,-1.265,1.12,.88,.035);
+          sign(0,1.49,-1.24,.91);
+          part('vase',bronze,0,.67,-.94,.09,.19,.085);
+          for(const side of [-1,1])part('vase',side>0?'#82917c':bronze,side*.36,.64,-1.04,.055,.14,.055);
+          box(timber,1.37,1.05,-.05,.4,.045,.06);
+          beam(bronze,[1.37,1.04,-.05],[1.37,.93,-.05],.012);
+          part('vase',bronze,1.37,.83,-.05,.08,.18,.08,[Math.PI,0,0]);
+          part('pole',bronze,1.37,.74,-.05,.09,.02,.09);
+          part('orb',bronze,1.37,.71,-.05,.016,.025,.016);
+          part('pole','#8e4d3f',-1.37,.65,-.05,.12,.18,.12,[Math.PI/2,0,0]);
+          for(const z of [-.145,.045])part('pole','#c6b58c',-1.37,.65,z,.12,.013,.12,[Math.PI/2,0,0]);
+          for(const x of [-1.45,-1.29])box(timber,x,.43,-.05,.035,.3,.18);
+          lantern(-.96,1.42,-.57);lantern(.96,1.42,-.57);
+        }
+        break;
+      }
       body(0,-.77,2.14,.48,1.35);roof(0,1.52,-.77,2.54,.75,.38);
       body(0,.48,2.3,.45,1.1);roof(0,1.27,.48,2.67,.75,.31);
       for(const side of [-1,1])box('wall:#b5735e',side*1.14,.71,-.12,.09,1.05,.75);

@@ -125,3 +125,31 @@ Primary documents consulted before geometry:
 Only the new-parcel kit changes. The four-volume footprint drives the open architecture and
 construction/placement previews; the saved 5.8x7.2 game-unit site, orientation and 300-minute cost
 remain unchanged. Existing non-parcel kit and all saved plans/history are preserved.
+
+
+## Phuc Kien follow-up — 2026-10-26
+
+Research was inspected before geometry changes. Google Maps verified the place at 46 Tran Phu,
+15.8774847,108.3306281. The Street View entry opened a flat photograph, not a navigable panorama:
+Olga Salih, April 2025, image CIHM0ogKEICAgICx-6vrpQE. It shows the pink masonry three-arch gate,
+cream arch surrounds, green glazed roofs, raised central tower with an upper arch and tiered
+eaves, ceramic ridge silhouettes and potted courtyard trees. A second photograph by MANH NGUYEN
+HUU, July 2024, image CIHM0ogKEICAgMDo9cqgCw, confirms the open red-columned front hall, brown
+tiles with green edges, lateral gallery and garden court. Provider/date overlays are retained
+in task screenshots. These dated photos are not a present measured survey or Google driving
+Street View. No reference photo, panorama or mesh is included as an app asset.
+
+- [Heritage Centre architectural study, 10 October 2018](https://hoianheritage.net/vi/trao-doi-chuyen-nganh/chuyen-de-nghien-cuu-trao-doi/kien-truc-co-cac-hoi-quan-cua-nguoi-hoa-o-hoi-an-quang-nam-735.html)
+  identifies the entrance, courts, three parallel transverse halls and longitudinal east/west
+  galleries. Its historical dimensions are not assigned to saved game parcels.
+- [Da Nang official tourism portal, page dated 1 January 2026](https://danangfantasticity.com/hoi-quan-phuc-kien)
+  cross-checks the community/religious role, gates, bonsai and water garden. Founding accounts
+  vary between sources; no new date, ritual or deity likeness is added to the game.
+
+The new-parcel kit compresses the axial sequence into the existing immutable 7.2 x 7.2 game-unit
+site: three transverse open halls, two side galleries, a court and distinct tiered three-arch
+gate. This is an interpretive compression, not a 100-metre measured replica. Footprint previews
+and construction use the same five-volume table. The gate uses an optional green roof palette
+in the existing roof generator; default calls retain exactly their old output. Props are static,
+without a new light, reflector or animation clock. Legacy geometry/site history and the
+200-completed-focus-minute cost remain. FPS measurement is deferred by explicit request.

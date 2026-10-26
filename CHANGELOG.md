@@ -1,3 +1,13 @@
+## 2026-10-26 — Phuc Kien parcel architecture from dated real imagery
+
+New-parcel Phuc Kien gains a pink three-arch gate, raised arched tower and tiered green
+roofs, plus three open halls, galleries and planted courts following verified Maps photos
+and the Heritage Centre study. Model and construction share one footprint table. Existing
+site/history/200-minute cost and non-parcel kits remain. Optional roof glaze reuses the
+existing generator, with identical defaults. FPS deferred. Full suite: 1,946 passes, zero failures,
+one expected skip; three cross-checks, focused 52, lint/build pass. Fifty legacy and 45 other-parcel outputs unchanged.
+Browser verified sample stages and site selection/cancel without writes or captured errors.
+
 ## 2026-10-26 — Quan Cong Mieu's own street block and courtyard
 
 - Survey verified official Street View and monument documentation before new-parcel geometry.

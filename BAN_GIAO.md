@@ -1,3 +1,22 @@
+> Last update: **2026-10-26 — PHUC KIEN PARCEL KIT AFTER DATED PHOTO SURVEY.**
+> User requested implementation; old buildings/previews preserved, FPS deferred.
+> Maps confirms 46 Tran Phu; gate photo Olga Salih Apr2025, court MANH NGUYEN HUU Jul2024.
+> Street View entry returned a flat image; no continuous/rotated panorama claim.
+> Heritage Centre 2018 study supplies three axial halls, galleries and successive courts.
+> Source/date and compressed-proportion limits: docs/HOI_AN_PARCELS.md.
+> New-parcel-only kit: pink three-arch gate, central arched tower, tiered green roofs,
+> cream surrounds, three open transverse halls, side galleries, bonsai and static water garden.
+> Shared five-volume footprints drive model/placement/construction. Legacy kit is unchanged.
+> Existing roof accepts an optional glaze palette; default calls preserve previous output.
+> Saved sites/positions/dimensions/history and 200 completed-focus-minute target remain.
+> No new light/Reflector/animation loop, native pixel or scheduling change; FPS not measured.
+> Validation: full suite 1,946 passes, zero failures, one expected skip; three cross-checks pass.
+> Focused 52 checks, lint/build pass. Fifty legacy and 45 other-parcel stage outputs are identical;
+> all 50 parcel-stage outputs are finite/read-only. Browser checked front/courts, stages 35/70%,
+> site switch/cancel and zero captured errors. No real focus or building plan was created.
+
+---
+
 > Last update: **2026-10-26 — QUAN CONG MIEU PARCEL KIT AFTER VERIFIED STREET SURVEY.**
 > User explicitly requested this monument, old buildings/previews preserved, FPS deferred.
 > Research preceded geometry: official Google Street View Dec 2021, rotated, pano

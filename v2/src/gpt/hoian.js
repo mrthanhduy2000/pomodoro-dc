@@ -20,7 +20,7 @@ export function drawHoiAnBuilding(scene, b) {
   const part = (kind, mat, x, y, z, w, h, d, rotation = [0, 0, 0]) => scene.part(kind, mat, [c.x+mirror*x, y, c.z+z], [w,h,d], [rotation[0],mirror*rotation[1],mirror*rotation[2]], pick);
   const beam = (mat, a, to, radius=.025) => scene.beam(mat, [c.x+mirror*a[0],a[1],c.z+a[2]], [c.x+mirror*to[0],to[1],c.z+to[2]], radius, pick);
   const box = (mat,x,y,z,w,h,d) => part('box',mat,x,y,z,w,h,d);
-  const roof = (x,y,z,w,d,rise=.42) => {
+  const roof = (x,y,z,w,d,rise=.42,glaze=null) => {
     if(progress < .5) return;
     const reach=d/2;
     if(progress<.82)for(const side of [-1,1])for(let rib=0;rib<Math.ceil(Math.min(1,(progress-.5)/.15)*9);rib+=1) {
@@ -42,7 +42,7 @@ export function drawHoiAnBuilding(scene, b) {
         const slope=Math.atan2(height(a)-height(next),reach/10);
         for(let strip=0;strip<4;strip+=1) {
           const dx=(strip-1.5)*w/4;
-          part('box','tile',x+dx,y+height(u)+sag(dx),z+side*reach*u,w/4+.008,.025,Math.hypot(reach/10,height(a)-height(next))+.018,[side*slope,0,0]);
+          part('box',glaze?.[0]??'tile',x+dx,y+height(u)+sag(dx),z+side*reach*u,w/4+.008,.025,Math.hypot(reach/10,height(a)-height(next))+.018,[side*slope,0,0]);
         }
         const n=Math.max(5,Math.round(w/.085));
         for(let col=0;col<n;col+=1) {
@@ -50,7 +50,7 @@ export function drawHoiAnBuilding(scene, b) {
           const wear=random(seed),dx=-w/2+(col+.5)*w/n;
           const age=ageAt(col,row,side)*.75+wear*.25;
           const tint=age<.5?variant:age<.72?(variant+1)%4:age<.9?(variant+3)%4:(variant+2)%4;
-          part('roofTile',tiles[tint],x+dx+(random(`${seed}:x`)-.5)*.009,y+height(u)+.018+sag(dx)+(wear-.5)*.012,z+side*reach*u, .029*(.94+wear*.12),reach/9,.029,[Math.PI/2+side*slope,(wear-.5)*.035,(random(`${seed}:tilt`)-.5)*.025]);
+          part('roofTile',(glaze??tiles)[tint],x+dx+(random(`${seed}:x`)-.5)*.009,y+height(u)+.018+sag(dx)+(wear-.5)*.012,z+side*reach*u, .029*(.94+wear*.12),reach/9,.029,[Math.PI/2+side*slope,(wear-.5)*.035,(random(`${seed}:tilt`)-.5)*.025]);
         }
       }
       // Gable boards close the roof volume. Slim timber eaves keep the edges light.

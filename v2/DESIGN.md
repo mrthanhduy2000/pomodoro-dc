@@ -257,3 +257,15 @@ drum and incense furniture are static inventory-based interpretations, without a
 likeness. Circular vertical motifs compensate the shared world-width transform instead of becoming
 ovals. All saved site versions, dimensions/orientations and the 300-minute cost remain. Legacy
 geometry and previews are unchanged; native pixels/lights/render scheduling stay. FPS is deferred.
+
+
+### Phuc Kien parcel kit (2026-10-26)
+
+Dated Maps photographs (April 2025 gate, July 2024 court) and the 2018 Heritage Centre study
+precede model changes; source limits are in docs/HOI_AN_PARCELS.md. New-parcel geometry alone
+uses three transverse open halls and two longitudinal galleries from one shared footprint
+table. The pink three-arch gate gains cream surrounds, a raised central arched tower and
+tiered green glazed roofs. The existing roof generator accepts an optional four-tone palette;
+default callers retain their original geometry/material output. Bonsai and water-garden props
+are static. Saved 7.2 x 7.2 site dimensions, 200-minute target, legacy kits and preview controls
+remain unchanged. No light, reflection pass, render scheduling or native pixel change. FPS deferred.

@@ -18,6 +18,7 @@ export function heritageFootprints(key,site=null) {
   if(site&&key==='ha-phunghung-v1')return [[0,.86,3.1,.72,2.1],[0,-.18,3.1,.9,1.65],[0,-1.1,3.1,.56,1.35]];
   if(site&&key==='ha-quangtrieu-v1')return [[0,-.96,3,.66,1.42],[-1.43,-.02,.55,1.35,1.02],[1.43,-.02,.55,1.35,1.02]];
   if(site&&key==='ha-quancong-v1')return [[0,.88,3.15,.66,1.25],[0,-.99,3.05,.66,1.48],[-1.37,-.055,.58,1.21,.95],[1.37,-.055,.58,1.21,.95]];
+  if(site&&key==='ha-phuckien-v1')return [[0,.25,2.94,.3,1.12],[0,-.53,2.94,.32,1.4],[0,-1.21,2.94,.24,1.2],[-1.38,-.48,.32,1.55,.85],[1.38,-.48,.32,1.55,.85]];
   return Object.hasOwn(FOOTPRINTS,key)?FOOTPRINTS[key]:null;
 }
 
@@ -129,6 +130,100 @@ export function drawHeritageBuilding(kit, building, progress) {
       break;
     }
     case 'ha-phuckien-v1': {
+      if(building.site) {
+        const pink='wall:#c78e86',cream='wall:#e1d3b0',green='#789468';
+        const glaze=['tile:#52735e','tile:#63856b','tile:#7c956a','tile:#496453'];
+        const volumes=heritageFootprints(building.key,building.site);
+        box('paving',0,.17,0,3.34,.07,2.85);
+        // Three transverse halls and longitudinal galleries retain open sky between roofs.
+        for(const [i,[x,z,w,d,h]] of volumes.slice(0,3).entries()) {
+          const front=z+d/2;
+          box('stone',x,.23,z,w+.08,.12,d+.09);
+          for(const side of [-1,1])box(cream,side*(w/2-.04),.28+h/2,z,.08,h,d);
+          if(i===2)box(cream,0,.28+h/2,z-d/2,w,h,.075);
+          for(const px of [-1.31,-.46,.46,1.31]) {
+            part('pole',green,px,.32,front,.065,.16,.065);
+            part('pole','wall:#a34336',px,.38+(h-.16)/2,front,.047,h-.16,.047);
+            box(timber,px,.27+h,front,.19,.1,.16);
+          }
+          box(timber,0,.23+h,front,w,.13,.12);
+          roof(x,.3+h,z,w+.26,d+.16,.3);
+          if(finish) {
+            sign(0,.14+h,front+.09,.85);
+            for(const px of [-1.05,1.05])lantern(px,.06+h,front+.08);
+            for(const side of [-1,1])for(let j=0;j<6;j++) {
+              const at=u=>[side*(.9+.48*u),h+.65+.13*u*u,z];
+              beam(green,at(j/6),at((j+1)/6),.025);
+            }
+          }
+        }
+        for(const [x,z,w,d,h] of volumes.slice(3)) {
+          const side=Math.sign(x),inner=x-side*w/2;
+          box(pink,x+side*w/2,.27+h/2,z,.07,h,d);
+          for(let j=0;j<5;j++)posts([inner],.27,z-d/2+.08+j*(d-.16)/4,h);
+          gableRoof(x,.27+h,z,w+.18,d+.16,.18);
+        }
+        // April 2025 gate photo: three masonry arches beneath a raised, tiered central tower.
+        const gateZ=1.12;
+        const arch=(cx,bottom,spring,rx,ry,depth)=>{
+          for(const side of [-1,1]) {
+            box(pink,cx+side*(rx+.065),(bottom+spring)/2,gateZ,.13,spring-bottom,depth);
+            box(cream,cx+side*(rx-.005),(bottom+spring)/2,gateZ+depth/2+.012,.032,spring-bottom,.025);
+          }
+          for(let j=0;j<16;j++) {
+            const at=(u,r)=>[cx+Math.cos(u*Math.PI)*(rx+r),spring+Math.sin(u*Math.PI)*(ry+r),gateZ];
+            beam(pink,at(j/16,.065),at((j+1)/16,.065),.073);
+            const trim=u=>[cx+Math.cos(u*Math.PI)*rx,spring+Math.sin(u*Math.PI)*ry,gateZ+depth/2+.025];
+            beam(cream,trim(j/16),trim((j+1)/16),.022);
+          }
+        };
+        for(const x of [-.98,0,.98])arch(x,.23,.88,x===0?.43:.31,.29,.21);
+        box(pink,0,1.38,gateZ,2.95,.22,.25);
+        for(const side of [-1,1]) {
+          box(pink,side*1.52,.88,gateZ,.17,1.28,.29);
+          for(const y of [.3,1.13,1.48])box(cream,side*1.52,y,gateZ,.25,.055,.34);
+          roof(side*1.12,1.49,gateZ,.94,.48,.2,glaze);
+        }
+        roof(0,1.53,gateZ,1.67,.55,.24,glaze);
+        arch(0,1.82,2.32,.14,.24,.23);
+        for(const side of [-1,1]) {
+          box(pink,side*.34,2.18,gateZ,.25,.73,.25);
+          if(finish) {
+            box(cream,side*.34,2.2,gateZ+.14,.16,.35,.025);
+            box('#4b6556',side*.34,2.2,gateZ+.16,.1,.29,.015);
+          }
+        }
+        box(pink,0,2.69,gateZ,.86,.23,.25);
+        roof(0,2.82,gateZ,1.12,.52,.23,glaze);
+        for(const side of [-1,1])roof(side*.62,2.13,gateZ,.45,.43,.15,glaze);
+        if(finish) {
+          sign(0,1.39,gateZ+.16,1.03);sign(0,2.69,gateZ+.16,.55);
+          // Stepped pier caps, cream border panels and discrete ceramic crest silhouettes.
+          for(const x of [-1.52,-.52,.52,1.52])for(let course=0;course<6;course++)box(cream,x,.38+course*.14,gateZ+.158,.12,.012,.012);
+          for(const [cx,y,w] of [[0,1.81,1.55],[-1.12,1.72,.83],[1.12,1.72,.83],[0,3.09,1]]) {
+            for(const side of [-1,1]) {
+              for(let j=0;j<7;j++) {
+                const at=u=>[cx+side*(w*.12+w*.34*u),y+.16*u*u,gateZ];
+                beam(green,at(j/7),at((j+1)/7),.022);
+              }
+              part('orb',green,cx+side*w*.44,y+.2,gateZ,.035,.065,.025);
+            }
+            part('orb','#b8ac7b',cx,y+.12,gateZ,.045,.07,.035);
+          }
+          for(const x of [-.96,.96])for(const z of [.58,-.15]) {
+            part('vase','tile:#8c6a50',x,.28,z,.12,.2,.12);
+            garden(x,.4,z,.26);
+          }
+          for(let step=0;step<3;step++)box('stone',0,.12+step*.05,.64-step*.075,1.36-step*.05,.065,.16);
+          box('stone',-.93,.24,.88,.46,.1,.27);
+          box('#557d6d',-.93,.296,.88,.36,.012,.18);
+          // Static incense furniture; no invented deity likeness or ritual animation.
+          box(timber,0,.53,-.63,1.02,.08,.23);
+          for(const x of [-.4,.4])box(timber,x,.37,-.63,.06,.3,.18);
+          part('vase','#958357',0,.65,-.62,.12,.18,.09);
+        }
+        break;
+      }
       // Ordered forecourt, three gate openings and rear sanctuary, rather than a shop facade.
       body(0,-.64,2.42,.64,1.4);roof(0,1.57,-.64,2.82,.98,.52);
       for(const x of [-1.16,1.16]) {body(x,-.06,.3,.65,.8);roof(x,.97,-.06,.5,.9,.2);}

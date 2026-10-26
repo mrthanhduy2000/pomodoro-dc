@@ -1,3 +1,22 @@
+> Last update: **2026-10-26 — QUANG TRIEU PARCEL COURTYARD AFTER DATED 360 SURVEY.**
+> User's continue accepted the prior Quang Trieu proposal; FPS remains deferred.
+> Maps verified 176 Tran Phu, Hoi An (not the namesake in HCMC). Entrance community panorama:
+> KTSMAP Bui Hai Giang, Nov 2024; courtyard panorama: Jan Reher, Mar 2024, opened and rotated.
+> Sources/date limits and primary heritage references: docs/HOI_AN_PARCELS.md.
+> Only new-parcel Quang Trieu kit changes: open three-bay sanctuary, longitudinal galleries,
+> round stone gate columns, raised central gate roof/lower side roofs, red ironwork,
+> leafy gallery shade, stepped approach and static ceramic dragon pool/bronze incense vessel.
+> Footprint previews and construction staging use the same new three-volume footprint table.
+> Legacy kit, persisted positions/areas, timer credit and old/future preview controls are unchanged.
+> Original procedural geometry only; no Maps photo/mesh asset, extra light or animated water pass.
+> New parts use existing instancing/materials; no FPS/speed claim, native pixels retained.
+> Validation: full suite 1,946 passes / zero failures / one expected skip; three cross-checks,
+> 52 focused checks, lint and build pass. Fifty legacy model/stage outputs match previous HEAD.
+> Browser checked old/parcel samples, stage slider, sample-to-site flow and cancel, with no errors.
+> No real focus or test build plan was created.
+
+---
+
 > Last update: **2026-10-26 — INSPECT REAL PARCELS BEFORE BUILDING; PHUNG HUNG FOLLOW-UP.**
 > User deferred FPS measurement: no new benchmark or speed claim in this round.
 > Maps survey before geometry: Phung Hung community pano Jan 2020 is distorted/coverage-limited;

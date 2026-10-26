@@ -16,6 +16,7 @@ const FOOTPRINTS={
 export function heritageFootprints(key,site=null) {
   if(site&&key==='ha-tanky-v1')return [[0,.92,3.25,.66,1.38],[0,-.94,3.25,.62,1.28],[-1.48,-.01,.28,1.2,1.18],[1.48,-.01,.28,1.2,1.18]];
   if(site&&key==='ha-phunghung-v1')return [[0,.86,3.1,.72,2.1],[0,-.18,3.1,.9,1.65],[0,-1.1,3.1,.56,1.35]];
+  if(site&&key==='ha-quangtrieu-v1')return [[0,-.96,3,.66,1.42],[-1.43,-.02,.55,1.35,1.02],[1.43,-.02,.55,1.35,1.02]];
   return Object.hasOwn(FOOTPRINTS,key)?FOOTPRINTS[key]:null;
 }
 
@@ -29,7 +30,7 @@ export function fitHeritageQuay(matrix, originZ) {
 
 export function drawHeritageBuilding(kit, building, progress) {
   if (!heritageOf(building.key)) return false;
-  const {box,part,beam,roof,body,window,posts,rail,garden,lantern,counter}=kit;
+  const {box,part,beam,roof,gableRoof,body,window,posts,rail,garden,lantern,counter}=kit;
   const finish=progress>=.82,open=progress>=.95;
   const timber='timber',red='wall:#bb746b';
   const columns=(xs,z,h)=>posts(xs,.18,z,h);
@@ -213,6 +214,101 @@ export function drawHeritageBuilding(kit, building, progress) {
       break;
     }
     case 'ha-quangtrieu-v1': {
+      if(building.site) {
+        const cream='wall:#d3c3a0',ceramic='#75988b',stone='stone',iron='#9f4b3d';
+        const [[,hallZ,hallW,hallD,hallH],...galleries]=heritageFootprints(building.key,building.site);
+        const hallFront=hallZ+hallD/2;
+        // Open sanctuary and longitudinal galleries leave a real central courtyard.
+        box('paving',0,.18,.03,3.25,.06,2.68);
+        box(stone,0,.23,hallZ,hallW+.08,.18,hallD+.08);
+        box(cream,0,.23+hallH/2,hallZ-hallD/2+.04,hallW,hallH,.09);
+        for(const side of [-1,1])box(cream,side*(hallW/2-.04),.23+hallH/2,hallZ,.08,hallH,hallD);
+        for(const x of [-1.36,-.45,.45,1.36]) {
+          box(stone,x,.31,hallFront+.04,.16,.14,.2);
+          part('pole','wall:#8b493f',x,.34+(hallH-.24)/2,hallFront+.04,.044,hallH-.24,.044);
+          box(cream,x,.23+hallH-.17,hallFront+.04,.22,.11,.17);
+        }
+        box(timber,0,hallH+.14,hallFront+.03,hallW-.12,.14,.12);
+        roof(0,.23+hallH,hallZ,hallW+.43,hallD+.32,.43);
+        for(let step=0;step<3;step++)box(stone,0,.12+step*.065,hallFront+.2-step*.08,hallW-.35-step*.08,.075,.24);
+        for(const [x,z,w,d,h] of galleries) {
+          const side=Math.sign(x),inner=x-side*(w/2-.025);
+          box(cream,x+side*(w/2-.055),.24+h/2,z,.08,h,d);
+          box(timber,x,.23,z,w,.06,d);
+          for(let i=0;i<4;i++) {
+            const at=z-d/2+.095+i*(d-.14)/3;
+            box(stone,inner,.27,at,.12,.12,.13);
+            posts([inner],.33,at,h-.18);
+          }
+          gableRoof(x,.22+h,z,w+.27,d+.26,.24);
+        }
+        // Four round stone columns carry a taller central gate and lower side openings.
+        for(const x of [-1.4,-.51,.51,1.4]) {
+          const h=Math.abs(x)<1?1.52:1.22;
+          part('pole',stone,x,.25,1.21,.095,.17,.095);
+          part('pole',stone,x,.31+h/2,1.21,.061,h,.061);
+          box(cream,x,.31+h,1.21,.23,.1,.21);
+        }
+        box(cream,0,1.64,1.21,1.22,.34,.16);
+        roof(0,1.85,1.21,1.48,.44,.23);
+        for(const side of [-1,1]) {
+          box(cream,side*.96,1.35,1.21,.81,.21,.15);
+          roof(side*.96,1.49,1.21,1.03,.4,.18);
+        }
+        if(finish) {
+          sign(0,1.64,1.31,.86);
+          for(const side of [-1,1]) {
+            lantern(side*.49,1.54,1.31);
+            for(const y of [1.51,1.77])box(ceramic,side*.32,y,1.304,.48,.025,.018);
+            for(let i=0;i<7;i++) {
+              const x=side*(.6+i*.16);
+              box(iron,x,.65,1.21,.015,.77,.018);
+              part('hat',iron,x,1.05,1.21,.027,.065,.027);
+            }
+            for(const y of [.31,.78])box(iron,side*1.05,y,1.21,.9,.025,.025);
+            // Restrained glazed ridge curls and leafy shade use the existing instanced kit.
+            for(let i=0;i<8;i++) {
+              const a=i/8,b=(i+1)/8;
+              const point=u=>[side*(.2+u*1.26),2.09+.11*Math.sin(u*Math.PI)+.08*u,-.96];
+              beam(ceramic,point(a),point(b),.018);
+            }
+            for(let i=0;i<12;i++)part('leaf',`foliage:${i%2?'#536c43':'#6a8051'}`,side*(1.16+.06*Math.sin(i*2)),1.18+.08*Math.sin(i),-.55+i*.105,.16,.11,.13,[i*.6,side*.4,i*.3]);
+          }
+          // Ceramic dragon pool: a bounded static sculpture, not another animated water pass.
+          part('pole',stone,0,.27,.13,.36,.14,.29);
+          part('pole','#467d75',0,.347,.13,.31,.014,.245);
+          const at=u=>{const angle=u*Math.PI*2.6;return [Math.sin(angle)*(.18+.07*u),.37+.51*u,.13+Math.cos(angle)*(.13+.05*u)];};
+          for(let i=0;i<22;i++) {
+            const a=at(i/22),b=at((i+1)/22);
+            beam('#628d78',a,b,.042);
+            for(const side of [-1,0,1])part('orb',i%3?'#88a58b':'#b6b998',a[0]+side*.025,a[1]+.028,a[2],.016,.01,.019);
+            if(i%2===0)part('hat','#b69960',a[0],a[1]+.06,a[2],.018,.055,.018,[0,0,.3*Math.sin(i)]);
+          }
+          const head=at(1);
+          part('orb','#648b72',head[0],head[1]+.055,head[2],.096,.09,.073);
+          part('orb','#b96047',head[0],head[1]+.02,head[2]+.08,.065,.032,.053);
+          box('#473d32',head[0],head[1]+.02,head[2]+.127,.09,.014,.009);
+          for(let tooth=0;tooth<4;tooth++)box('#d9d2b4',head[0]+(tooth-1.5)*.022,head[1]+.026,head[2]+.134,.012,.02,.01);
+          for(const side of [-1,1]) {
+            part('orb','#e6ddc4',head[0]+side*.065,head[1]+.08,head[2]+.046,.026,.025,.02);
+            part('orb','#334538',head[0]+side*.065,head[1]+.08,head[2]+.064,.011,.012,.009);
+            beam('#d2c49b',[head[0]+side*.055,head[1]+.1,head[2]],[head[0]+side*.1,head[1]+.23,head[2]-.05],.014);
+            beam('#d2c49b',[head[0]+side*.08,head[1]+.17,head[2]-.025],[head[0]+side*.145,head[1]+.19,head[2]-.06],.01);
+            beam('#ddd1af',[head[0]+side*.04,head[1]+.12,head[2]+.04],[head[0]+side*.095,head[1]+.105,head[2]+.065],.016);
+            for(let i=0;i<5;i++) {
+              const whisker=u=>[head[0]+side*(.035+.18*u),head[1]+.045+.06*Math.sin(u*Math.PI),head[2]+.11+.06*u];
+              beam('#d8c28b',whisker(i/5),whisker((i+1)/5),.008);
+            }
+          }
+          box(timber,0,.43,-1.06,.88,.2,.24);
+          box('wall:#8b493f',0,.94,-1.19,.92,.82,.035);
+          sign(0,1.4,-1.16,.8);
+          part('vase','#8c7851',0,.62,-.84,.12,.24,.1);
+          for(const x of [-.08,0,.08])beam('#8c7851',[x,.35,-.82],[x*.7,.54,-.84],.015);
+          for(const x of [-.92,.92])lantern(x,1.34,-.55);
+        }
+        break;
+      }
       body(0,-.7,2.1,.55,1.3);roof(0,1.47,-.7,2.5,.83,.42);
       for(const side of [-1,1]){body(side*1.04,-.04,.42,.8,.9);roof(side*1.04,1.07,-.04,.65,1.05,.22);}
       box('paving',0,.18,.05,1.56,.06,.96);

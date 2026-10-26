@@ -233,3 +233,14 @@ key is stable across unrelated timer/UI updates. The original small/full samples
 Phung Hung's new-parcel-only kit has a deep three-volume sequence, hip middle roof, upper timber
 gallery and stone-based posts, based on the dated survey in docs/HOI_AN_PARCELS.md. Legacy kit
 geometry and persisted footprint versions stay unchanged. FPS measurement is deferred by request.
+
+
+### Quang Trieu parcel kit (2026-10-26)
+
+The new-parcel-only kit follows dated gate/courtyard community panoramas and primary monument
+sources recorded in docs/HOI_AN_PARCELS.md. A shared three-volume footprint supplies placement,
+construction and the open sanctuary/galleries. Round stone gate columns support a raised central
+roof and lower side roofs. The static ceramic dragon pool is original bounded geometry with a
+plain water-coloured surface; it adds no Reflector, light or animation loop. Native pixels,
+instancing and current rendering policies remain. Legacy geometry, site versions/dimensions and
+completed-focus credit remain unchanged. FPS measurement stays deferred by request.

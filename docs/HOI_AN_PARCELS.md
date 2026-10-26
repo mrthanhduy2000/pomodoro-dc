@@ -71,3 +71,26 @@ stone-based timber columns and a four-direction middle roof between two-directio
 roofs. Those structural distinctions guide the new-parcel kit. Its three model volumes and
 column count are interpretive, not an exact measured reconstruction or a current furnishing survey.
 Legacy non-parcel geometry and all parcel dimensions/positions remain unchanged.
+
+
+## Quang Trieu follow-up — 2026-10-26 (before model changes)
+
+Verified the Maps listing at 176 Tran Phu, Hoi An, not the namesake hall in Ho Chi Minh City.
+Opened and rotated community 360 imagery: KTSMAP Bui Hai Giang, November 2024, entrance pano
+`CIHM0ogKEICAgICPgPnabg`; Jan Reher, March 2024, courtyard pano `CIHM0ogKEICAgID9jtCmLQ`.
+The gate has round stone columns, a raised central roof, smaller side roofs and red ironwork.
+The courtyard view shows a ceramic coiled dragon pool, open central space, shaded side galleries,
+steps to the three-bay sanctuary and raised ceramic roof ornaments. Date labels refer to imagery,
+not a current on-site survey. Screenshots retain attribution in the task visualization folder.
+
+Primary sources checked before code:
+- [Heritage Centre monument entry](https://hoianheritage.net/vi/di-san-van-hoa/Hoi-quan/hoi-quan-quang-dong-chua-quang-dong-so-176-tran-phu-phuong-minh-an-156.html)
+  confirms the Hoi An identity, community/religious function and structural timber/stone vocabulary.
+- [Official heritage portal](https://hoianworldheritage.org.vn/vi/news/Diem-di-tich/Hoi-quan-Quang-Dong-17.hwh)
+  identifies the sanctuary traditions and surviving bronze incense vessel.
+- [Heritage Centre assembly-hall study](https://hoianheritage.net/vi/trao-doi-chuyen-nganh/chuyen-de-nghien-cuu-trao-doi/kien-truc-co-cac-hoi-quan-cua-nguoi-hoa-o-hoi-an-quang-nam-735.html)
+  supports the central axis, open courts and longitudinal east/west galleries.
+
+The new-parcel-only kit interprets those elements with original procedural geometry. It preserves
+site.version1 dimensions and the entire legacy non-parcel kit. Neither decorative scale/column
+counts nor foliage are claimed to be measured replicas. No Google asset is included in the app.

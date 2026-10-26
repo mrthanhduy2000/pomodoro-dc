@@ -1,3 +1,13 @@
+## 2026-10-26 — Quang Trieu courtyard and gate on real parcels
+
+- Survey dated Google Maps community 360 imagery before geometry, cross-check primary heritage sources.
+- Refine only the new-parcel Quang Trieu model: open sanctuary, east/west galleries, distinct gate roofs,
+  round stone columns, red ironwork, shaded courtyard and a static ceramic dragon pool.
+- Match placement/construction footprints to the new model while keeping persisted dimensions and old kit.
+- Preserve exact completed-focus credit, all 3D previews, original resolution and render scheduling.
+- FPS measurement remains deferred; no new smoothness claim.
+- Validation: 1,946 full-suite passes, zero failures, one expected skip; three cross-checks, 52 focused checks, lint/build and 50 legacy output comparisons pass.
+
 ## 2026-10-26 — Inspect parcel position and area before building
 
 - Move real-city placement into the inspector, preserving the 3D view.

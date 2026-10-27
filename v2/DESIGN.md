@@ -102,15 +102,15 @@ The city renderer mounts lazily only in City. Original v1 quick focus durations 
 are reused as pure constants, with 50/current preference retained. Recent completed goals offer
 suggestions; Space and category preferences retain shared behavior.
 
-City starts with the earned city. “Xem trước 3D” opens the labelled twenty-building sample.
-Only the separate “Hội An mở rộng · tương lai” button inside My City opens `gpt/world.js`:
-a read-only 48-building regional study with variable widths, depths and compound courtyards.
-It separates old town, western Thanh Ha, southern Kim Bong/Cam Kim and eastern Cam Thanh.
-Its creek feeds the wider river; district buttons frame each area. Relative geography and areas
-are interpretive, not surveyed coordinates or actual metres. New GPT Hoi An plans now persist version-2 parcels (ADR-107). Existing plans retain their
-original grid contract. The future regional study remains read-only and opt-in.
-Neither preview can create sessions, assets or construction credit. The small sample retains
-its construction slider/workers; the future study has no fake earned placement candidates.
+City opens one map-led Hoi An preview. The old postcard, regional future button and parcel
+sample selector are consolidated into this world (ADR-108). Earned progress is an overlay state,
+not another architectural model library. All eight mapped monuments use the current parcel kits
+and retain construction previews/workers. Thirty mapped road segments provide a dated core;
+640 bounded static context houses use mapped centres/rectangular footprint envelopes with
+interpreted heights/roofs. Forty foreground infill houses are illustrative. No preview writes
+sessions or construction credit. Unsupported regions wait for survey rather than appearing
+as geographically verified invented clusters. New mapped plans use site.version2/mapVersion1;
+old grid and site.version1 events keep their previous allocator and coordinates.
 
 ### Historical choices and placement
 
@@ -209,9 +209,8 @@ GPT transforms the kit, picking, mosaics and worksites consistently. Constructio
 human proportions rather than being stretched to the lot. Buildings gain parcel-edge walls,
 front pavement and rear service access; detailed ground never fills the entire district rectangle.
 Optional parcel street commerce is capped at the latest 60 plots; all canonical buildings and
-resident records remain. The old twenty-building preview remains available; its separate parcel
-sample calls the same pure candidate geometry and cannot write events or progress. Its phase
-slider still demonstrates construction. The full regional study stays behind its existing button.
+resident records remain. The old postcard and parcel generators are retained for compatibility
+checks; the UI now uses regionalCity (ADR-108), including its construction slider and workers.
 
 Expanded parcel scenes use coarse twenty-unit cells only for large static batches; compact
 historical scenes keep their original path. Bounds include wind margin and picks follow each
@@ -269,3 +268,38 @@ tiered green glazed roofs. The existing roof generator accepts an optional four-
 default callers retain their original geometry/material output. Bonsai and water-garden props
 are static. Saved 7.2 x 7.2 site dimensions, 200-minute target, legacy kits and preview controls
 remain unchanged. No light, reflection pass, render scheduling or native pixel change. FPS deferred.
+
+
+## Unified map-led Hoi An (2026-10-27, ADR-108)
+
+`engine/hoian-map.json` contains30 road segments and8 monument references from the public OSM
+snapshot retrieved2026-10-27. `gpt/hoian-buildings.json` contains2,660 rectangular building
+envelopes and is loaded only with the lazy city renderer, not by the timer/engine.
+`hoianMap.js` projects latitude/longitude into the local world at5 metres/unit. This is a point
+reference system, not surveyed land: reference quality varies, Phuc Kien's point requires a
+model offset, building heights/roof styles and water envelopes remain interpreted. Do not
+replace the version1 snapshot beneath accepted site.version2 plans; a later survey needs
+an explicit map version and backwards-compatible validation. OSM copyright/ODbL attribution
+is visible inside the source navigator. No Google imagery or texture is shipped.
+
+`parcels.js::mappedCandidates` offers a single fixed reference for eight old-town monuments.
+It is opt-in from GPT; version1 parcel allocation is unchanged. Named references cannot be
+cloned or relocated on collision. Shared command/replay retains workVersion2 and rejects
+malformed map versions/positions; same-site concurrent mapped plans do not fall back to a
+version1 street. Older clients reject unsupported site versions until refreshed. Exact focus
+credit, all historical site objects and event order remain canonical.
+
+`world.js::regionalCity` preserves original earned building objects and adds read-only context.
+An earned mapped monument replaces only its matching reference illustration. Picking/planning
+uses the real city, never synthetic progress. The same regional terrain is used during preview
+and planning; the phase slider only modifies a copied visual model. Source/road navigation is
+collapsed in the inspector. Main navigation contains no old/future/parcel sample switches.
+Native pixels/lights/shadows/reflection resolutions remain. Context is static and capped at640
+lightweight houses; foreground models retain detail. Ordinary selection keeps the same base-city
+identity, avoiding a full model rebuild. No FPS run or speed claim in this round.
+
+Legacy grid/site.version1 streets retain their existing commerce/worker builders inside the
+unified scene; mapped construction uses the same worksite animation with its site transform.
+
+Mapped detail framing uses neighbouring site/context envelopes and raises obstructed approaches;
+legacy scenes retain their previous clearance radius.

@@ -1,3 +1,15 @@
+## 2026-10-27 — One map-led Hoi An city (ADR-108)
+
+Unify the old postcard, regional future and parcel sample routes into one shared world with
+preview/progress and construction stages. Upgraded monument kits now appear in the main city.
+Add dated OSM street/reference/building-envelope data and visible attribution; static background
+houses are capped. New GPT monument plans use fixed versioned map references; old plans and
+exact completed-focus accounting remain. Reject mapped collisions without relocating history.
+Street View and heritage/map sources are documented; whole-city accuracy is still incomplete.
+User grants standing automatic release authorization. FPS deferred. Full tests:1,949 passes,
+zero failures, one expected skip; three cross-checks and55 focused data/art/doc checks pass. Browser checks cover source/road navigation, stages,
+fixed-site preview and cancel, without real writes. Dense-map framing avoids surrounding houses.
+
 ## 2026-10-26 — Phuc Kien parcel architecture from dated real imagery
 
 New-parcel Phuc Kien gains a pink three-arch gate, raised arched tower and tiered green

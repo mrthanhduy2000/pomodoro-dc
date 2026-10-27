@@ -187,3 +187,21 @@ test('future regional study has varied free footprints and never changes earned 
   assert.ok(regions.kimbong.z>regions.oldtown.z);
   assert.deepEqual(futureCity(source),future,'projection is deterministic');
 });
+
+test('one regional world uses upgraded parcel kits and preserves earned buildings in both preview states',async()=>{
+  const {futureCity,regionalCity,MAP_ROADS}=await import('./world.js');
+  const {mappedCandidates}=await import('../engine/parcels.js');
+  const site=mappedCandidates({buildings:[]},'ha-phuckien-v1')[0];
+  const earned=freeze({planId:'earned-map',key:'ha-phuckien-v1',site,plot:{x:site.x/4,y:site.z/4},workMs:1234567,bricks:[{sid:'real'}]});
+  const city=freeze({buildings:[earned],candidates:[],current:earned,queued:[],totalBricks:1});
+  const before=JSON.stringify(city),sample=futureCity(city);
+  assert.equal(sample.buildings.filter(b=>b.site?.version===2).length,8);
+  assert.ok(sample.buildings.find(b=>b.key==='ha-phuckien-v1').site,'regional model reaches the upgraded parcel-only kit');
+  assert.ok(MAP_ROADS.some(r=>r.name==='Trần Phú')&&MAP_ROADS.some(r=>r.name==='Bạch Đằng'));
+  for(const preview of [false,true]) {
+    const shown=regionalCity(city,preview);
+    assert.equal(shown.buildings[0],earned);assert.equal(shown.current,earned);assert.equal(shown.totalBricks,1);
+    assert.equal(shown.buildings.filter(b=>b.key===earned.key).length,1,'preview cannot duplicate a completed geographic monument');
+  }
+  assert.equal(JSON.stringify(city),before);
+});

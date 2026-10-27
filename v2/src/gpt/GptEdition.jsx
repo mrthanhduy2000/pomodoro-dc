@@ -8,9 +8,10 @@ import { Detail } from '../ui/CityView.jsx';
 import StatsView from '../ui/StatsView.jsx';
 import SettingsView from '../ui/SettingsView.jsx';
 import { hoursMinutes } from '../ui/format.js';
-import { PLACES, SEASONS, postcardCity, parcelPostcardCity, readAppearance, snowIn } from './art.js';
-import { futureCity, DISTRICTS } from './world.js';
-import { parcelCandidates, parcelProfile, PARCEL_DISTRICTS } from '../engine/parcels.js';
+import { PLACES, SEASONS, postcardCity, readAppearance, snowIn } from './art.js';
+import { regionalCity, DISTRICTS, MAP_ROADS, HOIAN_MAP } from './world.js';
+import { mapReference } from '../engine/hoianMap.js';
+import { parcelCandidates, mappedCandidates, parcelProfile, PARCEL_DISTRICTS } from '../engine/parcels.js';
 import { HOIAN_NAMES } from './hoian.js';
 import './gpt.css';
 
@@ -39,7 +40,7 @@ function Atmosphere({ value, onChange }) {
 
 function HeritageNote({ building }) {
   const place=heritageOf(building?.key);
-  return place && <div className="gpt-heritage-note"><span className="eyebrow">Nét riêng công trình</span><p>{place.feature}</p><details><summary>Nếp sống và nguồn tư liệu</summary><p>{place.life}</p><small>Tái hiện thu nhỏ, cách điệu từ địa danh thật; không phải bản sao đo đạc.</small><a href={place.source} target="_blank" rel="noreferrer">Tìm hiểu địa danh ↗</a></details></div>;
+  return place && <div className="gpt-heritage-note"><span className="eyebrow">Nét riêng công trình</span><p>{place.feature}</p><details><summary>Nếp sống và nguồn tư liệu</summary><p>{place.life}</p><small>Tái hiện thu nhỏ, cách điệu từ địa danh thật; không phải bản sao đo đạc.</small>{building.reference&&<a href={building.reference.source} target="_blank" rel="noreferrer">Điểm tham chiếu trên bản đồ ↗</a>}<a href={place.source} target="_blank" rel="noreferrer">Tìm hiểu địa danh ↗</a></details></div>;
 }
 
 function BlueprintChoices({ city, onChoose, names = SHAPES, heritage = false }) {
@@ -52,6 +53,21 @@ function BlueprintChoices({ city, onChoose, names = SHAPES, heritage = false }) 
   ))}</div>;
 }
 
+/** Warm cream/forest tokens from gpt.css; one shared city with a quiet source navigator. */
+function HoiAnMapGuide({scene,motion}) {
+  const roads=MAP_ROADS.filter((road,i,all)=>all.findIndex(item=>item.name===road.name)===i);
+  return <details className="gpt-map-guide"><summary>Đường phố &amp; tư liệu khảo sát</summary>
+    <p>Phố cổ · {HOIAN_MAP.landmarks.length} địa danh, {MAP_ROADS.length} đoạn đường có tọa độ. Nền nhà lấy tâm từ bản đồ; chiều cao, mái và bờ nước còn minh hoạ. Chưa tái hiện toàn bộ Hội An.</p>
+    <div className="gpt-preview-types">{roads.map(road=><button type="button" key={road.id} onClick={()=>{
+      const points=MAP_ROADS.filter(item=>item.name===road.name).flatMap(item=>item.points),x=points.reduce((sum,p)=>sum+p.x,0)/points.length,z=points.reduce((sum,p)=>sum+p.z,0)/points.length;
+      scene?.viewDistrict({x,z,span:Math.max(16,Math.min(45,Math.hypot(points.at(-1).x-points[0].x,points.at(-1).z-points[0].z)))},motion?900:0);
+    }}>{road.name} ↗</button>)}</div>
+    <p><a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noreferrer">© OpenStreetMap contributors · ODbL</a> · dữ liệu {HOIAN_MAP.retrieved}.</p>
+    <a href="https://www.hoianworldheritage.org.vn/vi/maps.hwh" target="_blank" rel="noreferrer">Bản đồ cơ quan bảo tồn ↗</a>
+    <p>Tiếp theo: {DISTRICTS.filter(d=>d.pending).map(d=>d.name).join(' · ')} — chờ khảo sát vị trí.</p>
+  </details>;
+}
+
 function CityWorkspace({ app, appearance, sample, onSampleChange }) {
   const [pick, setPick] = useState(null);
   const [blueprint, setBlueprint] = useState(null);
@@ -60,33 +76,31 @@ function CityWorkspace({ app, appearance, sample, onSampleChange }) {
   const [siteIndex,setSiteIndex]=useState(0);
   const [scene, setScene] = useState(null);
   const [previewWork, setPreviewWork] = useState(false);
-  const [previewParcels,setPreviewParcels]=useState(false);
   const [previewPercent, setPreviewPercent] = useState(35);
   useEffect(()=>{
-    if(sample==='full'&&scene?.model?.city.futurePlan)scene.viewDistrict(DISTRICTS[0],0);
-  },[sample,scene]);
+    if(appearance.place==='hoian'&&scene?.model?.city.geoPlan)scene.viewDistrict(DISTRICTS[0],0);
+  },[scene,appearance.place]);
   const [renderedPreview, setRenderedPreview] = useState(35);
   useEffect(()=>{
     const timeout=setTimeout(()=>setRenderedPreview(previewPercent),120);
     return ()=>clearTimeout(timeout);
   },[previewPercent]);
   const city = app.city;
-  const sites=useMemo(()=>blueprint&&appearance.place==='hoian'?parcelCandidates(city,blueprint.key,district):null,[blueprint,city,district,appearance.place]);
+  const sites=useMemo(()=>blueprint&&appearance.place==='hoian'?(mapReference(blueprint.key)?mappedCandidates(city,blueprint.key):parcelCandidates(city,blueprint.key,district)):null,[blueprint,city,district,appearance.place]);
   const selectedSite=sites?.[siteIndex]||sites?.[0];
   const selectedSiteKey=selectedSite?JSON.stringify(selectedSite):null;
   const placementSites=useMemo(()=>selectedSiteKey?[JSON.parse(selectedSiteKey)]:sites,[selectedSiteKey,sites]);
   useEffect(()=>{if(selectedSiteKey)scene?.focusParcel(JSON.parse(selectedSiteKey),appearance.motion?700:0);},[selectedSiteKey,scene,appearance.motion]);
   const names = appearance.place === 'hoian' ? HOIAN_NAMES : SHAPES;
+  const baseCity = useMemo(() => {
+    if(!sample&&appearance.place!=='hoian')return city;
+    return appearance.place==='hoian'?regionalCity(city,Boolean(sample)):postcardCity(city);
+  },[sample,city,appearance.place]);
   const shownCity = useMemo(() => {
-    if(!sample)return city;
-    const town=sample==='full'?futureCity(city):previewParcels&&appearance.place==='hoian'?parcelPostcardCity(city):postcardCity(city,appearance.place==='hoian');
-    if(!previewWork||sample==='full')return town;
-    const target=pick?.planId||town.buildings[0].planId;
-    return {...town,buildings:town.buildings.map(b=>b.planId===target?{...b,workMs:b.targetMinutes*60000*renderedPreview/100,bricks:b.bricks.slice(0,Math.ceil(b.size*renderedPreview/100))}:b)};
-  }, [sample, city, previewWork, renderedPreview, pick?.planId, appearance.place,previewParcels]);
-  useEffect(()=>{
-    if(sample===true&&previewParcels&&scene?.model?.city.parcelSample)scene.focusBuilding(scene.model.city.buildings[0].planId,0);
-  },[sample,previewParcels,scene]);
+    if(!previewWork||!sample)return baseCity;
+    const target=pick?.planId||baseCity.buildings[0].planId;
+    return {...baseCity,buildings:baseCity.buildings.map(b=>b.planId===target?{...b,workMs:b.targetMinutes*60000*renderedPreview/100,bricks:b.bricks.slice(0,Math.ceil(b.size*renderedPreview/100))}:b)};
+  }, [baseCity,sample,previewWork,renderedPreview,pick?.planId]);
   const current = city.current;
   const remaining = current ? current.workUnit==='minutes' ? Math.ceil(current.targetMinutes-constructionMinutes(current)) : current.size-current.bricks.length : 0;
   const collected = new Set(city.buildings.filter(b=>constructionProgress(b)>=1 && heritageOf(b.key)).map(b=>b.key));
@@ -107,18 +121,18 @@ function CityWorkspace({ app, appearance, sample, onSampleChange }) {
   return (
     <div className="gpt-city-workspace">
       <div className="gpt-city-stage">
-        <Scene key={sample==='full'?'future':sample?'sample':'earned'} city={shownCity} categories={app.state.categories} now={app.cityNow} appearance={appearance} onPick={select} onScene={setScene} picking={Boolean(blueprint)} placementBlueprint={blueprint?.key} placementSites={placementSites} selectedPlan={selectedPlan} label={sample==='full'?'Hội An mở rộng, quy hoạch tham khảo không phải thành tích thật':sample ? 'Phố mẫu kiến trúc, không phải thành tích thật' : 'Thành phố từ các phiên tập trung của bạn'} />
-        <div className="gpt-scene-caption"><span className="gpt-live-dot" /><span>{sample==='full'?'Hội An mở rộng · quy hoạch tham khảo':sample ? 'Phố mẫu · không tính vào tiến độ' : `${city.buildings.length} công trình · ${city.totalBricks} viên gạch`}</span></div>
+        <Scene key={appearance.place==='hoian'?'hoian':sample?'sample':'earned'} city={shownCity} categories={app.state.categories} now={app.cityNow} appearance={appearance} onPick={select} onScene={setScene} picking={Boolean(blueprint)} placementBlueprint={blueprint?.key} placementSites={placementSites} selectedPlan={selectedPlan} label={appearance.place==='hoian'?'Hội An 3D, đường có nguồn bản đồ; nhà nền minh hoạ':sample ? 'Phố mẫu kiến trúc, không phải thành tích thật' : 'Thành phố từ các phiên tập trung của bạn'} />
+        <div className="gpt-scene-caption"><span className="gpt-live-dot" /><span>{sample ? (appearance.place==='hoian'?'Hội An · xem trước 3D, không tính tiến độ':'Phố mẫu · không tính vào tiến độ') : (appearance.place==='hoian'?`${city.buildings.length} công trình của bạn · nền nhà tham chiếu`:`${city.buildings.length} công trình · ${city.totalBricks} viên gạch`)}</span></div>
+        {appearance.place==='hoian'&&<a className="gpt-map-attribution" href="https://www.openstreetmap.org/copyright" target="_blank" rel="noreferrer">© OpenStreetMap</a>}
         <div className="gpt-camera-tools">
           <button type="button" onClick={() => scene?.frameCity(appearance.motion ? 900 : 0)} title="Đưa máy ảnh về toàn cảnh">Toàn cảnh</button>
           {appearance.place==='hoian' && <><button type="button" onClick={()=>scene?.viewQuarter('river',appearance.motion?1000:0)}>Dạo bờ sông</button><button type="button" onClick={()=>scene?.viewQuarter('bridge',appearance.motion?1000:0)}>Qua cầu</button><button type="button" onClick={()=>scene?.viewQuarter('market',appearance.motion?1000:0)}>Ghé chợ</button></>}
-          {!sample && appearance.place==='hoian' && <button type="button" onClick={()=>{onSampleChange('full');setPick(null);setBlueprint(null);setPreviewWork(false);}}>Hội An mở rộng · tương lai</button>}
-          {sample===true&&appearance.place==='hoian'&&<button type="button" aria-pressed={previewParcels} onClick={()=>{setPreviewParcels(!previewParcels);setPick(null);setPreviewWork(false);}}>{previewParcels?'Về phố mẫu cũ':'Xem mẫu khu đất riêng'}</button>}
-          <button type="button" onClick={() => { onSampleChange(!sample); setPick(null); setBlueprint(null); setPreviewWork(false); }}>{sample ? 'Thành phố của tôi' : 'Xem trước 3D'}</button>
+          <button type="button" onClick={() => { onSampleChange(!sample); setPick(null); setBlueprint(null); setPreviewWork(false); }}>{sample ? 'Tiến độ của tôi' : 'Xem trước 3D'}</button>
         </div>
 
       </div>
       <aside className="gpt-city-inspector">
+        {appearance.place==='hoian'&&<HoiAnMapGuide scene={scene} motion={appearance.motion} />}
         {blueprint ? (
           <div className="gpt-parcel-planner">
             <span className="eyebrow">Chọn khu đất</span>
@@ -134,17 +148,17 @@ function CityWorkspace({ app, appearance, sample, onSampleChange }) {
                 <p className="muted">{blueprint.key==='ha-chuacau-v1'?'Khu đất bắc qua lạch nước.':'Vạch sáng đánh dấu lối vào từ phố.'}</p>
               </>}
               <div className="gpt-parcel-sites"><span>Vị trí khu đất</span><div className="gpt-parcel-options" aria-label="Vị trí khu đất">{sites.map((site,i)=><button type="button" className="btn" aria-label={`Khu đất ${i+1}`} title={`Ngắm khu đất ${i+1}`} aria-pressed={selectedSite===site} key={`${site.x}:${site.z}`} onClick={()=>setSiteIndex(i)}>{i+1}</button>)}</div></div>
-              {!selectedSite && <p>Chưa có khu đất trống phù hợp trong khu vực này.</p>}
+              {!selectedSite && <p>{mapReference(blueprint.key)?'Vị trí tham chiếu đã có công trình hoặc trùng với khu đất cũ. Công trình cũ được giữ nguyên.':'Chưa có khu đất trống phù hợp trong khu vực này.'}</p>}
               <button type="button" className="btn btn--primary" disabled={!selectedSite} onClick={()=>place(null,selectedSite)}>Xây công trình ở đây · {blueprint.size*MINUTES_PER_STEP} phút</button>
-              <small className="gpt-parcel-scale">Tỷ lệ trong trò chơi; không phải số đo địa chính.</small>
+              <small className="gpt-parcel-scale">{selectedSite?.version===2?'Vị trí theo điểm bản đồ; diện tích và hướng nhà còn cách điệu.':'Khu xây dựng theo tỷ lệ trò chơi; vị trí chưa được khảo sát địa lý.'}</small>
               <HeritageNote building={blueprint} />
             </> : <><p className="muted">Chọn một ô đất sáng.</p><button type="button" className="btn btn--primary" onClick={()=>place(city.candidates[0])}>Chọn ô gần nhất</button></>}
             <button type="button" className="btn" onClick={()=>setBlueprint(null)}>Huỷ</button>
           </div>
         ) : sample ? (
-          <><span className="eyebrow">{sample==='full'?'Hội An mở rộng · bản nghiên cứu':'Xem trước thành phố 3D'}</span><h2>{sampleBuilding ? (sampleBuilding.name||names[sampleBuilding.shape]) : 'Một nơi để\nmuốn trở về.'}</h2><p className="muted">{sample==='full'?'Bố trí theo khu vực và địa danh; diện tích công trình khác nhau. Đây là tỷ lệ khái quát, không phải bản đồ đo đạc hay tiến độ thật.':sampleBuilding ? (previewWork?'Công trình mẫu đang xây. Thợ và vật liệu chỉ minh họa, không tính vào tiến độ.':'Mẫu công trình hoàn thiện. Bạn có thể ngắm các mặt của công trình trong không gian 3D.') : `Ngắm thử phố ${PLACES[appearance.place].name}. Những công trình mẫu không tính vào tiến độ của bạn.`}</p>{sampleBuilding && <button type="button" className="btn" onClick={() => scene?.focusBuilding(sampleBuilding.planId, appearance.motion ? 1000 : 0)}>Xem gần công trình ↗</button>}{sample==='full'&&<div className="gpt-districts">{DISTRICTS.map(district=><button key={district.id} type="button" className="btn" onClick={()=>scene?.viewDistrict(district,appearance.motion?1100:0)}>{district.name} ↗</button>)}<details><summary>Địa lý và nguồn tham khảo</summary>{DISTRICTS.map(district=><p key={district.id}><b>{district.name}</b> · {district.note} <a href={district.source} target="_blank" rel="noreferrer">Nguồn ↗</a></p>)}</details></div>}<button type="button" className="btn" hidden={sample==='full'} aria-pressed={previewWork} onClick={()=>{setPreviewWork(!previewWork);setPreviewPercent(35);if(!selectedPlan){const id=shownCity.buildings[0].planId;setPick({type:'building',planId:id});scene?.focusBuilding(id,appearance.motion?800:0);}}}>{previewWork?'Xem nhà đã hoàn thiện':'Xem giai đoạn đang xây'}</button>{previewWork && sampleBuilding && <label className="gpt-construction-preview">{Math.round(constructionMinutes(sampleBuilding))}/{sampleBuilding.targetMinutes} phút · {constructionStage(sampleBuilding).label}<input type="range" min="0" max="100" step="1" aria-label="Tiến độ thi công mẫu" value={previewPercent} onChange={e=>setPreviewPercent(Number(e.target.value))} /></label>}{sampleBuilding && heritageOf(sampleBuilding.key) && city.canPlan && <button type="button" className="btn btn--primary" onClick={()=>choose(heritageOf(sampleBuilding.key))}>Xây mẫu này · {heritageOf(sampleBuilding.key).size*MINUTES_PER_STEP} phút</button>}<HeritageNote building={sampleBuilding} /><div className="gpt-preview-types">{previewChoices.map(({id,name,building})=> {
+          <><span className="eyebrow">{appearance.place==='hoian'?'Hội An · thành phố chung':'Xem trước thành phố 3D'}</span><h2>{sampleBuilding ? (sampleBuilding.name||names[sampleBuilding.shape]) : 'Một nơi để\nmuốn trở về.'}</h2><p className="muted">{sampleBuilding ? (previewWork?'Công trình mẫu đang xây. Thợ và vật liệu chỉ minh họa, không tính vào tiến độ.':'Mẫu công trình hoàn thiện. Bạn có thể ngắm các mặt của công trình trong không gian 3D.') : (appearance.place==='hoian'?'Hội An đang được tái hiện từng tuyến phố. Chọn công trình để xem hoặc bắt đầu xây.':`Ngắm thử phố ${PLACES[appearance.place].name}. Những công trình mẫu không tính vào tiến độ của bạn.`)}</p>{sampleBuilding && <button type="button" className="btn" onClick={() => scene?.focusBuilding(sampleBuilding.planId, appearance.motion ? 1000 : 0)}>Xem gần công trình ↗</button>}<button type="button" className="btn" aria-pressed={previewWork} onClick={()=>{setPreviewWork(!previewWork);setPreviewPercent(35);if(!selectedPlan){const id=shownCity.buildings[0].planId;setPick({type:'building',planId:id});scene?.focusBuilding(id,appearance.motion?800:0);}}}>{previewWork?'Xem nhà đã hoàn thiện':'Xem giai đoạn đang xây'}</button>{previewWork && sampleBuilding && <label className="gpt-construction-preview">{Math.round(constructionMinutes(sampleBuilding))}/{sampleBuilding.targetMinutes} phút · {constructionStage(sampleBuilding).label}<input type="range" min="0" max="100" step="1" aria-label="Tiến độ thi công mẫu" value={previewPercent} onChange={e=>setPreviewPercent(Number(e.target.value))} /></label>}{sampleBuilding && heritageOf(sampleBuilding.key) && city.canPlan && <button type="button" className="btn btn--primary" onClick={()=>choose(heritageOf(sampleBuilding.key))}>Xây mẫu này · {heritageOf(sampleBuilding.key).size*MINUTES_PER_STEP} phút</button>}<HeritageNote building={sampleBuilding} /><div className="gpt-preview-types">{previewChoices.map(({id,name,building})=> {
             return building && <button key={id} type="button" aria-pressed={sampleBuilding?.planId===building.planId} onClick={()=> { setPick({type:'building',planId:building.planId}); scene?.focusBuilding(building.planId,appearance.motion?1000:0); }}>{name}<span aria-hidden="true">↗</span></button>;
-          })}</div><button type="button" className="btn btn--primary" onClick={() => { setPick(null); setPreviewWork(false); onSampleChange(false); }}>Xây thành phố của tôi</button><div className="gpt-inspector-note">Phút tập trung của phiên đã hoàn thành sẽ xây móng, dựng khung, lợp mái và hoàn thiện ngôi nhà.</div></>
+          })}</div><button type="button" className="btn btn--primary" onClick={() => { setPick(null); setPreviewWork(false); onSampleChange(false); }}>Xây công trình của tôi</button><div className="gpt-inspector-note">Phút tập trung của phiên đã hoàn thành sẽ xây móng, dựng khung, lợp mái và hoàn thiện ngôi nhà.</div></>
         ) : pick ? <><HeritageNote building={chosenBuilding} /><Detail pick={pick} city={city} categories={app.state.categories} onFocus={(id) => scene?.focusBuilding(id, appearance.motion ? 1000 : 0)} onClose={() => setPick(null)} architectural /></> : (
           <><span className="eyebrow">Góc phố của bạn</span><h2>{current ? (heritageOf(current.key)?.name||names[current.shape]) : 'Bắt đầu từ\nmột căn nhà.'}</h2>
             {current ? <><HeritageNote building={current} /><p className="muted">{current.name}</p><div className="gpt-progress"><span style={{ width: `${constructionProgress(current) * 100}%` }} /></div><p><b>{current.workUnit==='minutes'?`${Math.floor(constructionMinutes(current))}/${current.targetMinutes} phút`:`${current.bricks.length}/${current.size} phiên (kế hoạch cũ)`}</b> · {constructionStage(current).label}</p><p className="muted">Còn {remaining} {current.workUnit==='minutes'?'phút':'phiên'} để hoàn thành.</p><button type="button" className="btn" onClick={() => scene?.focusBuilding(current.planId, appearance.motion ? 1000 : 0)}>Đến công trình ↗</button></> : <p className="muted">Chọn một công trình. Mỗi phiên tập trung sẽ để lại một dấu tích ở đây.</p>}
@@ -174,7 +188,7 @@ function FocusCompanion({app,onCity}) {
 export default function GptEdition({ app, sync }) {
   const [tab, setTab] = useState('focus');
   const [appearance, setAppearance] = useState(readAppearance);
-  const [sample, setSample] = useState(false);
+  const [sample, setSample] = useState(true);
   const [reduced, setReduced] = useState(() => window.matchMedia('(prefers-reduced-motion: reduce)').matches);
   const today = todaySummary(app.state, app.now);
   const place = PLACES[appearance.place];
@@ -201,7 +215,7 @@ export default function GptEdition({ app, sync }) {
             <FocusPanel app={app} goTo={setTab} CityRenderer={NoCityPreview} architectural />
             <div className="gpt-today"><span>Hôm nay <b>{today.count}/{app.state.prefs.dailyGoal} phiên</b></span><span>{hoursMinutes(today.minutes)}</span></div>
           </section>
-          <FocusCompanion app={app} onCity={()=>{setSample(false);setTab('city');}} />
+          <FocusCompanion app={app} onCity={()=>{setSample(true);setTab('city');}} />
         </div>}
         {tab === 'city' && <CityWorkspace app={app} appearance={cityAppearance} sample={sample} onSampleChange={setSample} />}
         {tab === 'stats' && <div className="gpt-inner-page"><span className="eyebrow">Những điều bạn đã làm được</span><h1>Nhật ký tập trung</h1><StatsView app={app} /></div>}

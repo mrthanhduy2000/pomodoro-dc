@@ -1,3 +1,26 @@
+> Last update: **2026-10-27 — ONE MAP-LED HOI AN WORLD; STANDING AUTO-RELEASE AUTHORIZATION.**
+> User explicitly authorizes future completed work to commit/push main/update GPT production
+> without another per-commit question. Verify Ready and the live version. Memory note saved.
+> User makes expanded Hoi An the sole main direction, merging old/regional/parcel samples.
+> Reopened/rotated Google Street View Dec2021 Tran Phu; official map/UNESCO source limits recorded.
+> Public OSM snapshot:30 road segments,8 monument references,2,660 building envelopes, dated2026-10-27.
+> One regional preview/progress UI now uses all upgraded parcel-only kits; no old/future/sample selector.
+> New mapped choices persist site.version2/mapVersion1 under the existing workVersion2 contract.
+> Version1/grid replay and historical building objects/positions remain; no timer/store/SQL migration.
+> Fixed monument collisions never clone/relocate into version1 fallback. Exact completed credit stays.
+> World context is render-only; mapped earned monuments replace matching reference illustrations.
+> Native pixels/lights/maps stay.640 lightweight static context houses max; FPS remains deferred.
+> Source limits matter: point/envelope anchors are not cadastral parcels; heights/roofs/water stylised.
+> Thanh Ha/Kim Bong/Cam Thanh await proper survey; do not claim all of Hoi An is reconstructed.
+> Validation:1,949 full-suite passes, zero failures, one expected skip; three cross-checks pass.
+> Focused55 data/art/doc checks pass; browser source/road/stage/placement/cancel checks pass.
+> Focus has zero canvases; no captured browser errors. Dense-map framing now accounts for
+> surrounding model/context bounds and raises obstructed approaches. Final release verification follows push.
+> Context JSON is lazy-city-only; selection preserves base-city identity, avoiding full rebuilds.
+> No real focus session or synthetic construction plan is created during UI checks.
+
+---
+
 > Last update: **2026-10-26 — PHUC KIEN PARCEL KIT AFTER DATED PHOTO SURVEY.**
 > User requested implementation; old buildings/previews preserved, FPS deferred.
 > Maps confirms 46 Tran Phu; gate photo Olga Salih Apr2025, court MANH NGUYEN HUU Jul2024.

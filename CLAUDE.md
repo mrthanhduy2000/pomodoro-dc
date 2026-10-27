@@ -27,8 +27,8 @@ Classify every instruction into one of two buckets:
   plainly** what you are about to do *before* touching anything; (2) do it (with `npm test` + lint +
   doc updates); (3) explain what changed and why it helps; (4) **deploy to Vercel automatically**
   (commit + push) — do not ask again, "do it" already includes deploy permission.
-- Why: push = production deploy to all of Đàm's devices. He needs control over research, but once he
-  says do it, stop asking back and forth. Details: memory `ask-before-acting.md`.
+- **Release authorization, confirmed 2026-10-27:** finish authorized work, push `main`,
+  verify GPT production. No per-commit prompt. Research-only requests still stop before edits.
 
 ## ⚠️ TOKEN BUDGET — the most expensive rule, read before anything else
 The context window is **exhaustible**, and what drains it is not chat — it is **this project's own

@@ -1296,8 +1296,8 @@ Reopening something means moving it back out of the archive — never duplicatin
    hoặc `node scripts/doc-budget.mjs --map <file>` để lấy mục lục + khoảng dòng.
 
 ### GPT regional presentation (2026-10-25)
-`v2/src/gpt/world.js` owns the read-only authored regional study and district metadata. It is
-separate from canonical grid plans and opens only inside My City. `art.js` owns the authorized
+`v2/src/gpt/world.js` composes the unified map-led city, reference/context models and earned facts.
+It opens in City with one preview/progress control; no separate future or parcel sample route. `art.js` owns the authorized
 Chua Cau site projection and commerce clock; `heritage.js` draws ten source-linked choices.
 `engine/stats.js::journalEntries` filters shared records; `ui/StatsView.jsx` bounds displayed rows.
 Focus mounts no renderer. See ADR-105/106 and `v2/DESIGN.md` for the data boundary.
@@ -1308,3 +1308,14 @@ collision and frontage candidates, shared river sites, legacy reservation cells.
 versioned event replay and reference-counted reservation release. `useTimerApp.js` passes explicit
 sites to the shared command. `docs/HOI_AN_PARCELS.md` records dated imagery and primary sources.
 `gpt/art.js::parcelPostcardCity` supplies read-only validation imagery using the real parcel geometry.
+
+
+### Versioned map references (2026-10-27, ADR-108)
+`v2/src/engine/hoian-map.json`: dated public OSM road, monument and building-envelope snapshot
+with source/license metadata. Building envelopes are separately lazy-loaded from
+`v2/src/gpt/hoian-buildings.json`, keeping heavy context out of the engine/Focus.
+`hoianMap.js`: pure projection/reference lookup and frozen-version
+site derivation. `parcels.js::mappedCandidates`: opt-in fixed monument addresses, without changing
+the version1 allocator. `gpt/world.js::regionalCity`: one read-only context composition preserving
+earned objects. `GptScene::buildMappedLandscape`: roads, interpreted water and capped static houses.
+Source/date limits and expansion backlog are in `docs/HOI_AN_PARCELS.md`.

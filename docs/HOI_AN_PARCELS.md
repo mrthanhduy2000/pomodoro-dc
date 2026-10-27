@@ -153,3 +153,39 @@ and construction use the same five-volume table. The gate uses an optional green
 in the existing roof generator; default calls retain exactly their old output. Props are static,
 without a new light, reflector or animation clock. Legacy geometry/site history and the
 200-completed-focus-minute cost remain. FPS measurement is deferred by explicit request.
+
+
+## One map-led Hoi An direction — 2026-10-27
+
+User explicitly makes this the main product direction: one Hoi An world, not three disconnected
+old/future/parcel samples. Ultimate whole-city/geographic/cultural fidelity remains a continuing
+objective; this release establishes a dated core and must not claim that objective is complete.
+
+Research before implementation: Google Street View at19 Tran Phu, captured December2021,
+pano T_eBl61PBpUdwnLuU1HdkQ, reopened and rotated along the street. It confirms connected
+frontages, narrow paved street, thresholds and street activity. Screenshot preserves date/provider.
+The [official visitor map](https://www.hoianworldheritage.org.vn/vi/maps.hwh) embeds a Google map;
+[UNESCO's map register](https://whc.unesco.org/en/list/948/maps/) lists the1998 protection plan,
+which is historical zoning evidence, not a current building survey. Its PDF capture timed out;
+no uninspected plan detail is claimed.
+
+Public coordinates come from the [OSM map API snapshot](https://api.openstreetmap.org/api/0.6/map?bbox=108.323,15.875,108.334,15.881),
+retrieved2026-10-27:30 named street-way segments,8 monument references and2,660 building
+envelopes. Selected roads include Tran Phu, Nguyen Thai Hoc, Bach Dang, Nguyen Thi Minh Khai,
+Phan Chau Trinh, Le Loi, Hoang Van Thu, Chau Thuong Van, Cong Nu Ngoc Hoa and Nguyen Phuc Chu.
+OSM IDs, original lat/lon, source and [ODbL attribution](https://www.openstreetmap.org/copyright)
+are retained in the snapshot. The app contains no Google photo, tile, mesh or panorama asset.
+
+Quality boundaries: OSM feature names/points are community map data, not cadastral certification.
+Phuc Kien is a point marker, whereas several other references are feature-envelope centres.
+Phuc Kien's model sits behind its marker by half the interpreted lot depth. Footprint envelopes
+are rectangles aligned to a longest polygon edge; they are not the full source polygons. Heights,
+roofs and generic foreground homes remain illustrative. Main bank offsets follow the mapped
+Bach Dang centreline; creek/water envelopes are still stylised. Mapped centres do not establish
+that every facade, resident, road width or historical period has been surveyed.
+
+Expansion sequence: verify complete Tran Phu/Nguyen Thai Hoc/Bach Dang frontages and actual
+water outlines first; then survey Thanh Ha, Kim Bong and Cam Thanh, including dated images,
+road/parcel anchors, architecture and living practices. Those regions are marked pending instead
+of presenting invented clusters as accurate geography. Old saved sites remain at their original
+coordinates, even where they predate map-led placement. Never relocate them to fit a newer survey.

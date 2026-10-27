@@ -1,5 +1,6 @@
 /** Version-1 game parcels. World units are interpretive proportions, never cadastral metres. */
 import { blueprint } from './catalog.js';
+import { mappedSite } from './hoianMap.js';
 
 export const PARCEL_DISTRICTS = Object.freeze([
   { id:'oldtown', name:'Phố cổ', left:-18, right:26, front:-11, direction:-1 },
@@ -47,6 +48,10 @@ export const parcelAvailable=(site,buildings)=>!buildings.some(b=>parcelsOverlap
 
 /** Reject malformed/cross-water sites; historic profiles are frozen by this site version. */
 export function validParcel(site,key) {
+  if(site?.version===2) {
+    const p=parcelProfile(key),expected=p&&mappedSite(key,p.width,p.depth);
+    return Boolean(expected&&Object.keys(expected).every(field=>site[field]===expected[field]));
+  }
   const p=parcelProfile(key),district=PARCEL_DISTRICTS.find(d=>d.id===site?.district);
   if(!p||!district||site.version!==1||!p.districts.includes(site.district))return false;
   if(![site.x,site.z,site.width,site.depth,site.yaw].every(Number.isFinite))return false;
@@ -86,6 +91,12 @@ export function parcelCandidates(city,key,districtId,limit=5) {
     }
   }
   return out;
+}
+
+/** Geographic sites are opt-in for new GPT plans. Version-1 replay keeps its old allocator. */
+export function mappedCandidates(city,key) {
+  const p=parcelProfile(key),site=p&&mappedSite(key,p.width,p.depth);
+  return site&&parcelAvailable(site,city.buildings||[])?[site]:[];
 }
 
 /** Block legacy placements whose full model could intersect a new parcel; no old plan is moved. */

@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import { buildCity, cmdPlan, cmdCancelPlan } from './city.js';
 import { reduce } from './timer.js';
 import { HOIAN_BLUEPRINTS } from './catalog.js';
-import { parcelCandidates, validParcel, buildingParcel, parcelsOverlap, parcelCells } from './parcels.js';
+import { parcelCandidates, mappedCandidates, validParcel, buildingParcel, parcelsOverlap, parcelCells } from './parcels.js';
 
 const MIN=60000,T0=Date.parse('2026-10-25T02:00:00Z');
 const replay=events=>buildCity(events,reduce(events,T0+86400000),T0+86400000);
@@ -12,6 +12,36 @@ const focus=(id,at,minutes)=>[
   {id:`end:${id}`,at:at+minutes*MIN,kind:'focus.complete',data:{sid:id,auto:true}},
 ];
 const plan=(city,id,key='ha-tanky-v1',at=T0,site=parcelCandidates(city,key)[0])=>cmdPlan(city,at,{planId:id,blueprintKey:key,site});
+
+test('mapped sites are fixed versioned references; replay preserves old plans and exact completed minutes',()=>{
+  const log=[plan(replay([]),'legacy'),...focus('old-work',T0+MIN,100)];
+  const original=replay(log),site=mappedCandidates(original,'ha-phuckien-v1')[0];
+  assert.equal(site.version,2);assert.equal(site.mapVersion,1);
+  assert.ok(validParcel(site,'ha-phuckien-v1'));
+  for(const change of [{x:site.x+.001},{reference:'ha-tanky-v1'},{mapVersion:99},{yaw:site.yaw+.1},{width:site.width+.1}])
+    assert.ok(!validParcel({...site,...change},'ha-phuckien-v1'));
+  const event=plan(original,'mapped','ha-phuckien-v1',T0+101*MIN,site);
+  const before=JSON.stringify([...log,event]);
+  const city=replay([...log,event,...focus('new-work',T0+102*MIN,50)]);
+  assert.deepEqual(city.buildings[0],original.buildings[0]);
+  assert.deepEqual(city.buildings[1].site,site);assert.equal(city.buildings[1].workMs,50*MIN);
+  assert.equal(mappedCandidates(city,'ha-phuckien-v1').length,0,'mapped monument cannot be cloned into another location');
+  const collision={...event,id:'other-device',data:{...event.data,planId:'other-device'}};
+  const collided=replay([...log,event,collision]);
+  assert.equal(collided.buildings.length,2,'collision never silently falls back to an unrelated version-1 address');
+  assert.equal(JSON.stringify([...log,event]),before);
+});
+
+test('released map-version-1 addresses cannot drift beneath accepted plans',()=>{
+  const addresses=[['ha-chuacau-v1',-.011,0],['ha-quangtrieu-v1',11.601,-4.657],
+    ['ha-quancong-v1',114.902,-8.569],['ha-campho-v1',-39.418,-25.339],
+    ['ha-tanky-v1',38.699,15.589],['ha-cho-v1',114.279,7.929],
+    ['ha-phunghung-v1',-5.005,-1.42],['ha-phuckien-v1',98.002,-9.311]];
+  for(const [key,x,z] of addresses) {
+    const [site]=mappedCandidates({buildings:[]},key);
+    assert.equal(site.x,x);assert.equal(site.z,z);assert.equal(site.mapVersion,1);
+  }
+});
 
 test('all parcel profiles offer valid land/water sites, with different real footprints and no source mutation',()=>{
   const city=replay([]),before=JSON.stringify(city);

@@ -13,6 +13,8 @@ import { hash01, constructionProgress, candidatePlots } from '../engine/city.js'
 import { heritageOf } from '../engine/catalog.js';
 import { fitHeritageQuay, heritageFootprints } from './heritage.js';
 import { drawHoiAnBuilding } from './hoian.js';
+import { MAP_ROADS, mapPoint } from '../engine/hoianMap.js';
+import mappedContext from './hoian-buildings.json' with { type: 'json' };
 import { architectureOf, DEFAULT_APPEARANCE, PLACES, snowIn, streetJourney, journeyAt, projectGptCity, riverSite, riverCandidates, tradeAt, bridgeWalkHeight } from './art.js';
 
 const GEO = {
@@ -189,7 +191,14 @@ export class GptScene extends CityScene {
         const p=plotCenter(other.plot),dx=position.x-c.x,dz=position.z-c.z;
         const u=Math.max(0,Math.min(1,((p.x-c.x)*dx+(p.z-c.z)*dz)/(dx*dx+dz*dz)));
         const clearance=Math.hypot(p.x-c.x-dx*u,p.z-c.z-dz*u);
-        if(u>.16 && clearance<1.65 && target.y+(position.y-target.y)*u<3.2)score+=(1.65-clearance)*5;
+        const radius=this.model.city.geoPlan?Math.hypot((other.site?.width??3.8*(other.world?.sx??1))/2,(other.site?.depth??3.2*(other.world?.sz??1))/2)+.2:1.65;
+        if(u>.16 && clearance<radius && target.y+(position.y-target.y)*u<3.2)score+=(radius-clearance)*5;
+      }
+      if(this.model.city.geoPlan)for(const block of this.mapContext||[]) {
+        const dx=position.x-c.x,dz=position.z-c.z;
+        const u=Math.max(0,Math.min(1,((block.x-c.x)*dx+(block.z-c.z)*dz)/(dx*dx+dz*dz)));
+        const clearance=Math.hypot(block.x-c.x-dx*u,block.z-c.z-dz*u),radius=Math.hypot(block.width,block.depth)/2;
+        if(u>.12&&clearance<radius&&target.y+(position.y-target.y)*u<2)score+=(radius-clearance)*3;
       }
       for(const crown of this.treeCrowns||[]) {
         const dx=position.x-c.x,dy=position.y-target.y,dz=position.z-c.z;
@@ -200,10 +209,14 @@ export class GptScene extends CityScene {
       score+=Math.abs((i-5.5)*Math.PI/18)*.07;
       if(!best||score<best.score)best={position,target,score};
     }
+    if(this.model.city.geoPlan&&best.score>2)best.position.y+=Math.min(4,best.score*.4);
     this.flyTo(best,ms);this.renderDirty=true;
   }
 
   viewQuarter(mode,ms=1000) {
+    if(this.model.city.geoPlan&&mode!=='market') {
+      this.flyTo(mode==='bridge'?{target:{x:0,y:.8,z:0},position:{x:6,y:4,z:7}}:{target:{x:48,y:.7,z:23},position:{x:59,y:6,z:31}},ms);this.renderDirty=true;return;
+    }
     const frames={river:{target:{x:0,y:.7,z:-2},position:{x:8.6,y:4.4,z:-1.7}},bridge:{target:{x:2,y:.85,z:-2},position:{x:-4.2,y:3.7,z:-1.8}}};
     if(mode==='market' && this.trades?.length) {
       const trade=this.trades.find(t=>t.market)||this.trades[0];
@@ -266,7 +279,13 @@ export class GptScene extends CityScene {
     this.buildLandscape();
     this.buildSky();
     for (const b of this.model.city.buildings) this.buildHouse(b);
-    if(this.model.city.futurePlan)this.buildFutureLife();else if(this.a.place==='hoian'){this.buildStreetscape();this.buildParcelLife();}
+    if(this.model.city.futurePlan){
+      this.buildFutureLife();
+      if(this.model.city.geoPlan){
+        this.buildStreetscape(this.model.city.buildings.filter(b=>!b.site&&!b.illustrative));
+        this.buildParcelLife(this.model.city.buildings.filter(b=>b.site?.version===1));
+      }
+    }else if(this.a.place==='hoian'){this.buildStreetscape();this.buildParcelLife();}
     if(this.model.picking&&this.model.placementSites)for(const site of this.model.placementSites) {
       const pick={type:'parcel',site},bridge=this.model.placementBlueprint==='ha-chuacau-v1';
       const front=site.z+(bridge?1:Math.cos(site.yaw))*site.depth/2;
@@ -608,6 +627,7 @@ export class GptScene extends CityScene {
   }
 
   buildFutureLandscape() {
+    if(this.model.city.geoPlan){this.buildMappedLandscape();return;}
     this.part('box','#7a8a69',[0,-.18,8],[240,.25,180]);
     for(const b of this.model.city.buildings) {
       if(b.riverBridge)continue;
@@ -647,9 +667,67 @@ export class GptScene extends CityScene {
     for(const [cx,cz] of [[-59,2],[-6,31]])for(let i=0;i<7;i++)this.tree(cx-10+i*3,cz+10,1.1,`village:${cx}:${i}`);
   }
 
+  buildMappedLandscape() {
+    this.part('box','#788467',[48,-.18,0],[460,.25,280]);
+    const bank=MAP_ROADS.filter(r=>r.name==='Bạch Đằng').sort((a,b)=>b.points.length-a.points.length)[0].points.slice().reverse();
+    // The road centreline is mapped; bank offsets and the creek are an explicitly stylised envelope.
+    const north=[{x:-100,z:11},{x:-1.1,z:10},{x:-1.1,z:-75},{x:1.1,z:-75},{x:1.1,z:10},{x:9.864,z:12.8},...bank.map(p=>({x:p.x,z:p.z+1.3})),{x:200,z:12}];
+    const south=[{x:200,z:36},...bank.slice().reverse().map(p=>({x:p.x,z:p.z+11})),{x:-100,z:31}];
+    this.createRiver(new THREE.ShapeGeometry(new THREE.Shape([...north,...south].map(p=>new THREE.Vector2(p.x,-p.z)))),0);
+    for(const road of MAP_ROADS)for(let i=1;i<road.points.length;i++) {
+      const a=road.points[i-1],b=road.points[i],dx=b.x-a.x,dz=b.z-a.z,length=Math.hypot(dx,dz);
+      if(length<.02)continue;
+      this.part('box','paving',[(a.x+b.x)/2,.015,(a.z+b.z)/2],[road.name==='Cầu An Hội'?1.3:1.05,.06,length+.03],[0,Math.atan2(dx,dz),0]);
+    }
+    for(let i=1;i<bank.length;i++) {
+      const a=bank[i-1],b=bank[i],length=Math.hypot(b.x-a.x,b.z-a.z);
+      for(let t=0;t<length;t+=.9) {
+        const u=t/length;
+        this.part('box','stone',[a.x+(b.x-a.x)*u,.08,a.z+(b.z-a.z)*u+.8],[.85,.27,.28],[0,Math.atan2(b.z-a.z,b.x-a.x),0]);
+      }
+      if(i%3===0)this.tree(b.x,b.z-1.2,.8+hash01(`map-bank:${i}`)*.2,`map-bank:${i}`);
+    }
+    for(const b of this.model.city.buildings)if(!b.riverBridge) {
+      const c=plotCenter(b.plot),scale=b.world||{sx:1,sz:1};
+      this.part('box','paving',[c.x,-.015,c.z],[3.5*scale.sx,.06,2.8*scale.sz]);
+    }
+    // Bounded static context: mapped building centres, interpreted height/roof, no extra actors.
+    const protectedLots=[...this.model.city.buildings.map(b=>({c:plotCenter(b.plot),w:b.site?.width||3.9,d:b.site?.depth||3.2})),
+      ...(this.model.placementSites||[]).map(site=>({c:{x:site.x,z:site.z},w:site.width,d:site.depth}))];
+    const roadDistance=b=>{
+      let nearest=Infinity;
+      for(const road of MAP_ROADS)for(let i=1;i<road.points.length;i++) {
+        const a=road.points[i-1],to=road.points[i],dx=to.x-a.x,dz=to.z-a.z,length=dx*dx+dz*dz;
+        const u=length?Math.max(0,Math.min(1,((b.x-a.x)*dx+(b.z-a.z)*dz)/length)):0;
+        nearest=Math.min(nearest,Math.hypot(b.x-a.x-dx*u,b.z-a.z-dz*u));
+      }
+      return nearest+hash01(`context-order:${b.id}`)*.3;
+    };
+    const context=mappedContext.buildings.map(b=>({...b,...mapPoint(b.lat,b.lon)}))
+      .filter(b=>b.x>-50&&b.x<145&&b.z>-38&&b.z<25&&!protectedLots.some(p=>Math.abs(p.c.x-b.x)<(p.w+b.width)/2+.2&&Math.abs(p.c.z-b.z)<(p.d+b.depth)/2+.2))
+      .map(b=>({...b,priority:roadDistance(b)})).sort((a,b)=>a.priority-b.priority).slice(0,640);
+    this.mapContext=context;
+    for(const b of context) {
+      const seed=hash01(`map-house:${b.id}`),h=.8+seed*.7,rise=.25+seed*.15;
+      const w=b.width*.94,d=b.depth*.94,cos=Math.cos(b.yaw),sin=Math.sin(b.yaw);
+      this.part('detailBox',['wall:#bda66d','wall:#cab377','wall:#d2ba81'][b.id%3],[b.x,h/2,b.z],[w,h,d],[0,b.yaw,0]);
+      for(const side of [-1,1]) {
+        const offset=side*d/4,slope=Math.atan2(rise,d/2);
+        const rotation=new THREE.Euler().setFromRotationMatrix(new THREE.Matrix4().makeRotationY(b.yaw).multiply(new THREE.Matrix4().makeRotationX(side*slope)));
+        this.part('detailBox',['tile:#535c51','tile:#6a6554','tile:#665c4d'][b.id%3],[b.x+sin*offset,h+rise/2,b.z+cos*offset],[w+.13,.045,Math.hypot(d/2,rise)+.09],[rotation.x,rotation.y,rotation.z]);
+      }
+      this.part('detailBox','timber',[b.x+sin*d*.48,h*.43,b.z+cos*d*.48],[Math.min(w*.55,.6),h*.62,.025],[0,b.yaw,0]);
+    }
+  }
+
   buildFutureLife() {
     for(const b of this.model.city.buildings) {
-      const c=plotCenter(b.plot),scale=b.world;
+      if(b.site?.version===1||(!b.site&&!b.illustrative))continue;
+      if(constructionProgress(b)<1){
+        this.activeBridge=b.site||b.riverBridge?b.planId:null;
+        this.buildWorksite(b);this.activeBridge=null;continue;
+      }
+      const c=plotCenter(b.plot),scale=b.world||{sx:1,sz:1};
       if(b.riverBridge) {
         for(const side of [-1,1]){const actor=this.streetPerson(c.x-1.93,.015,c.z+side*.1,`${b.planId}:visitor:${side}`,'walk');actor.bridgeWalk={axis:'x',center:c.x};actor.journey=streetJourney([[c.x-1.93,c.z+side*.1,.015,2],[c.x+1.93,c.z+side*.1,.015,2]]);}
       } else if(b.key==='ha-thanhha-v1') {
@@ -657,7 +735,7 @@ export class GptScene extends CityScene {
         const helper=this.streetPerson(c.x-.72*scale.sx+.38,.015,c.z+.45*scale.sz+.15,`${b.planId}:helper`,'potterHelper',-Math.PI/2);helper.phase=potter.phase;helper.pace=potter.pace;
       } else if(b.key==='ha-kimbong-v1')this.streetPerson(c.x-.66*scale.sx,.015,c.z+.6*scale.sz-.28,`${b.planId}:carver`,'carve');
       else if(b.shape==='house')this.streetPerson(c.x,.015,c.z+1.5*scale.sz,`${b.planId}:walker`,'walk',Math.PI/2,null,{axis:'x',length:1.4});
-      else if(b.key==='ha-cho-v1') {
+      else if(b.key==='ha-cho-v1'||b.shape==='market') {
         const x=c.x,z=c.z+1.5*scale.sz;
         this.part('box','timber',[x,.28,z],[.58,.3,.3]);
         const trade={phase:3,length:2.1,depth:-.2,heading:Math.atan2(.38,-.33),x,z,shelfY:.46,market:true,wares:3,customers:[]};this.trades.push(trade);
@@ -665,6 +743,7 @@ export class GptScene extends CityScene {
         for(let i=0;i<2;i++){const customer=this.streetPerson(x-2.1-i*.42,.015,z+.4+i*.12,`${b.planId}:customer:${i}`,'customer');customer.trade=trade;customer.customerIndex=i;trade.customers.push(customer);}
         this.buildTradeGoods(trade);
       }
+      else if(b.site)this.streetPerson(c.x,.015,c.z+Math.cos(b.site.yaw)*(b.site.depth/2+.45),`${b.planId}:visitor`,'walk',Math.PI/2,null,{axis:'x',length:1.2});
     }
   }
 
@@ -842,12 +921,12 @@ export class GptScene extends CityScene {
     this.world.add(this.water); this.disposables.push(waterGeo,this.water);
     // Fixed moorings occupy the canal between the existing bridges, never building plots.
     this.boats=[];
-    for(const [i,bx] of (this.model.city.futurePlan?[-18,0,25]:[.1,4.2,-3.1]).entries()) {
+    for(const [i,bx] of (this.model.city.geoPlan?[28,74,112]:this.model.city.futurePlan?[-18,0,25]:[.1,4.2,-3.1]).entries()) {
       const boat=this.buildRiverBoat(i);
-      const bz=this.model.city.futurePlan?(i===1?13.5:i===2?18:15):i===1?-2.5:i===2?-1.55:-2.05;
+      const bz=this.model.city.geoPlan?[25,31,28][i]:this.model.city.futurePlan?(i===1?13.5:i===2?18:15):i===1?-2.5:i===2?-1.55:-2.05;
       boat.position.set(bx,.055,bz);boat.rotation.y=i===1?-.13:i===2?.12:.06;
       this.world.add(boat);this.boats.push(boat);
-      const bank=this.model.city.futurePlan?10:i===1?-3.08:-.92;
+      const bank=this.model.city.geoPlan?[21,27,24][i]:this.model.city.futurePlan?10:i===1?-3.08:-.92;
       for(let segment=0;segment<8;segment+=1) {
         const point=u=>[bx-.6-.32*u,.17+.05*u-Math.sin(u*Math.PI)*.07,bz+(bank-bz)*u];
         this.beam('timber',point(segment/8),point((segment+1)/8),.008);
@@ -1152,8 +1231,8 @@ export class GptScene extends CityScene {
     }
   }
 
-  buildParcelLife() {
-    const plots=this.model.city.buildings.filter(b=>b.site),recent=new Set(plots.slice(-60).map(b=>b.planId));
+  buildParcelLife(plots=this.model.city.buildings.filter(b=>b.site)) {
+    const recent=new Set(plots.slice(-60).map(b=>b.planId));
     // Bound optional decorative commerce; every real building and resident record is retained.
     for(const b of plots.filter(b=>recent.has(b.planId)||constructionProgress(b)<1)) {
       const s=b.site,c=plotCenter(b.plot),progress=constructionProgress(b);
@@ -1181,8 +1260,7 @@ export class GptScene extends CityScene {
     }
   }
 
-  buildStreetscape() {
-    const buildings=this.model.city.buildings.filter(b=>!b.site);
+  buildStreetscape(buildings=this.model.city.buildings.filter(b=>!b.site)) {
     const byPlot=new Map(buildings.map(b=>[`${b.plot.x},${b.plot.y}`,b]));
     for(const bridge of buildings.filter(b=>b.riverBridge && constructionProgress(b)>=1))for(const side of [-1,1]) {
       const c=plotCenter(bridge.plot),x=c.x+side*.1;

@@ -246,7 +246,7 @@ export function buildCity(events, timerState, now = Date.now()) {
       const bp = blueprint(d.blueprint);
       const era = eraOf(total);
       if (!bp || bp.era > era) continue; // a future era's blueprint is not unlocked yet
-      const site=d.workVersion===2?(parcelAvailable(d.site,buildings)?{...d.site}:parcelCandidates({buildings},bp.key,d.site.district,1)[0]):null;
+      const site=d.workVersion===2?(parcelAvailable(d.site,buildings)?{...d.site}:d.site.version===2?null:parcelCandidates({buildings},bp.key,d.site.district,1)[0]):null;
       if(d.workVersion===2&&!site)continue;
       const plot = site?{x:site.x/4,y:site.z/4}:placePlot(d.plot, occupied);
       const b = {

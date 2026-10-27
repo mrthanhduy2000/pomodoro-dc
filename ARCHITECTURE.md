@@ -1445,9 +1445,20 @@ UI (v2/src/ui) ──actions──▶ useTimerApp ──cmd*(state, now)──�
    vào `TECH_DEBT.md` (không được để chỉ tồn tại trong hội thoại rồi mất khi phiên kết thúc).
 
 ### Versioned real parcels (2026-10-25, ADR-107)
-`v2/src/engine/parcels.js` is pure and imports catalog data only. Shared city commands/replay use it
+`v2/src/engine/parcels.js` is pure and imports catalog data and the versioned map reference module. Shared city commands/replay use it
 for version-2 minute plans with persisted site geometry. Legacy grid plans retain the original path;
 reservation ownership protects later legacy candidates and survives partial cancellation.
 GPT projects site dimensions into its shared building/worker/pick transforms. `art.js` re-exports
 the existing river address mapping from the pure parcel module; there is one implementation.
 Research/proportion limits: `docs/HOI_AN_PARCELS.md`. No log/schema migration or second economy.
+
+
+### Unified map-led city (2026-10-27, ADR-108)
+A dated OSM JSON snapshot flows through `engine/hoianMap.js` into pure mapped-site validation
+and the GPT regional renderer. Coordinates are never fetched during replay. Existing grid
+and site.version1 plans retain the old allocator; new GPT monument choices explicitly use
+site.version2/mapVersion1 under the existing workVersion2 event contract. Canonical writes
+still pass through cmdPlan; no migration or second store. A mapped collision cannot silently
+fall back to an unrelated version1 address. `regionalCity` composes reference/context records
+with original earned building objects for rendering only. All preview controls use this same
+world and shared heritage kits; synthetic records never become session credit.

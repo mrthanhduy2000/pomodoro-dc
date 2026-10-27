@@ -11,6 +11,28 @@
 
 ---
 
+## ADR-108 — One map-led Hoi An world; version new geographic references
+
+- **Date:**2026-10-27. Supersedes the separate regional-preview route in ADR-106.
+- **Context:** user makes expanded Hoi An the primary product and explicitly merges three preview
+  routes. Recent parcel-only art was absent from the separate regional model library.
+- **Problem:** disconnected previews concealed upgrades; hand-authored geography could not support
+  a product claiming documented locations. Existing plans must never move.
+- **Options:** retain three routes (rejected: continued divergence); reposition old plans in place
+  (rejected: destroys historical facts); version opt-in reference sites and share one world (chosen).
+- **Decision:** snapshot public OSM data with date/license; use a pure projection and site.version2
+  validation under workVersion2. Preserve the old allocator for site.version1/grid plans.
+- **Trade-offs:** new fixed monuments cannot be cloned on address collision. Mapped points and
+  rectangular envelopes are less than a measured replica; model heights/roofs/water remain art.
+- **Impact:** regionalCity composes earned objects and render-only references. Shared parcel kits
+  drive main preview and construction. UI drops old/regional/parcel route switches.
+- **Safety:** no migration, network call during replay or synthetic credit. Mapped conflicts reject
+  instead of silently choosing unrelated streets. New tests guard old facts, coordinates and credit.
+- **Review:** future corrected surveys must add a new map version with compatible validation;
+  never overwrite this snapshot beneath accepted plans. Survey pending regions before expansion.
+
+---
+
 ## 📚 ADR-001 … ADR-50 — full text archived
 
 The **50 oldest ADRs** were moved verbatim to

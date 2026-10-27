@@ -319,3 +319,15 @@ with low capstones, a water-facing course, tree openings and short capped moorin
 by cumulative distance rather than source vertex density. Water/land elevations and widths
 remain illustrative. Details use the existing material-only mapBlock batches; no new actors,
 light, render pass, pixel reduction or data/placement schema is introduced. FPS stays deferred.
+
+### Tan Ky block shell detail (2026-10-27)
+
+The parcel-only Tan Ky shell now interprets the dated101 Nguyen Thai Hoc front photo: horizontal
+timber side panels, a narrow entry, loft door and ceramic vents, without an invented balcony.
+It retains the existing compressed footprint volumes and centre while opening interior shells,
+adding a one-sided courtyard gallery/brackets and a distinct rear service opening. No exact present rear
+replica is claimed. The legacy grid branch is unchanged. Up to10 nearby mapped context envelopes
+receive static multi-range shells and open light wells, with original centres/bounds/yaw retained.
+Their street and service faces differ; IDs are not labelled as verified numbered properties.
+The existing material-only mapBlock batches and rendering schedules remain. Dated references
+and source disagreements/limits live in docs/HOI_AN_PARCELS.md. FPS remains deferred.

@@ -13,7 +13,7 @@ import { hash01, constructionProgress, candidatePlots } from '../engine/city.js'
 import { heritageOf } from '../engine/catalog.js';
 import { fitHeritageQuay, heritageFootprints } from './heritage.js';
 import { drawHoiAnBuilding } from './hoian.js';
-import { MAP_ROADS, mapPoint } from '../engine/hoianMap.js';
+import { MAP_ROADS, mapPoint, mapReference } from '../engine/hoianMap.js';
 import mappedContext from './hoian-buildings.json' with { type: 'json' };
 import { architectureOf, DEFAULT_APPEARANCE, PLACES, snowIn, streetJourney, journeyAt, projectGptCity, riverSite, riverCandidates, tradeAt, bridgeWalkHeight } from './art.js';
 
@@ -746,7 +746,11 @@ export class GptScene extends CityScene {
         frontages.get(c.house.id).push(c);
       }
     }
+    const tanKyRef=mapReference('ha-tanky-v1'),tanKy=mapPoint(tanKyRef.lat,tanKyRef.lon);
+    const merchantRow=new Set(context.filter(b=>Math.abs(b.x-tanKy.x)<8&&Math.abs(b.z-tanKy.z)<4&&Math.max(b.width,b.depth)>1.8)
+      .sort((a,b)=>Math.hypot(a.x-tanKy.x,a.z-tanKy.z)-Math.hypot(b.x-tanKy.x,b.z-tanKy.z)).slice(0,10).map(b=>b.id));
     for(const b of context) {
+      if(merchantRow.has(b.id)){this.buildMappedMerchantHouse(b);continue;}
       const seed=hash01(`map-house:${b.id}`),h=.8+seed*.7,rise=.25+seed*.15;
       const w=b.width*.94,d=b.depth*.94,cos=Math.cos(b.yaw),sin=Math.sin(b.yaw);
       this.part('mapBlock',['wall:#bda66d','wall:#cab377','wall:#d2ba81'][b.id%3],[b.x,h/2,b.z],[w,h,d],[0,b.yaw,0]);
@@ -780,6 +784,79 @@ export class GptScene extends CityScene {
       }
       else this.part('mapBlock','timber',[b.x+sin*d*.48,h*.43,b.z+cos*d*.48],[Math.min(w*.55,.6),h*.62,.025],[0,b.yaw,0]);
     }
+  }
+
+  buildMappedMerchantHouse(b) {
+    // Original block variants within immutable mapped envelopes, not numbered-house replicas.
+    let w=b.width*.94,d=b.depth*.94,yaw=b.yaw;
+    if(w>d){[w,d]=[d,w];yaw+=Math.PI/2;}
+    if(Math.cos(yaw)>0)yaw+=Math.PI;
+    const cos=Math.cos(yaw),sin=Math.sin(yaw),seed=hash01(`merchant:${b.id}`),type=b.id%4;
+    const wall=['wall:#d2b577','wall:#bea16a','wall:#d8be89','wall:#c7b68e'][type];
+    const roofMat=['tile:#535c51','tile:#6a6554','tile:#665c4d'][b.id%3];
+    const put=(mat,x,y,z,sx,sy,sz,rx=0)=>{
+      const rotation=new THREE.Euler().setFromRotationMatrix(new THREE.Matrix4().makeRotationY(yaw).multiply(new THREE.Matrix4().makeRotationX(rx)));
+      this.part('mapBlock',mat,[b.x+cos*x+sin*z,y,b.z-sin*x+cos*z],[sx,sy,sz],[rotation.x,rotation.y,rotation.z]);
+    };
+    const tiledRoof=(z,depth,h,rise,width=w)=>{
+      const run=depth/2,slope=Math.atan2(rise,run),count=Math.max(4,Math.min(12,Math.ceil(width/.12)));
+      for(const side of [-1,1]) {
+        put(roofMat,0,h+rise/2,z+side*depth/4,width+.10,.035,Math.hypot(run,rise)+.08,side*slope);
+        for(let j=0;j<=count;j++)put(roofMat,(j/count-.5)*width,h+rise/2+.021,z+side*depth/4,.024,.025,Math.hypot(run,rise)+.09,side*slope);
+        put('timber',0,h-.012,z+side*(run+.02),width+.08,.045,.07);
+        // Stepped gable infill closes the roof silhouette without filling the light well.
+        for(const end of [-1,1])for(let j=0;j<4;j++)put(wall,end*(width/2-.025),h+rise*(j+.5)/4,z,.05,rise/4,depth*(1-(j+.5)/4));
+      }
+      put(roofMat,0,h+rise+.025,z,width+.13,.06,.07);
+    };
+    const frontDepth=d*(.28+seed*.035),rearDepth=d*.24,middleDepth=d*.19;
+    const frontZ=d/2-frontDepth/2,rearZ=-d/2+rearDepth/2,middleZ=-d*.04;
+    const frontH=type===1?1.5:1.0+seed*.25,rearH=.77+seed*.25;
+    put('paving',0,.035,0,w,.06,d);
+    for(const [z,depth,h] of [[frontZ,frontDepth,frontH],[middleZ,middleDepth,.83],[rearZ,rearDepth,rearH]]) {
+      for(const side of [-1,1])put(wall,side*(w/2-.035),h/2,z,.07,h,depth);
+      put('timber',0,.08,z,w,.045,depth);
+      tiledRoof(z,depth,h,.20+seed*.10);
+    }
+    // Thin galleries and exposed posts connect roofed ranges around two actual air gaps.
+    for(const side of [-1,1]) {
+      const gx=side*(w/2-.065),galleryW=Math.min(.16,w*.18);
+      put('timber',gx,.78,0,galleryW,.035,d*.57);
+      for(const z of [-d*.22,d*.15]) {
+        put('timber',gx,.39,z,.032,.78,.035);
+        put('stone',gx,.09,z,.08,.10,.08);
+      }
+      put('stone',side*(w/2-.11),.067,0,.04,.025,d*.55);
+    }
+    const frontFace=d/2+.012,entry=Math.min(.30,w*.32),bay=(w-entry)/2;
+    for(const side of [-1,1]) {
+      put('timber',side*(entry/2+bay/2),.47,frontFace,bay*.94,.78,.04);
+      for(let j=0;j<6;j++)put('#8c7650',side*(entry/2+bay/2),.16+j*.12,frontFace+.027,bay*.90,.012,.01);
+      put('timber',side*entry/2,.47,frontFace+.035,.035,.86,.065);
+      // The rear has smaller practical doors, uneven limewashed shoulders and a shallow canopy.
+      put(wall,side*(w+entry)/4,rearH*.46,-d/2-.012,(w-entry)/2,rearH*.92,.055);
+      put('timber',side*entry*.53,.42,-d/2-.05,.035,.79,.055);
+    }
+    put('timber',0,.91,frontFace+.025,w,.06,.09);
+    put('stone',0,.08,frontFace+.07,w,.09,.16);
+    if(frontH>1.35) {
+      put(wall,0,1.21,frontFace,w,.52,.07);
+      for(const x of [-w*.28,0,w*.28]) {
+        put('timber',x,1.23,frontFace+.05,w*.18,.31,.025);
+        for(let j=0;j<4;j++)put('#8c7650',x,1.12+j*.07,frontFace+.07,w*.15,.012,.012);
+      }
+    } else put(wall,0,(frontH+.91)/2,frontFace,w,Math.max(.04,frontH-.91),.06);
+    if(type!==2) {
+      put(type===0?'#666a52':'#79715c',0,.88,frontFace+.10,w+.03,.035,.27,.12);
+      for(const side of [-1,1])put('timber',side*w*.43,.43,frontFace+.21,.022,.84,.022);
+    }
+    put('#79715c',0,rearH*.88,-d/2-.08,w,.03,.20,-.12);
+    put('stone',0,.09,-d/2-.07,w*.78,.10,.16);
+    for(let j=0;j<2+type%2;j++)put('timber',-w*.25+j*w*.16,.15,-d/2+.12,.11,.15,.14);
+    // Recessed threshold glimpses and a planter add life without per-house actors or lights.
+    put('#b59970',0,.073,d*.19,Math.min(.28,w*.35),.018,.24);
+    put('stone',w*.22,.12,-d*.21,.16,.16,.15);
+    put('foliage:#647053',w*.22,.22,-d*.21,.17,.12,.16);
   }
 
   buildMappedFrontage(b,w,d,h,street) {

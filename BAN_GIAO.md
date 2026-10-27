@@ -1,3 +1,22 @@
+> **2026-10-27 Tan Ky block follow-up:** dated imagery and heritage text precede geometry.
+> Maps front photo Beat “Baccio” Lipp: capture Mar2023/panel Apr2023, confirmed101 Nguyen Thai Hoc.
+> Two3D Solution community360s: capture Jun2019/panel Jul2019, neighbourhood fronts and Bach Dang.
+> Do not call the visible Tre Tre building Tan Ky; the exact present rear frontage is unverified.
+> Heritage Centre2016 and heritage portal2010 guide timber panels, upper door/ceramic vents,
+> stone footings, light wells and linked roofed ranges. Sources/limits: docs/HOI_AN_PARCELS.md.
+> Parcel Tan Ky kit now has a hollow shell, horizontal timber fronts, loft vents, exposed court
+> gallery/brackets and a practical rear doorway/threshold. Legacy grid kit remains byte-for-byte
+> equivalent in staged draw output; footprints, saved centres/sites and minute accounting stay.
+> Up to10 mapped context houses within the Tan Ky block gain separate roofed ranges, open courts,
+> narrow galleries and differentiated front/rear surfaces inside original envelopes.
+> Context variants are original interpretations, not exact replicas of unverified addresses.
+> Static material-only mapBlock batches retained; no added actor/light/pass or reduced pixels.
+> Validation:1,949 full-suite passes, zero failures, one expected skip; three cross-checks pass.
+> Focused55 checks, lint/build and document checks pass;72 legacy stage outputs unchanged.
+> Other parcel outputs/footprints unchanged. Ten context shells have finite positive geometry,
+> input unchanged. Browser front/court/35-to70% preview checks pass, zero captured errors.
+> Production verification follows push. FPS stays deferred. No focus/build plan created.
+
 > **2026-10-27 three-street art follow-up:** survey first, geometry second.
 > Reopened/rotated official Google Street View Dec2021 Tran Phu19 and Nguyen Thai Hoc95;
 > inspected3DSolution Bach Dang community360 (capture Jun2019/panel Jul2019) in two directions.

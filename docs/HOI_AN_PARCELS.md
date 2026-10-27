@@ -222,3 +222,38 @@ The quay follows the already interpreted southward offset from the Bach Dang cen
 walk width, waterline, elevation and mooring spacing are illustrative, not surveyed boundaries.
 Original procedural materials/geometry only; screenshots remain research evidence outside the app.
 Native pixels, lights, reflection count and resident simulation remain; FPS is deferred.
+
+## Tan Ky and its two-street block — 2026-10-27
+
+Research precedes this geometry change. Maps confirms101 Nguyen Thai Hoc. The opened listing
+front photograph by Beat “Baccio” Lipp shows capture March2023, panel April2023: horizontal
+removable timber boards, recessed central entry, upper central timber door, two green ceramic
+vent panels, aged ochre plaster and a low tiled canopy. Neighbouring frontages differ in height,
+shutters and masonry parapets. This photo confirms the named frontage, not neighbouring addresses.
+
+The [Nguyen Thai Hoc neighbourhood360](https://www.google.com/maps/@?api=1&map_action=pano&pano=CIHM0ogKEICAgIDqhc_IkgE)
+by3D Solution (capture June2019/panel July2019; camera15.876545,108.327837) shows adjacent
+masonry balconies, timber shops and raised thresholds. It is not treated as Tan Ky's front.
+The [Bach Dang block360](https://www.google.com/maps/@?api=1&map_action=pano&pano=CIHM0ogKEICAgIDqxfXfrwE)
+by the same contributor/date (camera15.876187,108.328097), opened and rotated longitudinally,
+shows a mix of low tiled service fronts, taller masonry, steps and recessed courts beside the
+riverside road. The visible Tre Tre frontage is NOT labelled Tan Ky. Tan Ky's exact present rear
+facade remains unverified; its service entrance is an architectural interpretation.
+
+[Heritage Centre: Ngoi Nha co](https://hoianheritage.danang.gov.vn/vi/trao-doi-chuyen-nganh/chuyen-de-nghien-cuu-trao-doi/ngoi-nha-co-548.html)
+(31 October2016) describes successive house ranges, a loft front without a projecting balcony,
+central upper door and ceramic vents, horizontal timber panels and rear trading access.
+[Heritage portal: Nha co Tan Ky](https://www.hoianworldheritage.org.vn/vi/news/Diem-di-tich/Nha-co-Tan-Ky-Hoi-An-13.hwh)
+(20 December2010) cross-checks structural bays, stone column bases and a light well with side
+ranges. Descriptions disagree on some timber/stone origins and counting of ranges; no material
+provenance or exact range-count claim is encoded. Existing compressed footprints are retained.
+
+Scope: improve only the parcel Tan Ky kit; legacy grid kit output stays. Keep saved sites,
+footprints and minute accounting. A bounded subset of mapped context in this block gains hollow
+roofed ranges, open courts, galleries and distinct front/rear doors inside its original envelope.
+Individual context IDs retain their centres, dimensions and yaw. Variants are original interpreted
+models, not claimed replicas of unverified numbered houses. No sourced photo is shipped as an asset.
+
+Further reading of the2016 record places the connecting range on the right and the light well
+on the left. The parcel kit therefore uses one covered gallery opposite a plaster court wall,
+within the same collision footprint. The compact two-roof massing is still not a measured plan.

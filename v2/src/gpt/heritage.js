@@ -48,6 +48,82 @@ export function drawHeritageBuilding(kit, building, progress) {
   };
   switch(building.key) {
     case 'ha-tanky-v1': {
+      if(building.site) {
+        // Dated front photo and heritage records: closed timber frontage, loft vents, open court.
+        // Keep the released footprints/centre; only the shell and visible surfaces change.
+        for(const [x,z,w,d,h] of heritageFootprints(building.key,building.site)) {
+          // The record places the connecting range on one side of the light well.
+          if(x<0) {
+            if(progress>=.35)box('wall:#d4b468',-1.59,.77,z,.07,1.18,d);
+            continue;
+          }
+          box('stone',x,.16,z,w+.06,.16,d+.04);
+          if(progress>=.35) {
+            for(const side of [-1,1])box('wall:#d4b468',x+side*(w/2-.035),.18+h/2,z,.07,h,d);
+            box(timber,x,.20,z,w,.055,d);
+            box(timber,x,h+.14,z,w,.055,d);
+          }
+        }
+        roof(0,1.55,.92,3.5,.95,.39);
+        roof(0,1.45,-.94,3.5,.9,.34);
+        roof(1.48,1.35,-.01,.46,1.5,.12);
+        posts([1.33],.20,-.42,1.08);posts([1.33],.20,.36,1.08);
+        beam(timber,[1.33,1.18,-.61],[1.33,1.18,.59],.026);
+        for(const z of [-.42,.36])beam(timber,[1.33,1.05,z],[1.48,1.29,z],.025);
+        if(finish) {
+          box('stone',-1.59,1.38,-.01,.11,.055,1.23);
+          box('wall:#dfc284',-1.54,.80,-.01,.04,.55,.59);
+          box('stone',-1.51,1.09,-.01,.045,.035,.66);
+          box('stone',-1.51,.51,-.01,.045,.035,.66);
+        }
+        box('paving',0,.18,-.01,2.6,.04,1.10);
+        for(const side of [-1,1])box('stone',side*1.18,.21,-.01,.075,.035,1.12);
+        if(progress>=.35) {
+          // Two separately framed doors reveal interior depth; no solid infill across the entry.
+          for(const side of [-1,1]) {
+            box('wall:#d4b468',side*1.575,.86,1.27,.10,1.36,.12);
+            box('wall:#d4b468',side*.94,.81,-1.255,1.20,1.25,.07);
+            box(timber,side*.32,.66,1.285,.065,.97,.10);
+            box(timber,side*.32,.66,-1.29,.06,.96,.08);
+            if(finish) {
+              // Removable horizontal boards flank the narrow street entry.
+              for(let row=0;row<8;row++)box(row%3?'timber':'#65543d',side*.93,.26+row*.10,1.285,1.12,.09,.055);
+              part('box',timber,side*.41,.66,-1.29,.19,.91,.035,[0,side*.85,0]);
+              if(side>0){box('stone',1.33,.27,-.42,.15,.13,.15);box('stone',1.33,.27,.36,.15,.13,.15);}
+            }
+          }
+          box('wall:#d4b468',0,1.30,1.27,3.05,.49,.11);
+          box(timber,0,1.05,1.30,3.10,.09,.12);
+          box(timber,0,1.11,-1.29,.71,.09,.10);
+        }
+        if(finish) {
+          box(timber,0,1.30,1.34,.42,.43,.055);
+          box('#8e7953',0,1.30,1.376,.012,.41,.012);
+          for(const side of [-1,1]) {
+            box('wall:#dfc284',side*.87,1.31,1.34,.30,.27,.055);
+            for(const u of [-1,1])for(const v of [-1,1]) {
+              box('#526c5b',side*.87+u*.058,1.31+v*.05,1.38,.095,.085,.018);
+              box('#242f28',side*.87+u*.058,1.31+v*.05,1.392,.027,.035,.007);
+            }
+            part('pole',timber,side*.21,1.02,1.37,.043,.025,.043,[Math.PI/2,0,0]);
+          }
+          sign(0,.96,1.35,.42);
+          // Recessed service threshold and modest stock, not a second ornate shopfront.
+          box('stone',0,.22,-1.34,.79,.08,.20);
+          box('stone',0,.13,-1.43,.90,.08,.15);
+          for(let i=0;i<3;i++)box(timber,.73+i*.17,.33,-1.28,.14,.22,.15);
+          box(timber,-.76,.48,.78,.56,.045,.21);
+          box('#b59970',0,.21,-.07,.38,.018,.34);
+          pots(-.55,-.60,3);
+          for(const z of [.70,-.74])for(const x of [-1,0,1]) {
+            beam(timber,[x-.45,1.19,z],[x,1.43,z],.023);
+            beam(timber,[x+.45,1.19,z],[x,1.43,z],.023);
+          }
+        }
+        if(open)garden(.72,.23,-.12,.23);
+        break;
+      }
+
       // Two roofed blocks and side galleries leave an actual open-air light well.
       const frontage=building.site?3.25:2.22,sideX=building.site?1.48:.97,roofW=building.site?3.5:2.5;
       const frontZ=building.site?.92:.48,backZ=building.site?-.94:-.73,faceZ=building.site?1.27:.83;

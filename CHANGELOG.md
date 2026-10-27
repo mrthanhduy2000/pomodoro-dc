@@ -1,3 +1,15 @@
+## 2026-10-27 — Tan Ky frontage and merchant-house block
+
+Survey the dated101 Nguyen Thai Hoc front photo, adjacent community360s on Nguyen Thai Hoc and
+Bach Dang, and two heritage records. Refine parcel Tan Ky with horizontal timber panels, a
+central loft door/ceramic vents, hollow ranges, court galleries, column footings and a modest
+rear service threshold. Rebuild up to10 background envelopes nearby as linked roofed ranges
+with actual open courts and distinct street/service fronts. No anonymous house gets an invented
+historic address. Exact rear facade remains unverified. Preserve all saved sites/footprints,
+legacy grid art, 3D previews and historical credit; use static batches and defer FPS. Validation:
+1,949 full-suite passes, zero failures, one expected skip; three cross-checks and55 focused checks
+pass. Lint/build, finite geometry and legacy-stage comparison pass; browser front/court/stages checked.
+
 ## 2026-10-27 — Surveyed three-street frontages and Bach Dang quay
 
 Use dated Tran Phu/Nguyen Thai Hoc official Street View, Bach Dang community360 and Heritage

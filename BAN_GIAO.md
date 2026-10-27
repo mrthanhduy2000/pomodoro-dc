@@ -1,3 +1,21 @@
+> **2026-10-27 three-street art follow-up:** survey first, geometry second.
+> Reopened/rotated official Google Street View Dec2021 Tran Phu19 and Nguyen Thai Hoc95;
+> inspected3DSolution Bach Dang community360 (capture Jun2019/panel Jul2019) in two directions.
+> Heritage Centre shop-house and historic street-plan texts cross-check the architectural language.
+> Dated sources and limits: docs/HOI_AN_PARCELS.md. No current complete frontage census claim.
+> Render-only street-facing timber bays, thresholds, upper shutters, masonry cornices/galleries,
+> varied awnings and roof channels enrich a bounded subset of the existing mapped background.
+> At most72 nearest envelopes per corridor; all2,660 context envelopes remain available.
+> Bach Dang gets connected paving, capstone joints, low quay face, tree openings and short
+> capped mooring posts spaced by distance. Bank/water offsets remain illustrative, not surveyed.
+> Dedicated mapBlock batching retained; no extra actors, lights, reflection passes or pixel changes.
+> Old building/site coordinates, accepted plans, exact credit and historical replay stay unchanged.
+> Preview/progress, detailed monuments and workers retain their existing paths. No FPS run.
+> Validation:1,949 full-suite passes, zero failures, one expected skip; three cross-checks pass.
+> Focused55 checks, lint/build and finite positive geometry/input-immutability smoke check pass.
+> Browser confirms street navigation, close zoom and35/70% construction preview, zero captured errors.
+> No focus session or build plan created. Release verification follows push; FPS remains unmeasured.
+
 > **2026-10-27 map-context follow-up:** production visual check found the640-house cap left
 > hollow-looking blocks. Use up to2,660 source envelopes via a dedicated static instanced-box
 > kind, grouped by material rather than detailed-part cells. No extra actors/lights or FPS run.

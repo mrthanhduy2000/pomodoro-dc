@@ -1,3 +1,15 @@
+## 2026-10-27 — Surveyed three-street frontages and Bach Dang quay
+
+Use dated Tran Phu/Nguyen Thai Hoc official Street View, Bach Dang community360 and Heritage
+Centre texts to guide original static geometry. Add road-facing timber bays, thresholds, upper
+shutters, plaster surrounds, galleries, variable awnings and roof channels on a bounded context
+subset. Replace isolated bank stones with a connected paved promenade, low quay face, capstone
+joints, tree openings and capped mooring posts. Keep map centres/envelopes, historical sites,
+3D preview, native pixels and current resident simulation. No Google imagery is shipped; no
+complete contemporary measured reconstruction or FPS improvement is claimed. Validation:1,949
+full-suite passes, zero failures, one expected skip, three cross-checks and55 focused checks pass;
+lint/build and static geometry smoke checks pass. Preview stages35/70% and street zoom checked.
+
 ## 2026-10-27 — Complete mapped context coverage
 
 Production visual review found the initial640-house cap left empty blocks. Static mapped context

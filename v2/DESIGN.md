@@ -307,3 +307,15 @@ legacy scenes retain their previous clearance radius.
 Static map-block geometry uses a dedicated plain instanced box kind, grouped by material,
 without the detailed-part spatial-cell split. This retains full mapped context coverage without
 creating per-house actors or many tiny cell batches. There is no new FPS claim.
+
+### Street-facing context and quay (2026-10-27)
+
+Within the same mapped envelopes, up to72 nearby houses per surveyed corridor receive static
+road-facing bays, shutters, thresholds, upper masonry/galleries, awnings and roof channels.
+Nearest street projection chooses the exposed box face; this is a typology interpretation,
+not an address-by-address replica. Tran Phu, Nguyen Thai Hoc and Bach Dang references are dated
+in docs/HOI_AN_PARCELS.md. The Bach Dang promenade joins the existing interpreted bank envelope,
+with low capstones, a water-facing course, tree openings and short capped mooring posts placed
+by cumulative distance rather than source vertex density. Water/land elevations and widths
+remain illustrative. Details use the existing material-only mapBlock batches; no new actors,
+light, render pass, pixel reduction or data/placement schema is introduced. FPS stays deferred.

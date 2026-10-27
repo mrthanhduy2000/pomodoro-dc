@@ -189,3 +189,36 @@ water outlines first; then survey Thanh Ha, Kim Bong and Cam Thanh, including da
 road/parcel anchors, architecture and living practices. Those regions are marked pending instead
 of presenting invented clusters as accurate geography. Old saved sites remain at their original
 coordinates, even where they predate map-led placement. Never relocate them to fit a newer survey.
+
+## Three-street frontage and quay follow-up — 2026-10-27
+
+Survey before geometry:
+- [Google Street View, Tran Phu](https://www.google.com/maps/@?api=1&map_action=pano&pano=T_eBl61PBpUdwnLuU1HdkQ): official panorama captured December2021, camera label19 Tran Phu,
+  reopened and rotated along the street. Continuous low ochre shopfronts, raised thresholds,
+  deep cloth awnings and a mix of low timber and upper masonry elevations. Camera address is
+  not the identity of every frontage or of Quan Cong Mieu at24 Tran Phu.
+- [Google Street View, Nguyen Thai Hoc](https://www.google.com/maps/@?api=1&map_action=pano&pano=PCpEeDePRBtX-cQ8B95uPQ): official panorama captured December2021, camera label95 Nguyen Thai Hoc,
+  opened from the101 Tan Ky search and rotated longitudinally. Low timber shop openings alternate
+  with two-storey masonry, louvred shutters, projecting mouldings and solid gallery balustrades;
+  rectangular pavement and reddish thresholds. The search address is not the camera address.
+- [Bach Dang community360](https://www.google.com/maps/@?api=1&map_action=pano&pano=CIHM0ogKEICAgIDqxaXDQg): 3DSolution, capture overlay June2019, contributor panel July2019,
+  camera15.876052,108.329273. River-facing and longitudinal views inspected: flat paved promenade,
+  low kerb, short pale capped mooring posts, tree openings, deep shop awnings and larger roofed
+  passenger boats moored parallel to the bank. This is community360, not Google driving coverage.
+  No continuous high railing or repeated water stairs is inferred from these views.
+
+[Heritage Centre: Nha Pho](https://hoianheritage.net/vi/di-san-van-hoa/Nha-pho/nha-pho-261.html)
+(29 September2015) supplies timber trading bays, paired door eyes, deep house sequences and
+courtyards; [Binh do Hoi An](https://hoianheritage.danang.gov.vn/vi/trao-doi-chuyen-nganh/chuyen-de-nghien-cuu-trao-doi/Suy-nghi-ve-binh-do-Hoi-An-429.html)
+(8 June2015) supports the parallel Bach Dang–Nguyen Thai Hoc–Tran Phu street structure and
+continuous frontages. The sources are historical descriptions, not a measured contemporary census.
+
+Implementation scope: bounded static street-facing details on existing mapped envelopes,
+with corridor-specific timber openings, shutters, thresholds, cornices/galleries and awnings.
+Selection follows the street-facing envelope edge, retaining up to two distinct faces for deep
+houses between streets; it does not assign invented business names,
+addresses or measured building histories. Existing centres, dimensions and saved sites stay.
+The quay follows the already interpreted southward offset from the Bach Dang centreline;
+walk width, waterline, elevation and mooring spacing are illustrative, not surveyed boundaries.
+Original procedural materials/geometry only; screenshots remain research evidence outside the app.
+Native pixels, lights, reflection count and resident simulation remain; FPS is deferred.

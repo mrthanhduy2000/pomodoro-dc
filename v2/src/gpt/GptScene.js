@@ -680,13 +680,36 @@ export class GptScene extends CityScene {
       if(length<.02)continue;
       this.part('box','paving',[(a.x+b.x)/2,.015,(a.z+b.z)/2],[road.name==='Cầu An Hội'?1.3:1.05,.06,length+.03],[0,Math.atan2(dx,dz),0]);
     }
+    // Surveyed quay language; offsets remain illustrative, not a measured river boundary.
+    for(let i=1;i<bank.length;i++) {
+      const a=bank[i-1],b=bank[i],dx=b.x-a.x,dz=b.z-a.z,length=Math.hypot(dx,dz);
+      if(length<.02)continue;
+      const yaw=Math.atan2(dx,dz),mx=(a.x+b.x)/2,mz=(a.z+b.z)/2;
+      this.part('mapBlock','paving',[mx,.025,mz+.94],[.78,.09,length+.04],[0,yaw,0]);
+      this.part('mapBlock','stone',[mx,-.13,mz+1.29],[.12,.35,length+.04],[0,yaw,0]);
+      this.part('mapBlock','#697466',[mx,-.24,mz+1.35],[.025,.10,length+.04],[0,yaw,0]);
+      const slabs=Math.max(1,Math.ceil(length/.72));
+      for(let j=0;j<slabs;j++) {
+        const t=(j+.5)/slabs,x=a.x+dx*t,z=a.z+dz*t;
+        this.part('mapBlock',j%3===0?'#b4b2a0':'stone',[x,.09,z+1.23],[.22,.055,length/slabs-.025],[0,yaw,0]);
+        this.part('mapBlock','#9c9f91',[x,.074,z+.88],[.58,.008,.012],[0,Math.atan2(dz,dx),0]);
+      }
+      if(i%3===0) {
+        this.part('mapBlock','stone',[b.x,.075,b.z+.91],[.44,.06,.40]);
+        this.part('mapBlock','#626b51',[b.x,.11,b.z+.91],[.33,.025,.29]);
+        this.tree(b.x,b.z+.91,.8+hash01(`map-bank:${i}`)*.2,`map-bank:${i}`);
+      }
+    }
+    // Place short capped mooring posts by travelled distance, not by OSM vertex density.
+    let nextPost=1.2;
     for(let i=1;i<bank.length;i++) {
       const a=bank[i-1],b=bank[i],length=Math.hypot(b.x-a.x,b.z-a.z);
-      for(let t=0;t<length;t+=.9) {
-        const u=t/length;
-        this.part('box','stone',[a.x+(b.x-a.x)*u,.08,a.z+(b.z-a.z)*u+.8],[.85,.27,.28],[0,Math.atan2(b.z-a.z,b.x-a.x),0]);
+      for(;nextPost<length;nextPost+=2.8) {
+        const t=nextPost/length,x=a.x+(b.x-a.x)*t,z=a.z+(b.z-a.z)*t+1.13;
+        this.part('mapBlock','stone',[x,.19,z],[.105,.22,.105]);
+        this.part('mapBlock','#c6c2ad',[x,.30,z],[.21,.055,.18]);
       }
-      if(i%3===0)this.tree(b.x,b.z-1.2,.8+hash01(`map-bank:${i}`)*.2,`map-bank:${i}`);
+      nextPost-=length;
     }
     for(const b of this.model.city.buildings)if(!b.riverBridge) {
       const c=plotCenter(b.plot),scale=b.world||{sx:1,sz:1};
@@ -699,6 +722,30 @@ export class GptScene extends CityScene {
       .filter(b=>b.x>-50&&b.x<145&&b.z>-38&&b.z<25&&!protectedLots.some(p=>Math.abs(p.c.x-b.x)<(p.w+b.width)/2+.2&&Math.abs(p.c.z-b.z)<(p.d+b.depth)/2+.2))
       .slice(0,2660);
     this.mapContext=context;
+    // Only nearby street frontages receive detail. All context keeps material-only batching.
+    const corridors=['Trần Phú','Nguyễn Thái Học','Bạch Đằng'];
+    const frontages=new Map();
+    for(const name of corridors) {
+      const segments=MAP_ROADS.filter(r=>r.name===name).flatMap(r=>r.points.slice(1).map((b,i)=>({a:r.points[i],b})));
+      const candidates=context.map(house=>{
+        let nearest={distance:Infinity,gap:Infinity};
+        for(const {a,b} of segments) {
+          const dx=b.x-a.x,dz=b.z-a.z,length2=dx*dx+dz*dz;
+          if(length2<.0001)continue;
+          const t=Math.max(0,Math.min(1,((house.x-a.x)*dx+(house.z-a.z)*dz)/length2));
+          const x=a.x+dx*t,z=a.z+dz*t,distance=Math.hypot(house.x-x,house.z-z);
+          const cos=Math.cos(house.yaw),sin=Math.sin(house.yaw),hx=x-house.x,hz=z-house.z;
+          const gap=Math.hypot(Math.max(0,Math.abs(cos*hx-sin*hz)-house.width*.47),
+            Math.max(0,Math.abs(sin*hx+cos*hz)-house.depth*.47));
+          if(gap<nearest.gap||(gap===nearest.gap&&distance<nearest.distance))nearest={x,z,distance,gap};
+        }
+        return {house,name,...nearest};
+      }).filter(c=>c.gap<.75).sort((a,b)=>a.gap-b.gap||a.distance-b.distance||a.house.id-b.house.id).slice(0,72);
+      for(const c of candidates) {
+        if(!frontages.has(c.house.id))frontages.set(c.house.id,[]);
+        frontages.get(c.house.id).push(c);
+      }
+    }
     for(const b of context) {
       const seed=hash01(`map-house:${b.id}`),h=.8+seed*.7,rise=.25+seed*.15;
       const w=b.width*.94,d=b.depth*.94,cos=Math.cos(b.yaw),sin=Math.sin(b.yaw);
@@ -708,7 +755,79 @@ export class GptScene extends CityScene {
         const rotation=new THREE.Euler().setFromRotationMatrix(new THREE.Matrix4().makeRotationY(b.yaw).multiply(new THREE.Matrix4().makeRotationX(side*slope)));
         this.part('mapBlock',['tile:#535c51','tile:#6a6554','tile:#665c4d'][b.id%3],[b.x+sin*offset,h+rise/2,b.z+cos*offset],[w+.13,.045,Math.hypot(d/2,rise)+.09],[rotation.x,rotation.y,rotation.z]);
       }
-      this.part('mapBlock','timber',[b.x+sin*d*.48,h*.43,b.z+cos*d*.48],[Math.min(w*.55,.6),h*.62,.025],[0,b.yaw,0]);
+      const frontage=frontages.get(b.id);
+      if(frontage) {
+        // Deep tube houses can address two streets; retain a distinct rear trading frontage.
+        const faces=new Set();
+        for(const street of frontage.sort((a,b)=>a.distance-b.distance)) {
+          const dx=street.x-b.x,dz=street.z-b.z,lx=cos*dx-sin*dz,lz=sin*dx+cos*dz;
+          const face=Math.abs(lx)/w>Math.abs(lz)/d?`x:${Math.sign(lx)}`:`z:${Math.sign(lz)}`;
+          if(faces.has(face)||faces.size===2)continue;
+          faces.add(face);this.buildMappedFrontage(b,w,d,h,street);
+        }
+        const roof=['tile:#535c51','tile:#6a6554','tile:#665c4d'][b.id%3];
+        this.part('mapBlock',roof,[b.x,h+rise+.025,b.z],[w+.19,.07,.09],[0,b.yaw,0]);
+        const channels=Math.max(4,Math.min(18,Math.ceil(w/.16)));
+        for(const side of [-1,1]) {
+          const slope=Math.atan2(rise,d/2),offset=side*d/4;
+          const rotation=new THREE.Euler().setFromRotationMatrix(new THREE.Matrix4().makeRotationY(b.yaw).multiply(new THREE.Matrix4().makeRotationX(side*slope)));
+          for(let j=0;j<=channels;j++) {
+            const u=(j/channels-.5)*w;
+            this.part('mapBlock',roof,[b.x+cos*u+sin*offset,h+rise/2+.025,b.z-sin*u+cos*offset],
+              [.025,.025,Math.hypot(d/2,rise)+.09],[rotation.x,rotation.y,rotation.z]);
+          }
+        }
+      }
+      else this.part('mapBlock','timber',[b.x+sin*d*.48,h*.43,b.z+cos*d*.48],[Math.min(w*.55,.6),h*.62,.025],[0,b.yaw,0]);
+    }
+  }
+
+  buildMappedFrontage(b,w,d,h,street) {
+    const cos=Math.cos(b.yaw),sin=Math.sin(b.yaw),dx=street.x-b.x,dz=street.z-b.z;
+    const lx=cos*dx-sin*dz,lz=sin*dx+cos*dz;
+    const sideX=Math.abs(lx)/w>Math.abs(lz)/d;
+    const localX=sideX?Math.sign(lx):0,localZ=sideX?0:Math.sign(lz);
+    const nx=cos*localX+sin*localZ,nz=-sin*localX+cos*localZ;
+    const yaw=Math.atan2(nx,nz),half=sideX?w/2:d/2,span=sideX?d:w;
+    const seed=hash01(`map-front:${b.id}`),upper=h>1.13,ground=upper?h*.51:h*.85;
+    const front=(mat,u,y,v,sx,sy,sz)=>this.part('mapBlock',mat,
+      [b.x+nx*(half+v)+nz*u,y,b.z+nz*(half+v)-nx*u],[sx,sy,sz],[0,yaw,0]);
+    // Deep timber trading bays, without inventing a business identity or address.
+    const bays=Math.max(1,Math.min(5,Math.floor(span/.48))),bay=Math.min(.58,span*.86/bays);
+    front('stone',0,.075,.10,span*.98,.11,.28);
+    front('#8c6650',0,.14,.045,span*.90,.025,.18);
+    front('timber',0,ground*.55,.025,span*.88,ground*.88,.045);
+    for(let i=0;i<bays;i++) {
+      const u=(i-(bays-1)/2)*span*.84/bays;
+      front(i===(b.id%bays)?'#262e28':'#5c4932',u,ground*.54,.052,bay*.88,ground*.77,.018);
+      front('timber',u-bay*.49,ground*.55,.075,.027,ground*.91,.04);
+      if(i!==(b.id%bays))for(let j=1;j<5;j++)front('#8c7650',u-bay/2+bay*j/5,ground*.53,.067,.012,ground*.72,.012);
+    }
+    front('timber',0,ground+.045,.075,span*.98,.065,.09);
+    // Variable upper openings and plaster surrounds distinguish masonry from low timber houses.
+    if(upper) {
+      front(street.name==='Nguyễn Thái Học'?'#d3c5a1':'stone',0,ground+.10,.035,span,.045,.10);
+      const count=Math.max(1,Math.min(4,Math.floor(span/.55))),spacing=span*.80/count;
+      for(let i=0;i<count;i++) {
+        const u=(i-(count-1)/2)*spacing,win=Math.min(.34,spacing*.66),y=ground+(h-ground)*.51,wh=(h-ground)*.59;
+        front('#d3c5a1',u,y,.025,win+.075,wh+.075,.065);
+        front('timber',u,y,.068,win,wh,.025);
+        for(let j=0;j<4;j++)front('#8c7650',u,y-wh*.38+j*wh*.24,.087,win*.88,.013,.014);
+        front('#d3c5a1',u,y+wh*.62,.07,win+.13,.035,.10);
+      }
+      if(street.name==='Nguyễn Thái Học'&&seed>.45) {
+        front('stone',0,ground+.03,.19,span*.95,.06,.38);
+        front('#d3c5a1',0,ground+.18,.35,span*.95,.07,.065);
+        for(let j=0;j<=bays;j++)front('#d3c5a1',(j/bays-.5)*span*.90,ground+.12,.35,.04,.22,.06);
+      }
+    }
+    front('timber',0,h-.025,.10,span+.08,.055,.24);
+    // Deep, uneven awnings observed on Bach Dang; restrained overhangs on the inner streets.
+    const awning=street.name==='Bạch Đằng'||seed>.57;
+    if(awning) {
+      const depth=street.name==='Bạch Đằng'?.34+seed*.13:.19;
+      front(seed>.6?'#666a52':'#79715c',0,ground+.015,depth*.48,span*.96,.035,depth);
+      for(const side of [-1,1])front('timber',side*span*.43,ground*.49,depth*.91,.022,ground,.022);
     }
   }
 

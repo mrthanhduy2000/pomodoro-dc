@@ -19,6 +19,7 @@ import { architectureOf, DEFAULT_APPEARANCE, PLACES, snowIn, streetJourney, jour
 
 const GEO = {
   detailBox: new THREE.BoxGeometry(1,1,1),
+  mapBlock: new THREE.BoxGeometry(1,1,1),
   torso: new THREE.LatheGeometry([[.68,-.5],[.78,-.43],[.65,-.15],[.85,.24],[.74,.4],[.4,.5]].map(p=>new THREE.Vector2(...p)),10),
   vase: new THREE.LatheGeometry([[.45,-.5],[.75,-.43],[1,-.12],[.9,.18],[.58,.32],[.55,.47],[.7,.5],[.56,.5],[.47,.31]].map(p=>new THREE.Vector2(...p)),16),
   bowl: new THREE.LatheGeometry([[0,-.5],[.4,-.45],[1,.5],[.88,.5],[.3,-.32],[0,-.32]].map(p=>new THREE.Vector2(...p)),16),
@@ -694,29 +695,20 @@ export class GptScene extends CityScene {
     // Bounded static context: mapped building centres, interpreted height/roof, no extra actors.
     const protectedLots=[...this.model.city.buildings.map(b=>({c:plotCenter(b.plot),w:b.site?.width||3.9,d:b.site?.depth||3.2})),
       ...(this.model.placementSites||[]).map(site=>({c:{x:site.x,z:site.z},w:site.width,d:site.depth}))];
-    const roadDistance=b=>{
-      let nearest=Infinity;
-      for(const road of MAP_ROADS)for(let i=1;i<road.points.length;i++) {
-        const a=road.points[i-1],to=road.points[i],dx=to.x-a.x,dz=to.z-a.z,length=dx*dx+dz*dz;
-        const u=length?Math.max(0,Math.min(1,((b.x-a.x)*dx+(b.z-a.z)*dz)/length)):0;
-        nearest=Math.min(nearest,Math.hypot(b.x-a.x-dx*u,b.z-a.z-dz*u));
-      }
-      return nearest+hash01(`context-order:${b.id}`)*.3;
-    };
     const context=mappedContext.buildings.map(b=>({...b,...mapPoint(b.lat,b.lon)}))
       .filter(b=>b.x>-50&&b.x<145&&b.z>-38&&b.z<25&&!protectedLots.some(p=>Math.abs(p.c.x-b.x)<(p.w+b.width)/2+.2&&Math.abs(p.c.z-b.z)<(p.d+b.depth)/2+.2))
-      .map(b=>({...b,priority:roadDistance(b)})).sort((a,b)=>a.priority-b.priority).slice(0,640);
+      .slice(0,2660);
     this.mapContext=context;
     for(const b of context) {
       const seed=hash01(`map-house:${b.id}`),h=.8+seed*.7,rise=.25+seed*.15;
       const w=b.width*.94,d=b.depth*.94,cos=Math.cos(b.yaw),sin=Math.sin(b.yaw);
-      this.part('detailBox',['wall:#bda66d','wall:#cab377','wall:#d2ba81'][b.id%3],[b.x,h/2,b.z],[w,h,d],[0,b.yaw,0]);
+      this.part('mapBlock',['wall:#bda66d','wall:#cab377','wall:#d2ba81'][b.id%3],[b.x,h/2,b.z],[w,h,d],[0,b.yaw,0]);
       for(const side of [-1,1]) {
         const offset=side*d/4,slope=Math.atan2(rise,d/2);
         const rotation=new THREE.Euler().setFromRotationMatrix(new THREE.Matrix4().makeRotationY(b.yaw).multiply(new THREE.Matrix4().makeRotationX(side*slope)));
-        this.part('detailBox',['tile:#535c51','tile:#6a6554','tile:#665c4d'][b.id%3],[b.x+sin*offset,h+rise/2,b.z+cos*offset],[w+.13,.045,Math.hypot(d/2,rise)+.09],[rotation.x,rotation.y,rotation.z]);
+        this.part('mapBlock',['tile:#535c51','tile:#6a6554','tile:#665c4d'][b.id%3],[b.x+sin*offset,h+rise/2,b.z+cos*offset],[w+.13,.045,Math.hypot(d/2,rise)+.09],[rotation.x,rotation.y,rotation.z]);
       }
-      this.part('detailBox','timber',[b.x+sin*d*.48,h*.43,b.z+cos*d*.48],[Math.min(w*.55,.6),h*.62,.025],[0,b.yaw,0]);
+      this.part('mapBlock','timber',[b.x+sin*d*.48,h*.43,b.z+cos*d*.48],[Math.min(w*.55,.6),h*.62,.025],[0,b.yaw,0]);
     }
   }
 

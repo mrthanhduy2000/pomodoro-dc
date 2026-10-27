@@ -1,3 +1,11 @@
+## 2026-10-27 — Complete mapped context coverage
+
+Production visual review found the initial640-house cap left empty blocks. Static mapped context
+now uses up to2,660 source envelopes with a dedicated instanced-box kind grouped by material;
+no per-house actors, extra lights, new simulation or resolution change. Detailed landmarks,
+fixed sites and all history remain. Lint/build,55 focused checks and fresh browser verification
+pass with zero captured errors; FPS deferred.
+
 ## 2026-10-27 — One map-led Hoi An city (ADR-108)
 
 Unify the old postcard, regional future and parcel sample routes into one shared world with

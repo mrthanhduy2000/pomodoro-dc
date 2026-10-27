@@ -106,7 +106,7 @@ City opens one map-led Hoi An preview. The old postcard, regional future button 
 sample selector are consolidated into this world (ADR-108). Earned progress is an overlay state,
 not another architectural model library. All eight mapped monuments use the current parcel kits
 and retain construction previews/workers. Thirty mapped road segments provide a dated core;
-640 bounded static context houses use mapped centres/rectangular footprint envelopes with
+2,660 bounded static context houses use mapped centres/rectangular footprint envelopes with
 interpreted heights/roofs. Forty foreground infill houses are illustrative. No preview writes
 sessions or construction credit. Unsupported regions wait for survey rather than appearing
 as geographically verified invented clusters. New mapped plans use site.version2/mapVersion1;
@@ -294,7 +294,7 @@ An earned mapped monument replaces only its matching reference illustration. Pic
 uses the real city, never synthetic progress. The same regional terrain is used during preview
 and planning; the phase slider only modifies a copied visual model. Source/road navigation is
 collapsed in the inspector. Main navigation contains no old/future/parcel sample switches.
-Native pixels/lights/shadows/reflection resolutions remain. Context is static and capped at640
+Native pixels/lights/shadows/reflection resolutions remain. Context is static and capped at2,660
 lightweight houses; foreground models retain detail. Ordinary selection keeps the same base-city
 identity, avoiding a full model rebuild. No FPS run or speed claim in this round.
 
@@ -303,3 +303,7 @@ unified scene; mapped construction uses the same worksite animation with its sit
 
 Mapped detail framing uses neighbouring site/context envelopes and raises obstructed approaches;
 legacy scenes retain their previous clearance radius.
+
+Static map-block geometry uses a dedicated plain instanced box kind, grouped by material,
+without the detailed-part spatial-cell split. This retains full mapped context coverage without
+creating per-house actors or many tiny cell batches. There is no new FPS claim.

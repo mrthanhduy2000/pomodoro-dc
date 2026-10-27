@@ -1,3 +1,8 @@
+> **2026-10-27 map-context follow-up:** production visual check found the640-house cap left
+> hollow-looking blocks. Use up to2,660 source envelopes via a dedicated static instanced-box
+> kind, grouped by material rather than detailed-part cells. No extra actors/lights or FPS run.
+> Lint/build and55 focused checks pass; fresh browser context visible with zero captured errors.
+
 > Last update: **2026-10-27 — ONE MAP-LED HOI AN WORLD; STANDING AUTO-RELEASE AUTHORIZATION.**
 > User explicitly authorizes future completed work to commit/push main/update GPT production
 > without another per-commit question. Verify Ready and the live version. Memory note saved.
@@ -9,7 +14,7 @@
 > Version1/grid replay and historical building objects/positions remain; no timer/store/SQL migration.
 > Fixed monument collisions never clone/relocate into version1 fallback. Exact completed credit stays.
 > World context is render-only; mapped earned monuments replace matching reference illustrations.
-> Native pixels/lights/maps stay.640 lightweight static context houses max; FPS remains deferred.
+> Native pixels/lights/maps stay.2,660 lightweight static context houses max; FPS remains deferred.
 > Source limits matter: point/envelope anchors are not cadastral parcels; heights/roofs/water stylised.
 > Thanh Ha/Kim Bong/Cam Thanh await proper survey; do not claim all of Hoi An is reconstructed.
 > Validation:1,949 full-suite passes, zero failures, one expected skip; three cross-checks pass.

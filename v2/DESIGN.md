@@ -331,3 +331,15 @@ receive static multi-range shells and open light wells, with original centres/bo
 Their street and service faces differ; IDs are not labelled as verified numbered properties.
 The existing material-only mapBlock batches and rendering schedules remain. Dated references
 and source disagreements/limits live in docs/HOI_AN_PARCELS.md. FPS remains deferred.
+
+### Dated Tan Ky neighbour profiles (2026-10-28)
+
+`world.js::TANKY_NEIGHBOURS` holds two frozen render-only survey references, not build sites.
+The103 profile uses the Dec2021 Street View Reaching Out frontage, and99–99A uses the Sep2023
+Ha Gia owner frontage. Source dates/tenant and subdivision limits are in docs/HOI_AN_PARCELS.md.
+The source navigator offers close framing and image links inside its existing disclosure.
+`GptScene` fits these profiles to two approximate context envelopes with fixed compressed widths,
+original centres/yaw and protected-lot rejection. Widths do not change between preview/progress.
+No accepted site or engine contract changes. Dedicated facade shapes use the existing static
+material batches and merchant-house court/rear shells. No extra actors/lights/pass or lower pixels.
+The large city remains incomplete; neither these profiles nor Google points define cadastral lots.

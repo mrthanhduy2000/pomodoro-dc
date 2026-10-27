@@ -1,3 +1,15 @@
+## 2026-10-28 — Two dated facades beside Tan Ky
+
+Verify99/103 against dated heritage business lists and actual Maps imagery. Add separate original
+profiles: pale recessed103 with blue-grey shutters and a cornice; ochre99–99A with a masonry
+balcony, shaped surrounds and stepped trading entrance. The99/99A subdivision and source-envelope
+association remain qualified. Fixed display widths fit existing lots without moving saved
+buildings; omit conflicting illustrations. Fold close-view controls and dated source links into
+the existing inspector. Preserve 3D, legacy art/history/credit, native pixels and static batching.
+Use pierced balcony/curved moulding geometry and a paved street connection. FPS remains deferred;
+no exact cadastral reconstruction/current tenant continuity claim. Validation:1,949 passes, zero
+failures, one expected skip; three cross-checks,55 focused checks, lint/build and geometry checks pass.
+
 ## 2026-10-27 — Tan Ky frontage and merchant-house block
 
 Survey the dated101 Nguyen Thai Hoc front photo, adjacent community360s on Nguyen Thai Hoc and

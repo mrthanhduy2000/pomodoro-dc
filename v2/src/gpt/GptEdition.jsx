@@ -9,7 +9,7 @@ import StatsView from '../ui/StatsView.jsx';
 import SettingsView from '../ui/SettingsView.jsx';
 import { hoursMinutes } from '../ui/format.js';
 import { PLACES, SEASONS, postcardCity, readAppearance, snowIn } from './art.js';
-import { regionalCity, DISTRICTS, MAP_ROADS, HOIAN_MAP } from './world.js';
+import { regionalCity, DISTRICTS, MAP_ROADS, HOIAN_MAP, TANKY_NEIGHBOURS } from './world.js';
 import { mapReference } from '../engine/hoianMap.js';
 import { parcelCandidates, mappedCandidates, parcelProfile, PARCEL_DISTRICTS } from '../engine/parcels.js';
 import { HOIAN_NAMES } from './hoian.js';
@@ -53,11 +53,16 @@ function BlueprintChoices({ city, onChoose, names = SHAPES, heritage = false }) 
   ))}</div>;
 }
 
-/** Warm cream/forest tokens from gpt.css; one shared city with a quiet source navigator. */
+/** Reuse cream/forest tokens and the existing serif/body hierarchy; dated references stay folded. */
 function HoiAnMapGuide({scene,motion}) {
   const roads=MAP_ROADS.filter((road,i,all)=>all.findIndex(item=>item.name===road.name)===i);
   return <details className="gpt-map-guide"><summary>Đường phố &amp; tư liệu khảo sát</summary>
     <p>Phố cổ · {HOIAN_MAP.landmarks.length} địa danh, {MAP_ROADS.length} đoạn đường có tọa độ. Nền nhà lấy tâm từ bản đồ; chiều cao, mái và bờ nước còn minh hoạ. Chưa tái hiện toàn bộ Hội An.</p>
+    <div className="gpt-preview-types">{TANKY_NEIGHBOURS.map(house=><button type="button" key={house.id}
+      title={`Mặt tiền theo ảnh ${house.date}; vị trí và tỷ lệ được diễn giải trong khuôn bản đồ hiện có.`}
+      onClick={()=>scene?.viewSurveyedHouse(house.id,motion?900:0)}>{house.label} ↗</button>)}</div>
+    <small>Mặt tiền quanh Tấn Ký theo ảnh 2021–2023; vị trí ghép vào nền bản đồ còn diễn giải.</small>
+    <p>{TANKY_NEIGHBOURS.map(house=><a key={house.id} href={house.source} target="_blank" rel="noreferrer">Tư liệu {house.label.split(' · ')[0]} · {house.date} ↗ </a>)}</p>
     <div className="gpt-preview-types">{roads.map(road=><button type="button" key={road.id} onClick={()=>{
       const points=MAP_ROADS.filter(item=>item.name===road.name).flatMap(item=>item.points),x=points.reduce((sum,p)=>sum+p.x,0)/points.length,z=points.reduce((sum,p)=>sum+p.z,0)/points.length;
       scene?.viewDistrict({x,z,span:Math.max(16,Math.min(45,Math.hypot(points.at(-1).x-points[0].x,points.at(-1).z-points[0].z)))},motion?900:0);

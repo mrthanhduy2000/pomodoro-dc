@@ -11,6 +11,12 @@ export const DISTRICTS=Object.freeze([
   {id:'camthanh',name:'Cẩm Thanh',x:59,z:16,span:26,pending:true,note:'Đang chờ khảo sát các nhánh sông và khu dân cư.',source:'https://danangfantasticity.com/en/rung-dua-bay-mau'},
 ]);
 
+// Dated facade references, attached to approximate context envelopes only; never command sites.
+export const TANKY_NEIGHBOURS=Object.freeze([
+  Object.freeze({id:595299312,label:'103 · cửa chớp xanh',style:'recessed',width:1.20,x:35.484,z:16.823,date:'12/2021',source:'https://www.google.com/maps/@?api=1&map_action=pano&pano=C--UD1xXeg-VGFv8JvtU5Q&heading=180'}),
+  Object.freeze({id:631066781,label:'99–99A · nhà ban công',style:'balcony',width:1.95,x:41.412,z:16.865,date:'9/2023',source:'https://www.google.com/maps/place/H%C3%A0+Gia+-+Kimono+and+Pyjama+Specialist/@15.8764595,108.3278388,17z/data=!4m6!3m5!1s0x31420fc701f05871:0x54566ff273cfa895!8m2!3d15.8764595!4d108.3278388!16s%2Fg%2F11twrk64yw'}),
+]);
+
 export function futureCity(city) {
   const models=HOIAN_MAP.landmarks.map((reference,i)=>{
     const bp=blueprint(reference.key),profile=parcelProfile(bp.key),site=mappedSite(bp.key,profile.width,profile.depth);

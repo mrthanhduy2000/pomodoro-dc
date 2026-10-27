@@ -257,3 +257,39 @@ models, not claimed replicas of unverified numbered houses. No sourced photo is 
 Further reading of the2016 record places the connecting range on the right and the light well
 on the left. The parcel kit therefore uses one covered gallery opposite a plaster court wall,
 within the same collision footprint. The compact two-roof massing is still not a measured plan.
+
+## Immediate Tan Ky neighbours — 2026-10-28
+
+Address checks precede models. [Heritage Centre2014 gallery list](https://hoianheritage.net/vi/news/Tin-tuc-su-kien/Gian-trung-bay-tac-pham-nghe-thuat-T-G-va-Ami-tai-Diem-dung-chan-57-Tran-phu-nam-trong-top-10-diem-trung-bay-hap-dan-tai-Khu-di-san-van-hoa-the-gioi-Hoi-An-313.html)
+records Phu Tam Photography at99 Nguyen Thai Hoc. The [heritage business list](https://www.hoianworldheritage.org.vn/vi/news/Dich-vu-uy-tin-chat-luong/Diem-kinh-doanh-dat-chuan-Van-minh-510.hwh)
+records Reaching Out at103 in its2012 table. These are dated tenants, not present occupancy claims.
+Maps currently associates103 with The Spice Route and99 with Ha Gia. The Maps99 point lies
+unhelpfully close to Tan Ky; it is NOT used to overwrite any map coordinates or saved sites.
+
+Observed images:
+- Official Google Street View, [pano C--UD1xXeg-VGFv8JvtU5Q](https://www.google.com/maps/@?api=1&map_action=pano&pano=C--UD1xXeg-VGFv8JvtU5Q), December2021,
+  camera label106 Nguyen Thai Hoc, facing the103 Reaching Out sign. Camera label is not facade
+  address. Two tall pale masonry shoulders, blue-grey louvred shutters, continuous cornice,
+  tiled cap, recessed full-height central entrance and patterned panels below ground shutters.
+  Tilted upward to inspect the upper storey. Tan Ky is visibly adjacent.
+- Ha Gia owner frontage photograph, September2023, opened from its Maps listing at99:
+  two-storey ochre frontage, masonry balcony with oval openings, shaped upper surrounds,
+  shallow awning and shop recessed behind several steps; clothing racks in the apron.
+  Image ID CIHM0ogKEICAgICZhpj4Mw. The neighbouring March2023 Tan Ky photograph contains a99A
+  sign, while the business listing says99. Use99–99A as a qualified group, not a proven
+  subdivision/ownership statement. No branded business sign is reconstructed in the model.
+- Spice Route owner interior, October2026: timber posts/ceiling, long shelves and a deep
+  shop axis. It informs modest original interior props, not a replication of products or brands.
+
+Render-only profile103 is associated with context envelope595299312 and99–99A with631066781,
+using relative street order and approximate frontage location. This association is interpretive,
+not cadastral identification. Their source centres/yaw and the map snapshot stay unchanged.
+Fixed compressed display widths fit the existing protected lots in both preview modes; a
+profile is omitted on a new collision rather than resizing an earned building or changing its
+own dimensions with progress. Display width stays above55% of the source envelope width. Never remove, relocate or shrink an earned building for a sample.
+The existing source navigator exposes the two dated facade views and their uncertainty.
+Original procedural geometry/materials only; research photographs remain outside the app.
+
+The99 reference link opens the correct Maps listing/gallery; Google may reset it to the first
+photo rather than retain the selected September2023 frontage. The source date belongs to the
+inspected frontage, not every picture in that gallery. The103 link includes the observed heading.

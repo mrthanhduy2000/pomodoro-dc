@@ -14,10 +14,27 @@ import { heritageOf } from '../engine/catalog.js';
 import { fitHeritageQuay, heritageFootprints } from './heritage.js';
 import { drawHoiAnBuilding } from './hoian.js';
 import { MAP_ROADS, mapPoint, mapReference } from '../engine/hoianMap.js';
+import { TANKY_NEIGHBOURS } from './world.js';
 import mappedContext from './hoian-buildings.json' with { type: 'json' };
 import { architectureOf, DEFAULT_APPEARANCE, PLACES, snowIn, streetJourney, journeyAt, projectGptCity, riverSite, riverCandidates, tradeAt, bridgeWalkHeight } from './art.js';
 
+function balconyPanelGeometry() {
+  const panel=new THREE.Shape().moveTo(-.5,-.5).lineTo(.5,-.5).lineTo(.5,.5).lineTo(-.5,.5).closePath();
+  for(let i=0;i<8;i++) {
+    const hole=new THREE.Path();hole.absellipse((i-3.5)/8,0,.035,.30,0,Math.PI*2,true);panel.holes.push(hole);
+  }
+  return new THREE.ExtrudeGeometry(panel,{depth:1,bevelEnabled:false,curveSegments:10}).translate(0,0,-.5);
+}
+
+function archMouldingGeometry() {
+  const arch=new THREE.Shape().moveTo(-.5,0).quadraticCurveTo(0,.5,.5,0)
+    .lineTo(.44,-.015).quadraticCurveTo(0,.40,-.44,-.015).closePath();
+  return new THREE.ExtrudeGeometry(arch,{depth:1,bevelEnabled:false,curveSegments:12}).translate(0,0,-.5);
+}
+
 const GEO = {
+  surveyBalustrade: balconyPanelGeometry(),
+  surveyArch: archMouldingGeometry(),
   detailBox: new THREE.BoxGeometry(1,1,1),
   mapBlock: new THREE.BoxGeometry(1,1,1),
   torso: new THREE.LatheGeometry([[.68,-.5],[.78,-.43],[.65,-.15],[.85,.24],[.74,.4],[.4,.5]].map(p=>new THREE.Vector2(...p)),10),
@@ -718,8 +735,16 @@ export class GptScene extends CityScene {
     // Bounded static context: mapped building centres, interpreted height/roof, no extra actors.
     const protectedLots=[...this.model.city.buildings.map(b=>({c:plotCenter(b.plot),w:b.site?.width||3.9,d:b.site?.depth||3.2})),
       ...(this.model.placementSites||[]).map(site=>({c:{x:site.x,z:site.z},w:site.width,d:site.depth}))];
-    const context=mappedContext.buildings.map(b=>({...b,...mapPoint(b.lat,b.lon)}))
-      .filter(b=>b.x>-50&&b.x<145&&b.z>-38&&b.z<25&&!protectedLots.some(p=>Math.abs(p.c.x-b.x)<(p.w+b.width)/2+.2&&Math.abs(p.c.z-b.z)<(p.d+b.depth)/2+.2))
+    const context=mappedContext.buildings.map(b=>({...b,...mapPoint(b.lat,b.lon)})).map(b=>{
+      const survey=TANKY_NEIGHBOURS.find(p=>p.id===b.id);
+      if(!survey)return b;
+      // Compress only this render-only frontage where approximate source rectangles overlap.
+      const renderWidth=survey.width;
+      const fits=protectedLots.every(lot=>Math.abs(lot.c.z-b.z)>=(lot.d+b.depth)/2+.1||
+        2*(Math.abs(lot.c.x-b.x)-lot.w/2-.12)>=renderWidth);
+      return {...b,survey,renderWidth,fits};
+    }).filter(b=>b.x>-50&&b.x<145&&b.z>-38&&b.z<25&&(b.survey?b.fits&&b.renderWidth>=b.width*.55:
+        !protectedLots.some(p=>Math.abs(p.c.x-b.x)<(p.w+b.width)/2+.2&&Math.abs(p.c.z-b.z)<(p.d+b.depth)/2+.2)))
       .slice(0,2660);
     this.mapContext=context;
     // Only nearby street frontages receive detail. All context keeps material-only batching.
@@ -750,7 +775,7 @@ export class GptScene extends CityScene {
     const merchantRow=new Set(context.filter(b=>Math.abs(b.x-tanKy.x)<8&&Math.abs(b.z-tanKy.z)<4&&Math.max(b.width,b.depth)>1.8)
       .sort((a,b)=>Math.hypot(a.x-tanKy.x,a.z-tanKy.z)-Math.hypot(b.x-tanKy.x,b.z-tanKy.z)).slice(0,10).map(b=>b.id));
     for(const b of context) {
-      if(merchantRow.has(b.id)){this.buildMappedMerchantHouse(b);continue;}
+      if(b.survey||merchantRow.has(b.id)){this.buildMappedMerchantHouse(b);continue;}
       const seed=hash01(`map-house:${b.id}`),h=.8+seed*.7,rise=.25+seed*.15;
       const w=b.width*.94,d=b.depth*.94,cos=Math.cos(b.yaw),sin=Math.sin(b.yaw);
       this.part('mapBlock',['wall:#bda66d','wall:#cab377','wall:#d2ba81'][b.id%3],[b.x,h/2,b.z],[w,h,d],[0,b.yaw,0]);
@@ -788,15 +813,15 @@ export class GptScene extends CityScene {
 
   buildMappedMerchantHouse(b) {
     // Original block variants within immutable mapped envelopes, not numbered-house replicas.
-    let w=b.width*.94,d=b.depth*.94,yaw=b.yaw;
+    let w=b.renderWidth??b.width*.94,d=b.depth*.94,yaw=b.yaw;
     if(w>d){[w,d]=[d,w];yaw+=Math.PI/2;}
     if(Math.cos(yaw)>0)yaw+=Math.PI;
     const cos=Math.cos(yaw),sin=Math.sin(yaw),seed=hash01(`merchant:${b.id}`),type=b.id%4;
     const wall=['wall:#d2b577','wall:#bea16a','wall:#d8be89','wall:#c7b68e'][type];
     const roofMat=['tile:#535c51','tile:#6a6554','tile:#665c4d'][b.id%3];
-    const put=(mat,x,y,z,sx,sy,sz,rx=0)=>{
+    const put=(mat,x,y,z,sx,sy,sz,rx=0,kind='mapBlock')=>{
       const rotation=new THREE.Euler().setFromRotationMatrix(new THREE.Matrix4().makeRotationY(yaw).multiply(new THREE.Matrix4().makeRotationX(rx)));
-      this.part('mapBlock',mat,[b.x+cos*x+sin*z,y,b.z-sin*x+cos*z],[sx,sy,sz],[rotation.x,rotation.y,rotation.z]);
+      this.part(kind,mat,[b.x+cos*x+sin*z,y,b.z-sin*x+cos*z],[sx,sy,sz],[rotation.x,rotation.y,rotation.z]);
     };
     const tiledRoof=(z,depth,h,rise,width=w)=>{
       const run=depth/2,slope=Math.atan2(rise,run),count=Math.max(4,Math.min(12,Math.ceil(width/.12)));
@@ -811,12 +836,13 @@ export class GptScene extends CityScene {
     };
     const frontDepth=d*(.28+seed*.035),rearDepth=d*.24,middleDepth=d*.19;
     const frontZ=d/2-frontDepth/2,rearZ=-d/2+rearDepth/2,middleZ=-d*.04;
-    const frontH=type===1?1.5:1.0+seed*.25,rearH=.77+seed*.25;
+    const frontH=b.survey?(b.survey.style==='recessed'?1.88:1.65):type===1?1.5:1.0+seed*.25,rearH=.77+seed*.25;
     put('paving',0,.035,0,w,.06,d);
     for(const [z,depth,h] of [[frontZ,frontDepth,frontH],[middleZ,middleDepth,.83],[rearZ,rearDepth,rearH]]) {
       for(const side of [-1,1])put(wall,side*(w/2-.035),h/2,z,.07,h,depth);
       put('timber',0,.08,z,w,.045,depth);
-      tiledRoof(z,depth,h,.20+seed*.10);
+      const behindCornice=b.survey?.style==='balcony'&&z===frontZ;
+      tiledRoof(z-(behindCornice?.10:0),depth-(behindCornice?.14:0),h,.20+seed*.10);
     }
     // Thin galleries and exposed posts connect roofed ranges around two actual air gaps.
     for(const side of [-1,1]) {
@@ -828,25 +854,40 @@ export class GptScene extends CityScene {
       }
       put('stone',side*(w/2-.11),.067,0,.04,.025,d*.55);
     }
+    if(b.survey) {
+      let nearest={distance:Infinity};
+      for(const road of MAP_ROADS.filter(r=>r.name==='Nguyễn Thái Học'))for(let i=1;i<road.points.length;i++) {
+        const a=road.points[i-1],to=road.points[i],dx=to.x-a.x,dz=to.z-a.z,length2=dx*dx+dz*dz;
+        if(length2<.0001)continue;
+        const t=Math.max(0,Math.min(1,((b.x-a.x)*dx+(b.z-a.z)*dz)/length2)),x=a.x+dx*t,z=a.z+dz*t;
+        const distance=Math.hypot(x-b.x,z-b.z);
+        if(distance<nearest.distance)nearest={x,z,distance};
+      }
+      const apron=sin*(nearest.x-b.x)+cos*(nearest.z-b.z)-d/2-.52;
+      if(apron>.03&&apron<1.8)put('paving',0,.028,d/2+apron/2,w,.045,apron+.025);
+    }
     const frontFace=d/2+.012,entry=Math.min(.30,w*.32),bay=(w-entry)/2;
     for(const side of [-1,1]) {
-      put('timber',side*(entry/2+bay/2),.47,frontFace,bay*.94,.78,.04);
-      for(let j=0;j<6;j++)put('#8c7650',side*(entry/2+bay/2),.16+j*.12,frontFace+.027,bay*.90,.012,.01);
-      put('timber',side*entry/2,.47,frontFace+.035,.035,.86,.065);
+      if(!b.survey) {
+        put('timber',side*(entry/2+bay/2),.47,frontFace,bay*.94,.78,.04);
+        for(let j=0;j<6;j++)put('#8c7650',side*(entry/2+bay/2),.16+j*.12,frontFace+.027,bay*.90,.012,.01);
+        put('timber',side*entry/2,.47,frontFace+.035,.035,.86,.065);
+      }
       // The rear has smaller practical doors, uneven limewashed shoulders and a shallow canopy.
       put(wall,side*(w+entry)/4,rearH*.46,-d/2-.012,(w-entry)/2,rearH*.92,.055);
       put('timber',side*entry*.53,.42,-d/2-.05,.035,.79,.055);
     }
-    put('timber',0,.91,frontFace+.025,w,.06,.09);
+    if(!b.survey)put('timber',0,.91,frontFace+.025,w,.06,.09);
     put('stone',0,.08,frontFace+.07,w,.09,.16);
-    if(frontH>1.35) {
+    if(b.survey)this.buildSurveyedFrontage(put,b.survey,w,d,frontH);
+    else if(frontH>1.35) {
       put(wall,0,1.21,frontFace,w,.52,.07);
       for(const x of [-w*.28,0,w*.28]) {
         put('timber',x,1.23,frontFace+.05,w*.18,.31,.025);
         for(let j=0;j<4;j++)put('#8c7650',x,1.12+j*.07,frontFace+.07,w*.15,.012,.012);
       }
     } else put(wall,0,(frontH+.91)/2,frontFace,w,Math.max(.04,frontH-.91),.06);
-    if(type!==2) {
+    if(!b.survey&&type!==2) {
       put(type===0?'#666a52':'#79715c',0,.88,frontFace+.10,w+.03,.035,.27,.12);
       for(const side of [-1,1])put('timber',side*w*.43,.43,frontFace+.21,.022,.84,.022);
     }
@@ -857,6 +898,68 @@ export class GptScene extends CityScene {
     put('#b59970',0,.073,d*.19,Math.min(.28,w*.35),.018,.24);
     put('stone',w*.22,.12,-d*.21,.16,.16,.15);
     put('foliage:#647053',w*.22,.22,-d*.21,.17,.12,.16);
+  }
+
+  buildSurveyedFrontage(put,survey,w,d,h) {
+    const face=d/2+.02,recess=survey.style==='recessed';
+    const plaster=recess?'wall:#c5c6b2':'wall:#d2b06d',trim=recess?'#a5a99b':'#d1c4a0';
+    const shutter=recess?'#607580':'timber';
+    const louvre=(x,y,z,width,height)=>{
+      put(trim,x,y,z,width+.055,height+.055,.055);
+      put(shutter,x,y,z+.04,width,height,.035);
+      put('timber',x,y,z+.065,.012,height,.012);
+      for(let j=0;j<7;j++)put(recess?'#87979b':'#8c7650',x,y-height*.42+j*height*.14,z+.065,width*.88,.012,.012);
+      put(trim,x,y-height/2-.045,z+.055,width+.10,.045,.12);
+    };
+    if(recess) {
+      // 103: tall masonry shoulders frame a full-height recessed entrance, not a flat door decal.
+      const shoulder=w*.32,door=w*.26;
+      for(const side of [-1,1]) {
+        const x=side*w*.34;
+        put(plaster,x,h/2,face,shoulder,h,.10);
+        put(trim,side*w*.49,h/2,face+.065,.045,h,.045);
+        louvre(x,.62,face+.07,w*.23,.54);
+        louvre(x,1.45,face+.07,w*.16,.38);
+        put(trim,x,.25,face+.075,w*.27,.18,.025);
+        for(let j=0;j<4;j++)put('#929b91',x+(j-1.5)*w*.052,.25,face+.095,.022,.075,.013);
+        put(plaster,side*door*.58,.81,face-.16,.065,1.62,.39);
+        put('timber',side*door*.50,.49,face-.33,.035,.88,.055);
+      }
+      put('timber',0,.49,face-.35,door,.89,.035);
+      put('timber',0,1.31,face-.31,door,.23,.055);
+      put('#65513c',0,1.06,face-.25,door*.90,.16,.035);
+      put('stone',0,.09,face-.04,door+.10,.08,.52);
+      for(const y of [h-.075,h+.005])put(trim,0,y,face+.04,w+.06,.045,.13);
+    } else {
+      // 99–99A group: open ground trading bays under an oval-pierced masonry balcony.
+      put(plaster,0,1.33,face-.17,w,.65,.065);
+      put(plaster,0,1.69,face-.14,w,.10,.065);
+      put(trim,0,1.76,face-.12,w+.06,.055,.12);
+      for(const side of [-1,1])louvre(side*w*.28,1.34,face-.11,w*.23,.43);
+      for(const x of [-w*.46,0,w*.46]) {
+        put(plaster,x,.50,face+.02,.055,.95,.075);
+        put(trim,x,1.37,face+.03,.065,.66,.10);
+        put(trim,x,1.68,face+.02,.12,.06,.13);
+      }
+      put(trim,0,.99,face+.075,w+.06,.065,.34);
+      put(trim,0,1.19,face+.22,w+.06,.055,.07);
+      put(trim,0,1.04,face+.22,w+.06,.04,.07);
+      put(trim,0,1.115,face+.22,w+.06,.18,.07,0,'surveyBalustrade');
+      for(const side of [-1,1])put(trim,side*w*.24,1.60,face-.08,w*.41,.22,.06,0,'surveyArch');
+      put('#79715c',0,.94,face+.16,w,.035,.36,.12);
+      for(let step=0;step<3;step++)put('stone',0,.04+step*.035,face+.18-step*.07,w*.86,.05,.13);
+      for(const side of [-1,1])for(let j=0;j<4;j++)put(['#947465','#6d8185','#ad9777'][j%3],side*w*.28,.39,face-.08+j*.05,.08,.43,.035);
+    }
+    // Both shells keep a few shaded interior shelves; no extra residents, lamps or product brands.
+    for(let j=0;j<3;j++)put('timber',w*.35,.29+j*.19,face-.32,w*.18,.025,.16);
+    put('glow',0,.84,face-.25,w*.30,.018,.025);
+  }
+
+  viewSurveyedHouse(id,ms=900) {
+    const house=this.mapContext?.find(b=>b.id===id&&b.survey)||TANKY_NEIGHBOURS.find(b=>b.id===id);
+    if(!house)return;
+    this.flyTo({target:{x:house.x,y:.75,z:house.z-1},position:{x:house.x+2.6,y:3.8,z:house.z-6.8}},ms);
+    this.renderDirty=true;
   }
 
   buildMappedFrontage(b,w,d,h,street) {

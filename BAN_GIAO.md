@@ -1,3 +1,22 @@
+> **2026-10-28 dated Tan Ky neighbour facades:** photo/address checks before modelling.
+> Official Street View Dec2021, camera106, shows103 Reaching Out (not camera address).
+> Ha Gia owner frontage Sep2023 at Maps99 supplies the99–99A group; subdivision remains uncertain.
+> Historical heritage lists corroborate99/103, not present tenant identity. Never merge old/new
+> business names into a timeless claim. Sources and map-anchor limits: docs/HOI_AN_PARCELS.md.
+> Two dedicated static facade profiles replace generic context: tall recessed pale103 with blue
+> shutters/cornice and ochre99–99A balcony, shaped window surrounds, steps and recessed shop.
+> Fixed compressed display widths, original context centres/yaw; omit profiles on protected-lot
+> collision. Old accepted buildings, sites, history, targets and city projection facts stay.
+> Source inspector adds two read-only close-view buttons and dated image links; no new city mode.
+> Existing material-batched instancing stays; no actor/light/render pass or pixel change.
+> Balcony holes and arch mouldings use two small reusable static extrusions, not square strips.
+> Source-facing paving joins the mapped street. No real focus/build plan created; FPS deferred.
+> Validation:1,949 full-suite passes, zero failures, one expected skip; three cross-checks pass.
+> Focused55, doc, lint/build checks pass. Finite/positive geometry, fixed dimensions across preview
+> modes, input immutability and occupied-lot omission checked. Browser close views pass, zero errors.
+> Source links verified to the correct pano/listing; Google99 gallery can reset to its first photo.
+> Final release verification follows push.
+
 > **2026-10-27 Tan Ky block follow-up:** dated imagery and heritage text precede geometry.
 > Maps front photo Beat “Baccio” Lipp: capture Mar2023/panel Apr2023, confirmed101 Nguyen Thai Hoc.
 > Two3D Solution community360s: capture Jun2019/panel Jul2019, neighbourhood fronts and Bach Dang.

@@ -13,7 +13,7 @@ import { hash01, constructionProgress, candidatePlots } from '../engine/city.js'
 import { heritageOf } from '../engine/catalog.js';
 import { fitHeritageQuay, heritageFootprints } from './heritage.js';
 import { drawHoiAnBuilding } from './hoian.js';
-import { MAP_ROADS, mapPoint, mapReference } from '../engine/hoianMap.js';
+import { MAP_ROADS, mapPoint, mapReference, MAP_STREET_SEGMENTS, mappedStreetProfile, streetEnvelopeFit } from '../engine/hoianMap.js';
 import { TANKY_NEIGHBOURS } from './world.js';
 import mappedContext from './hoian-buildings.json' with { type: 'json' };
 import { architectureOf, DEFAULT_APPEARANCE, PLACES, snowIn, streetJourney, journeyAt, projectGptCity, riverSite, riverCandidates, tradeAt, bridgeWalkHeight } from './art.js';
@@ -329,6 +329,7 @@ export class GptScene extends CityScene {
     this.drop = null;
     this.plotTiles = null;
     this.batches = new Map();
+    this.streetFits=new Map();
     this.artMaterials = new Map();
     this.textures ??= new Map();
     this.actors = [];
@@ -403,6 +404,7 @@ export class GptScene extends CityScene {
       this.part('box', '#b77852', [1.6 + (i % 3) * 0.2, 0.12 + Math.floor(i / 9) * 0.1, 1.6 + (Math.floor(i / 3) % 3) * 0.2], [0.17, 0.09, 0.17], [0, 0, 0], { type: 'brick', brick });
     });
     this.buildMilestones();
+    if(this.model.city.geoPlan)this.fitMappedStreetModels();
     this.flushParts();
     this.createWeather();
     this.fitShadow(this.bounds);
@@ -521,7 +523,7 @@ export class GptScene extends CityScene {
     fitHeritageQuay(matrix,this.heritageQuays?.get(planId));
     const bridgeRotation=this.bridgeRotations?.get(planId);
     if(bridgeRotation)matrix.premultiply(bridgeRotation);
-    this.batches.get(key).parts.push({ matrix, pick });
+    this.batches.get(key).parts.push({ matrix, pick, streetOwner:planId||this.streetOwner, context:this.activeContext });
   }
 
   beam(mat, from, to, radius = 0.035, pick = null) {
@@ -754,11 +756,7 @@ export class GptScene extends CityScene {
     const north=[{x:-100,z:11},{x:-1.1,z:10},{x:-1.1,z:-75},{x:1.1,z:-75},{x:1.1,z:10},{x:9.864,z:12.8},...bank.map(p=>({x:p.x,z:p.z+1.3})),{x:200,z:12}];
     const south=[{x:200,z:36},...bank.slice().reverse().map(p=>({x:p.x,z:p.z+11})),{x:-100,z:31}];
     this.createRiver(new THREE.ShapeGeometry(new THREE.Shape([...north,...south].map(p=>new THREE.Vector2(p.x,-p.z)))),0);
-    for(const road of MAP_ROADS)for(let i=1;i<road.points.length;i++) {
-      const a=road.points[i-1],b=road.points[i],dx=b.x-a.x,dz=b.z-a.z,length=Math.hypot(dx,dz);
-      if(length<.02)continue;
-      this.part('box','paving',[(a.x+b.x)/2,.015,(a.z+b.z)/2],[road.name==='Cầu An Hội'?1.3:1.05,.06,length+.03],[0,Math.atan2(dx,dz),0]);
-    }
+    this.buildMappedStreets();
     // Surveyed quay language; offsets remain illustrative, not a measured river boundary.
     for(let i=1;i<bank.length;i++) {
       const a=bank[i-1],b=bank[i],dx=b.x-a.x,dz=b.z-a.z,length=Math.hypot(dx,dz);
@@ -792,7 +790,9 @@ export class GptScene extends CityScene {
     }
     for(const b of this.model.city.buildings)if(!b.riverBridge) {
       const c=plotCenter(b.plot),scale=b.world||{sx:1,sz:1};
+      this.streetOwner=b.planId;
       this.part('box','paving',[c.x,-.015,c.z],[3.5*scale.sx,.06,2.8*scale.sz]);
+      this.streetOwner=null;
     }
     // Bounded static context: mapped building centres, interpreted height/roof, no extra actors.
     const protectedLots=[...this.model.city.buildings.map(b=>({c:plotCenter(b.plot),w:b.site?.width||3.9,d:b.site?.depth||3.2})),
@@ -837,9 +837,87 @@ export class GptScene extends CityScene {
     const merchantRow=new Set(context.filter(b=>Math.abs(b.x-tanKy.x)<8&&Math.abs(b.z-tanKy.z)<4&&Math.max(b.width,b.depth)>1.8)
       .sort((a,b)=>Math.hypot(a.x-tanKy.x,a.z-tanKy.z)-Math.hypot(b.x-tanKy.x,b.z-tanKy.z)).slice(0,10).map(b=>b.id));
     for(const b of context) {
-      if(b.survey||merchantRow.has(b.id)){this.buildMappedMerchantHouse(b);continue;}
-      this.buildMappedContextHouse(b,frontages.get(b.id));
+      this.activeContext=b;
+      if(b.survey||merchantRow.has(b.id))this.buildMappedMerchantHouse(b);
+      else this.buildMappedContextHouse(b,frontages.get(b.id));
+      this.activeContext=null;
     }
+  }
+
+  buildMappedStreets() {
+    // The full walking corridor is terrain, fixed independently of city progress.
+    for(const road of MAP_ROADS) {
+      const profile=mappedStreetProfile(road),{width,sidewalk,halfWidth,raised}=profile;
+      const bridge=road.name==='Cầu An Hội',surface=road.surface==='wood'?'timber':road.surface==='paving_stones'?'#958d79':'#777d76';
+      for(let i=1;i<road.points.length;i++) {
+        const a=road.points[i-1],b=road.points[i],dx=b.x-a.x,dz=b.z-a.z,length=Math.hypot(dx,dz);
+        if(length<.02)continue;
+        const yaw=Math.atan2(dx,dz),nx=dz/length,nz=-dx/length,mx=(a.x+b.x)/2,mz=(a.z+b.z)/2;
+        this.part('mapBlock','paving',[mx,.035,mz],[halfWidth*2,.09,length+.03],[0,yaw,0]);
+        this.part('mapBlock',surface,[mx,.086,mz],[width,.018,length+.035],[0,yaw,0]);
+        for(const side of [-1,1]) {
+          const slabs=Math.max(1,Math.ceil(length/.65));
+          for(let j=0;j<slabs;j++) {
+            const t=(j+.5)/slabs,x=a.x+dx*t+nx*side*width/2,z=a.z+dz*t+nz*side*width/2;
+            // Open the kerb at intersections rather than walling off a crossing street.
+            const crossing=MAP_STREET_SEGMENTS.some(other=>{
+              if(other.roadId===road.id)return false;
+              const alignment=Math.abs((dx*other.dx+dz*other.dz)/(length*other.length));
+              if(alignment>.92)return false;
+              const u=Math.max(0,Math.min(1,((x-other.a.x)*other.dx+(z-other.a.z)*other.dz)/(other.length*other.length)));
+              return Math.hypot(x-other.a.x-other.dx*u,z-other.a.z-other.dz*u)<other.halfWidth+.12;
+            });
+            const lifted=raised&&!crossing;
+            this.part('mapBlock','paving',[x+nx*side*sidewalk/2,lifted?.115:.086,z+nz*side*sidewalk/2],[sidewalk,lifted?.035:.018,length/slabs+.008],[0,yaw,0]);
+            if(!crossing&&!bridge)this.part('mapBlock',raised?'stone':'#958d79',[x,raised?.113:.093,z],[.045,raised?.055:.012,length/slabs-.035],[0,yaw,0]);
+          }
+        }
+      }
+    }
+  }
+
+  fitMappedStreetModels() {
+    // Inspect complete emitted geometry, including roofs/awnings/steps, before instancing.
+    const groups=new Map(),buildings=new Map(this.model.city.buildings.map(b=>[b.planId,b]));
+    for(const batch of this.batches.values()) {
+      if(!batch.geo.boundingBox)batch.geo.computeBoundingBox();
+      for(const part of batch.parts) {
+        const owner=part.context?`context:${part.context.id}`:part.streetOwner;
+        if(!owner)continue;
+        const building=buildings.get(owner);
+        if(building?.riverBridge)continue;
+        if(!groups.has(owner))groups.set(owner,{owner,building,context:part.context,box:new THREE.Box3(),parts:[]});
+        const group=groups.get(owner);group.parts.push(part);
+        group.box.union(batch.geo.boundingBox.clone().applyMatrix4(part.matrix));
+      }
+    }
+    this.streetFits=new Map();this.streetModelBounds=[];
+    const occupied=[];
+    const overlap=(a,b)=>Math.abs(a.x-b.x)<(a.width+b.width)/2+.025&&Math.abs(a.z-b.z)<(a.depth+b.depth)/2+.025;
+    const ordered=[...groups.values()].sort((a,b)=>Number(!!a.context)-Number(!!b.context)||Number(!!b.context?.survey)-Number(!!a.context?.survey)||(a.context?.id||0)-(b.context?.id||0));
+    for(const group of ordered) {
+      const {box,context,building,owner}=group,anchor=context||plotCenter(building.plot);
+      const center=box.getCenter(new THREE.Vector3()),size=box.getSize(new THREE.Vector3());
+      const envelope={x:center.x,z:center.z,width:size.x,depth:size.z};
+      const fit=streetEnvelopeFit(envelope,anchor);let scale=1;
+      const at=s=>({...envelope,x:anchor.x+(envelope.x-anchor.x)*fit.x*s,z:anchor.z+(envelope.z-anchor.z)*fit.z*s,width:envelope.width*fit.x*s,depth:envelope.depth*fit.z*s});
+      // Only illustrative context is culled/compressed against other buildings; earned facts stay.
+      if(context&&fit.x*fit.z>.001&&occupied.some(other=>overlap(at(scale),other))) {
+        let lo=0,hi=scale;
+        for(let i=0;i<16;i++){const mid=(lo+hi)/2;if(occupied.some(other=>overlap(at(mid),other)))hi=mid;else lo=mid;}
+        scale=lo;
+      }
+      const omitted=(context&&Math.min(fit.x,fit.z)*scale<.40)||(building?.illustrative&&Math.min(fit.x,fit.z)<.25);
+      if(omitted){for(const part of group.parts)part.streetOmit=true;continue;}
+      // A saved anchor on a mapped street cannot be moved or erased by an art repair.
+      if(fit.x===0||fit.z===0){fit.x=1;fit.z=1;}
+      const matrix=new THREE.Matrix4().makeTranslation(anchor.x,0,anchor.z)
+        .multiply(new THREE.Matrix4().makeScale(fit.x*scale,1,fit.z*scale)).multiply(new THREE.Matrix4().makeTranslation(-anchor.x,0,-anchor.z));
+      for(const part of group.parts)part.matrix.premultiply(matrix);
+      this.streetFits.set(owner,matrix);const fitted=at(scale);occupied.push(fitted);
+      this.streetModelBounds.push({owner,...fitted,scaleX:fit.x*scale,scaleZ:fit.z*scale});
+    }
+    for(const [key,batch] of this.batches){batch.parts=batch.parts.filter(part=>!part.streetOmit);if(!batch.parts.length)this.batches.delete(key);}
   }
 
   buildMappedContextHouse(b,frontage) {
@@ -1072,6 +1150,7 @@ export class GptScene extends CityScene {
 
   buildFutureLife() {
     for(const b of this.model.city.buildings) {
+      this.streetOwner=b.planId;
       if(b.site?.version===1||(!b.site&&!b.illustrative))continue;
       if(constructionProgress(b)<1){
         this.activeBridge=b.site||b.riverBridge?b.planId:null;
@@ -1095,6 +1174,7 @@ export class GptScene extends CityScene {
       }
       else if(b.site)this.streetPerson(c.x,.015,c.z+Math.cos(b.site.yaw)*(b.site.depth/2+.45),`${b.planId}:visitor`,'walk',Math.PI/2,null,{axis:'x',length:1.2});
     }
+    this.streetOwner=null;
   }
 
   buildLandscape() {
@@ -1455,6 +1535,7 @@ export class GptScene extends CityScene {
       for(const side of [-1,1])part(actor.arms[1].elbow,'pole','timber',[side*.008,-.105,.055],[.003,.13,.003],[Math.PI/3,0,0]);
     }
     if(pose==='sit')part(actor.arms[1].elbow,'taper','#c8b98d',[0,-.12,0],[.025,.04,.025]);
+    actor.streetOwner=this.activeBridge||this.streetOwner;
     actor.bridgeRotation=this.bridgeRotations?.get(this.activeBridge);
     actor.parcelSite=this.activeBridge?this.model.city.buildings.find(b=>b.planId===this.activeBridge)?.site:null;
     this.actors.push(actor);return actor;
@@ -1472,6 +1553,17 @@ export class GptScene extends CityScene {
         }
         matrix.premultiply(actor.rigidSite);
       }else matrix.premultiply(actor.bridgeRotation);
+    }
+    const streetFit=this.streetFits?.get(actor.streetOwner);
+    if(streetFit&&node.userData.trade)matrix.premultiply(streetFit);
+    else if(streetFit) {
+      if(!actor.streetShift||actor.streetTick!==actor.poseTick) {
+        actor.streetRoot??=new THREE.Vector3();actor.streetShift??=new THREE.Vector3();
+        const root=actor.streetRoot.setFromMatrixPosition(actor.root.matrixWorld);
+        if(actor.bridgeRotation)root.applyMatrix4(actor.bridgeRotation);
+        actor.streetShift.copy(root).applyMatrix4(streetFit).sub(root);actor.streetTick=actor.poseTick;
+      }
+      matrix.elements[12]+=actor.streetShift.x;matrix.elements[14]+=actor.streetShift.z;
     }
     return matrix;
   }

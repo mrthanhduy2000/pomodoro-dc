@@ -357,3 +357,21 @@ The retained OSM response supplies37 matching way-level floor-count tags; absent
 height, facade identity, materials and roof selection are still interpretations. Shared forms vary
 by immutable source ID/proportion, independent of focus credit. This is whole-stock art coverage,
 not a measured replica of every address. Survey and evidence limits: docs/HOI_AN_PARCELS.md.
+
+### Street clearance repair (2026-10-28)
+
+The retained OSM response now supplies61 original highway/surface/sidewalk/bridge tags on the
+same30 ways; IDs, coordinates, projection, map version and canonical accepted sites are unchanged.
+`hoianMap.js` defines interpreted carriageway/walking margins and conservative segment-envelope
+clearance. No road-width survey is claimed. `GptScene` draws contrasting carriageways, low paved
+walking margins and kerbs with lowered/open crossings; source sidewalk=no uses flush margins.
+Bridge deck approaches retain their separate treatment. Terrain never follows focus progress.
+Before uploading static instances, `fitMappedStreetModels` bounds the full emitted model, including
+roof/awning/threshold and owned props. It contracts display X/Z around the unchanged anchor to
+clear street/sidewalk corridors. Context models also avoid previously accepted display envelopes;
+surveyed fronts precede generic context. Unusable context/illustrative houses are omitted, never
+earned records. Actors retain human proportions and follow their owner's fitted position; trading
+props follow the same fit. This is a conservative visual correction, not cadastral lot geometry.
+A saved anchor already inside a corridor is retained rather than moved/erased; this exceptional
+legacy case cannot be certified collision-free by this art repair. Rendering does not change plan
+validation, event replay, focus credit or persistence. Source-envelope data remain unmodified.

@@ -1314,8 +1314,8 @@ sites to the shared command. `docs/HOI_AN_PARCELS.md` records dated imagery and 
 `v2/src/engine/hoian-map.json`: dated public OSM road, monument and building-envelope snapshot
 with source/license metadata. Building envelopes are separately lazy-loaded from
 `v2/src/gpt/hoian-buildings.json`, keeping heavy context out of the engine/Focus.
-`hoianMap.js`: pure projection/reference lookup and frozen-version
-site derivation. `parcels.js::mappedCandidates`: opt-in fixed monument addresses, without changing
+`hoianMap.js`: pure projection/reference lookup, frozen-version site derivation and render-only
+street corridor/clearance helpers. `parcels.js::mappedCandidates`: opt-in fixed monument addresses, without changing
 the version1 allocator. `gpt/world.js::regionalCity`: one read-only context composition preserving
 earned objects. `GptScene::buildMappedLandscape`: roads, interpreted water and capped static houses.
 Source/date limits and expansion backlog are in `docs/HOI_AN_PARCELS.md`.

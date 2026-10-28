@@ -205,3 +205,21 @@ test('one regional world uses upgraded parcel kits and preserves earned building
   }
   assert.equal(JSON.stringify(city),before);
 });
+
+
+test('street clearance fits display geometry without mutating recorded sites or road coordinates',async()=>{
+  const {streetEnvelopeFit,streetIntersectsEnvelope,MAP_ROADS}=await import('../engine/hoianMap.js');
+  const {mappedCandidates}=await import('../engine/parcels.js');
+  const site=freeze(mappedCandidates({buildings:[]},'ha-tanky-v1')[0]);
+  const source=JSON.stringify({site,roads:MAP_ROADS});
+  const envelope={x:site.x,z:site.z,width:site.width+.5,depth:site.depth+.6};
+  assert.equal(streetIntersectsEnvelope(envelope),true,'the released oversized shell blocks a street');
+  const fit=streetEnvelopeFit(envelope,site);
+  const shown={...envelope,width:envelope.width*fit.x,depth:envelope.depth*fit.z};
+  assert.ok(fit.x>0&&fit.z>0&&fit.x<=1&&fit.z<=1);
+  assert.equal(streetIntersectsEnvelope(shown),false,'roof/threshold extent clears the full walking corridor');
+  assert.deepEqual(streetEnvelopeFit(envelope,site),fit,'no progress-dependent terrain adjustment');
+  const p=MAP_ROADS.find(r=>r.name==='Nguyễn Thái Học').points[2];
+  assert.deepEqual(streetEnvelopeFit({...p,width:2,depth:2}),{x:0,z:0},'illustrative houses centred on a street must be rejected');
+  assert.equal(JSON.stringify({site,roads:MAP_ROADS}),source);
+});

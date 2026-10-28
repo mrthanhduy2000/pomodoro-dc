@@ -323,3 +323,24 @@ per-house objects; selected street fronts keep a bounded extra detail layer. Cen
 width/depth/yaw and earned sites/history remain. No extra actor/light/reflection pass or pixel
 reduction. Roof/court interpretation varies deterministically by envelope proportion and ID,
 not by focus credit or construction progress. Individual whole-city exactness remains unfinished.
+
+## Street/house clearance repair — 2026-10-28
+
+The previous full-envelope models could cover roads because neither rectangle fitting nor roof,
+awning and threshold extents reserved a walking corridor. This release checks emitted geometry,
+not only source-centre distance. It contracts display geometry around fixed anchors and rejects
+unusable illustrative context. Source envelopes, accepted plans and road coordinates are retained.
+The new display bounds are not measured property boundaries. Very deep interpreted landmark
+models can become compressed: correct circulation does not prove exact architectural dimensions.
+
+The retained OSM response adds61 original highway/surface/sidewalk/bridge tags, matched by way ID.
+For example35952527 (Le Loi) has sidewalk=both;35952581 (Tran Phu) has sidewalk=no. Accordingly
+raised kerbs are not presented as universal to all Hoi An streets; flush walking margins are used
+where the snapshot says no sidewalk. Widths remain interpreted at the existing5-metres-per-unit
+scale; bridge approaches have separate margins. Kerbs/raised slabs open at crossing streets.
+
+[Heritage portal: trading streets](https://hoianworldheritage.org.vn/vi/news/Dat-va-nguoi-Hoi-An/hoi-an-xay-dung-tuyen-pho-van-minh-thuong-mai-2781.hwh)
+corroborates commercial Tran Phu/Nguyen Thi Minh Khai street context, not exact kerb measurements.
+[Heritage Centre urban overview](https://hoianheritage.danang.gov.vn/vi/trao-doi-chuyen-nganh/chuyen-de-nghien-cuu-trao-doi/tong-quan-ve-di-san-kien-truc-khu-pho-co-hoi-an-1307.html)
+describes parallel river streets and intersecting streets/alleys; it does not supply frontage widths.
+No Google images, road tiles or meshes are imported into the product. FPS remains deferred.

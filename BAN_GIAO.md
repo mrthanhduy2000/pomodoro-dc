@@ -1,3 +1,20 @@
+> **2026-10-28 street clearance repair:** fix models crossing roads/walking margins.
+> Same source road IDs/points/version;61 retained OSM road tags added. Carriageways, low paved
+> margins, kerbs and open/lowered intersections replace uniform paving strips. Source sidewalk=no
+> uses flush margins. Widths remain interpreted; see docs/HOI_AN_PARCELS.md.
+> Full emitted model bounds include roofs/awnings/steps/owned props. Display X/Z fit contracts
+> about unchanged anchors before instancing; context also avoids other display envelopes.
+> Unusable context/illustrative houses are omitted; saved buildings/sites/history remain.
+> Actors stay upright/full-sized; trade goods use the owner fit. No added frame-time collision
+> work, light/pass or reduced pixels. Source building envelopes and event facts unchanged.
+> Deep illustrative kits may compress; a legacy anchor inside a corridor remains protected
+> rather than moved/erased. This cannot certify every historical placement collision-free.
+> Validation:1,950 full-suite passes, zero failures, one expected skip; three cross-checks pass.
+> Focused35 (including docs), lint/build pass. Two full emitted-scene fixtures with street life
+> retain input and finite matrices, with zero corridor overlaps. Local overview, close fronts and
+> 35/70-percent construction previews pass without captured errors. Production check follows push.
+> Actor fit offsets are cached per pose tick; FPS remains deferred.
+
 > **2026-10-28 shared mapped housing stock:** extend the remaining displayed context houses.
 > Heritage Centre shop-house/architecture records and dated Duc An interior precede geometry.
 > Sources and uncertainty: docs/HOI_AN_PARCELS.md. No whole-city exact-replica claim.

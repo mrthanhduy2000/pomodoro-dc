@@ -1,3 +1,18 @@
+## 2026-10-28 — Street, sidewalk and complete-model clearance
+
+Retain source road coordinates and add61 source OSM surface/sidewalk/highway/bridge tags.
+Separate carriageways, low paved walking margins and kerbs; open/lower crossings and respect
+source sidewalk=no with flush margins. Before static upload, fit full emitted model geometry
+including roofs/awnings/steps to the walking corridor around unchanged anchors. Prioritise dated
+facades; reject unusable illustrative context and prevent context/building overlap. Keep actor
+proportions and align trade props with their owner's visual fit. Recorded plans/sites/history,
+source building envelopes, native pixels and lights stay. Widths and display compression remain
+interpreted; anchors already on a road are protected legacy exceptions, not silently relocated.
+Sources/limits: docs/HOI_AN_PARCELS.md. FPS remains deferred.
+Validation:1,950 passes, zero failures, one expected skip; three cross-checks pass. Focused35,
+lint/build pass; both full emitted-scene fixtures retain input with zero corridor overlaps.
+Local close/overview and35/70-percent previews pass without captured errors.
+
 ## 2026-10-28 — Shared housing across the mapped city
 
 Replace remaining solid context bodies with four shared hollow house assemblies based on

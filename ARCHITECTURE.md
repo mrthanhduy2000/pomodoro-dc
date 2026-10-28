@@ -1462,3 +1462,10 @@ still pass through cmdPlan; no migration or second store. A mapped collision can
 fall back to an unrelated version1 address. `regionalCity` composes reference/context records
 with original earned building objects for rendering only. All preview controls use this same
 world and shared heritage kits; synthetic records never become session credit.
+
+### GPT street/model clearance (2026-10-28)
+The existing `hoianMap.js` also projects interpreted road/walking corridors from the fixed map.
+`GptScene` uses them at rebuild time to bound and fit emitted model instances about unchanged
+plot/site anchors, before static upload. Context rejection affects presentation only; it never
+feeds commands, allocation or event replay. Road terrain is independent of progress. See
+`v2/DESIGN.md` for visual compression and legacy-anchor limitations.

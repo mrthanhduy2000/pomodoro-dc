@@ -32,6 +32,64 @@ function archMouldingGeometry() {
   return new THREE.ExtrudeGeometry(arch,{depth:1,bevelEnabled:false,curveSegments:12}).translate(0,0,-.5);
 }
 
+// Unit assemblies are shared by every mapped house; no per-house mesh tree or simulation.
+const HOUSING_FORMS=[
+  {name:'mapLow',blocks:[[.12,.76,1]],gallery:false,upper:false},
+  {name:'mapCourt',blocks:[[.34,.32,1],[-.35,.30,.78]],gallery:true,upper:false},
+  {name:'mapLoft',blocks:[[.35,.30,1],[-.06,.18,.70],[-.375,.25,.77]],gallery:true,upper:false},
+  {name:'mapMasonry',blocks:[[.35,.30,1],[-.35,.30,.65]],gallery:true,upper:true},
+];
+
+function housingGeometry(form,role,fine=false) {
+  const parts=[];
+  const box=(x,y,z,w,h,d,rx=0)=>parts.push(new THREE.BoxGeometry(w,h,d).toNonIndexed().rotateX(rx).translate(x,y,z));
+  for(const [z,depth,h] of form.blocks) {
+    if(role==='wall') {
+      if(form.upper&&z>0)box(0,.78,z+depth/2,.93,.44,.04);
+      for(const side of [-1,1])box(side*.48,h/2,z,.04,h,depth);
+      for(const side of [-1,1])box(side*.33,h*.38,z-depth/2,.30,h*.76,.035);
+      for(const side of [-1,1]) {
+        const gable=new THREE.Shape().moveTo(-depth/2,0).lineTo(depth/2,0).lineTo(0,.19).closePath();
+        parts.push(new THREE.ExtrudeGeometry(gable,{depth:.025,bevelEnabled:false}).rotateY(Math.PI/2).translate(side*.48,h,z));
+      }
+    }
+    if(role==='roof') {
+      const rise=.19,run=depth/2,slope=Math.atan2(rise,run),length=Math.hypot(run,rise)+.025;
+      for(const side of [-1,1]) {
+        box(0,h+rise/2,z+side*depth/4,1.035,.015,length,side*slope);
+        box(0,h-.008,z+side*(run+.008),1.045,.025,.025);
+        if(fine)for(let j=0;j<9;j++)box((j/8-.5),h+rise/2+.012,z+side*depth/4,.012,.015,length,side*slope);
+      }
+      box(0,h+rise+.012,z,1.05,.035,.035);
+    }
+    if(role==='timber') {
+      const ground=form.upper&&z>0 ? .50 : h*.77;
+      for(const side of [-1,1])box(side*.21,ground/2,z+depth/2+.015,.027,ground,.045);
+      box(0,ground,z+depth/2+.02,.91,.045,.05);
+      for(const side of [-1,1])box(side*.35,ground*.48,z+depth/2-.045,.23,ground*.78,.03);
+      box(0,h-.015,z,.91,.025,depth*.95);
+    }
+  }
+  if(role==='wall'&&form.gallery)box(-.48,.32,0,.04,.64,.99);
+  if(role==='roof'&&form.gallery)box(.43,.63,0,.16,.025,.69);
+  if(role==='timber'&&form.gallery)for(const z of [-.23,.20])box(.43,.31,z,.025,.62,.027);
+  if(role==='timber') {
+    box(0,.08,.505,.34,.10,.025);
+    if(form.upper)for(const x of [-.26,.26]) {
+      box(x,.83,.515,.20,.25,.025);
+      for(let j=0;j<4;j++)box(x,.75+j*.05,.535,.18,.012,.012);
+    }
+  }
+  if(role==='floor') {
+    box(0,.035,0,.97,.04,.99);
+    box(0,.055,.515,.91,.05,.065);
+    box(0,.028,.55,.94,.035,.04);
+  }
+  const geometry=mergeGeometries(parts,false);
+  for(const part of parts)part.dispose();
+  return geometry;
+}
+
 const GEO = {
   surveyBalustrade: balconyPanelGeometry(),
   surveyArch: archMouldingGeometry(),
@@ -50,6 +108,10 @@ const GEO = {
   roofTile: new THREE.CylinderGeometry(1, 1, 1, 8, 1, true, Math.PI/2, Math.PI),
   taper: new THREE.CylinderGeometry(0.68, 1, 1, 4).rotateY(Math.PI / 4),
 };
+for(const form of HOUSING_FORMS) {
+  for(const role of ['wall','roof','timber','floor'])GEO[`${form.name}:${role}`]=housingGeometry(form,role);
+  GEO[`${form.name}:roofFine`]=housingGeometry(form,'roof',true);
+}
 const clothPositions=GEO.cloth.attributes.position;
 for(let i=0;i<clothPositions.count;i+=1)clothPositions.setY(i,Math.sin(clothPositions.getX(i)*Math.PI*6)*.045*(clothPositions.getZ(i)+.5));
 GEO.cloth.computeVertexNormals();
@@ -776,38 +838,35 @@ export class GptScene extends CityScene {
       .sort((a,b)=>Math.hypot(a.x-tanKy.x,a.z-tanKy.z)-Math.hypot(b.x-tanKy.x,b.z-tanKy.z)).slice(0,10).map(b=>b.id));
     for(const b of context) {
       if(b.survey||merchantRow.has(b.id)){this.buildMappedMerchantHouse(b);continue;}
-      const seed=hash01(`map-house:${b.id}`),h=.8+seed*.7,rise=.25+seed*.15;
-      const w=b.width*.94,d=b.depth*.94,cos=Math.cos(b.yaw),sin=Math.sin(b.yaw);
-      this.part('mapBlock',['wall:#bda66d','wall:#cab377','wall:#d2ba81'][b.id%3],[b.x,h/2,b.z],[w,h,d],[0,b.yaw,0]);
-      for(const side of [-1,1]) {
-        const offset=side*d/4,slope=Math.atan2(rise,d/2);
-        const rotation=new THREE.Euler().setFromRotationMatrix(new THREE.Matrix4().makeRotationY(b.yaw).multiply(new THREE.Matrix4().makeRotationX(side*slope)));
-        this.part('mapBlock',['tile:#535c51','tile:#6a6554','tile:#665c4d'][b.id%3],[b.x+sin*offset,h+rise/2,b.z+cos*offset],[w+.13,.045,Math.hypot(d/2,rise)+.09],[rotation.x,rotation.y,rotation.z]);
+      this.buildMappedContextHouse(b,frontages.get(b.id));
+    }
+  }
+
+  buildMappedContextHouse(b,frontage) {
+    const seed=hash01(`map-house:${b.id}`),w=b.width*.94,d=b.depth*.94;
+    const level=b.levels??(seed>.77?2:1);
+    const type=level>=2?3:d>w*1.35?(seed>.45?2:1):0;
+    const form=HOUSING_FORMS[type],h=b.levels ? .18+b.levels*.62 : .86+seed*.54;
+    let yaw=b.yaw;
+    if(frontage?.length) {
+      const near=frontage.slice().sort((a,c)=>a.distance-c.distance)[0];
+      if(Math.sin(yaw)*(near.x-b.x)+Math.cos(yaw)*(near.z-b.z)<0)yaw+=Math.PI;
+    }
+    const rotation=[0,yaw,0],position=[b.x,0,b.z],scale=[w,h,d];
+    const wall=['wall:#bda66d','wall:#cab377','wall:#d2ba81','wall:#c5bfaa','wall:#d2b992'][b.id%5];
+    const roof=['tile:#535c51','tile:#6a6554','tile:#665c4d'][b.id%3];
+    this.part(`${form.name}:wall`,wall,position,scale,rotation);
+    this.part(`${form.name}:${frontage?'roofFine':'roof'}`,roof,position,scale,rotation);
+    this.part(`${form.name}:timber`,'timber',position,scale,rotation);
+    this.part(`${form.name}:floor`,'paving',position,scale,rotation);
+    if(frontage) {
+      const faces=new Set(),cos=Math.cos(b.yaw),sin=Math.sin(b.yaw);
+      for(const street of frontage) {
+        const dx=street.x-b.x,dz=street.z-b.z,lx=cos*dx-sin*dz,lz=sin*dx+cos*dz;
+        const face=Math.abs(lx)/w>Math.abs(lz)/d?`x:${Math.sign(lx)}`:`z:${Math.sign(lz)}`;
+        if(faces.has(face)||faces.size===2)continue;
+        faces.add(face);this.buildMappedFrontage(b,w,d,h,street);
       }
-      const frontage=frontages.get(b.id);
-      if(frontage) {
-        // Deep tube houses can address two streets; retain a distinct rear trading frontage.
-        const faces=new Set();
-        for(const street of frontage.sort((a,b)=>a.distance-b.distance)) {
-          const dx=street.x-b.x,dz=street.z-b.z,lx=cos*dx-sin*dz,lz=sin*dx+cos*dz;
-          const face=Math.abs(lx)/w>Math.abs(lz)/d?`x:${Math.sign(lx)}`:`z:${Math.sign(lz)}`;
-          if(faces.has(face)||faces.size===2)continue;
-          faces.add(face);this.buildMappedFrontage(b,w,d,h,street);
-        }
-        const roof=['tile:#535c51','tile:#6a6554','tile:#665c4d'][b.id%3];
-        this.part('mapBlock',roof,[b.x,h+rise+.025,b.z],[w+.19,.07,.09],[0,b.yaw,0]);
-        const channels=Math.max(4,Math.min(18,Math.ceil(w/.16)));
-        for(const side of [-1,1]) {
-          const slope=Math.atan2(rise,d/2),offset=side*d/4;
-          const rotation=new THREE.Euler().setFromRotationMatrix(new THREE.Matrix4().makeRotationY(b.yaw).multiply(new THREE.Matrix4().makeRotationX(side*slope)));
-          for(let j=0;j<=channels;j++) {
-            const u=(j/channels-.5)*w;
-            this.part('mapBlock',roof,[b.x+cos*u+sin*offset,h+rise/2+.025,b.z-sin*u+cos*offset],
-              [.025,.025,Math.hypot(d/2,rise)+.09],[rotation.x,rotation.y,rotation.z]);
-          }
-        }
-      }
-      else this.part('mapBlock','timber',[b.x+sin*d*.48,h*.43,b.z+cos*d*.48],[Math.min(w*.55,.6),h*.62,.025],[0,b.yaw,0]);
     }
   }
 

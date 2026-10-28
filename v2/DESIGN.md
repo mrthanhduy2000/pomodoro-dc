@@ -343,3 +343,17 @@ original centres/yaw and protected-lot rejection. Widths do not change between p
 No accepted site or engine contract changes. Dedicated facade shapes use the existing static
 material batches and merchant-house court/rear shells. No extra actors/lights/pass or lower pixels.
 The large city remains incomplete; neither these profiles nor Google points define cadastral lots.
+
+### Shared mapped housing stock (2026-10-28)
+
+All remaining displayed context houses now use four reusable unit assemblies: low timber front,
+linked courtyard ranges, loft ranges and an upper masonry front. Hollow shells, gable ends,
+roof slopes/ridges, timber openings, gallery posts, courtyard paving and stepped entrances replace
+solid generic bodies. Fine roof channels stay limited to the bounded street-front subset.
+Shell/roof/timber/floor remain material-batched instances, with no per-house scene tree or actor.
+Existing merchant and surveyed facade profiles take precedence. Source centres/envelopes/yaw,
+protected-lot exclusion and accepted buildings remain unchanged.
+The retained OSM response supplies37 matching way-level floor-count tags; absent values, floor
+height, facade identity, materials and roof selection are still interpretations. Shared forms vary
+by immutable source ID/proportion, independent of focus credit. This is whole-stock art coverage,
+not a measured replica of every address. Survey and evidence limits: docs/HOI_AN_PARCELS.md.

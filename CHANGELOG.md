@@ -1,3 +1,16 @@
+## 2026-10-28 — Shared housing across the mapped city
+
+Replace remaining solid context bodies with four shared hollow house assemblies based on
+heritage shop-house typologies: low timber fronts, linked court/loft ranges and upper masonry
+fronts. Add roof/gable/ridge geometry, timber posts/panels, galleries, paved courts and thresholds;
+retain bounded street details and dedicated surveyed models. Preserve all2,660 original source
+envelopes and accepted sites/history. Add37 source-tagged floor counts from the retained OSM
+response without inventing missing values or per-address identities. Material-batched instances
+retain native pixels and existing actor/light/pass counts. Exact whole-city replicas remain
+unverified. Sources/limits: docs/HOI_AN_PARCELS.md. FPS remains deferred.
+Validation:1,949 passes, zero failures, one expected skip; three cross-checks pass. Lint/build pass.
+Both preview/progress have finite geometry/matrices and immutable input; local close views pass.
+
 ## 2026-10-28 — Two dated facades beside Tan Ky
 
 Verify99/103 against dated heritage business lists and actual Maps imagery. Add separate original

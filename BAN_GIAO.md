@@ -1,3 +1,17 @@
+> **2026-10-28 shared mapped housing stock:** extend the remaining displayed context houses.
+> Heritage Centre shop-house/architecture records and dated Duc An interior precede geometry.
+> Sources and uncertainty: docs/HOI_AN_PARCELS.md. No whole-city exact-replica claim.
+> Four reusable hollow assemblies add linked roof ranges, open courts, galleries, timber fronts,
+> upper shutters, gables, ridges, thresholds and paving. Keep named/merchant profiles unchanged.
+> All2,660 source centres/widths/depths/yaw remain;37 explicit way-level floor tags added from
+> retained OSM snapshot. Missing heights/individual identities remain interpreted.
+> Shared instanced wall/roof/timber/floor roles; bounded fine roofs/frontages only. No per-house
+> simulation, light/pass/pixel change. Existing saved buildings/sites/history/credit stay.
+> Validation:1,949 full-suite passes, zero failures, one expected skip; three cross-checks pass.
+> Lint/build pass; both progress/preview produce finite shared vertices/matrices and unchanged
+> input. Local overview/close views render without captured errors. FPS remains deferred.
+> Final production verification follows push. No focus session/build plan created.
+
 > **2026-10-28 dated Tan Ky neighbour facades:** photo/address checks before modelling.
 > Official Street View Dec2021, camera106, shows103 Reaching Out (not camera address).
 > Ha Gia owner frontage Sep2023 at Maps99 supplies the99–99A group; subdivision remains uncertain.

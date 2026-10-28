@@ -293,3 +293,33 @@ Original procedural geometry/materials only; research photographs remain outside
 The99 reference link opens the correct Maps listing/gallery; Google may reset it to the first
 photo rather than retain the selected September2023 frontage. The source date belongs to the
 inspected frontage, not every picture in that gallery. The103 link includes the observed heading.
+
+## Whole mapped housing stock — 2026-10-28
+
+User requests the same standard across the remaining city. The public dataset contains2,660
+building envelopes, not2,660 individually surveyed houses. A complete measured present-day
+replica is not supported by current evidence. Named facades retain their dated survey models;
+all other context receives explicit typology interpretation without invented addresses.
+
+Research before this expansion:
+- [Heritage Centre: Nha Pho](https://hoianheritage.danang.gov.vn/vi/di-san-van-hoa/Nha-pho/nha-pho-261.html),
+  September2015: narrow trading fronts, linked roofed ranges, open light wells, side connectors,
+  rear service access, timber frames/removable panels, low loft and later two-storey forms.
+- [Traditional architecture study](https://hoianheritage.net/vi/trao-doi-chuyen-nganh/chuyen-de-nghien-cuu-trao-doi/Di-san-kien-truc-truyen-thong-cua-nguoi-Viet-o-Hoi-An-187.html),
+  December2013: differing roof/structural forms and mixed Vietnamese/Chinese/Japanese/French
+  influences; two-storey French-influenced fronts are documented, not universal to every house.
+- Maps confirms Duc An at129 Tran Phu. Its opened interior photograph shows a deep timber
+  axis, framed passage, seating and daylight court; capture December2022, panel January2023,
+  photographer shown as 宗南李, image CIHM0ogKEICAgIDB8p7MowE. Later gallery thumbnails showing
+  unrelated cafes/drinks are rejected as evidence for Duc An. This interior is a typology
+  reference only, not a claim that the generic context houses are Duc An replicas.
+- The retained2026-10-27 OSM response contains37 matching building-way `building:levels` values.
+  Only those explicit values are added to the render JSON. Missing heights remain interpreted;
+  floor height/roof form/colour are not measured. No saved map/site version is replaced.
+
+Implementation: every remaining context envelope gets a hollow low-house, courtyard/loft or
+multi-range upper-storey assembly. Shared instanced shell/roof/timber/court geometry limits
+per-house objects; selected street fronts keep a bounded extra detail layer. Centres, source
+width/depth/yaw and earned sites/history remain. No extra actor/light/reflection pass or pixel
+reduction. Roof/court interpretation varies deterministically by envelope proportion and ID,
+not by focus credit or construction progress. Individual whole-city exactness remains unfinished.
